@@ -1,0 +1,56 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Android - generated & sensitive
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+android/**/*.jks
+android/**/*.keystore
+android/**/keystore.properties
+
+# Capacitor generated
+dist/
+
+# Claude Code agent directories
+thinker/
+coder/
+
+# Deploy / local scripts
+deploy.sh
+launch.sh
+
+# Python / MCP scripts (local tooling)
+mcp_notebook.py
+login.mjs
+sync_docs.mjs
+sync_notebooks.mjs
+
+# Project management (local only)
+STATUS.md

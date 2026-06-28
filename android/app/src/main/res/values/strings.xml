@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Quire</string>
+    <string name="title_activity_main">Quire</string>
+    <string name="package_name">com.eduplayconnect.quire</string>
+    <string name="custom_url_scheme">com.eduplayconnect.quire</string>
+</resources>

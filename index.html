@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4A5568" />
+    <title>Quire</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <div class="app" id="appRoot">
+      <header class="top-bar">
+        <button class="icon-btn" id="backBtn" aria-label="Back" data-i18n-aria-label="common.back" hidden>‹</button>
+        <h1 class="top-bar-title" id="topBarTitle">Quire</h1>
+        <button class="icon-btn" id="savePdfBtn" aria-label="Save" data-i18n-aria-label="common.save" style="margin-left: auto;" hidden>💾</button>
+        <button class="icon-btn" id="sharePdfBtn" aria-label="Share" data-i18n-aria-label="common.share" hidden>📤</button>
+      </header>
+
+      <main class="screen-container">
+        <section class="screen" id="screen-hub">
+          <button type="button" class="btn btn-primary btn-large" id="hubOpenReaderBtn">
+            <span data-i18n="hub.openPdf">📖 Open PDF</span>
+          </button>
+
+          <input
+            type="text"
+            class="hub-search"
+            id="hubSearchInput"
+            placeholder="Search tools..."
+            aria-label="Search tools"
+            data-i18n-placeholder="hub.searchPlaceholder"
+          />
+
+          <div class="recents-section hidden" id="recentsSection">
+            <h3 class="tool-category-title" data-i18n="hub.recentlyOpened">Recently Opened</h3>
+            <div class="recents-list" id="recentsList"></div>
+          </div>
+
+          <div class="tool-category" id="categorySayfaIslemleri">
+            <h3 class="tool-category-title" data-i18n="hub.category.pageOps">Page Operations</h3>
+            <div class="tool-rows">
+              <button type="button" class="tool-row" data-tool="rotate" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
+                  <span class="tool-row-desc" data-i18n="tool.rotate.desc">Turn pages to the orientation you need</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="tool-row" data-tool="organize" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
+                  <span class="tool-row-desc" data-i18n="tool.organize.desc">Delete or reorder pages</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="tool-row" data-tool="page-numbers" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
+                  <span class="tool-row-desc" data-i18n="tool.pageNumbers.desc">Add page numbers to the document</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tool-category" id="categoryBirlestirme">
+            <h3 class="tool-category-title" data-i18n="hub.category.combine">Combine</h3>
+            <div class="tool-rows">
+              <button type="button" class="tool-row" data-tool="merge" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
+                  <span class="tool-row-desc" data-i18n="tool.merge.desc">Combine multiple PDFs into one file</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="tool-row" data-tool="booklet" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
+                  <span class="tool-row-desc" data-i18n="tool.booklet.desc">Lay out pages in booklet format</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tool-category" id="categoryEkleme">
+            <h3 class="tool-category-title" data-i18n="hub.category.add">Add</h3>
+            <div class="tool-rows">
+              <button type="button" class="tool-row" data-tool="watermark" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
+                  <span class="tool-row-desc" data-i18n="tool.watermark.desc">Add a protective stamp to your document</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="tool-row" data-tool="image-to-pdf" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.imageToPdf.title">Image to PDF</span>
+                  <span class="tool-row-desc" data-i18n="tool.imageToPdf.desc">Convert photos into PDF format</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen hidden reader-screen" id="screen-reader">
+          <div class="reader-subbar">
+            <span class="reader-page-indicator" id="readerPageIndicator">- / -</span>
+            <button type="button" class="icon-btn-sm" id="readerNightModeBtn" aria-label="Night mode" data-i18n-aria-label="reader.nightMode">🌙</button>
+            <button type="button" class="icon-btn-sm" id="readerSearchBtn" aria-label="Search" data-i18n-aria-label="reader.search">🔍</button>
+            <button type="button" class="icon-btn-sm" id="readerFullscreenBtn" aria-label="Fullscreen reading" data-i18n-aria-label="reader.fullscreen">📖</button>
+            <button type="button" class="btn btn-tonal" id="readerToolsBtn" data-i18n="nav.tools">Tools</button>
+          </div>
+          <div class="reader-search-panel hidden" id="readerSearchPanel">
+            <input
+              type="search"
+              class="reader-search-input"
+              id="readerSearchInput"
+              placeholder="Search in document…"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              data-i18n-placeholder="reader.searchPlaceholder"
+            />
+            <span class="reader-search-count" id="readerSearchCount"></span>
+            <button type="button" class="icon-btn-sm" id="readerSearchPrevBtn" aria-label="Previous result" data-i18n-aria-label="reader.prevResult" disabled>‹</button>
+            <button type="button" class="icon-btn-sm" id="readerSearchNextBtn" aria-label="Next result" data-i18n-aria-label="reader.nextResult" disabled>›</button>
+            <button type="button" class="icon-btn-sm" id="readerSearchCloseBtn" aria-label="Close search" data-i18n-aria-label="reader.closeSearch">✕</button>
+          </div>
+          <div class="reader-scroll" id="readerScroll">
+            <div class="reader-page-list" id="readerPageList"></div>
+          </div>
+
+          <div class="reader-fullscreen-overlay hidden" id="readerFullscreenOverlay">
+            <div class="fs-overlay-bar hidden" id="fsOverlayBar">
+              <button type="button" class="icon-btn-sm" id="fsExitBtn" aria-label="Close" data-i18n-aria-label="common.close">✕</button>
+              <div class="fs-controls-group">
+                <button type="button" class="icon-btn-sm" id="fsRotateLeftBtn" aria-label="Rotate left" data-i18n-aria-label="reader.rotateLeft">↺</button>
+                <span class="fs-page-indicator" id="fsPageIndicator">1 / 1</span>
+                <button type="button" class="icon-btn-sm" id="fsRotateRightBtn" aria-label="Rotate right" data-i18n-aria-label="reader.rotateRight">↻</button>
+              </div>
+            </div>
+            <div class="fs-viewer" id="fsViewer"></div>
+          </div>
+
+          <div class="reader-tools-sheet hidden" id="readerToolsSheet">
+            <div class="reader-tools-backdrop" id="readerToolsBackdrop"></div>
+            <div class="reader-tools-panel">
+              <div class="tool-rows">
+                <button type="button" class="tool-row" data-tool="rotate">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
+                  </span>
+                </button>
+                <button type="button" class="tool-row" data-tool="organize">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
+                  </span>
+                </button>
+                <button type="button" class="tool-row" data-tool="page-numbers">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
+                  </span>
+                </button>
+                <button type="button" class="tool-row" data-tool="watermark">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
+                  </span>
+                </button>
+                <button type="button" class="tool-row" data-tool="merge">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
+                  </span>
+                </button>
+                <button type="button" class="tool-row" data-tool="booklet">
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+                  <span class="tool-row-meta">
+                    <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-picker">
+          <div class="hero">
+            <div class="hero-icon" aria-hidden="true">📄</div>
+            <h2 data-i18n="picker.title">Create your booklet</h2>
+            <p class="hero-subtitle" data-i18n="picker.subtitle">Pick a PDF and Quire will turn it into a printable booklet.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="pickFileBtn" data-i18n="common.pickPdf">Select PDF</button>
+
+          <div class="file-card hidden" id="fileCard">
+            <div class="file-card-icon" aria-hidden="true">📄</div>
+            <div class="file-card-meta">
+              <span class="file-card-name" id="fileNameLabel"></span>
+              <span class="file-card-size" id="fileSizeLabel"></span>
+            </div>
+            <button class="icon-btn" id="clearFileBtn" aria-label="Remove" data-i18n-aria-label="common.remove">✕</button>
+          </div>
+
+          <button class="btn btn-primary btn-large hidden" id="continueBtn" data-i18n="common.continue">Continue</button>
+        </section>
+
+        <section class="screen hidden" id="screen-merge-picker">
+          <div class="hero">
+            <div class="hero-icon" aria-hidden="true">🧩</div>
+            <h2 data-i18n="merge.title">Merge PDFs</h2>
+            <p class="hero-subtitle" data-i18n="merge.subtitle">Add at least two PDFs, set their order, and combine them into one file.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="mergeAddFileBtn" data-i18n="merge.addFile">+ Add File</button>
+
+          <p class="merge-empty-hint hidden" id="mergeEmptyHint" data-i18n="merge.emptyHint">No files added yet.</p>
+
+          <div class="merge-file-list" id="mergeFileList"></div>
+
+          <button class="btn btn-primary btn-large" id="mergeRunBtn" disabled>
+            <span id="mergeRunBtnLabel" data-i18n="tool.merge.title">Merge</span>
+            <span class="spinner hidden" id="mergeRunSpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-merge-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="merge.resultTitle">Merge complete</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="mergeStatFiles">0</span>
+              <span class="stat-label" data-i18n="stat.totalFiles">Total Files</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="mergeStatPages">0</span>
+              <span class="stat-label" data-i18n="stat.totalPages">Total Pages</span>
+            </div>
+          </div>
+
+          <div class="merge-filename-field">
+            <label for="mergeFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="mergeFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="merge.mergedPdf">Merged PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="mergeSaveBtn">
+                  <span id="mergeSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="mergeSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="mergeShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="mergeActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="mergeGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+
+          <button class="btn btn-text btn-large" id="mergeNewBtn" data-i18n="merge.newMerge">New Merge</button>
+        </section>
+
+        <section class="screen hidden" id="screen-organize">
+          <div class="hero" id="organizeHero">
+            <div class="hero-icon" aria-hidden="true">🗂️</div>
+            <h2 data-i18n="organize.title">Organize pages</h2>
+            <p class="hero-subtitle" data-i18n="organize.subtitle">Pick a PDF; delete pages or change their order.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="organizePickBtn" data-i18n="common.pickPdf">Select PDF</button>
+
+          <div class="merge-file-list" id="organizePageList"></div>
+
+          <button class="btn btn-primary btn-large hidden" id="organizeApplyBtn" disabled>
+            <span id="organizeApplyBtnLabel" data-i18n="common.apply">Apply</span>
+            <span class="spinner hidden" id="organizeApplySpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-organize-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.organizeResult">Pages updated</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="organizeStatOriginal">0</span>
+              <span class="stat-label" data-i18n="stat.originalPages">Original Pages</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="organizeStatRemaining">0</span>
+              <span class="stat-label" data-i18n="stat.remainingPages">Remaining Pages</span>
+            </div>
+          </div>
+
+          <div class="organize-filename-field">
+            <label for="organizeFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="organizeFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="organize.editedPdf">Edited PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="organizeSaveBtn">
+                  <span id="organizeSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="organizeSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="organizeShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="organizeActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="organizeGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+
+          <button class="btn btn-text btn-large" id="organizeNewBtn" data-i18n="common.newFile">New File</button>
+        </section>
+
+        <section class="screen hidden" id="screen-rotate">
+          <div class="hero" id="rotateHero">
+            <div class="hero-icon" aria-hidden="true">🔄</div>
+            <h2 data-i18n="rotate.title">Rotate pages</h2>
+            <p class="hero-subtitle" data-i18n="rotate.subtitle">Pick a PDF; turn pages to the orientation you need.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="rotatePickBtn" data-i18n="common.pickPdf">Select PDF</button>
+
+          <button class="btn btn-tonal btn-large hidden" id="rotateAllBtn" data-i18n="rotate.rotateAll">Rotate All 90°</button>
+
+          <div class="merge-file-list" id="rotatePageList"></div>
+
+          <button class="btn btn-primary btn-large hidden" id="rotateApplyBtn" disabled>
+            <span id="rotateApplyBtnLabel" data-i18n="common.apply">Apply</span>
+            <span class="spinner hidden" id="rotateApplySpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-rotate-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.rotateResult">Pages rotated</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="rotateStatPages">0</span>
+              <span class="stat-label" data-i18n="stat.totalPages">Total Pages</span>
+            </div>
+          </div>
+
+          <div class="rotate-filename-field">
+            <label for="rotateFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="rotateFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="rotate.rotatedPdf">Rotated PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="rotateSaveBtn">
+                  <span id="rotateSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="rotateSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="rotateShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="rotateActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="rotateGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+
+          <button class="btn btn-text btn-large" id="rotateNewBtn" data-i18n="common.newFile">New File</button>
+        </section>
+
+        <section class="screen hidden" id="screen-page-numbers">
+          <div class="hero" id="pageNumbersHero">
+            <div class="hero-icon" aria-hidden="true">🔢</div>
+            <h2 data-i18n="pageNumbers.title">Add page numbers</h2>
+            <p class="hero-subtitle" data-i18n="pageNumbers.subtitle">Pick a PDF; choose a position and format, then apply.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="pageNumbersPickBtn" data-i18n="common.pickPdf">Select PDF</button>
+
+          <div class="pagenum-preview-card hidden" id="pageNumbersPreviewCard">
+            <img id="pageNumbersPreviewImg" alt="Preview" />
+            <span class="pagenum-overlay" id="pageNumbersOverlay"></span>
+          </div>
+
+          <div class="settings-panel hidden" id="pageNumbersSettingsPanel">
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="pageNumbers.position">Position</label>
+              </div>
+              <div class="segmented-group" id="pageNumbersPositionGroup">
+                <button type="button" class="segmented-btn is-active" data-position="bottom-right" data-i18n="pageNumbers.bottomRight">Bottom Right</button>
+                <button type="button" class="segmented-btn" data-position="bottom-left" data-i18n="pageNumbers.bottomLeft">Bottom Left</button>
+                <button type="button" class="segmented-btn" data-position="bottom-center" data-i18n="pageNumbers.bottomCenter">Bottom Center</button>
+                <button type="button" class="segmented-btn" data-position="top-right" data-i18n="pageNumbers.topRight">Top Right</button>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="common.format">Format</label>
+              </div>
+              <div class="segmented-group" id="pageNumbersFormatGroup">
+                <button type="button" class="segmented-btn is-active" data-format="number">1, 2, 3...</button>
+                <button type="button" class="segmented-btn" data-format="number-of-total" data-i18n="pageNumbers.pageOfTotal">Page 1 / 12</button>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label for="pageNumbersStartInput" data-i18n="pageNumbers.startNumber">Start Number</label>
+              </div>
+              <input type="number" id="pageNumbersStartInput" class="number-input" min="1" step="1" value="1" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-large hidden" id="pageNumbersApplyBtn" disabled>
+            <span id="pageNumbersApplyBtnLabel" data-i18n="common.apply">Apply</span>
+            <span class="spinner hidden" id="pageNumbersApplySpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-page-numbers-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.pageNumbersResult">Page numbers added</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="pageNumbersStatPages">0</span>
+              <span class="stat-label" data-i18n="stat.totalPages">Total Pages</span>
+            </div>
+          </div>
+
+          <div class="page-numbers-filename-field">
+            <label for="pageNumbersFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="pageNumbersFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="pageNumbers.numberedPdf">Numbered PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="pageNumbersSaveBtn">
+                  <span id="pageNumbersSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="pageNumbersSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="pageNumbersShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="pageNumbersActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="pageNumbersGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+
+          <button class="btn btn-text btn-large" id="pageNumbersNewBtn" data-i18n="common.newFile">New File</button>
+        </section>
+
+        <section class="screen hidden" id="screen-watermark">
+          <div class="hero" id="watermarkHero">
+            <div class="hero-icon" aria-hidden="true">💧</div>
+            <h2 data-i18n="watermark.title">Add watermark</h2>
+            <p class="hero-subtitle" data-i18n="watermark.subtitle">Pick a PDF; apply a text or image watermark.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="watermarkPickBtn" data-i18n="common.pickPdf">Select PDF</button>
+
+          <div class="pagenum-preview-card hidden" id="watermarkPreviewCard">
+            <img id="watermarkPreviewImg" alt="Preview" />
+            <span class="watermark-overlay-text hidden" id="watermarkOverlayText"></span>
+            <img class="watermark-overlay-image hidden" id="watermarkOverlayImage" alt="" />
+          </div>
+
+          <div class="settings-panel hidden" id="watermarkSettingsPanel">
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="watermark.type">Type</label>
+              </div>
+              <div class="segmented-group" id="watermarkModeGroup">
+                <button type="button" class="segmented-btn is-active" data-mode="text" data-i18n="watermark.text">Text</button>
+                <button type="button" class="segmented-btn" data-mode="image" data-i18n="watermark.image">Image</button>
+              </div>
+            </div>
+
+            <div class="setting-card" id="watermarkTextCard">
+              <div class="setting-row">
+                <label for="watermarkTextInput" data-i18n="watermark.watermarkText">Watermark Text</label>
+              </div>
+              <input type="text" id="watermarkTextInput" class="number-input" value="DRAFT" maxlength="40" />
+            </div>
+
+            <div class="setting-card hidden" id="watermarkImageCard">
+              <button type="button" class="btn btn-tonal" id="watermarkImagePickBtn" data-i18n="watermark.selectImage">Select Image</button>
+              <p class="setting-hint" id="watermarkImageStatus" data-i18n="watermark.noImageSelected">No image selected yet.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="watermark.rotation">Rotation</label>
+              </div>
+              <div class="segmented-group" id="watermarkRotateGroup">
+                <button type="button" class="segmented-btn is-active" data-rotate="45" data-i18n="watermark.diagonal">Diagonal</button>
+                <button type="button" class="segmented-btn" data-rotate="0" data-i18n="watermark.horizontal">Horizontal</button>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label for="watermarkOpacitySlider" data-i18n="watermark.opacity">Opacity</label>
+                <span class="setting-value" id="watermarkOpacityLabel">30%</span>
+              </div>
+              <input type="range" id="watermarkOpacitySlider" min="5" max="100" step="5" value="30" class="slider" />
+            </div>
+
+            <div class="setting-card hidden" id="watermarkScaleCard">
+              <div class="setting-row">
+                <label for="watermarkScaleSlider" data-i18n="watermark.scale">Scale</label>
+                <span class="setting-value" id="watermarkScaleLabel">50%</span>
+              </div>
+              <input type="range" id="watermarkScaleSlider" min="10" max="100" step="5" value="50" class="slider" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-large hidden" id="watermarkApplyBtn" disabled>
+            <span id="watermarkApplyBtnLabel" data-i18n="common.apply">Apply</span>
+            <span class="spinner hidden" id="watermarkApplySpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-watermark-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.watermarkResult">Watermark added</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="watermarkStatPages">0</span>
+              <span class="stat-label" data-i18n="stat.totalPages">Total Pages</span>
+            </div>
+          </div>
+
+          <div class="watermark-filename-field">
+            <label for="watermarkFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="watermarkFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="watermark.watermarkedPdf">Watermarked PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="watermarkSaveBtn">
+                  <span id="watermarkSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="watermarkSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="watermarkShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="watermarkActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="watermarkGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+
+          <button class="btn btn-text btn-large" id="watermarkNewBtn" data-i18n="common.newFile">New File</button>
+        </section>
+
+        <section class="screen hidden" id="screen-image-to-pdf">
+          <div class="hero" id="imageToPdfHero">
+            <div class="hero-icon" aria-hidden="true">📸</div>
+            <h2 data-i18n="tool.imageToPdf.title">Image to PDF</h2>
+            <p class="hero-subtitle" data-i18n="imageToPdf.subtitle">Take photos with the camera or add from the gallery, set their order, then convert to PDF.</p>
+          </div>
+
+          <div class="image-actions">
+            <button class="btn btn-primary" id="imgCameraBtn" data-i18n="imageToPdf.takePhoto">
+              📷 Take Photo
+            </button>
+            <label class="btn btn-tonal" id="imgGalleryLabel">
+              <span data-i18n="imageToPdf.pickFromGallery">🖼️ Pick from Gallery</span>
+              <input type="file" id="imgGalleryInput" accept="image/png, image/jpeg" multiple style="display: none;" />
+            </label>
+          </div>
+
+          <p class="merge-empty-hint" id="imgListEmptyHint" data-i18n="imageToPdf.emptyHint">No images added yet.</p>
+
+          <div class="image-grid" id="imageGrid"></div>
+
+          <button class="btn btn-primary btn-large hidden" id="imgGenerateBtn" disabled>
+            <span id="imgGenerateBtnLabel" data-i18n="imageToPdf.generatePdf">Create PDF</span>
+            <span class="spinner hidden" id="imgGenerateSpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-crop">
+          <div class="crop-header-actions">
+            <button class="btn btn-text" id="cropCancelBtn" data-i18n="common.cancel">Cancel</button>
+            <h3 class="crop-title" data-i18n="screenTitle.crop">Align Corners</h3>
+            <button class="btn btn-text" id="cropResetBtn" data-i18n="common.reset">Reset</button>
+          </div>
+
+          <div class="crop-container" id="cropContainer">
+            <img id="cropSourceImg" class="crop-source-img" alt="Image to crop" />
+            <svg id="cropSvg" class="crop-svg">
+              <polygon id="cropPolygon" class="crop-polygon" points="" />
+              <line id="line01" class="crop-line" />
+              <line id="line13" class="crop-line" />
+              <line id="line32" class="crop-line" />
+              <line id="line20" class="crop-line" />
+              <circle id="handle0" class="crop-handle" r="15" cx="0" cy="0" />
+              <circle id="handle1" class="crop-handle" r="15" cx="0" cy="0" />
+              <circle id="handle2" class="crop-handle" r="15" cx="0" cy="0" />
+              <circle id="handle3" class="crop-handle" r="15" cx="0" cy="0" />
+            </svg>
+
+            <div id="cropLoupe" class="crop-loupe hidden">
+              <canvas id="cropLoupeCanvas" class="crop-loupe-canvas"></canvas>
+            </div>
+          </div>
+
+          <p class="crop-hint" data-i18n="crop.hint">Drag the points to mark the page corners.</p>
+
+          <button class="btn btn-primary btn-large" id="cropApplyBtn" data-i18n="crop.applyAndFlatten">Apply and Flatten</button>
+        </section>
+
+        <section class="screen hidden" id="screen-config">
+          <h2 class="screen-title" data-i18n="screenTitle.config">Folding Settings</h2>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <label for="gutterSlider" data-i18n="config.gutter">Gutter</label>
+              <span class="setting-value" id="gutterValueLabel">0 pt</span>
+            </div>
+            <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
+            <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <label for="creepSlider" data-i18n="config.creep">Creep</label>
+              <span class="setting-value" id="creepValueLabel">0.0 pt</span>
+            </div>
+            <input type="range" id="creepSlider" min="0" max="5" step="0.1" value="0" class="slider" />
+            <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="generateBtn">
+            <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
+            <span class="spinner hidden" id="generateSpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.result">Booklet ready</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="statOriginal">0</span>
+              <span class="stat-label" data-i18n="stat.originalPages">Original Pages</span>
+            </div>
+            <div class="stat-card hidden" id="statPaddingCard">
+              <span class="stat-value" id="statPadding">0</span>
+              <span class="stat-label" data-i18n="stat.blankPagesAdded">Blank Pages Added</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="statSheets">0</span>
+              <span class="stat-label" data-i18n="stat.totalSheets">Total Sheets</span>
+            </div>
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="front" data-action="save" data-i18n="common.save">Save</button>
+                <button class="btn btn-tonal" data-target="front" data-action="share" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+            <div class="action-row">
+              <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="back" data-action="save" data-i18n="common.save">Save</button>
+                <button class="btn btn-tonal" data-target="back" data-action="share" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="actionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
+        </section>
+
+        <!-- Recents Screen -->
+        <section class="screen hidden" id="screen-recents">
+          <div class="hero">
+            <div class="hero-icon" aria-hidden="true">🕘</div>
+            <h2 data-i18n="hub.recentlyOpened">Recently Opened</h2>
+            <p class="hero-subtitle" data-i18n="recents.subtitle">Documents you opened or edited most recently.</p>
+          </div>
+
+          <div class="recents-list-large" id="recentsListLarge"></div>
+          <p class="empty-hint hidden" id="recentsEmptyHint" data-i18n="recents.emptyHint">No documents opened yet.</p>
+        </section>
+
+        <!-- Files Screen -->
+        <section class="screen hidden" id="screen-files">
+          <div class="files-explorer-header">
+            <div class="files-breadcrumb" id="filesBreadcrumb"></div>
+            <button class="icon-btn-sm" id="filesSortBtn" aria-label="Sort" title="Sort" data-i18n-aria-label="files.sort">⇅</button>
+            <button class="icon-btn-sm" id="filesDownloadBtn" aria-label="Download PDF from URL" title="Download PDF from URL" data-i18n-aria-label="files.downloadPdf">📥</button>
+            <button class="icon-btn-sm" id="filesNewFolderBtn" aria-label="New Folder" title="New Folder" data-i18n-aria-label="files.newFolder">📁+</button>
+          </div>
+
+          <div class="files-list" id="filesList"></div>
+          <p class="empty-hint hidden" id="filesEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
+
+          <div class="files-sort-sheet hidden" id="filesSortSheet">
+            <div class="files-sort-backdrop" id="filesSortBackdrop"></div>
+            <div class="files-sort-panel">
+              <div class="tool-rows">
+                <button type="button" class="tool-row" data-sort="name-asc">
+                  <span class="tool-row-icon" aria-hidden="true">🔤</span>
+                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameAsc">Name (A→Z)</span></span>
+                </button>
+                <button type="button" class="tool-row" data-sort="name-desc">
+                  <span class="tool-row-icon" aria-hidden="true">🔤</span>
+                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameDesc">Name (Z→A)</span></span>
+                </button>
+                <button type="button" class="tool-row" data-sort="date-desc">
+                  <span class="tool-row-icon" aria-hidden="true">🕐</span>
+                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateDesc">Newest first</span></span>
+                </button>
+                <button type="button" class="tool-row" data-sort="date-asc">
+                  <span class="tool-row-icon" aria-hidden="true">🕐</span>
+                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateAsc">Oldest first</span></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ayarlar (Settings) Screen -->
+        <section class="screen hidden" id="screen-settings">
+          <div class="hero">
+            <div class="hero-icon" aria-hidden="true">⚙️</div>
+            <h2 data-i18n="settings.title">Settings</h2>
+            <p class="hero-subtitle" data-i18n="settings.subtitle">Manage your app preferences.</p>
+          </div>
+
+          <div class="settings-list">
+            <div class="settings-group">
+              <h3 class="settings-group-title" data-i18n="settings.group.appearance">Appearance</h3>
+              <div class="settings-row">
+                <span class="settings-label" data-i18n="settings.darkTheme">Dark Theme</span>
+                <label class="switch">
+                  <input type="checkbox" id="settingsDarkModeToggle" />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <span class="settings-label" data-i18n="settings.language">Language</span>
+                <div class="settings-lang-switch" id="settingsLangSwitch">
+                  <button type="button" class="settings-lang-btn" data-lang="en">EN</button>
+                  <button type="button" class="settings-lang-btn" data-lang="tr">TR</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h3 class="settings-group-title" data-i18n="settings.group.storage">Storage</h3>
+              <button class="settings-row-btn" id="settingsClearCacheBtn">
+                <span class="settings-btn-label" data-i18n="settings.clearCache">Clear Temporary Cache</span>
+                <span class="settings-btn-sub" data-i18n="settings.clearCacheDesc">Deletes temporary files in the cache</span>
+              </button>
+            </div>
+
+            <div class="settings-group">
+              <h3 class="settings-group-title" data-i18n="settings.group.about">About</h3>
+              <div class="settings-row-info">
+                <span class="info-label" data-i18n="settings.appVersion">App Version</span>
+                <span class="info-value">v1.1.0</span>
+              </div>
+              <div class="settings-row-info">
+                <span class="info-label" data-i18n="settings.developer">Developer</span>
+                <span class="info-value">Quire Team</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-error">
+          <div class="error-banner">
+            <div class="error-icon" aria-hidden="true">!</div>
+            <h2 id="errorTitle" data-i18n="error.genericTitle">Something went wrong</h2>
+            <p id="errorMessage"></p>
+          </div>
+          <button class="btn btn-primary btn-large" id="retryBtn" data-i18n="common.retry">Try Again</button>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" id="bottomNav">
+        <button type="button" class="bottom-nav-item is-active" id="navTools" data-nav="hub">
+          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg></span>
+          <span class="nav-label" data-i18n="nav.tools">Tools</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-nav="recents">
+          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span class="nav-label" data-i18n="nav.recents">Recent</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-nav="files">
+          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
+          <span class="nav-label" data-i18n="nav.files">Files</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-nav="settings">
+          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="nav-label" data-i18n="nav.settings">Settings</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- First-launch Onboarding Overlay -->
+    <div class="onboarding-overlay hidden" id="onboardingOverlay">
+      <div class="onboarding-track" id="onboardingTrack">
+        <section class="onboarding-page">
+          <div class="onboarding-lang-switch" id="onboardingLangSwitch">
+            <button type="button" class="onboarding-lang-btn is-selected" data-lang="en">English</button>
+            <button type="button" class="onboarding-lang-btn" data-lang="tr">Türkçe</button>
+          </div>
+          <div class="onboarding-illustration" aria-hidden="true">📚</div>
+          <h2 class="onboarding-title" data-i18n="onboarding.page1.title">Welcome to Quire</h2>
+          <p class="onboarding-text" data-i18n="onboarding.page1.text">
+            With Quire you can merge PDFs, turn pages into a booklet, organize them, and much more — all with
+            a single tap.
+          </p>
+        </section>
+        <section class="onboarding-page">
+          <h2 class="onboarding-title" data-i18n="onboarding.page2.title">What Can You Do?</h2>
+          <ul class="onboarding-feature-list">
+            <li><span aria-hidden="true">📖</span> <span data-i18n="onboarding.feature.booklet">Create booklets</span></li>
+            <li><span aria-hidden="true">🧩</span> <span data-i18n="onboarding.feature.merge">Merge PDFs</span></li>
+            <li><span aria-hidden="true">🗂️</span> <span data-i18n="onboarding.feature.organize">Organize pages</span></li>
+            <li><span aria-hidden="true">💧</span> <span data-i18n="onboarding.feature.watermark">Add watermarks</span></li>
+            <li><span aria-hidden="true">🖼️</span> <span data-i18n="onboarding.feature.imageToPdf">Create PDFs from images</span></li>
+            <li><span aria-hidden="true">🔄</span> <span data-i18n="onboarding.feature.rotate">Rotate pages</span></li>
+            <li><span aria-hidden="true">🔢</span> <span data-i18n="onboarding.feature.pageNumbers">Add page numbers</span></li>
+            <li><span aria-hidden="true">📖</span> <span data-i18n="onboarding.feature.reader">Read PDFs offline — landscape mode, text selection</span></li>
+          </ul>
+        </section>
+        <section class="onboarding-page">
+          <h2 class="onboarding-title" data-i18n="onboarding.page3.title">Appearance Preference</h2>
+          <p class="onboarding-text" data-i18n="onboarding.page3.text">
+            You can change this anytime from Settings.
+          </p>
+          <div class="onboarding-theme-choice">
+            <button type="button" class="onboarding-theme-btn is-selected" data-theme="light">
+              <span class="onboarding-theme-icon" aria-hidden="true">☀️</span>
+              <span data-i18n="onboarding.theme.light">Light</span>
+            </button>
+            <button type="button" class="onboarding-theme-btn" data-theme="dark">
+              <span class="onboarding-theme-icon" aria-hidden="true">🌙</span>
+              <span data-i18n="onboarding.theme.dark">Dark</span>
+            </button>
+          </div>
+        </section>
+      </div>
+      <div class="onboarding-dots" id="onboardingDots">
+        <span class="onboarding-dot is-active"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+      </div>
+      <button type="button" class="btn btn-primary btn-large onboarding-next-btn" id="onboardingNextBtn">
+        Next
+      </button>
+    </div>
+
+    <!-- Move File Modal Dialog -->
+    <div class="modal-overlay hidden" id="moveDocModal">
+      <div class="modal-card">
+        <h3 class="modal-title" data-i18n="modal.moveDoc.title">Move Document</h3>
+        <div class="modal-body">
+          <p class="modal-label" data-i18n="modal.moveDoc.selectFolder">Select Destination Folder</p>
+          <div class="folder-select-list" id="moveDocFolderList"></div>
+          <p class="modal-hint" data-i18n="modal.moveDoc.hint">💡 Your document will be moved to the selected folder.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="moveDocCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="moveDocConfirmBtn" disabled data-i18n="modal.moveDoc.move">Move</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Actions Modal Dialog (overflow menu for file/folder rows) -->
+    <div class="modal-overlay hidden" id="fileActionsModal">
+      <div class="modal-card">
+        <h3 class="modal-title" id="fileActionsTitle"></h3>
+        <div class="modal-body">
+          <div class="folder-select-list" id="fileActionsList"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="fileActionsCancelBtn" data-i18n="common.cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open in Tool Sheet -->
+    <div class="modal-overlay hidden" id="openInToolSheet">
+      <div class="modal-card">
+        <h3 class="modal-title">Open in...</h3>
+        <div class="modal-body">
+          <div class="folder-select-list" id="openInToolList">
+            <button type="button" class="folder-select-item" data-tool-id="reader">📖 Reader</button>
+            <button type="button" class="folder-select-item" data-tool-id="booklet">📚 Booklet</button>
+            <button type="button" class="folder-select-item" data-tool-id="organize">🗂️ Organize Pages</button>
+            <button type="button" class="folder-select-item" data-tool-id="rotate">🔄 Rotate</button>
+            <button type="button" class="folder-select-item" data-tool-id="page-numbers">🔢 Page Numbers</button>
+            <button type="button" class="folder-select-item" data-tool-id="watermark">💧 Watermark</button>
+            <button type="button" class="folder-select-item" data-tool-id="merge">📎 Merge</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="openInToolCancelBtn" data-i18n="common.cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save & Rename Modal Dialog -->
+    <div class="modal-overlay hidden" id="saveDocModal">
+      <div class="modal-card">
+        <h3 class="modal-title" data-i18n="modal.saveDoc.title">Save Document</h3>
+        <div class="modal-body">
+          <label for="saveDocNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+          <input type="text" id="saveDocNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+
+          <label class="modal-label" data-i18n="modal.saveDoc.saveOption">Save Option</label>
+          <div class="modal-radio-group">
+            <label class="modal-radio-label">
+              <input type="radio" name="saveOption" value="private" checked />
+              <div class="modal-radio-content">
+                <span class="modal-radio-title" data-i18n="modal.saveDoc.private">Keep in Quire (Private)</span>
+                <span class="modal-radio-desc" data-i18n="modal.saveDoc.privateDesc">Stored inside the app, appears in Recently Opened.</span>
+              </div>
+            </label>
+            <label class="modal-radio-label">
+              <input type="radio" name="saveOption" value="public" />
+              <div class="modal-radio-content">
+                <span class="modal-radio-title" data-i18n="modal.saveDoc.public">Save to Device Documents (Local)</span>
+                <span class="modal-radio-desc" data-i18n="modal.saveDoc.publicDesc">Saved to the device's "Documents" folder, accessible from the file manager.</span>
+              </div>
+            </label>
+          </div>
+          <p class="modal-hint" data-i18n="modal.saveDoc.hint">💡 To save to a different folder or to Google Drive, use the Share (📤) button in the reader.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="saveDocCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveDocConfirmBtn">
+            <span id="saveDocConfirmBtnLabel" data-i18n="common.save">Save</span>
+            <span class="spinner hidden" id="saveDocConfirmSpinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Download PDF Modal Dialog -->
+    <div class="modal-overlay hidden" id="downloadPdfModal">
+      <div class="modal-card">
+        <h3 class="modal-title" data-i18n="modal.downloadPdfTitle">Download PDF from URL</h3>
+        <div class="modal-body">
+          <label for="downloadPdfUrlInput" class="modal-label" data-i18n="modal.downloadUrlLabel">PDF URL</label>
+          <input type="url" id="downloadPdfUrlInput" class="modal-input" placeholder="https://example.com/document.pdf" data-i18n-placeholder="modal.downloadPlaceholder" />
+
+          <label for="downloadPdfNameInput" class="modal-label" data-i18n="modal.downloadFilenameLabel">File Name (optional)</label>
+          <input type="text" id="downloadPdfNameInput" class="modal-input" placeholder="Enter file name (optional)" data-i18n-placeholder="common.fileNamePlaceholder" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="downloadPdfCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="downloadPdfConfirmBtn">
+            <span id="downloadPdfConfirmBtnLabel" data-i18n="modal.downloadBtn">Download</span>
+            <span class="spinner hidden" id="downloadPdfSpinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Select PDF Source Modal -->
+    <div class="modal-overlay hidden" id="pdfSourceModal">
+      <div class="modal-card">
+        <h3 class="modal-title" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
+        <div class="modal-body">
+          <div class="modal-radio-group">
+            <button type="button" class="modal-source-btn" id="pdfSourceQuireBtn">
+              <span class="file-item-icon">📂</span>
+              <div class="modal-radio-content">
+                <span class="modal-radio-title" data-i18n="modal.pdfSource.quire">Quire Documents</span>
+                <span class="modal-radio-desc" data-i18n="modal.pdfSource.quireDesc">Choose a PDF file saved inside Quire.</span>
+              </div>
+            </button>
+            <button type="button" class="modal-source-btn" id="pdfSourceDeviceBtn">
+              <span class="file-item-icon">📱</span>
+              <div class="modal-radio-content">
+                <span class="modal-radio-title" data-i18n="modal.pdfSource.device">Device Files</span>
+                <span class="modal-radio-desc" data-i18n="modal.pdfSource.deviceDesc">Choose a PDF file from your device storage.</span>
+              </div>
+            </button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="pdfSourceCancelBtn" data-i18n="common.cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quire File Picker Modal -->
+    <div class="modal-overlay hidden" id="quireFilePickerModal">
+      <div class="modal-card">
+        <h3 class="modal-title" data-i18n="modal.quirePicker.title">Select PDF</h3>
+        <div class="modal-body">
+          <div class="files-explorer-header">
+            <div class="files-breadcrumb" id="quirePickerBreadcrumb"></div>
+          </div>
+          <div class="folder-select-list" id="quirePickerList"></div>
+          <p class="empty-hint hidden" id="quirePickerEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="quirePickerCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary hidden" id="quirePickerConfirmBtn" data-i18n="common.select">Select</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast hidden" id="toast" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
