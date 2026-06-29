@@ -13,7 +13,10 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* Linting */
+    /* Strict — passes clean with zero errors (verified 2026-06-29) */
+    "strict": true,
+
+    /* Linting (not implied by strict) */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

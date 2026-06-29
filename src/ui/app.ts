@@ -33,6 +33,7 @@ import {
   deletePrivateItem,
   movePrivateItem,
   pathExists,
+  FileTooLargeError,
   type PickedPdf,
   type FileEntryInfo,
 } from '../native/file-bridge';
@@ -280,6 +281,12 @@ export function initApp(): void {
   const statSheets = byId<HTMLSpanElement>('statSheets');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
   const newFileBtn = byId<HTMLButtonElement>('newFileBtn');
+  const frontPreviewImg = byId<HTMLImageElement>('frontPreviewImg');
+  const frontPreviewSpinner = byId<HTMLDivElement>('frontPreviewSpinner');
+  const frontPreviewError = byId<HTMLParagraphElement>('frontPreviewError');
+  const backPreviewImg = byId<HTMLImageElement>('backPreviewImg');
+  const backPreviewSpinner = byId<HTMLDivElement>('backPreviewSpinner');
+  const backPreviewError = byId<HTMLParagraphElement>('backPreviewError');
 
   const errorTitle = byId<HTMLHeadingElement>('errorTitle');
   const errorMessage = byId<HTMLParagraphElement>('errorMessage');
@@ -801,7 +808,11 @@ export function initApp(): void {
               const picked = await readPdfFromUri(item.uri);
               pickerResolve?.(picked);
             } catch (err) {
-              showToast(t('toast.fileOpenError'));
+              if (err instanceof FileTooLargeError) {
+                showToast(t('toast.fileTooLarge', { mb: Math.round(err.sizeBytes / 1048576) }), { type: 'error' });
+              } else {
+                showToast(t('toast.fileOpenError'));
+              }
               pickerResolve?.(null);
             }
           }
@@ -828,6 +839,9 @@ export function initApp(): void {
             resolve(res);
           }
         } catch (err) {
+          if (err instanceof FileTooLargeError) {
+            showToast(t('toast.fileTooLarge', { mb: Math.round(err.sizeBytes / 1048576) }), { type: 'error' });
+          }
           resolve(options.allowMultiple ? [] : null);
         }
       };
@@ -883,7 +897,11 @@ export function initApp(): void {
       );
       pickerResolve?.(pickedList);
     } catch (err) {
-      showToast(t('toast.fileOpenError'));
+      if (err instanceof FileTooLargeError) {
+        showToast(t('toast.fileTooLarge', { mb: Math.round(err.sizeBytes / 1048576) }), { type: 'error' });
+      } else {
+        showToast(t('toast.fileOpenError'));
+      }
       pickerResolve?.([]);
     }
   });
@@ -952,6 +970,7 @@ export function initApp(): void {
       actionStatus.textContent = '';
 
       showScreen('result');
+      void renderBookletPreviews(result.frontPdf, result.backPdf);
     } catch (error) {
       const message =
         error instanceof BookletError
@@ -966,6 +985,37 @@ export function initApp(): void {
       generateSpinner.classList.add('hidden');
     }
   });
+
+  async function renderBookletPreviews(frontBytes: Uint8Array, backBytes: Uint8Array): Promise<void> {
+    async function renderOne(
+      bytes: Uint8Array,
+      imgEl: HTMLImageElement,
+      spinnerEl: HTMLDivElement,
+    ): Promise<void> {
+      const proxy = await loadPdfForThumbnails(bytes.slice());
+      try {
+        const dataUrl = await renderPageThumbnail(proxy, 1, 160);
+        imgEl.src = dataUrl;
+        imgEl.classList.remove('hidden');
+      } finally {
+        await destroyThumbnailDoc(proxy);
+        spinnerEl.classList.add('hidden');
+      }
+    }
+
+    const results = await Promise.allSettled([
+      renderOne(frontBytes, frontPreviewImg, frontPreviewSpinner),
+      renderOne(backBytes,  backPreviewImg,  backPreviewSpinner),
+    ]);
+    if (results[0].status === 'rejected') {
+      frontPreviewSpinner.classList.add('hidden');
+      frontPreviewError.classList.remove('hidden');
+    }
+    if (results[1].status === 'rejected') {
+      backPreviewSpinner.classList.add('hidden');
+      backPreviewError.classList.remove('hidden');
+    }
+  }
 
   document.querySelectorAll<HTMLButtonElement>('[data-target][data-action]').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -998,6 +1048,14 @@ export function initApp(): void {
     }
     resetPicker();
     booklet = null;
+    frontPreviewImg.classList.add('hidden');
+    frontPreviewImg.src = '';
+    frontPreviewError.classList.add('hidden');
+    frontPreviewSpinner.classList.remove('hidden');
+    backPreviewImg.classList.add('hidden');
+    backPreviewImg.src = '';
+    backPreviewError.classList.add('hidden');
+    backPreviewSpinner.classList.remove('hidden');
     showScreen('picker');
   });
 
