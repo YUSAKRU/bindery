@@ -317,6 +317,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'confirm.discardResult': 'You have an unsaved result. Go back and discard it?',
     'toast.fileTooLarge': 'File is too large ({mb} MB). Maximum is 50 MB.',
     'booklet.previewUnavailable': 'Preview unavailable',
+    'reader.opening': 'Opening document…',
   },
   tr: {
     'onboarding.page1.title': "Quire'a Hoş Geldiniz",
@@ -634,6 +635,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'confirm.discardResult': 'Kaydedilmemiş sonucunuz var. Geri dönmek ve silmek istiyor musunuz?',
     'toast.fileTooLarge': 'Dosya çok büyük ({mb} MB). En fazla 50 MB olabilir.',
     'booklet.previewUnavailable': 'Önizleme yok',
+    'reader.opening': 'Belge açılıyor…',
   },
 };
 

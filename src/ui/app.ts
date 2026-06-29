@@ -282,6 +282,7 @@ export function initApp(): void {
   const statSheets = byId<HTMLSpanElement>('statSheets');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
   const newFileBtn = byId<HTMLButtonElement>('newFileBtn');
+  const readerOpeningOverlay = byId<HTMLDivElement>('readerOpeningOverlay');
   const frontPreviewImg = byId<HTMLImageElement>('frontPreviewImg');
   const frontPreviewSpinner = byId<HTMLDivElement>('frontPreviewSpinner');
   const frontPreviewError = byId<HTMLParagraphElement>('frontPreviewError');
@@ -2848,6 +2849,10 @@ export function initApp(): void {
     readerPageIndicator.textContent = `1 / ${numPages}`;
   }
 
+  let isOpeningReader = false;
+  const showReaderOpening = (): void => readerOpeningOverlay.classList.remove('hidden');
+  const hideReaderOpening = (): void => readerOpeningOverlay.classList.add('hidden');
+
   async function openReaderWithBytes(
     bytes: Uint8Array,
     name: string,
@@ -2855,6 +2860,9 @@ export function initApp(): void {
     returnTo: ScreenId = 'hub',
     initialPage: number = 1,
   ): Promise<void> {
+    if (isOpeningReader) return;
+    isOpeningReader = true;
+    showReaderOpening();
     try {
       await validatePdf(bytes);
       await closeReaderDocument();
@@ -2877,6 +2885,9 @@ export function initApp(): void {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
+    } finally {
+      isOpeningReader = false;
+      hideReaderOpening();
     }
   }
 
@@ -2912,6 +2923,8 @@ export function initApp(): void {
       await renderRecentsList();
       return;
     }
+    if (isOpeningReader) return;
+    showReaderOpening();
     const returnTo: ScreenId = getCurrentScreenId() === 'recents' ? 'recents' : 'hub';
     try {
       const picked = await readPdfFromUri(entry.uri);
@@ -2920,6 +2933,8 @@ export function initApp(): void {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry.name);
       await renderRecentsList();
+    } finally {
+      hideReaderOpening();
     }
   }
 
