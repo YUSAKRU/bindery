@@ -188,14 +188,17 @@ export async function renderReaderPage(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get 2d canvas context');
 
-  // Always pass canvasContext explicitly so pdfjs uses it directly for drawing.
-  // In night mode the proxy intercepts color calls; both modes avoid the
-  // canvas:null workaround that was not part of the documented pdfjs v6 contract.
-  const renderTask = page.render({
-    canvas,
-    canvasContext: nightMode ? createSmartDarkContext(ctx) : ctx,
-    viewport,
-  });
+  // Night mode draws through a Proxy context (createSmartDarkContext) that inverts
+  // fill/stroke colors while leaving images in their original colors. pdfjs only
+  // honors a custom `canvasContext` when `canvas` is NOT supplied — if `canvas` is
+  // passed, pdfjs derives its own context from it and the proxy is bypassed (night
+  // mode silently stops inverting). So night mode MUST pass canvas:null + the proxy;
+  // normal mode passes the real canvas. Do not "simplify" this by adding canvas back.
+  const renderTask = page.render(
+    nightMode
+      ? { canvas: null as unknown as HTMLCanvasElement, canvasContext: createSmartDarkContext(ctx), viewport }
+      : { canvas, viewport },
+  );
   activeRenderTasks.set(pageNumber, renderTask);
   try {
     await renderTask.promise;

@@ -2373,6 +2373,36 @@ body {
   animation: spin 0.8s linear infinite;
 }
 
+/* ── Reader Night Chrome ─────────────────────────────────────────────────────── */
+.reader-night .top-bar {
+  background: #181818;
+  border-bottom-color: rgba(255, 255, 255, .07);
+}
+.reader-night .top-bar-title,
+.reader-night .top-bar .icon-btn {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, .08);
+}
+.reader-night .top-bar .icon-btn:active {
+  background: rgba(255, 255, 255, .16);
+}
+.reader-night .reader-subbar {
+  background: #181818;
+  border-top-color: rgba(255, 255, 255, .07);
+}
+.reader-night .reader-subbar .reader-page-indicator {
+  color: #aaaaaa;
+}
+.reader-night .reader-subbar .icon-btn-sm,
+.reader-night .reader-subbar .btn-tonal {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, .08);
+}
+.reader-night .reader-subbar .icon-btn-sm.is-active {
+  background: rgba(187, 134, 252, .25);
+  color: #d0aaff;
+}
+
 /* ── Reduced Motion ─────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

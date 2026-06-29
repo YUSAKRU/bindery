@@ -648,6 +648,14 @@ export function initApp(): void {
     } else if (id === 'files') {
       void renderFilesList();
     }
+    updateReaderNightChrome();
+  }
+
+  function updateReaderNightChrome(): void {
+    document.documentElement.classList.toggle(
+      'reader-night',
+      getCurrentScreenId() === 'reader' && readerNightMode,
+    );
   }
 
   function resetPicker(): void {
@@ -3096,6 +3104,7 @@ export function initApp(): void {
     readerNightMode = !readerNightMode;
     readerNightModeBtn.classList.toggle('is-active', readerNightMode);
     screens.reader.classList.toggle('night-mode', readerNightMode);
+    updateReaderNightChrome();
     void Preferences.set({ key: 'readerNightMode', value: String(readerNightMode) });
 
     // Clear the simple global CSS filter, as we now render Smart Dark Mode directly onto the canvas
