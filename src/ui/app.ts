@@ -218,6 +218,7 @@ export function initApp(): void {
   const openInToolCancelBtn = byId<HTMLButtonElement>('openInToolCancelBtn');
   const settingsDarkModeToggle = byId<HTMLInputElement>('settingsDarkModeToggle');
   const settingsClearCacheBtn = byId<HTMLButtonElement>('settingsClearCacheBtn');
+  const appVersionValue = byId<HTMLSpanElement>('appVersionValue');
   const settingsLangBtns = Array.from(
     document.querySelectorAll<HTMLButtonElement>('.settings-lang-btn'),
   );
@@ -2852,6 +2853,7 @@ export function initApp(): void {
     name: string,
     sourceUri: string | null = null,
     returnTo: ScreenId = 'hub',
+    initialPage: number = 1,
   ): Promise<void> {
     try {
       await validatePdf(bytes);
@@ -2868,6 +2870,9 @@ export function initApp(): void {
       showScreen('reader');
       topBarTitle.textContent = readerName;
       await renderReaderList();
+      if (initialPage > 1) {
+        readerScroll.scrollTop = (initialPage - 1) * readerSlotHeight() + READER_LIST_TOP_PADDING_PX;
+      }
       await recordOpened({ uri: sourceUri, name });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2907,9 +2912,10 @@ export function initApp(): void {
       await renderRecentsList();
       return;
     }
+    const returnTo: ScreenId = getCurrentScreenId() === 'recents' ? 'recents' : 'hub';
     try {
       const picked = await readPdfFromUri(entry.uri);
-      await openReaderWithBytes(picked.bytes, picked.name, entry.uri);
+      await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
     } catch {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry.name);
@@ -4510,6 +4516,8 @@ export function initApp(): void {
   })();
 
   showScreen('hub');
+
+  void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
 
   if (localStorage.getItem('quire.onboarded') !== 'true') {
     startOnboarding();
