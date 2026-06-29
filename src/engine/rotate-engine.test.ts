@@ -28,4 +28,16 @@ describe('rotatePages', () => {
     const input = await buildTestPdf(2);
     await expect(rotatePages(input, [90])).rejects.toBeInstanceOf(BookletError);
   });
+
+  it('rejects a non-standard angle (e.g. 45°)', async () => {
+    const input = await buildTestPdf(1);
+    await expect(rotatePages(input, [45])).rejects.toBeInstanceOf(BookletError);
+  });
+
+  it('accepts 0° as an identity rotation', async () => {
+    const input = await buildTestPdf(1);
+    const result = await rotatePages(input, [0]);
+    const outDoc = await PDFDocument.load(result.rotatedPdf);
+    expect(outDoc.getPage(0).getRotation().angle).toBe(0);
+  });
 });

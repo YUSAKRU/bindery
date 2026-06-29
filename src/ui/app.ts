@@ -38,7 +38,7 @@ import {
 } from '../native/file-bridge';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
-import { loadPdfForThumbnails, renderPageThumbnail } from '../native/pdf-thumbnails';
+import { destroyThumbnailDoc, loadPdfForThumbnails, renderPageThumbnail } from '../native/pdf-thumbnails';
 import { openReaderDocument, renderReaderPage, type ReaderDocument } from '../native/pdf-reader-render';
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
@@ -313,7 +313,7 @@ export function initApp(): void {
   function generateDefaultMergeName(): string {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `Birlesik_${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+    return `Merged_${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}_${pad(now.getHours())}${pad(now.getMinutes())}`;
   }
 
   const organizeHero = byId<HTMLDivElement>('organizeHero');
@@ -334,7 +334,7 @@ export function initApp(): void {
   const organizeNewBtn = byId<HTMLButtonElement>('organizeNewBtn');
 
   let organizeOriginalBytes: Uint8Array | null = null;
-  let organizeOriginalName = 'belge';
+  let organizeOriginalName = 'document';
   let organizePdfDoc: PDFDocumentProxy | null = null;
   let organizePageOrder: number[] = [];
   const organizeThumbCache = new Map<number, string>();
@@ -360,7 +360,7 @@ export function initApp(): void {
   const rotateNewBtn = byId<HTMLButtonElement>('rotateNewBtn');
 
   let rotateOriginalBytes: Uint8Array | null = null;
-  let rotateOriginalName = 'belge';
+  let rotateOriginalName = 'document';
   let rotatePdfDoc: PDFDocumentProxy | null = null;
   let rotateAngles: number[] = [];
   const rotateThumbCache = new Map<number, string>();
@@ -391,7 +391,7 @@ export function initApp(): void {
   const pageNumbersNewBtn = byId<HTMLButtonElement>('pageNumbersNewBtn');
 
   let pageNumbersOriginalBytes: Uint8Array | null = null;
-  let pageNumbersOriginalName = 'belge';
+  let pageNumbersOriginalName = 'document';
   let pageNumbersPdfDoc: PDFDocumentProxy | null = null;
   let pageNumbersOptions: { position: PageNumberPosition; format: PageNumberFormat; startNumber: number } = {
     position: 'bottom-right',
@@ -434,7 +434,7 @@ export function initApp(): void {
   const watermarkNewBtn = byId<HTMLButtonElement>('watermarkNewBtn');
 
   let watermarkOriginalBytes: Uint8Array | null = null;
-  let watermarkOriginalName = 'belge';
+  let watermarkOriginalName = 'document';
   let watermarkMode: 'text' | 'image' = 'text';
   let watermarkImageBytes: Uint8Array | null = null;
   let watermarkImageFormat: 'png' | 'jpg' = 'png';
@@ -476,7 +476,7 @@ export function initApp(): void {
   let readerDoc: ReaderDocument | null = null;
   let readerBytes: Uint8Array | null = null;
   let readerUri: string | null = null;
-  let readerName = 'Belge';
+  let readerName = 'Document';
   let isFullscreenReaderActive = false;
   let readerReturnTo: ScreenId = 'hub';
   let fsRotationAngle = 0; // 0, 90, 180, 270 / -90
@@ -503,11 +503,98 @@ export function initApp(): void {
 
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function showToast(message: string): void {
+  function showToast(message: string, opts?: { type?: 'info' | 'error' }): void {
+    if (opts?.type === 'error') {
+      errorLiveRegion.textContent = '';
+      requestAnimationFrame(() => { errorLiveRegion.textContent = message; });
+    }
     toast.textContent = message;
     toast.classList.remove('hidden');
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
+  }
+
+  // ── Modal focus trap ────────────────────────────────────────────────────────
+
+  const FOCUSABLE_SELECTOR = [
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'textarea:not([disabled])',
+    'select:not([disabled])',
+    'a[href]',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  interface ModalEntry { el: HTMLElement; trigger: Element | null; onClose?: () => void }
+  const modalStack: ModalEntry[] = [];
+
+  function openModal(el: HTMLElement, trigger: Element | null = document.activeElement, onClose?: () => void): void {
+    el.classList.remove('hidden');
+    modalStack.push({ el, trigger, onClose });
+    requestAnimationFrame(() => {
+      const first = el.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      first?.focus();
+    });
+  }
+
+  function closeModal(el: HTMLElement): void {
+    el.classList.add('hidden');
+    const idx = modalStack.findLastIndex((m) => m.el === el);
+    if (idx !== -1) {
+      const { trigger, onClose } = modalStack[idx];
+      modalStack.splice(idx, 1);
+      if (trigger instanceof HTMLElement) {
+        requestAnimationFrame(() => (trigger as HTMLElement).focus());
+      }
+      onClose?.();
+    }
+  }
+
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (modalStack.length === 0) return;
+    const { el } = modalStack[modalStack.length - 1];
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal(el);
+      return;
+    }
+    if (e.key === 'Tab') {
+      const focusable = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (node) => !node.closest('[hidden]') && getComputedStyle(node).display !== 'none',
+      );
+      if (focusable.length === 0) { e.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  });
+
+  // ── Confirm dialog ──────────────────────────────────────────────────────────
+
+  const confirmModal = byId<HTMLDivElement>('confirmModal');
+  const confirmModalMsg = byId<HTMLParagraphElement>('confirmModalMsg');
+  const confirmYesBtn = byId<HTMLButtonElement>('confirmYesBtn');
+  const confirmNoBtn = byId<HTMLButtonElement>('confirmNoBtn');
+  const errorLiveRegion = byId<HTMLDivElement>('errorLiveRegion');
+
+  function showConfirmDialog(message: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      confirmModalMsg.textContent = message;
+      let result = false;
+      const handleYes = () => { result = true;  closeModal(confirmModal); };
+      const handleNo  = () => { result = false; closeModal(confirmModal); };
+      const cleanup = () => {
+        confirmYesBtn.removeEventListener('click', handleYes);
+        confirmNoBtn.removeEventListener('click', handleNo);
+      };
+      confirmYesBtn.addEventListener('click', handleYes);
+      confirmNoBtn.addEventListener('click', handleNo);
+      openModal(confirmModal, document.activeElement, () => { cleanup(); resolve(result); });
+    });
   }
 
   function getCurrentScreenId(): ScreenId {
@@ -709,7 +796,7 @@ export function initApp(): void {
             }
             quirePickerConfirmBtn.disabled = selectedPickerFiles.length === 0;
           } else {
-            quireFilePickerModal.classList.add('hidden');
+            closeModal(quireFilePickerModal);
             try {
               const picked = await readPdfFromUri(item.uri);
               pickerResolve?.(picked);
@@ -730,7 +817,7 @@ export function initApp(): void {
       pickerResolve = resolve;
 
       const handleDevice = async () => {
-        pdfSourceModal.classList.add('hidden');
+        closeModal(pdfSourceModal);
         cleanupSourceListeners();
         try {
           if (options.allowMultiple) {
@@ -741,19 +828,18 @@ export function initApp(): void {
             resolve(res);
           }
         } catch (err) {
-          console.error("[DEBUG] Device picker error:", err);
           resolve(options.allowMultiple ? [] : null);
         }
       };
 
       const handleQuire = () => {
-        pdfSourceModal.classList.add('hidden');
+        closeModal(pdfSourceModal);
         cleanupSourceListeners();
 
         currentPickerPath = '';
         selectedPickerFiles = [];
 
-        quireFilePickerModal.classList.remove('hidden');
+        openModal(quireFilePickerModal);
         if (options.allowMultiple) {
           quirePickerConfirmBtn.classList.remove('hidden');
           quirePickerConfirmBtn.disabled = true;
@@ -765,7 +851,7 @@ export function initApp(): void {
       };
 
       const handleCancel = () => {
-        pdfSourceModal.classList.add('hidden');
+        closeModal(pdfSourceModal);
         cleanupSourceListeners();
         resolve(options.allowMultiple ? [] : null);
       };
@@ -780,17 +866,17 @@ export function initApp(): void {
       pdfSourceQuireBtn.addEventListener('click', handleQuire);
       pdfSourceCancelBtn.addEventListener('click', handleCancel);
 
-      pdfSourceModal.classList.remove('hidden');
+      openModal(pdfSourceModal);
     });
   }
 
   quirePickerCancelBtn.addEventListener('click', () => {
-    quireFilePickerModal.classList.add('hidden');
+    closeModal(quireFilePickerModal);
     pickerResolve?.(quirePickerConfirmBtn.classList.contains('hidden') ? null : []);
   });
 
   quirePickerConfirmBtn.addEventListener('click', async () => {
-    quireFilePickerModal.classList.add('hidden');
+    closeModal(quireFilePickerModal);
     try {
       const pickedList = await Promise.all(
         selectedPickerFiles.map((file) => readPdfFromUri(file.uri))
@@ -812,7 +898,7 @@ export function initApp(): void {
   }
 
   pickFileBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor...");
+    showToast(t('toast.selectingSource'));
     try {
       const picked = await promptAndPickPdfs({ allowMultiple: false });
       if (!picked) {
@@ -820,7 +906,6 @@ export function initApp(): void {
       }
       loadBookletFile(picked.bytes, picked.name);
     } catch (error) {
-      console.error("[DEBUG] pickFileBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
     }
@@ -888,7 +973,7 @@ export function initApp(): void {
       const target = button.dataset.target as 'front' | 'back';
       const action = button.dataset.action as 'save' | 'share';
       const bytes = target === 'front' ? booklet.frontPdf : booklet.backPdf;
-      const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'kitapcik'}_${target}.pdf`;
+      const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'booklet'}_${target}.pdf`;
       const label = target === 'front' ? t('booklet.frontSideLower') : t('booklet.backSideLower');
 
       try {
@@ -907,7 +992,10 @@ export function initApp(): void {
     });
   });
 
-  newFileBtn.addEventListener('click', () => {
+  newFileBtn.addEventListener('click', async () => {
+    if (booklet !== null) {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     resetPicker();
     booklet = null;
     showScreen('picker');
@@ -965,7 +1053,7 @@ export function initApp(): void {
   }
 
   mergeAddFileBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor (Çoklu)...");
+    showToast(t('toast.selectingSource'));
     let picked: PickedPdf[];
     try {
       picked = await promptAndPickPdfs({ allowMultiple: true });
@@ -973,7 +1061,6 @@ export function initApp(): void {
         return;
       }
     } catch (error) {
-      console.error("[DEBUG] mergeAddFileBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('toast.fileSelectError', { message }));
       return;
@@ -1010,7 +1097,7 @@ export function initApp(): void {
       mergeFileNameInput.value = generateDefaultMergeName();
       mergeSaveState = 'idle';
       mergeSaveBtn.disabled = false;
-      mergeSaveBtnLabel.textContent = 'Kaydet';
+      mergeSaveBtnLabel.textContent = t('common.save');
       mergeSaveSpinner.classList.add('hidden');
       mergeGoToLocationBtn.classList.add('hidden');
       showScreen('merge-result');
@@ -1053,7 +1140,7 @@ export function initApp(): void {
 
     const targetPath = `merges/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -1089,7 +1176,7 @@ export function initApp(): void {
   mergeShareBtn.addEventListener('click', async () => {
     if (!mergedPdf) return;
     try {
-      await sharePdf(mergedPdf, 'birlesik.pdf', t('merge.mergedPdf'));
+      await sharePdf(mergedPdf, 'merged.pdf', t('merge.mergedPdf'));
       mergeActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1097,7 +1184,10 @@ export function initApp(): void {
     }
   });
 
-  mergeNewBtn.addEventListener('click', () => {
+  mergeNewBtn.addEventListener('click', async () => {
+    if (mergedPdf !== null && mergeSaveState !== 'saved') {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     mergeFiles = [];
     mergedPdf = null;
     renderMergeList();
@@ -1106,6 +1196,7 @@ export function initApp(): void {
 
   function resetOrganizeScreen(): void {
     organizeOriginalBytes = null;
+    if (organizePdfDoc) void destroyThumbnailDoc(organizePdfDoc);
     organizePdfDoc = null;
     organizePageOrder = [];
     organizeThumbCache.clear();
@@ -1138,6 +1229,7 @@ export function initApp(): void {
     organizePageOrder.forEach((originalIndex, position) => {
       const row = document.createElement('div');
       row.className = 'organize-row';
+      row.setAttribute('aria-label', t('common.pageLabel', { n: originalIndex + 1 }));
       row.innerHTML = `
         <div class="organize-thumb" data-page-index="${originalIndex}">
           <span class="organize-thumb-placeholder">…</span>
@@ -1209,6 +1301,7 @@ export function initApp(): void {
     // pdf.js's worker transport can transfer/detach the underlying ArrayBuffer
     // of the bytes it's given, so it gets a copy — organizeOriginalBytes must
     // stay intact for organizePages() later.
+    if (organizePdfDoc) await destroyThumbnailDoc(organizePdfDoc);
     organizePdfDoc = await loadPdfForThumbnails(bytes.slice());
     organizePageOrder = Array.from({ length: organizePdfDoc.numPages }, (_, i) => i);
     organizeThumbCache.clear();
@@ -1221,7 +1314,7 @@ export function initApp(): void {
   }
 
   organizePickBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor...");
+    showToast(t('toast.selectingSource'));
     try {
       const picked = await promptAndPickPdfs({ allowMultiple: false });
       if (!picked) {
@@ -1229,7 +1322,6 @@ export function initApp(): void {
       }
       await loadOrganizeFile(picked.bytes, picked.name);
     } catch (error) {
-      console.error("[DEBUG] organizePickBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, 'organize');
     }
@@ -1247,7 +1339,7 @@ export function initApp(): void {
       organizeStatOriginal.textContent = String(result.originalPageCount);
       organizeStatRemaining.textContent = String(result.pageCount);
       organizeActionStatus.textContent = '';
-      organizeFileNameInput.value = `${organizeOriginalName}_duzenli`;
+      organizeFileNameInput.value = `${organizeOriginalName}_edited`;
       organizeSaveState = 'idle';
       organizeSaveBtn.disabled = false;
       organizeSaveBtnLabel.textContent = t('common.save');
@@ -1293,7 +1385,7 @@ export function initApp(): void {
 
     const targetPath = `edits/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -1330,7 +1422,7 @@ export function initApp(): void {
     if (!organizeResultPdf) return;
     let filename = organizeFileNameInput.value.trim();
     if (!filename) {
-      filename = `${organizeOriginalName}_duzenli`;
+      filename = `${organizeOriginalName}_edited`;
     }
     filename = filename.replace(/[/\\:*?"<>|]/g, '_');
     if (!filename.toLowerCase().endsWith('.pdf')) {
@@ -1345,13 +1437,17 @@ export function initApp(): void {
     }
   });
 
-  organizeNewBtn.addEventListener('click', () => {
+  organizeNewBtn.addEventListener('click', async () => {
+    if (organizeResultPdf !== null && organizeSaveState !== 'saved') {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     resetOrganizeScreen();
     showScreen('organize');
   });
 
   function resetRotateScreen(): void {
     rotateOriginalBytes = null;
+    if (rotatePdfDoc) void destroyThumbnailDoc(rotatePdfDoc);
     rotatePdfDoc = null;
     rotateAngles = [];
     rotateThumbCache.clear();
@@ -1385,6 +1481,7 @@ export function initApp(): void {
     rotateAngles.forEach((angle, originalIndex) => {
       const row = document.createElement('div');
       row.className = 'organize-row';
+      row.setAttribute('aria-label', `${t('common.pageLabel', { n: originalIndex + 1 })}, ${angle}°`);
       row.innerHTML = `
         <div class="organize-thumb" data-page-index="${originalIndex}">
           <span class="organize-thumb-placeholder">…</span>
@@ -1437,6 +1534,7 @@ export function initApp(): void {
     // pdf.js's worker transport can transfer/detach the underlying ArrayBuffer
     // of the bytes it's given, so it gets a copy — rotateOriginalBytes must
     // stay intact for rotatePages() later.
+    if (rotatePdfDoc) await destroyThumbnailDoc(rotatePdfDoc);
     rotatePdfDoc = await loadPdfForThumbnails(bytes.slice());
     rotateAngles = [];
     for (let i = 1; i <= rotatePdfDoc.numPages; i++) {
@@ -1454,7 +1552,7 @@ export function initApp(): void {
   }
 
   rotatePickBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor...");
+    showToast(t('toast.selectingSource'));
     try {
       const picked = await promptAndPickPdfs({ allowMultiple: false });
       if (!picked) {
@@ -1462,7 +1560,6 @@ export function initApp(): void {
       }
       await loadRotateFile(picked.bytes, picked.name);
     } catch (error) {
-      console.error("[DEBUG] rotatePickBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, 'rotate');
     }
@@ -1484,7 +1581,7 @@ export function initApp(): void {
       rotateResultPdf = result.rotatedPdf;
       rotateStatPages.textContent = String(result.pageCount);
       rotateActionStatus.textContent = '';
-      rotateFileNameInput.value = `${rotateOriginalName}_donduruldu`;
+      rotateFileNameInput.value = `${rotateOriginalName}_rotated`;
       rotateSaveState = 'idle';
       rotateSaveBtn.disabled = false;
       rotateSaveBtnLabel.textContent = t('common.save');
@@ -1530,7 +1627,7 @@ export function initApp(): void {
 
     const targetPath = `edits/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -1567,7 +1664,7 @@ export function initApp(): void {
     if (!rotateResultPdf) return;
     let filename = rotateFileNameInput.value.trim();
     if (!filename) {
-      filename = `${rotateOriginalName}_donduruldu`;
+      filename = `${rotateOriginalName}_rotated`;
     }
     filename = filename.replace(/[/\\:*?"<>|]/g, '_');
     if (!filename.toLowerCase().endsWith('.pdf')) {
@@ -1582,13 +1679,17 @@ export function initApp(): void {
     }
   });
 
-  rotateNewBtn.addEventListener('click', () => {
+  rotateNewBtn.addEventListener('click', async () => {
+    if (rotateResultPdf !== null && rotateSaveState !== 'saved') {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     resetRotateScreen();
     showScreen('rotate');
   });
 
   function resetPageNumbersScreen(): void {
     pageNumbersOriginalBytes = null;
+    if (pageNumbersPdfDoc) void destroyThumbnailDoc(pageNumbersPdfDoc);
     pageNumbersPdfDoc = null;
     pageNumbersOptions = { position: 'bottom-right', format: 'number', startNumber: 1 };
     pageNumbersResultPdf = null;
@@ -1630,6 +1731,7 @@ export function initApp(): void {
     // pdf.js's worker transport can transfer/detach the underlying ArrayBuffer
     // of the bytes it's given, so it gets a copy — pageNumbersOriginalBytes
     // must stay intact for addPageNumbers() later.
+    if (pageNumbersPdfDoc) await destroyThumbnailDoc(pageNumbersPdfDoc);
     pageNumbersPdfDoc = await loadPdfForThumbnails(bytes.slice());
     pageNumbersPreviewImg.src = await renderPageThumbnail(pageNumbersPdfDoc, 1, 220);
 
@@ -1643,7 +1745,7 @@ export function initApp(): void {
   }
 
   pageNumbersPickBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor...");
+    showToast(t('toast.selectingSource'));
     try {
       const picked = await promptAndPickPdfs({ allowMultiple: false });
       if (!picked) {
@@ -1651,7 +1753,6 @@ export function initApp(): void {
       }
       await loadPageNumbersFile(picked.bytes, picked.name);
     } catch (error) {
-      console.error("[DEBUG] pageNumbersPickBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, 'page-numbers');
     }
@@ -1695,7 +1796,7 @@ export function initApp(): void {
       pageNumbersResultPdf = result.numberedPdf;
       pageNumbersStatPages.textContent = String(result.pageCount);
       pageNumbersActionStatus.textContent = '';
-      pageNumbersFileNameInput.value = `${pageNumbersOriginalName}_numarali`;
+      pageNumbersFileNameInput.value = `${pageNumbersOriginalName}_numbered`;
       pageNumbersSaveState = 'idle';
       pageNumbersSaveBtn.disabled = false;
       pageNumbersSaveBtnLabel.textContent = t('common.save');
@@ -1741,7 +1842,7 @@ export function initApp(): void {
 
     const targetPath = `edits/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -1778,7 +1879,7 @@ export function initApp(): void {
     if (!pageNumbersResultPdf) return;
     let filename = pageNumbersFileNameInput.value.trim();
     if (!filename) {
-      filename = `${pageNumbersOriginalName}_numarali`;
+      filename = `${pageNumbersOriginalName}_numbered`;
     }
     filename = filename.replace(/[/\\:*?"<>|]/g, '_');
     if (!filename.toLowerCase().endsWith('.pdf')) {
@@ -1793,7 +1894,10 @@ export function initApp(): void {
     }
   });
 
-  pageNumbersNewBtn.addEventListener('click', () => {
+  pageNumbersNewBtn.addEventListener('click', async () => {
+    if (pageNumbersResultPdf !== null && pageNumbersSaveState !== 'saved') {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     resetPageNumbersScreen();
     showScreen('page-numbers');
   });
@@ -1854,6 +1958,7 @@ export function initApp(): void {
     // must stay intact for addWatermark() later.
     const pdfDoc = await loadPdfForThumbnails(bytes.slice());
     watermarkPreviewImg.src = await renderPageThumbnail(pdfDoc, 1, 220);
+    await destroyThumbnailDoc(pdfDoc);
 
     watermarkHero.classList.add('hidden');
     watermarkPickBtn.classList.add('hidden');
@@ -1865,7 +1970,7 @@ export function initApp(): void {
   }
 
   watermarkPickBtn.addEventListener('click', async () => {
-    showToast("PDF Kaynağı Seçiliyor...");
+    showToast(t('toast.selectingSource'));
     try {
       const picked = await promptAndPickPdfs({ allowMultiple: false });
       if (!picked) {
@@ -1873,7 +1978,6 @@ export function initApp(): void {
       }
       await loadWatermarkFile(picked.bytes, picked.name);
     } catch (error) {
-      console.error("[DEBUG] watermarkPickBtn click handler failed:", error);
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, 'watermark');
     }
@@ -1958,7 +2062,7 @@ export function initApp(): void {
       watermarkResultPdf = result.watermarkedPdf;
       watermarkStatPages.textContent = String(result.pageCount);
       watermarkActionStatus.textContent = '';
-      watermarkFileNameInput.value = `${watermarkOriginalName}_filigranli`;
+      watermarkFileNameInput.value = `${watermarkOriginalName}_watermarked`;
       watermarkSaveState = 'idle';
       watermarkSaveBtn.disabled = false;
       watermarkSaveBtnLabel.textContent = t('common.save');
@@ -2004,7 +2108,7 @@ export function initApp(): void {
 
     const targetPath = `edits/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -2041,7 +2145,7 @@ export function initApp(): void {
     if (!watermarkResultPdf) return;
     let filename = watermarkFileNameInput.value.trim();
     if (!filename) {
-      filename = `${watermarkOriginalName}_filigranli`;
+      filename = `${watermarkOriginalName}_watermarked`;
     }
     filename = filename.replace(/[/\\:*?"<>|]/g, '_');
     if (!filename.toLowerCase().endsWith('.pdf')) {
@@ -2056,7 +2160,10 @@ export function initApp(): void {
     }
   });
 
-  watermarkNewBtn.addEventListener('click', () => {
+  watermarkNewBtn.addEventListener('click', async () => {
+    if (watermarkResultPdf !== null && watermarkSaveState !== 'saved') {
+      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
+    }
     resetWatermarkScreen();
     showScreen('watermark');
   });
@@ -2193,7 +2300,7 @@ export function initApp(): void {
       const bytes = new Uint8Array(buffer);
 
       const format = photo.format === 'png' ? 'png' : 'jpg';
-      const name = `kamera_cekimi_${Date.now()}.${format}`;
+      const name = `camera_shot_${Date.now()}.${format}`;
 
       startCropFlow(bytes, name, format);
     } catch (error) {
@@ -2226,7 +2333,7 @@ export function initApp(): void {
       // Auto-save privately inside Quire data folder
       const dateStr = new Date().toISOString().slice(0, 10);
       const timeStr = new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
-      const filename = `Tarama_${dateStr}_${timeStr}.pdf`;
+      const filename = `Scan_${dateStr}_${timeStr}.pdf`;
       const privateUri = await savePdfPrivately(pdfBytes, `scans/${filename}`);
       await recordOpened({ uri: privateUri, name: filename });
 
@@ -3052,7 +3159,6 @@ export function initApp(): void {
           fitWidth = screenHeight / aspect;
         }
       } catch (err) {
-        console.error('Error fitting page aspect ratio:', err);
       }
     }
     
@@ -3385,7 +3491,7 @@ export function initApp(): void {
       const picked = await pickPdfWithPersistentUri();
       if (!picked) return;
       const file = await readPdfFromUri(picked.uri);
-      await openReaderWithBytes(file.bytes, file.name, picked.uri);
+      await openReaderWithBytes(file.bytes, file.name, picked.persistent ? picked.uri : null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfOpenFailed'), message, 'hub');
@@ -3394,7 +3500,19 @@ export function initApp(): void {
 
   retryBtn.addEventListener('click', () => showScreen(returnScreenOnError));
 
-  backBtn.addEventListener('click', () => {
+  function hasUnsavedResultPdf(): boolean {
+    switch (getCurrentScreenId()) {
+      case 'merge-result': return mergedPdf !== null && mergeSaveState !== 'saved';
+      case 'organize-result': return organizeResultPdf !== null && organizeSaveState !== 'saved';
+      case 'rotate-result': return rotateResultPdf !== null && rotateSaveState !== 'saved';
+      case 'page-numbers-result': return pageNumbersResultPdf !== null && pageNumbersSaveState !== 'saved';
+      case 'watermark-result': return watermarkResultPdf !== null && watermarkSaveState !== 'saved';
+      case 'result': return booklet !== null;
+      default: return false;
+    }
+  }
+
+  backBtn.addEventListener('click', async () => {
     const current = getCurrentScreenId();
     if (current === 'error') {
       showScreen(returnScreenOnError);
@@ -3406,7 +3524,7 @@ export function initApp(): void {
     }
     if (current === 'reader') {
       if (!saveDocModal.classList.contains('hidden')) {
-        saveDocModal.classList.add('hidden');
+        closeModal(saveDocModal);
         return;
       }
       if (isFullscreenReaderActive) {
@@ -3419,6 +3537,10 @@ export function initApp(): void {
       }
       showScreen(readerReturnTo);
       return;
+    }
+    if (hasUnsavedResultPdf()) {
+      const discard = await showConfirmDialog(t('confirm.discardResult'));
+      if (!discard) return;
     }
     if (current === 'image-to-pdf') {
       clearImageToPdfState();
@@ -3434,11 +3556,11 @@ export function initApp(): void {
     const privateRadio = saveDocModal.querySelector('input[value="private"]') as HTMLInputElement;
     if (privateRadio) privateRadio.checked = true;
 
-    saveDocModal.classList.remove('hidden');
+    openModal(saveDocModal, savePdfBtn);
   });
 
   saveDocCancelBtn.addEventListener('click', () => {
-    saveDocModal.classList.add('hidden');
+    closeModal(saveDocModal);
   });
 
   saveDocConfirmBtn.addEventListener('click', async () => {
@@ -3489,7 +3611,7 @@ export function initApp(): void {
         showToast(t('toast.savedToDevice'));
       }
       
-      saveDocModal.classList.add('hidden');
+      closeModal(saveDocModal);
       void renderRecentsList();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -3513,6 +3635,10 @@ export function initApp(): void {
 
   // Listen for native Android back button / gestures
   App.addListener('backButton', () => {
+    if (modalStack.length > 0) {
+      closeModal(modalStack[modalStack.length - 1].el);
+      return;
+    }
     if (!onboardingOverlay.classList.contains('hidden')) {
       if (onboardingIndex > 0) {
         onboardingIndex -= 1;
@@ -3724,7 +3850,7 @@ export function initApp(): void {
       btn.className = 'folder-select-item';
       btn.textContent = `${icon} ${label}`;
       btn.addEventListener('click', () => {
-        fileActionsModal.classList.add('hidden');
+        closeModal(fileActionsModal);
         void onClick();
       });
       fileActionsList.appendChild(btn);
@@ -3733,7 +3859,7 @@ export function initApp(): void {
     if (!isDir) {
       addAction('↗️', 'Open in...', () => {
         openInToolUri = item.uri;
-        openInToolSheet.classList.remove('hidden');
+        openModal(openInToolSheet);
       });
 
       addAction('📤', t('common.share'), async () => {
@@ -3750,7 +3876,7 @@ export function initApp(): void {
         moveTargetFolder = null;
         moveDocConfirmBtn.disabled = true;
         await renderMoveFolderList();
-        moveDocModal.classList.remove('hidden');
+        openModal(moveDocModal);
       });
     }
 
@@ -3789,7 +3915,7 @@ export function initApp(): void {
       const label = isDir
         ? t('files.deleteConfirmFolder', { name: item.name })
         : t('files.deleteConfirmFile', { name: item.name });
-      const ok = confirm(t('files.deleteConfirmQuestion', { label }));
+      const ok = await showConfirmDialog(t('files.deleteConfirmQuestion', { label }));
       if (!ok) return;
       try {
         const itemPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
@@ -3802,7 +3928,7 @@ export function initApp(): void {
       }
     });
 
-    fileActionsModal.classList.remove('hidden');
+    openModal(fileActionsModal);
   }
 
   async function renderFilesList(): Promise<void> {
@@ -4022,17 +4148,17 @@ export function initApp(): void {
   });
 
   filesDownloadBtn.addEventListener('click', () => {
-    showToast("İndirme Modalı Açılıyor...");
+    showToast(t('toast.openingDownloadModal'));
     downloadPdfUrlInput.value = '';
     downloadPdfNameInput.value = '';
     downloadPdfConfirmBtn.disabled = false;
     downloadPdfConfirmBtnLabel.classList.remove('hidden');
     downloadPdfSpinner.classList.add('hidden');
-    downloadPdfModal.classList.remove('hidden');
+    openModal(downloadPdfModal, filesDownloadBtn);
   });
 
   downloadPdfCancelBtn.addEventListener('click', () => {
-    downloadPdfModal.classList.add('hidden');
+    closeModal(downloadPdfModal);
   });
 
   downloadPdfConfirmBtn.addEventListener('click', async () => {
@@ -4047,9 +4173,9 @@ export function initApp(): void {
       try {
         const parsedUrl = new URL(url);
         const urlName = parsedUrl.pathname.split('/').pop();
-        filename = urlName ? decodeURIComponent(urlName) : 'indirilen_belge';
+        filename = urlName ? decodeURIComponent(urlName) : 'downloaded_document';
       } catch {
-        filename = 'indirilen_belge';
+        filename = 'downloaded_document';
       }
     }
 
@@ -4060,7 +4186,7 @@ export function initApp(): void {
 
     const targetPath = `downloads/${filename}`;
     if (await pathExists(targetPath)) {
-      const overwrite = confirm(t('common.overwriteConfirm', { name: filename }));
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
       if (!overwrite) return;
     }
 
@@ -4074,7 +4200,7 @@ export function initApp(): void {
       await recordOpened({ uri: savedUri, name: filename });
       
       showToast(t('toast.downloadSuccess'));
-      downloadPdfModal.classList.add('hidden');
+      closeModal(downloadPdfModal);
       
       // Auto-open in reader
       await openReaderWithBytes(bytes, filename, savedUri, 'files');
@@ -4091,25 +4217,25 @@ export function initApp(): void {
 
   // --- File actions modal event listener ---
   fileActionsCancelBtn.addEventListener('click', () => {
-    fileActionsModal.classList.add('hidden');
+    closeModal(fileActionsModal);
   });
 
   // --- Open in tool sheet event listeners ---
   openInToolCancelBtn.addEventListener('click', () => {
-    openInToolSheet.classList.add('hidden');
+    closeModal(openInToolSheet);
   });
 
   openInToolList.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tool-id]');
     if (!btn || !openInToolUri) return;
     const toolId = btn.dataset.toolId!;
-    openInToolSheet.classList.add('hidden');
+    closeModal(openInToolSheet);
     void openFileInTool(toolId, openInToolUri);
   });
 
   // --- Move modal event listeners ---
   moveDocCancelBtn.addEventListener('click', () => {
-    moveDocModal.classList.add('hidden');
+    closeModal(moveDocModal);
     moveSourceFile = null;
     moveTargetFolder = null;
   });
@@ -4123,7 +4249,7 @@ export function initApp(): void {
 
       if (sourceDir === destDir) {
         showToast(t('toast.sourceTargetSame'));
-        moveDocModal.classList.add('hidden');
+        closeModal(moveDocModal);
         return;
       }
 
@@ -4136,7 +4262,7 @@ export function initApp(): void {
         // not in recents, ignore
       }
       showToast(t('toast.moved', { name: moveSourceFile.name }));
-      moveDocModal.classList.add('hidden');
+      closeModal(moveDocModal);
       moveSourceFile = null;
       moveTargetFolder = null;
       void renderFilesList();

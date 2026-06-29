@@ -64,6 +64,13 @@ describe('addWatermark', () => {
     ).rejects.toBeInstanceOf(BookletError);
   });
 
+  it('allows opacity 0 (invisible watermark)', async () => {
+    const input = await buildTestPdf(1);
+    await expect(
+      addWatermark(input, { type: 'text', text: 'INVISIBLE', opacity: 0, rotateDegrees: 0 }),
+    ).resolves.toBeDefined();
+  });
+
   it('preserves page count for an image watermark', async () => {
     const input = await buildTestPdf(2);
     const result = await addWatermark(input, {

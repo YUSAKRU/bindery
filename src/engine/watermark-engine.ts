@@ -57,7 +57,7 @@ export function computeCenteredRotatedPosition(
 export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOptions): Promise<WatermarkResult> {
   const { pageCount } = await validatePdf(inputBytes);
 
-  if (options.opacity <= 0 || options.opacity > 1) {
+  if (options.opacity < 0 || options.opacity > 1) {
     throw new BookletError('Opaklık 0 ile 1 arasında olmalı.');
   }
   if (options.type === 'text' && !options.text.trim()) {
@@ -85,6 +85,10 @@ export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOpt
     });
   } else {
     const image = options.imageFormat === 'png' ? await doc.embedPng(options.imageBytes) : await doc.embedJpg(options.imageBytes);
+
+    if (image.width === 0) {
+      throw new BookletError('Filigran görseli geçersiz: genişlik sıfır.');
+    }
 
     doc.getPages().forEach((page) => {
       const { width, height } = page.getSize();

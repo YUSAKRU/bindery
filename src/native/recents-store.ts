@@ -29,12 +29,14 @@ export async function getRecents(): Promise<RecentEntry[]> {
   return readAll();
 }
 
-/** Adds/moves an entry to the front, deduped by name, capped at `MAX_ENTRIES`. */
+/** Adds/moves an entry to the front, deduped by URI (fallback: name), capped at `MAX_ENTRIES`. */
 export async function recordOpened(entry: { uri: string | null; name: string }): Promise<void> {
   const entries = await readAll();
-  const existing = entries.find((e) => e.name === entry.name);
+  const isSame = (e: RecentEntry) =>
+    entry.uri !== null && e.uri !== null ? e.uri === entry.uri : e.name === entry.name;
+  const existing = entries.find(isSame);
   const next: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: existing?.lastPage ?? 1, openedAt: Date.now() };
-  const filtered = entries.filter((e) => e.name !== entry.name);
+  const filtered = entries.filter((e) => !isSame(e));
   filtered.unshift(next);
   await writeAll(filtered.slice(0, MAX_ENTRIES));
 }

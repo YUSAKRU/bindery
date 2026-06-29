@@ -41,13 +41,16 @@ public class OpenDocumentPlugin extends Plugin {
             call.resolve(new JSObject());
             return;
         }
+        boolean persistent = true;
         try {
             getContext().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } catch (SecurityException ignored) {
-            // Falls back to a one-time read; the caller still gets the URI.
+            // Provider doesn't support persistable grants; URI is valid for this session only.
+            persistent = false;
         }
         JSObject ret = new JSObject();
         ret.put("uri", uri.toString());
+        ret.put("persistent", persistent);
         call.resolve(ret);
     }
 }

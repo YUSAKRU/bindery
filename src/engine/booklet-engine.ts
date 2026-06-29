@@ -1,5 +1,6 @@
 import { PDFDocument, PDFEmbeddedPage, PDFPage } from 'pdf-lib';
 import { validatePdf } from './validator';
+import { BookletError } from './types';
 import type { BookletOptions, BookletResult } from './types';
 
 const TARGET_WIDTH = 842.0; // A4 landscape, points
@@ -68,6 +69,13 @@ export async function makeBooklet(
 ): Promise<BookletResult> {
   const baseGutter = options.gutter ?? 0;
   const creepStep = options.creep ?? 0;
+
+  if (baseGutter < 0 || baseGutter >= TARGET_WIDTH / 2) {
+    throw new BookletError(`Geçersiz gutter değeri: ${baseGutter}. 0 ile ${TARGET_WIDTH / 2} arasında olmalı.`);
+  }
+  if (creepStep < 0) {
+    throw new BookletError('Creep değeri negatif olamaz.');
+  }
 
   const { pageCount: originalPageCount } = await validatePdf(inputBytes);
   const srcDoc = await PDFDocument.load(inputBytes);

@@ -40,4 +40,20 @@ describe('organizePages', () => {
     const input = await buildTestPdf([[595, 842]]);
     await expect(organizePages(input, [])).rejects.toBeInstanceOf(BookletError);
   });
+
+  it('rejects an out-of-bounds index (>= pageCount)', async () => {
+    const input = await buildTestPdf([[595, 842], [595, 842]]);
+    await expect(organizePages(input, [0, 2])).rejects.toBeInstanceOf(BookletError);
+  });
+
+  it('rejects a negative index', async () => {
+    const input = await buildTestPdf([[595, 842]]);
+    await expect(organizePages(input, [-1])).rejects.toBeInstanceOf(BookletError);
+  });
+
+  it('allows duplicate indices (same page repeated)', async () => {
+    const input = await buildTestPdf([[100, 200], [300, 400]]);
+    const result = await organizePages(input, [0, 0, 1]);
+    expect(result.pageCount).toBe(3);
+  });
 });

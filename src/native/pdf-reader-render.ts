@@ -1,5 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
-import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
+import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -12,6 +12,10 @@ export interface ReaderDocument {
 }
 
 const MAX_RENDER_SCALE = 2;
+
+// Keyed by page number so same-page re-renders cancel the stale task without
+// affecting concurrent renders of other pages (e.g. IntersectionObserver prefetch).
+const activeRenderTasks = new Map<number, RenderTask>();
 
 /**
  * Opens a PDF for full-resolution reading. Unlike `pdf-thumbnails.ts`,
@@ -146,6 +150,11 @@ export async function renderReaderPage(
   widthPx: number,
   nightMode: boolean = false,
 ): Promise<RenderedPage> {
+  // Cancel any stale render of THIS page before starting a fresh one. Renders of
+  // other page numbers are left untouched (concurrent prefetch must not be disrupted).
+  const prevTask = activeRenderTasks.get(pageNumber);
+  if (prevTask) prevTask.cancel();
+
   const page = await proxy.getPage(pageNumber);
   const baseViewport = page.getViewport({ scale: 1 });
   const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE);
@@ -176,15 +185,24 @@ export async function renderReaderPage(
 
   wrapper.appendChild(canvas);
 
-  // Render the page on canvas (with color-inverting proxy if nightMode is active)
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get 2d canvas context');
-  
-  const renderContext = nightMode
-    ? { canvas: null as unknown as HTMLCanvasElement, canvasContext: createSmartDarkContext(ctx), viewport }
-    : { canvas, viewport };
 
-  await page.render(renderContext).promise;
+  // Always pass canvasContext explicitly so pdfjs uses it directly for drawing.
+  // In night mode the proxy intercepts color calls; both modes avoid the
+  // canvas:null workaround that was not part of the documented pdfjs v6 contract.
+  const renderTask = page.render({
+    canvas,
+    canvasContext: nightMode ? createSmartDarkContext(ctx) : ctx,
+    viewport,
+  });
+  activeRenderTasks.set(pageNumber, renderTask);
+  try {
+    await renderTask.promise;
+  } finally {
+    if (activeRenderTasks.get(pageNumber) === renderTask) activeRenderTasks.delete(pageNumber);
+    page.cleanup();
+  }
 
   // Create text layer
   const textLayerDiv = document.createElement('div');

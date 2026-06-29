@@ -18,6 +18,11 @@ export async function downloadPdfFromUrl(url: string): Promise<Uint8Array> {
     throw new NetworkError(`Sunucu hata kodu döndürdü: ${response.status} ${response.statusText}`);
   }
 
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.startsWith('text/')) {
+    throw new NetworkError(`URL geçerli bir PDF döndürmüyor (Content-Type: ${contentType}).`);
+  }
+
   let buffer: ArrayBuffer;
   try {
     buffer = await response.arrayBuffer();

@@ -1,7 +1,7 @@
-import { registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface OpenDocumentPlugin {
-  pickPdf(): Promise<{ uri?: string }>;
+  pickPdf(): Promise<{ uri?: string; persistent?: boolean }>;
 }
 
 const OpenDocument = registerPlugin<OpenDocumentPlugin>('OpenDocument');
@@ -11,8 +11,15 @@ const OpenDocument = registerPlugin<OpenDocumentPlugin>('OpenDocument');
  * picker (`ACTION_OPEN_DOCUMENT`) instead of `ACTION_GET_CONTENT` — only
  * SAF grants can be made persistable, which "Son Okunanlar" depends on to
  * reopen a file after the app process has restarted.
+ *
+ * Returns null on non-Android platforms (plugin not available) or when the
+ * user cancels. The `persistent` flag indicates whether the URI permission
+ * was successfully persisted; callers should pass `null` as the stored URI
+ * when `persistent` is false so recents does not try to reopen it later.
  */
-export async function pickPdfWithPersistentUri(): Promise<{ uri: string } | null> {
+export async function pickPdfWithPersistentUri(): Promise<{ uri: string; persistent: boolean } | null> {
+  if (Capacitor.getPlatform() !== 'android') return null;
   const result = await OpenDocument.pickPdf();
-  return result.uri ? { uri: result.uri } : null;
+  if (!result.uri) return null;
+  return { uri: result.uri, persistent: result.persistent !== false };
 }

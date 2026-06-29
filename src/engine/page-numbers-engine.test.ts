@@ -55,6 +55,20 @@ describe('computeTextPosition', () => {
       y: 366,
     });
   });
+
+  it('top-left anchors to the top-left corner', () => {
+    expect(computeTextPosition('top-left', pageWidth, pageHeight, textWidth, fontSize, margin)).toEqual({
+      x: 24,
+      y: 366,
+    });
+  });
+
+  it('top-center centers horizontally at the top', () => {
+    expect(computeTextPosition('top-center', pageWidth, pageHeight, textWidth, fontSize, margin)).toEqual({
+      x: 140,
+      y: 366,
+    });
+  });
 });
 
 describe('addPageNumbers', () => {

@@ -15,6 +15,15 @@ export async function rotatePages(inputBytes: Uint8Array, angles: number[]): Pro
     throw new BookletError('Sayfa sayısı uyuşmuyor.');
   }
 
+  const validAngles = new Set([0, 90, 180, 270]);
+  for (const angle of angles) {
+    if (!validAngles.has(angle)) {
+      throw new BookletError(
+        `Geçersiz döndürme açısı: ${angle}. Sadece 0, 90, 180 ve 270 kabul edilir.`,
+      );
+    }
+  }
+
   const doc = await PDFDocument.load(inputBytes);
   doc.getPages().forEach((page, i) => page.setRotation(degrees(angles[i])));
 

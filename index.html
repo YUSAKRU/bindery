@@ -29,6 +29,7 @@
             id="hubSearchInput"
             placeholder="Search tools..."
             aria-label="Search tools"
+            data-i18n-aria-label="hub.searchAriaLabel"
             data-i18n-placeholder="hub.searchPlaceholder"
           />
 
@@ -905,9 +906,10 @@
     </div>
 
     <!-- Move File Modal Dialog -->
-    <div class="modal-overlay hidden" id="moveDocModal">
+    <div class="modal-overlay hidden" id="moveDocModal"
+         role="dialog" aria-modal="true" aria-labelledby="moveDocModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="modal.moveDoc.title">Move Document</h3>
+        <h3 class="modal-title" id="moveDocModalTitle" data-i18n="modal.moveDoc.title">Move Document</h3>
         <div class="modal-body">
           <p class="modal-label" data-i18n="modal.moveDoc.selectFolder">Select Destination Folder</p>
           <div class="folder-select-list" id="moveDocFolderList"></div>
@@ -921,7 +923,8 @@
     </div>
 
     <!-- File Actions Modal Dialog (overflow menu for file/folder rows) -->
-    <div class="modal-overlay hidden" id="fileActionsModal">
+    <div class="modal-overlay hidden" id="fileActionsModal"
+         role="dialog" aria-modal="true" aria-labelledby="fileActionsTitle">
       <div class="modal-card">
         <h3 class="modal-title" id="fileActionsTitle"></h3>
         <div class="modal-body">
@@ -934,9 +937,10 @@
     </div>
 
     <!-- Open in Tool Sheet -->
-    <div class="modal-overlay hidden" id="openInToolSheet">
+    <div class="modal-overlay hidden" id="openInToolSheet"
+         role="dialog" aria-modal="true" aria-labelledby="openInToolTitle">
       <div class="modal-card">
-        <h3 class="modal-title">Open in...</h3>
+        <h3 class="modal-title" id="openInToolTitle" data-i18n="modal.openIn.title">Open in…</h3>
         <div class="modal-body">
           <div class="folder-select-list" id="openInToolList">
             <button type="button" class="folder-select-item" data-tool-id="reader">📖 Reader</button>
@@ -955,9 +959,10 @@
     </div>
 
     <!-- Save & Rename Modal Dialog -->
-    <div class="modal-overlay hidden" id="saveDocModal">
+    <div class="modal-overlay hidden" id="saveDocModal"
+         role="dialog" aria-modal="true" aria-labelledby="saveDocModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="modal.saveDoc.title">Save Document</h3>
+        <h3 class="modal-title" id="saveDocModalTitle" data-i18n="modal.saveDoc.title">Save Document</h3>
         <div class="modal-body">
           <label for="saveDocNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
           <input type="text" id="saveDocNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
@@ -991,9 +996,10 @@
       </div>
     </div>
     <!-- Download PDF Modal Dialog -->
-    <div class="modal-overlay hidden" id="downloadPdfModal">
+    <div class="modal-overlay hidden" id="downloadPdfModal"
+         role="dialog" aria-modal="true" aria-labelledby="downloadPdfModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="modal.downloadPdfTitle">Download PDF from URL</h3>
+        <h3 class="modal-title" id="downloadPdfModalTitle" data-i18n="modal.downloadPdfTitle">Download PDF from URL</h3>
         <div class="modal-body">
           <label for="downloadPdfUrlInput" class="modal-label" data-i18n="modal.downloadUrlLabel">PDF URL</label>
           <input type="url" id="downloadPdfUrlInput" class="modal-input" placeholder="https://example.com/document.pdf" data-i18n-placeholder="modal.downloadPlaceholder" />
@@ -1012,9 +1018,10 @@
     </div>
 
     <!-- Select PDF Source Modal -->
-    <div class="modal-overlay hidden" id="pdfSourceModal">
+    <div class="modal-overlay hidden" id="pdfSourceModal"
+         role="dialog" aria-modal="true" aria-labelledby="pdfSourceModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
+        <h3 class="modal-title" id="pdfSourceModalTitle" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
         <div class="modal-body">
           <div class="modal-radio-group">
             <button type="button" class="modal-source-btn" id="pdfSourceQuireBtn">
@@ -1040,9 +1047,10 @@
     </div>
 
     <!-- Quire File Picker Modal -->
-    <div class="modal-overlay hidden" id="quireFilePickerModal">
+    <div class="modal-overlay hidden" id="quireFilePickerModal"
+         role="dialog" aria-modal="true" aria-labelledby="quirePickerModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="modal.quirePicker.title">Select PDF</h3>
+        <h3 class="modal-title" id="quirePickerModalTitle" data-i18n="modal.quirePicker.title">Select PDF</h3>
         <div class="modal-body">
           <div class="files-explorer-header">
             <div class="files-breadcrumb" id="quirePickerBreadcrumb"></div>
@@ -1058,6 +1066,21 @@
     </div>
 
     <div class="toast hidden" id="toast" aria-live="polite"></div>
+    <div id="errorLiveRegion" role="alert" aria-live="assertive" class="sr-only"></div>
+
+    <!-- Confirm Dialog Modal -->
+    <div class="modal-overlay hidden" id="confirmModal"
+         role="dialog" aria-modal="true" aria-labelledby="confirmModalMsg">
+      <div class="modal-card confirm-modal-card">
+        <div class="modal-body">
+          <p class="modal-label" id="confirmModalMsg"></p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="confirmNoBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmYesBtn" data-i18n="common.ok">OK</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

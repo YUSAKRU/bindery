@@ -307,6 +307,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.booklet.savedToQuire': '{label} saved to Quire.',
     'status.booklet.shared': '{label} shared.',
     'status.booklet.actionFailed': '{label} action failed: {message}',
+
+    'common.select': 'Select',
+    'common.ok': 'OK',
+    'hub.searchAriaLabel': 'Search tools',
+    'modal.openIn.title': 'Open in…',
+    'toast.selectingSource': 'Selecting source…',
+    'toast.openingDownloadModal': 'Opening download dialog…',
+    'confirm.discardResult': 'You have an unsaved result. Go back and discard it?',
   },
   tr: {
     'onboarding.page1.title': "Quire'a Hoş Geldiniz",
@@ -614,6 +622,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.booklet.savedToQuire': '{label} Quire içine kaydedildi.',
     'status.booklet.shared': '{label} paylaşıldı.',
     'status.booklet.actionFailed': '{label} işlemi başarısız: {message}',
+
+    'common.select': 'Seç',
+    'common.ok': 'Tamam',
+    'hub.searchAriaLabel': 'Araç ara',
+    'modal.openIn.title': 'Şununla aç…',
+    'toast.selectingSource': 'Kaynak seçiliyor…',
+    'toast.openingDownloadModal': 'İndirme penceresi açılıyor…',
+    'confirm.discardResult': 'Kaydedilmemiş sonucunuz var. Geri dönmek ve silmek istiyor musunuz?',
   },
 };
 

@@ -15,10 +15,12 @@ export async function validatePdf(bytes: Uint8Array): Promise<PdfMetadata> {
   try {
     doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
   } catch (error) {
-    if (error instanceof EncryptedPDFError) {
+    // pdf-lib v1.17.1: EncryptedPDFError does not properly extend Error, so instanceof
+    // checks fail at runtime. Check both instanceof and the message string as a fallback.
+    const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof EncryptedPDFError || message.includes('is encrypted')) {
       throw new PDFEncryptedError('The PDF file is encrypted or DRM-protected.');
     }
-    const message = error instanceof Error ? error.message : String(error);
     throw new PDFCorruptedError(`PDF file is corrupted or could not be read: ${message}`);
   }
 

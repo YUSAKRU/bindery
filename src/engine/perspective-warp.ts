@@ -35,7 +35,7 @@ function solve8x8(M: number[][], v: number[]): number[] {
 
     const pivot = mat[i][i];
     if (Math.abs(pivot) < 1e-8) {
-      throw new Error('Doğrusal bağımlı noktalar nedeniyle matris çözülemedi.');
+      throw new BookletError('Doğrusal bağımlı noktalar nedeniyle matris çözülemedi.');
     }
 
     // Eliminate below and above (reduced row echelon form)
@@ -62,6 +62,10 @@ function solve8x8(M: number[][], v: number[]): number[] {
  * Returns a 9-component array representing a 3x3 matrix in row-major order.
  */
 export function getHomographyMatrix(src: Point[], dst: Point[]): number[] {
+  if (src.length !== 4 || dst.length !== 4) {
+    throw new BookletError('Perspektif dönüşümü için tam olarak 4 köşe noktası gereklidir.');
+  }
+
   const M: number[][] = [];
   const v: number[] = [];
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BookletError } from './types';
 import { getHomographyMatrix } from './perspective-warp';
 
 describe('Perspective Warp Math', () => {
@@ -36,4 +37,27 @@ describe('Perspective Warp Math', () => {
     expect(h[7]).toBeCloseTo(0);  // h21
     expect(h[8]).toBeCloseTo(1);  // h22 (fixed 1)
   });
+
+  it('throws BookletError when fewer than 4 source points are given', () => {
+    const threePoints = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }];
+    const fourPoints = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }];
+    expect(() => getHomographyMatrix(threePoints, fourPoints)).toThrow(BookletError);
+    expect(() => getHomographyMatrix(fourPoints, threePoints)).toThrow(BookletError);
+  });
+
+  it('throws BookletError for collinear (degenerate) corners', () => {
+    // All 4 points on a line — matrix is singular
+    const collinear = [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+      { x: 2, y: 2 },
+      { x: 3, y: 3 },
+    ];
+    const rect = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }];
+    expect(() => getHomographyMatrix(collinear, rect)).toThrow(BookletError);
+  });
+
+  // NOTE: warpPerspective's full WebGL render path (document.createElement, canvas.getContext)
+  // is browser-only and cannot run under vitest/node. Error paths and math helpers are
+  // covered above; the render path requires an integration/e2e test in a browser environment.
 });

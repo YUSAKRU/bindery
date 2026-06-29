@@ -2,7 +2,7 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { validatePdf } from './validator';
 import { BookletError } from './types';
 
-export type PageNumberPosition = 'bottom-right' | 'bottom-left' | 'bottom-center' | 'top-right';
+export type PageNumberPosition = 'bottom-right' | 'bottom-left' | 'bottom-center' | 'top-right' | 'top-left' | 'top-center';
 export type PageNumberFormat = 'number' | 'number-of-total';
 
 export interface PageNumberOptions {
@@ -42,6 +42,10 @@ export function computeTextPosition(
       return { x: margin, y: margin };
     case 'bottom-center':
       return { x: (pageWidth - textWidth) / 2, y: margin };
+    case 'top-left':
+      return { x: margin, y: pageHeight - margin - fontSize };
+    case 'top-center':
+      return { x: (pageWidth - textWidth) / 2, y: pageHeight - margin - fontSize };
     case 'top-right':
       return { x: pageWidth - margin - textWidth, y: pageHeight - margin - fontSize };
     case 'bottom-right':

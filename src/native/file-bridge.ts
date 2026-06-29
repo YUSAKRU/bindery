@@ -7,6 +7,17 @@ export interface PickedPdf {
   bytes: Uint8Array;
 }
 
+const FILE_SIZE_LIMIT_BYTES = 50 * 1024 * 1024; // 50 MB
+
+export class FileTooLargeError extends Error {
+  sizeBytes: number;
+  constructor(sizeBytes: number) {
+    super(`File is too large (${Math.round(sizeBytes / (1024 * 1024))} MB). Maximum allowed size is 50 MB.`);
+    this.name = 'FileTooLargeError';
+    this.sizeBytes = sizeBytes;
+  }
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunkSize = 0x8000;
@@ -39,15 +50,35 @@ async function filePickedToBytes(file: PickedFile): Promise<PickedPdf> {
 
 /** Reads an arbitrary `content://`/`file://` URI (e.g. from Android's "Open with") into bytes. */
 export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
-  const [stat, file] = await Promise.all([
-    Filesystem.stat({ path: uri }),
-    Filesystem.readFile({ path: uri }),
-  ]);
+  // stat() is unreliable on raw content:// URIs (may throw on some Android versions
+  // and may return a path segment rather than a display name). Try it first for the
+  // size check and a best-effort display name; fall through gracefully on failure.
+  let statName: string | undefined;
+  try {
+    const stat = await Filesystem.stat({ path: uri });
+    if (stat.size > FILE_SIZE_LIMIT_BYTES) throw new FileTooLargeError(stat.size);
+    statName = stat.name;
+  } catch (e) {
+    if (e instanceof FileTooLargeError) throw e;
+    // Some content providers don't support stat — proceed without size guard.
+  }
+
+  const file = await Filesystem.readFile({ path: uri });
+
+  let bytes: Uint8Array;
   if (typeof file.data !== 'string') {
     const buffer = await (file.data as Blob).arrayBuffer();
-    return { name: stat.name, bytes: new Uint8Array(buffer) };
+    bytes = new Uint8Array(buffer);
+  } else {
+    bytes = base64ToBytes(file.data);
   }
-  return { name: stat.name, bytes: base64ToBytes(file.data) };
+
+  // Safe name fallback: decode the last path segment of the URI.
+  const name =
+    (statName ?? decodeURIComponent(uri.split('/').pop() ?? '').split('?')[0]) ||
+    'document.pdf';
+
+  return { name, bytes };
 }
 
 /** Opens the native file picker restricted to PDFs and returns its raw bytes. */
@@ -60,6 +91,7 @@ export async function pickPdf(): Promise<PickedPdf | null> {
 
   const file = result.files[0];
   if (!file) return null;
+  if (file.size > FILE_SIZE_LIMIT_BYTES) throw new FileTooLargeError(file.size);
   return filePickedToBytes(file);
 }
 
@@ -69,6 +101,10 @@ export async function pickPdfs(): Promise<PickedPdf[]> {
     types: ['application/pdf'],
     readData: true,
   });
+
+  const totalSize = result.files.reduce((sum, f) => sum + f.size, 0);
+  if (totalSize > FILE_SIZE_LIMIT_BYTES) throw new FileTooLargeError(totalSize);
+
   return Promise.all(result.files.map(filePickedToBytes));
 }
 

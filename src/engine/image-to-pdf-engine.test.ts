@@ -38,4 +38,14 @@ describe('imagesToPdf', () => {
   it('rejects compiling an empty image array', async () => {
     await expect(imagesToPdf([])).rejects.toBeInstanceOf(BookletError);
   });
+
+  it('rejects an unsupported image format and preserves BookletError identity', async () => {
+    const pngBytes = getTinyPngBytes();
+    // Cast to bypass TypeScript — simulates a runtime caller passing an unsupported format
+    const badInput = [{ bytes: pngBytes, format: 'webp' as 'png' }];
+    const error = await imagesToPdf(badInput).catch((e) => e);
+    expect(error).toBeInstanceOf(BookletError);
+    // Must not be re-wrapped: the original BookletError should surface directly
+    expect(error.message).toContain('Desteklenmeyen görsel formatı');
+  });
 });

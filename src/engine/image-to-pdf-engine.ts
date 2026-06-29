@@ -19,6 +19,10 @@ export async function imagesToPdf(images: ImagePageInput[]): Promise<Uint8Array>
     const pdfDoc = await PDFDocument.create();
 
     for (const imgData of images) {
+      if (imgData.format !== 'png' && imgData.format !== 'jpg') {
+        throw new BookletError(`Desteklenmeyen görsel formatı: ${imgData.format}. Sadece png ve jpg kabul edilir.`);
+      }
+
       let embedImg;
       if (imgData.format === 'png') {
         embedImg = await pdfDoc.embedPng(imgData.bytes);
@@ -53,6 +57,7 @@ export async function imagesToPdf(images: ImagePageInput[]): Promise<Uint8Array>
 
     return await pdfDoc.save();
   } catch (error) {
+    if (error instanceof BookletError) throw error;
     const message = error instanceof Error ? error.message : String(error);
     throw new BookletError(`Görseller PDF'e dönüştürülemedi: ${message}`);
   }
