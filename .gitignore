@@ -60,3 +60,6 @@ STATUS.md
 
 # Internal docs (local only, not for public repo)
 docs/
+
+# Local-only Play Store assets
+android/play-store-feature-graphic.png
