@@ -7,7 +7,7 @@ Tüm işlemleri tek komutla yapabilirsin:
 ```bash
 npm run test && npm run build && \
 export JAVA_HOME=/opt/android-studio/jbr && \
-export ANDROID_HOME=/home/user/Android/Sdk && \
+export ANDROID_HOME=$HOME/Android/Sdk && \
 export PATH=$PATH:$ANDROID_HOME/platform-tools && \
 npx cap sync && npx cap run android
 ```
@@ -31,7 +31,7 @@ npm run build
 ### 3. Cihaza Deploy Et
 ```bash
 export JAVA_HOME=/opt/android-studio/jbr
-export ANDROID_HOME=/home/user/Android/Sdk
+export ANDROID_HOME=$HOME/Android/Sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 npx cap sync          # Web assets'i senkronize et
@@ -40,9 +40,9 @@ npx cap run android   # Build + Deploy
 
 ## Kurulum Bilgisi
 
-- **Android SDK**: `/home/user/Android/Sdk`
+- **Android SDK**: `$HOME/Android/Sdk`
 - **Java Runtime**: `/opt/android-studio/jbr`
-- **Bağlı Cihaz ID**: `EE9L99PFUGP7INCQ`
+- **Bağlı Cihaz ID**: `adb devices` ile kontrol edin (cihaza özel, ortama göre değişir)
 - **App ID**: `com.eduplayconnect.quire`
 - **App Name**: Quire
 
@@ -54,7 +54,7 @@ npx cap run android   # Build + Deploy
 function android-deploy
     npm run test && npm run build && \
     set -x JAVA_HOME /opt/android-studio/jbr && \
-    set -x ANDROID_HOME /home/user/Android/Sdk && \
+    set -x ANDROID_HOME $HOME/Android/Sdk && \
     set -x PATH $PATH $ANDROID_HOME/platform-tools && \
     npx cap sync && npx cap run android
 end
