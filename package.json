@@ -1,13 +1,35 @@
 {
   "name": "pdf-booklet-mobile",
-  "version": "1.0.0",
-  "dependencies": {
-    "legacy-dep-removed": "^2.0.0"
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.9",
     "patch-package": "^8.0.1"
   },
-  "scripts": {
-    "postinstall": "patch-package"
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/camera": "^8.2.0",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/screen-orientation": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
+    "@capawesome/capacitor-file-picker": "^8.0.3",
+    "lucide-static": "^1.21.0",
+    "legacy-dep-removed": "^2.0.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.0.227"
   }
 }
