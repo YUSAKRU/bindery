@@ -57,3 +57,6 @@ STATUS.md
 
 # hcom scaffold (local tooling)
 .hcom-scaffold*
+
+# Internal docs (local only, not for public repo)
+docs/
