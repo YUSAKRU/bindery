@@ -54,3 +54,6 @@ sync_notebooks.mjs
 
 # Project management (local only)
 STATUS.md
+
+# hcom scaffold (local tooling)
+.hcom-scaffold*
