@@ -69,7 +69,7 @@ See [`CLAUDE.md`](CLAUDE.md) for more details.
 
 ### License
 
-This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the full text and [`docs/LICENSE.md`](docs/LICENSE.md) for the rationale behind this license choice.
+This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the full text and [`LICENSING.md`](LICENSING.md) for the rationale behind this license choice.
 
 ---
 
@@ -136,4 +136,4 @@ Detaylı bilgi için [`CLAUDE.md`](CLAUDE.md) dosyasına bakın.
 
 ### Lisans
 
-Bu proje **GPL-3.0** ile lisanslanmıştır. Tam metin için [`LICENSE`](LICENSE) dosyasına, lisans seçim gerekçesi için [`docs/LICENSE.md`](docs/LICENSE.md) dosyasına bakın.
+Bu proje **GPL-3.0** ile lisanslanmıştır. Tam metin için [`LICENSE`](LICENSE) dosyasına, lisans seçim gerekçesi için [`LICENSING.md`](LICENSING.md) dosyasına bakın.
