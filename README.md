@@ -33,11 +33,13 @@ The app manifest doesn't request the internet permission — every PDF operation
 
 ### Screenshots
 
-<!-- Big Boss: Add real app screenshots here, e.g.:
-![Home Screen](docs/media/screenshot-home.png)
-![Booklet Tool](docs/media/screenshot-booklet.png)
-![Reader - Night Mode](docs/media/screenshot-reader-night.png)
--->
+| Home | Booklet Tool |
+|---|---|
+| ![Home Screen](screenshots/home.png) | ![Booklet Tool](screenshots/booklet.png) |
+
+| Reader (Light) | Reader (Night Mode) |
+|---|---|
+| ![Reader - Light](screenshots/reader-light.png) | ![Reader - Night Mode](screenshots/reader-night.png) |
 
 ### Development & Build
 
@@ -100,11 +102,13 @@ Uygulama manifestosu internet iznini talep etmez — tüm PDF işleme, birleşti
 
 ### Ekran Görüntüleri
 
-<!-- Big Boss: Gerçek uygulama ekran görüntülerini buraya ekleyin, örnek:
-![Ana Ekran](docs/media/screenshot-home.png)
-![Kitapçık Aracı](docs/media/screenshot-booklet.png)
-![Okuyucu - Gece Modu](docs/media/screenshot-reader-night.png)
--->
+| Ana Ekran | Kitapçık Aracı |
+|---|---|
+| ![Ana Ekran](screenshots/home.png) | ![Kitapçık Aracı](screenshots/booklet.png) |
+
+| Okuyucu (Açık Tema) | Okuyucu (Gece Modu) |
+|---|---|
+| ![Okuyucu - Açık Tema](screenshots/reader-light.png) | ![Okuyucu - Gece Modu](screenshots/reader-night.png) |
 
 ### Geliştirme & Derleme
 
