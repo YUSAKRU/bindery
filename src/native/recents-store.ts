@@ -7,7 +7,7 @@ export interface RecentEntry {
   openedAt: number;
 }
 
-const STORAGE_KEY = 'quire.recents.v1';
+const STORAGE_KEY = 'bindery.recents.v1';
 const MAX_ENTRIES = 8;
 
 async function readAll(): Promise<RecentEntry[]> {

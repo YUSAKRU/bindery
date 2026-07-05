@@ -1,4 +1,4 @@
-package com.eduplayconnect.quire;
+package com.eduplayconnect.bindery;
 
 import android.content.Intent;
 import android.os.Bundle;

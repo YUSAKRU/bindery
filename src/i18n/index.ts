@@ -2,9 +2,9 @@ export type Lang = 'en' | 'tr';
 
 const STRINGS: Record<Lang, Record<string, string>> = {
   en: {
-    'onboarding.page1.title': 'Welcome to Quire',
+    'onboarding.page1.title': 'Welcome to Bindery',
     'onboarding.page1.text':
-      "With Quire you can merge PDFs, turn pages into a booklet, organize them, and much more — all with a single tap.",
+      "With Bindery you can merge PDFs, turn pages into a booklet, organize them, and much more — all with a single tap.",
     'onboarding.page2.title': 'What Can You Do?',
     'onboarding.feature.booklet': 'Create booklets',
     'onboarding.feature.merge': 'Merge PDFs',
@@ -59,7 +59,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.appVersion': 'App Version',
     'settings.developer': 'Developer',
 
-    'screenTitle.brand': 'Quire',
+    'screenTitle.brand': 'Bindery',
     'screenTitle.picker': 'Booklet',
     'screenTitle.config': 'Folding Settings',
     'screenTitle.result': 'Booklet Ready',
@@ -100,7 +100,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.close': 'Close',
 
     'picker.title': 'Create your booklet',
-    'picker.subtitle': 'Pick a PDF and Quire will turn it into a printable booklet.',
+    'picker.subtitle': 'Pick a PDF and Bindery will turn it into a printable booklet.',
 
     'merge.title': 'Merge PDFs',
     'merge.subtitle': 'Add at least two PDFs, set their order, and combine them into one file.',
@@ -187,7 +187,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.moveDoc.move': 'Move',
     'modal.saveDoc.title': 'Save Document',
     'modal.saveDoc.saveOption': 'Save Option',
-    'modal.saveDoc.private': 'Keep in Quire (Private)',
+    'modal.saveDoc.private': 'Keep in Bindery (Private)',
     'modal.saveDoc.privateDesc': 'Stored inside the app, appears in Recently Opened.',
     'modal.saveDoc.public': 'Save to Device Documents (Local)',
     'modal.saveDoc.publicDesc': "Saved to the device's \"Documents\" folder, accessible from the file manager.",
@@ -262,18 +262,18 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.downloadBtn': 'Download',
     'toast.fileSelectError': 'File could not be selected: {message}',
     'modal.pdfSource.title': 'Select PDF Source',
-    'modal.pdfSource.quire': 'Quire Documents',
-    'modal.pdfSource.quireDesc': 'Choose a PDF file saved inside Quire.',
+    'modal.pdfSource.bindery': 'Bindery Documents',
+    'modal.pdfSource.binderyDesc': 'Choose a PDF file saved inside Bindery.',
     'modal.pdfSource.device': 'Device Files',
     'modal.pdfSource.deviceDesc': 'Choose a PDF file from your device storage.',
-    'modal.quirePicker.title': 'Select PDF',
+    'modal.binderyPicker.title': 'Select PDF',
     'toast.addFailed': 'Could not be added — {reason}',
     'toast.invalidFileName': 'Please enter a valid file name.',
     'toast.cameraPermissionDenied':
       'Camera permission was not granted. You must allow camera access to take photos.',
     'toast.cameraError': 'Camera error: {message}',
     'toast.fileNoLongerAccessible': 'This file is no longer accessible.',
-    'toast.savedToQuire': 'Document saved inside Quire.',
+    'toast.savedToBindery': 'Document saved inside Bindery.',
     'toast.savedToDevice': 'Document saved to device documents.',
     'toast.saveError': 'Save error: {message}',
     'toast.shareErrorDetailed': 'Share error: {message}',
@@ -297,14 +297,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.saveFailed': 'Save failed: {message}',
     'status.shared': 'Shared.',
     'status.shareFailed': 'Share failed: {message}',
-    'status.merge.saved': 'Files merged and saved to Quire.',
-    'status.organize.saved': 'Edited document saved to Quire.',
-    'status.rotate.saved': 'Rotated document saved to Quire.',
-    'status.pageNumbers.saved': 'Numbered document saved to Quire.',
-    'status.watermark.saved': 'Watermarked document saved to Quire.',
+    'status.merge.saved': 'Files merged and saved to Bindery.',
+    'status.organize.saved': 'Edited document saved to Bindery.',
+    'status.rotate.saved': 'Rotated document saved to Bindery.',
+    'status.pageNumbers.saved': 'Numbered document saved to Bindery.',
+    'status.watermark.saved': 'Watermarked document saved to Bindery.',
     'booklet.frontSideLower': 'Front side',
     'booklet.backSideLower': 'Back side',
-    'status.booklet.savedToQuire': '{label} saved to Quire.',
+    'status.booklet.savedToBindery': '{label} saved to Bindery.',
     'status.booklet.shared': '{label} shared.',
     'status.booklet.actionFailed': '{label} action failed: {message}',
 
@@ -320,9 +320,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'reader.opening': 'Opening document…',
   },
   tr: {
-    'onboarding.page1.title': "Quire'a Hoş Geldiniz",
+    'onboarding.page1.title': "Bindery'ye Hoş Geldiniz",
     'onboarding.page1.text':
-      "Quire ile PDF'lerinizi birleştirin, kitapçık haline getirin, düzenleyin ve daha fazlasını tek dokunuşla yapabilirsiniz.",
+      "Bindery ile PDF'lerinizi birleştirin, kitapçık haline getirin, düzenleyin ve daha fazlasını tek dokunuşla yapabilirsiniz.",
     'onboarding.page2.title': 'Neler Yapabilirsiniz?',
     'onboarding.feature.booklet': 'Kitapçık oluşturma',
     'onboarding.feature.merge': 'PDF birleştirme',
@@ -377,7 +377,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.appVersion': 'Uygulama Sürümü',
     'settings.developer': 'Geliştirici',
 
-    'screenTitle.brand': 'Quire',
+    'screenTitle.brand': 'Bindery',
     'screenTitle.picker': 'Kitapçık',
     'screenTitle.config': 'Katlama Ayarları',
     'screenTitle.result': 'Kitapçık Hazır',
@@ -418,7 +418,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.close': 'Kapat',
 
     'picker.title': 'Kitapçığını oluştur',
-    'picker.subtitle': 'Bir PDF seç, Quire onu basılabilir bir kitapçığa dönüştürsün.',
+    'picker.subtitle': 'Bir PDF seç, Bindery onu basılabilir bir kitapçığa dönüştürsün.',
 
     'merge.title': "PDF'leri birleştir",
     'merge.subtitle': 'En az iki PDF ekle, sırasını ayarla ve tek dosyada birleştir.',
@@ -505,7 +505,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.moveDoc.move': 'Taşı',
     'modal.saveDoc.title': 'Belgeyi Kaydet',
     'modal.saveDoc.saveOption': 'Kaydetme Seçeneği',
-    'modal.saveDoc.private': 'Quire İçinde Sakla (Özel)',
+    'modal.saveDoc.private': 'Bindery İçinde Sakla (Özel)',
     'modal.saveDoc.privateDesc': 'Uygulama içinde saklanır, son okunanlarda görünür.',
     'modal.saveDoc.public': 'Cihaz Belgelerine Kaydet (Yerel)',
     'modal.saveDoc.publicDesc': 'Cihazın "Documents" klasörüne kaydedilir, dosya yöneticisinden erişilebilir.',
@@ -580,18 +580,18 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.downloadBtn': 'İndir',
     'toast.fileSelectError': 'Dosya seçilemedi: {message}',
     'modal.pdfSource.title': 'Belge Kaynağı Seçin',
-    'modal.pdfSource.quire': 'Quire Belgeleri',
-    'modal.pdfSource.quireDesc': 'Quire içine kaydedilmiş bir PDF seçin.',
+    'modal.pdfSource.bindery': 'Bindery Belgeleri',
+    'modal.pdfSource.binderyDesc': 'Bindery içine kaydedilmiş bir PDF seçin.',
     'modal.pdfSource.device': 'Cihaz Dosyaları',
     'modal.pdfSource.deviceDesc': 'Cihazınızın hafızasından bir PDF seçin.',
-    'modal.quirePicker.title': 'PDF Seç',
+    'modal.binderyPicker.title': 'PDF Seç',
     'toast.addFailed': 'Eklenemedi — {reason}',
     'toast.invalidFileName': 'Lütfen geçerli bir dosya adı girin.',
     'toast.cameraPermissionDenied':
       'Kamera izni verilmedi. Fotoğraf çekebilmek için kameraya izin vermelisiniz.',
     'toast.cameraError': 'Kamera hatası: {message}',
     'toast.fileNoLongerAccessible': 'Bu dosyaya artık erişilemiyor.',
-    'toast.savedToQuire': 'Belge Quire içerisine kaydedildi.',
+    'toast.savedToBindery': 'Belge Bindery içerisine kaydedildi.',
     'toast.savedToDevice': 'Belge cihaz belgelerine kaydedildi.',
     'toast.saveError': 'Kaydetme hatası: {message}',
     'toast.shareErrorDetailed': 'Paylaşım hatası: {message}',
@@ -615,14 +615,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.saveFailed': 'Kaydetme başarısız: {message}',
     'status.shared': 'Paylaşıldı.',
     'status.shareFailed': 'Paylaşım başarısız: {message}',
-    'status.merge.saved': 'Dosyalar birleştirildi ve Quire içine kaydedildi.',
-    'status.organize.saved': 'Düzenlenmiş belge Quire içine kaydedildi.',
-    'status.rotate.saved': 'Döndürülmüş belge Quire içine kaydedildi.',
-    'status.pageNumbers.saved': 'Numaralanmış belge Quire içine kaydedildi.',
-    'status.watermark.saved': 'Filigranlı belge Quire içine kaydedildi.',
+    'status.merge.saved': 'Dosyalar birleştirildi ve Bindery içine kaydedildi.',
+    'status.organize.saved': 'Düzenlenmiş belge Bindery içine kaydedildi.',
+    'status.rotate.saved': 'Döndürülmüş belge Bindery içine kaydedildi.',
+    'status.pageNumbers.saved': 'Numaralanmış belge Bindery içine kaydedildi.',
+    'status.watermark.saved': 'Filigranlı belge Bindery içine kaydedildi.',
     'booklet.frontSideLower': 'Ön yüz',
     'booklet.backSideLower': 'Arka yüz',
-    'status.booklet.savedToQuire': '{label} Quire içine kaydedildi.',
+    'status.booklet.savedToBindery': '{label} Bindery içine kaydedildi.',
     'status.booklet.shared': '{label} paylaşıldı.',
     'status.booklet.actionFailed': '{label} işlemi başarısız: {message}',
 
@@ -639,7 +639,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
   },
 };
 
-const STORAGE_KEY = 'quire.lang';
+const STORAGE_KEY = 'bindery.lang';
 let currentLang: Lang = 'en';
 
 export function getLanguage(): Lang {

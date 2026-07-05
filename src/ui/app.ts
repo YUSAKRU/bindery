@@ -195,16 +195,16 @@ export function initApp(): void {
   const downloadPdfConfirmBtnLabel = byId<HTMLSpanElement>('downloadPdfConfirmBtnLabel');
   const downloadPdfSpinner = byId<HTMLSpanElement>('downloadPdfSpinner');
   const pdfSourceModal = byId<HTMLDivElement>('pdfSourceModal');
-  const pdfSourceQuireBtn = byId<HTMLButtonElement>('pdfSourceQuireBtn');
+  const pdfSourceBinderyBtn = byId<HTMLButtonElement>('pdfSourceBinderyBtn');
   const pdfSourceDeviceBtn = byId<HTMLButtonElement>('pdfSourceDeviceBtn');
   const pdfSourceCancelBtn = byId<HTMLButtonElement>('pdfSourceCancelBtn');
 
-  const quireFilePickerModal = byId<HTMLDivElement>('quireFilePickerModal');
-  const quirePickerBreadcrumb = byId<HTMLDivElement>('quirePickerBreadcrumb');
-  const quirePickerList = byId<HTMLDivElement>('quirePickerList');
-  const quirePickerEmptyHint = byId<HTMLParagraphElement>('quirePickerEmptyHint');
-  const quirePickerCancelBtn = byId<HTMLButtonElement>('quirePickerCancelBtn');
-  const quirePickerConfirmBtn = byId<HTMLButtonElement>('quirePickerConfirmBtn');
+  const binderyFilePickerModal = byId<HTMLDivElement>('binderyFilePickerModal');
+  const binderyPickerBreadcrumb = byId<HTMLDivElement>('binderyPickerBreadcrumb');
+  const binderyPickerList = byId<HTMLDivElement>('binderyPickerList');
+  const binderyPickerEmptyHint = byId<HTMLParagraphElement>('binderyPickerEmptyHint');
+  const binderyPickerCancelBtn = byId<HTMLButtonElement>('binderyPickerCancelBtn');
+  const binderyPickerConfirmBtn = byId<HTMLButtonElement>('binderyPickerConfirmBtn');
   const moveDocModal = byId<HTMLDivElement>('moveDocModal');
   const moveDocFolderList = byId<HTMLDivElement>('moveDocFolderList');
   const moveDocCancelBtn = byId<HTMLButtonElement>('moveDocCancelBtn');
@@ -235,7 +235,7 @@ export function initApp(): void {
 
   // Files explorer state
   type FileSortMode = 'name-asc' | 'name-desc' | 'date-desc' | 'date-asc';
-  let filesSortMode: FileSortMode = (localStorage.getItem('quire.filesSort') as FileSortMode) ?? 'date-desc';
+  let filesSortMode: FileSortMode = (localStorage.getItem('bindery.filesSort') as FileSortMode) ?? 'date-desc';
   let currentFolderPath = '';
   let moveSourceFile: FileEntryInfo | null = null;
   let moveTargetFolder: string | null = null;
@@ -715,16 +715,16 @@ export function initApp(): void {
   let selectedPickerFiles: { name: string; uri: string }[] = [];
   let pickerResolve: ((value: any) => void) | null = null;
 
-  function renderQuirePickerBreadcrumb(): void {
-    quirePickerBreadcrumb.innerHTML = '';
+  function renderBinderyPickerBreadcrumb(): void {
+    binderyPickerBreadcrumb.innerHTML = '';
     const btn = document.createElement('button');
     btn.className = 'breadcrumb-item';
     btn.textContent = t('files.root');
     btn.addEventListener('click', () => {
       currentPickerPath = '';
-      void renderQuirePickerList(quirePickerConfirmBtn.classList.contains('hidden') ? false : true);
+      void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
     });
-    quirePickerBreadcrumb.appendChild(btn);
+    binderyPickerBreadcrumb.appendChild(btn);
 
     if (currentPickerPath) {
       const parts = currentPickerPath.split('/');
@@ -735,30 +735,30 @@ export function initApp(): void {
         const separator = document.createElement('span');
         separator.className = 'breadcrumb-separator';
         separator.textContent = ' › ';
-        quirePickerBreadcrumb.appendChild(separator);
+        binderyPickerBreadcrumb.appendChild(separator);
 
         const folderBtn = document.createElement('button');
         folderBtn.className = 'breadcrumb-item';
         folderBtn.textContent = part;
         folderBtn.addEventListener('click', () => {
           currentPickerPath = currentPath;
-          void renderQuirePickerList(quirePickerConfirmBtn.classList.contains('hidden') ? false : true);
+          void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
         });
-        quirePickerBreadcrumb.appendChild(folderBtn);
+        binderyPickerBreadcrumb.appendChild(folderBtn);
       });
     }
   }
 
-  async function renderQuirePickerList(allowMultiple: boolean): Promise<void> {
-    renderQuirePickerBreadcrumb();
+  async function renderBinderyPickerList(allowMultiple: boolean): Promise<void> {
+    renderBinderyPickerBreadcrumb();
     const items = await listPrivateFolder(currentPickerPath);
-    quirePickerList.innerHTML = '';
+    binderyPickerList.innerHTML = '';
 
     const pdfItems = items.filter(
       (item) => item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf')
     );
     const isEmpty = pdfItems.length === 0;
-    quirePickerEmptyHint.classList.toggle('hidden', !isEmpty);
+    binderyPickerEmptyHint.classList.toggle('hidden', !isEmpty);
 
     for (const item of pdfItems) {
       const isDir = item.type === 'directory';
@@ -800,7 +800,7 @@ export function initApp(): void {
       card.addEventListener('click', async () => {
         if (isDir) {
           currentPickerPath = currentPickerPath ? `${currentPickerPath}/${item.name}` : item.name;
-          void renderQuirePickerList(allowMultiple);
+          void renderBinderyPickerList(allowMultiple);
         } else {
           if (allowMultiple) {
             const idx = selectedPickerFiles.findIndex((f) => f.uri === item.uri);
@@ -811,9 +811,9 @@ export function initApp(): void {
               selectedPickerFiles.push({ name: item.name, uri: item.uri });
               card.classList.add('is-selected');
             }
-            quirePickerConfirmBtn.disabled = selectedPickerFiles.length === 0;
+            binderyPickerConfirmBtn.disabled = selectedPickerFiles.length === 0;
           } else {
-            closeModal(quireFilePickerModal);
+            closeModal(binderyFilePickerModal);
             try {
               const picked = await readPdfFromUri(item.uri);
               pickerResolve?.(picked);
@@ -829,7 +829,7 @@ export function initApp(): void {
         }
       });
 
-      quirePickerList.appendChild(card);
+      binderyPickerList.appendChild(card);
     }
   }
 
@@ -856,22 +856,22 @@ export function initApp(): void {
         }
       };
 
-      const handleQuire = () => {
+      const handleBindery = () => {
         closeModal(pdfSourceModal);
         cleanupSourceListeners();
 
         currentPickerPath = '';
         selectedPickerFiles = [];
 
-        openModal(quireFilePickerModal);
+        openModal(binderyFilePickerModal);
         if (options.allowMultiple) {
-          quirePickerConfirmBtn.classList.remove('hidden');
-          quirePickerConfirmBtn.disabled = true;
+          binderyPickerConfirmBtn.classList.remove('hidden');
+          binderyPickerConfirmBtn.disabled = true;
         } else {
-          quirePickerConfirmBtn.classList.add('hidden');
+          binderyPickerConfirmBtn.classList.add('hidden');
         }
 
-        void renderQuirePickerList(options.allowMultiple);
+        void renderBinderyPickerList(options.allowMultiple);
       };
 
       const handleCancel = () => {
@@ -882,25 +882,25 @@ export function initApp(): void {
 
       const cleanupSourceListeners = () => {
         pdfSourceDeviceBtn.removeEventListener('click', handleDevice);
-        pdfSourceQuireBtn.removeEventListener('click', handleQuire);
+        pdfSourceBinderyBtn.removeEventListener('click', handleBindery);
         pdfSourceCancelBtn.removeEventListener('click', handleCancel);
       };
 
       pdfSourceDeviceBtn.addEventListener('click', handleDevice);
-      pdfSourceQuireBtn.addEventListener('click', handleQuire);
+      pdfSourceBinderyBtn.addEventListener('click', handleBindery);
       pdfSourceCancelBtn.addEventListener('click', handleCancel);
 
       openModal(pdfSourceModal);
     });
   }
 
-  quirePickerCancelBtn.addEventListener('click', () => {
-    closeModal(quireFilePickerModal);
-    pickerResolve?.(quirePickerConfirmBtn.classList.contains('hidden') ? null : []);
+  binderyPickerCancelBtn.addEventListener('click', () => {
+    closeModal(binderyFilePickerModal);
+    pickerResolve?.(binderyPickerConfirmBtn.classList.contains('hidden') ? null : []);
   });
 
-  quirePickerConfirmBtn.addEventListener('click', async () => {
-    closeModal(quireFilePickerModal);
+  binderyPickerConfirmBtn.addEventListener('click', async () => {
+    closeModal(binderyFilePickerModal);
     try {
       const pickedList = await Promise.all(
         selectedPickerFiles.map((file) => readPdfFromUri(file.uri))
@@ -1040,7 +1040,7 @@ export function initApp(): void {
         if (action === 'save') {
           const savedUri = await savePdfPrivately(bytes, `booklets/${filename}`);
           await recordOpened({ uri: savedUri, name: filename });
-          actionStatus.textContent = t('status.booklet.savedToQuire', { label });
+          actionStatus.textContent = t('status.booklet.savedToBindery', { label });
         } else {
           await sharePdf(bytes, filename, `${label} PDF`);
           actionStatus.textContent = t('status.booklet.shared', { label });
@@ -2398,7 +2398,7 @@ export function initApp(): void {
       }));
       const pdfBytes = await imagesToPdf(input);
 
-      // Auto-save privately inside Quire data folder
+      // Auto-save privately inside Bindery data folder
       const dateStr = new Date().toISOString().slice(0, 10);
       const timeStr = new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
@@ -3687,7 +3687,7 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         
         await recordOpened({ uri: newUri, name: newName });
-        showToast(t('toast.savedToQuire'));
+        showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
         
@@ -4229,7 +4229,7 @@ export function initApp(): void {
   filesSortRows.forEach((row) => {
     row.addEventListener('click', () => {
       filesSortMode = (row.dataset.sort as FileSortMode) ?? 'date-desc';
-      localStorage.setItem('quire.filesSort', filesSortMode);
+      localStorage.setItem('bindery.filesSort', filesSortMode);
       filesSortSheet.classList.add('hidden');
       void renderFilesList();
     });
@@ -4368,13 +4368,13 @@ export function initApp(): void {
     document.documentElement.classList.toggle('light-theme', !active);
   }
 
-  const isDarkMode = localStorage.getItem('quire.darkmode') === 'true';
+  const isDarkMode = localStorage.getItem('bindery.darkmode') === 'true';
   settingsDarkModeToggle.checked = isDarkMode;
   applyThemePreference(isDarkMode);
 
   settingsDarkModeToggle.addEventListener('change', () => {
     const active = settingsDarkModeToggle.checked;
-    localStorage.setItem('quire.darkmode', String(active));
+    localStorage.setItem('bindery.darkmode', String(active));
     applyThemePreference(active);
   });
 
@@ -4431,7 +4431,7 @@ export function initApp(): void {
   }
 
   function finishOnboarding(): void {
-    localStorage.setItem('quire.onboarded', 'true');
+    localStorage.setItem('bindery.onboarded', 'true');
     onboardingOverlay.classList.add('hidden');
   }
 
@@ -4448,7 +4448,7 @@ export function initApp(): void {
     btn.addEventListener('click', () => {
       const active = btn.dataset.theme === 'dark';
       onboardingThemeBtns.forEach((b) => b.classList.toggle('is-selected', b === btn));
-      localStorage.setItem('quire.darkmode', String(active));
+      localStorage.setItem('bindery.darkmode', String(active));
       applyThemePreference(active);
       settingsDarkModeToggle.checked = active;
     });
@@ -4534,7 +4534,7 @@ export function initApp(): void {
 
   void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
 
-  if (localStorage.getItem('quire.onboarded') !== 'true') {
+  if (localStorage.getItem('bindery.onboarded') !== 'true') {
     startOnboarding();
   }
 

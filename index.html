@@ -5,14 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#4A5568" />
-    <title>Quire</title>
+    <title>Bindery</title>
     <link rel="stylesheet" href="/src/ui/styles.css" />
   </head>
   <body>
     <div class="app" id="appRoot">
       <header class="top-bar">
         <button class="icon-btn" id="backBtn" aria-label="Back" data-i18n-aria-label="common.back" hidden>‹</button>
-        <h1 class="top-bar-title" id="topBarTitle">Quire</h1>
+        <h1 class="top-bar-title" id="topBarTitle">Bindery</h1>
         <button class="icon-btn" id="savePdfBtn" aria-label="Save" data-i18n-aria-label="common.save" style="margin-left: auto;" hidden>💾</button>
         <button class="icon-btn" id="sharePdfBtn" aria-label="Share" data-i18n-aria-label="common.share" hidden>📤</button>
       </header>
@@ -202,7 +202,7 @@
           <div class="hero">
             <div class="hero-icon" aria-hidden="true">📄</div>
             <h2 data-i18n="picker.title">Create your booklet</h2>
-            <p class="hero-subtitle" data-i18n="picker.subtitle">Pick a PDF and Quire will turn it into a printable booklet.</p>
+            <p class="hero-subtitle" data-i18n="picker.subtitle">Pick a PDF and Bindery will turn it into a printable booklet.</p>
           </div>
 
           <button class="btn btn-primary btn-large" id="pickFileBtn" data-i18n="common.pickPdf">Select PDF</button>
@@ -831,7 +831,7 @@
               </div>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.developer">Developer</span>
-                <span class="info-value">Quire Team</span>
+                <span class="info-value">Bindery Team</span>
               </div>
             </div>
           </div>
@@ -876,9 +876,9 @@
             <button type="button" class="onboarding-lang-btn" data-lang="tr">Türkçe</button>
           </div>
           <div class="onboarding-illustration" aria-hidden="true">📚</div>
-          <h2 class="onboarding-title" data-i18n="onboarding.page1.title">Welcome to Quire</h2>
+          <h2 class="onboarding-title" data-i18n="onboarding.page1.title">Welcome to Bindery</h2>
           <p class="onboarding-text" data-i18n="onboarding.page1.text">
-            With Quire you can merge PDFs, turn pages into a booklet, organize them, and much more — all with
+            With Bindery you can merge PDFs, turn pages into a booklet, organize them, and much more — all with
             a single tap.
           </p>
         </section>
@@ -989,7 +989,7 @@
             <label class="modal-radio-label">
               <input type="radio" name="saveOption" value="private" checked />
               <div class="modal-radio-content">
-                <span class="modal-radio-title" data-i18n="modal.saveDoc.private">Keep in Quire (Private)</span>
+                <span class="modal-radio-title" data-i18n="modal.saveDoc.private">Keep in Bindery (Private)</span>
                 <span class="modal-radio-desc" data-i18n="modal.saveDoc.privateDesc">Stored inside the app, appears in Recently Opened.</span>
               </div>
             </label>
@@ -1041,11 +1041,11 @@
         <h3 class="modal-title" id="pdfSourceModalTitle" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
         <div class="modal-body">
           <div class="modal-radio-group">
-            <button type="button" class="modal-source-btn" id="pdfSourceQuireBtn">
+            <button type="button" class="modal-source-btn" id="pdfSourceBinderyBtn">
               <span class="file-item-icon">📂</span>
               <div class="modal-radio-content">
-                <span class="modal-radio-title" data-i18n="modal.pdfSource.quire">Quire Documents</span>
-                <span class="modal-radio-desc" data-i18n="modal.pdfSource.quireDesc">Choose a PDF file saved inside Quire.</span>
+                <span class="modal-radio-title" data-i18n="modal.pdfSource.bindery">Bindery Documents</span>
+                <span class="modal-radio-desc" data-i18n="modal.pdfSource.binderyDesc">Choose a PDF file saved inside Bindery.</span>
               </div>
             </button>
             <button type="button" class="modal-source-btn" id="pdfSourceDeviceBtn">
@@ -1063,21 +1063,21 @@
       </div>
     </div>
 
-    <!-- Quire File Picker Modal -->
-    <div class="modal-overlay hidden" id="quireFilePickerModal"
-         role="dialog" aria-modal="true" aria-labelledby="quirePickerModalTitle">
+    <!-- Bindery File Picker Modal -->
+    <div class="modal-overlay hidden" id="binderyFilePickerModal"
+         role="dialog" aria-modal="true" aria-labelledby="binderyPickerModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" id="quirePickerModalTitle" data-i18n="modal.quirePicker.title">Select PDF</h3>
+        <h3 class="modal-title" id="binderyPickerModalTitle" data-i18n="modal.binderyPicker.title">Select PDF</h3>
         <div class="modal-body">
           <div class="files-explorer-header">
-            <div class="files-breadcrumb" id="quirePickerBreadcrumb"></div>
+            <div class="files-breadcrumb" id="binderyPickerBreadcrumb"></div>
           </div>
-          <div class="folder-select-list" id="quirePickerList"></div>
-          <p class="empty-hint hidden" id="quirePickerEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
+          <div class="folder-select-list" id="binderyPickerList"></div>
+          <p class="empty-hint hidden" id="binderyPickerEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-text" id="quirePickerCancelBtn" data-i18n="common.cancel">Cancel</button>
-          <button type="button" class="btn btn-primary hidden" id="quirePickerConfirmBtn" data-i18n="common.select">Select</button>
+          <button type="button" class="btn btn-text" id="binderyPickerCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary hidden" id="binderyPickerConfirmBtn" data-i18n="common.select">Select</button>
         </div>
       </div>
     </div>

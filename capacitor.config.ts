@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.eduplayconnect.quire',
-  appName: 'Quire',
+  appId: 'com.eduplayconnect.bindery',
+  appName: 'Bindery',
   webDir: 'dist',
   android: {
     backgroundColor: '#ffffffff',

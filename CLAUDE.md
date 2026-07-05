@@ -43,8 +43,8 @@ npx cap run android   # Build + Deploy
 - **Android SDK**: `$HOME/Android/Sdk`
 - **Java Runtime**: `/opt/android-studio/jbr`
 - **Bağlı Cihaz ID**: `adb devices` ile kontrol edin (cihaza özel, ortama göre değişir)
-- **App ID**: `com.eduplayconnect.quire`
-- **App Name**: Quire
+- **App ID**: `com.eduplayconnect.bindery`
+- **App Name**: Bindery
 
 ## Fish Shell için Alias (Opsiyonel)
 

@@ -17,10 +17,10 @@ android {
             keyPassword localProperties['release.key.password']
         }
     }
-    namespace = "com.eduplayconnect.quire"
+    namespace = "com.eduplayconnect.bindery"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.eduplayconnect.quire"
+        applicationId "com.eduplayconnect.bindery"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 5

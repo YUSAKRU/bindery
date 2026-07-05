@@ -1,6 +1,6 @@
-# Quire: All-in-One PDF Tools
+# Bindery: All-in-One PDF Tools
 
-Quire, mobil cihazınızda çalışan, gizlilik odaklı, **tamamen çevrimdışı** bir PDF araç setidir.
+Bindery, mobil cihazınızda çalışan, gizlilik odaklı, **tamamen çevrimdışı** bir PDF araç setidir.
 
 ## Neden Çevrimdışı / Gizlilik Odaklı?
 
