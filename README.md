@@ -37,7 +37,7 @@ Uygulama manifestosu internet iznini talep etmez — tüm PDF işleme, birleşti
 ```bash
 npm run test && npm run build && \
 export JAVA_HOME=/opt/android-studio/jbr && \
-export ANDROID_HOME=/home/user/Android/Sdk && \
+export ANDROID_HOME=$HOME/Android/Sdk && \
 export PATH=$PATH:$ANDROID_HOME/platform-tools && \
 npx cap sync && npx cap run android
 ```
@@ -49,7 +49,7 @@ npx cap sync && npx cap run android
 3. **Cihaza deploy et**:
    ```bash
    export JAVA_HOME=/opt/android-studio/jbr
-   export ANDROID_HOME=/home/user/Android/Sdk
+   export ANDROID_HOME=$HOME/Android/Sdk
    export PATH=$PATH:$ANDROID_HOME/platform-tools
 
    npx cap sync
