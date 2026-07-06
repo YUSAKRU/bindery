@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
 import { validatePdf } from './validator';
 import { BookletError } from './types';
 
@@ -54,6 +54,46 @@ export function computeTextPosition(
   }
 }
 
+/**
+ * Normalizes a page rotation angle (which pdf-lib returns verbatim from the
+ * /Rotate entry, e.g. it may be negative or >360) to one of 0/90/180/270.
+ */
+export function normalizeRotation(angle: number): 0 | 90 | 180 | 270 {
+  const normalized = (((Math.round(angle / 90) * 90) % 360) + 360) % 360;
+  return normalized as 0 | 90 | 180 | 270;
+}
+
+/**
+ * Converts a position expressed in "visible" (post-rotation, as seen by a
+ * viewer) coordinates into the page's actual unrotated content-space
+ * coordinates. A page's /Rotate entry does not transform its content stream
+ * coordinate system - it tells viewers to rotate the whole rendered page
+ * clockwise for display. So text drawn "upright" at (x, y) with no local
+ * rotation will itself appear rotated on screen for a rotated page, and its
+ * anchor point maps to a different on-screen location than (x, y). This
+ * inverts that clockwise display transform so a caller can reason purely in
+ * terms of where the text should visually end up.
+ */
+export function toContentSpacePosition(
+  visibleX: number,
+  visibleY: number,
+  visibleWidth: number,
+  visibleHeight: number,
+  rotation: number,
+): { x: number; y: number } {
+  switch (normalizeRotation(rotation)) {
+    case 90:
+      return { x: visibleHeight - visibleY, y: visibleX };
+    case 180:
+      return { x: visibleWidth - visibleX, y: visibleHeight - visibleY };
+    case 270:
+      return { x: visibleY, y: visibleWidth - visibleX };
+    case 0:
+    default:
+      return { x: visibleX, y: visibleY };
+  }
+}
+
 export async function addPageNumbers(inputBytes: Uint8Array, options: PageNumberOptions): Promise<PageNumberResult> {
   const { pageCount } = await validatePdf(inputBytes);
 
@@ -68,9 +108,31 @@ export async function addPageNumbers(inputBytes: Uint8Array, options: PageNumber
   doc.getPages().forEach((page, i) => {
     const label = formatPageLabel(options.format, options.startNumber + i, lastNumber, options.pageWord);
     const textWidth = font.widthOfTextAtSize(label, FONT_SIZE);
+
+    const mediaBox = page.getMediaBox();
     const { width, height } = page.getSize();
-    const { x, y } = computeTextPosition(options.position, width, height, textWidth, FONT_SIZE, MARGIN);
-    page.drawText(label, { x, y, size: FONT_SIZE, font });
+    const rotation = normalizeRotation(page.getRotation().angle);
+    const isSideways = rotation === 90 || rotation === 270;
+    const visibleWidth = isSideways ? height : width;
+    const visibleHeight = isSideways ? width : height;
+
+    const { x: visibleX, y: visibleY } = computeTextPosition(
+      options.position,
+      visibleWidth,
+      visibleHeight,
+      textWidth,
+      FONT_SIZE,
+      MARGIN,
+    );
+    const { x: localX, y: localY } = toContentSpacePosition(visibleX, visibleY, visibleWidth, visibleHeight, rotation);
+
+    page.drawText(label, {
+      x: mediaBox.x + localX,
+      y: mediaBox.y + localY,
+      size: FONT_SIZE,
+      font,
+      rotate: degrees(rotation),
+    });
   });
 
   const numberedPdf = await doc.save();
