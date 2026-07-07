@@ -465,7 +465,8 @@ body {
 .rotate-filename-field,
 .organize-filename-field,
 .page-numbers-filename-field,
-.watermark-filename-field {
+.watermark-filename-field,
+.booklet-filename-field {
   display: flex;
   flex-direction: column;
   gap: 6px;

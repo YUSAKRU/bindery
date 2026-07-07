@@ -797,24 +797,34 @@
             </div>
           </div>
 
+          <div class="booklet-filename-field">
+            <label for="bookletFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="bookletFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
           <div class="action-list">
             <div class="action-row">
               <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
               <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="front" data-action="save" data-i18n="common.save">Save</button>
                 <button class="btn btn-tonal" data-target="front" data-action="share" data-i18n="common.share">Share</button>
               </div>
             </div>
             <div class="action-row">
               <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
               <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="back" data-action="save" data-i18n="common.save">Save</button>
                 <button class="btn btn-tonal" data-target="back" data-action="share" data-i18n="common.share">Share</button>
               </div>
             </div>
           </div>
 
+          <button class="btn btn-primary btn-large" id="bookletSaveBtn">
+            <span id="bookletSaveBtnLabel" data-i18n="booklet.saveBoth">Save Both</span>
+            <span class="spinner hidden" id="bookletSaveSpinner"></span>
+          </button>
+
           <p class="action-status" id="actionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="bookletGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
 
           <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
         </section>

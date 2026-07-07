@@ -183,6 +183,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'stat.totalSheets': 'Total Sheets',
     'booklet.frontSidePdf': 'Front Side PDF',
     'booklet.backSidePdf': 'Back Side PDF',
+    'booklet.saveBoth': 'Save Both',
 
     'recents.subtitle': 'Documents you opened or edited most recently.',
     'recents.emptyHint': 'No documents opened yet.',
@@ -322,6 +323,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.frontSideLower': 'Front side',
     'booklet.backSideLower': 'Back side',
     'status.booklet.savedToBindery': '{label} saved to Bindery.',
+    'status.booklet.saved': 'Booklet saved to Bindery.',
     'status.booklet.shared': '{label} shared.',
     'status.booklet.actionFailed': '{label} action failed: {message}',
 
@@ -518,6 +520,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'stat.totalSheets': 'Toplam Yaprak',
     'booklet.frontSidePdf': 'Ön Yüz PDF',
     'booklet.backSidePdf': 'Arka Yüz PDF',
+    'booklet.saveBoth': 'İkisini de Kaydet',
 
     'recents.subtitle': 'En son açtığınız veya düzenlediğiniz belgeler.',
     'recents.emptyHint': 'Henüz hiç belge açılmadı.',
@@ -657,6 +660,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.frontSideLower': 'Ön yüz',
     'booklet.backSideLower': 'Arka yüz',
     'status.booklet.savedToBindery': '{label} Bindery içine kaydedildi.',
+    'status.booklet.saved': 'Kitapçık Bindery içine kaydedildi.',
     'status.booklet.shared': '{label} paylaşıldı.',
     'status.booklet.actionFailed': '{label} işlemi başarısız: {message}',
 

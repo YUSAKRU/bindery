@@ -302,6 +302,11 @@ export function initApp(): void {
   const backPreviewImg = byId<HTMLImageElement>('backPreviewImg');
   const backPreviewSpinner = byId<HTMLDivElement>('backPreviewSpinner');
   const backPreviewError = byId<HTMLParagraphElement>('backPreviewError');
+  const bookletFileNameInput = byId<HTMLInputElement>('bookletFileNameInput');
+  const bookletSaveBtn = byId<HTMLButtonElement>('bookletSaveBtn');
+  const bookletSaveBtnLabel = byId<HTMLSpanElement>('bookletSaveBtnLabel');
+  const bookletSaveSpinner = byId<HTMLSpanElement>('bookletSaveSpinner');
+  const bookletGoToLocationBtn = byId<HTMLButtonElement>('bookletGoToLocationBtn');
 
   const errorTitle = byId<HTMLHeadingElement>('errorTitle');
   const errorMessage = byId<HTMLParagraphElement>('errorMessage');
@@ -326,6 +331,7 @@ export function initApp(): void {
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
   let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array } | null = null;
+  let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -1147,6 +1153,12 @@ export function initApp(): void {
       });
 
       booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf };
+      bookletSaveState = 'idle';
+      bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
+      bookletSaveBtn.disabled = false;
+      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      bookletSaveSpinner.classList.add('hidden');
+      bookletGoToLocationBtn.classList.add('hidden');
 
       statOriginal.textContent = String(result.originalPages);
       statSheets.textContent = String(result.sheetsCount);
@@ -1206,29 +1218,81 @@ export function initApp(): void {
     }
   }
 
-  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action]').forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
     button.addEventListener('click', async () => {
       if (!booklet) return;
       const target = button.dataset.target as 'front' | 'back';
-      const action = button.dataset.action as 'save' | 'share';
       const bytes = target === 'front' ? booklet.frontPdf : booklet.backPdf;
       const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'booklet'}_${target}.pdf`;
       const label = target === 'front' ? t('booklet.frontSideLower') : t('booklet.backSideLower');
 
       try {
-        if (action === 'save') {
-          const savedUri = await savePdfPrivately(bytes, `booklets/${filename}`);
-          await recordOpened({ uri: savedUri, name: filename });
-          actionStatus.textContent = t('status.booklet.savedToBindery', { label });
-        } else {
-          await sharePdf(bytes, filename, `${label} PDF`);
-          actionStatus.textContent = t('status.booklet.shared', { label });
-        }
+        await sharePdf(bytes, filename, `${label} PDF`);
+        actionStatus.textContent = t('status.booklet.shared', { label });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         actionStatus.textContent = t('status.booklet.actionFailed', { label, message });
       }
     });
+  });
+
+  bookletFileNameInput.addEventListener('input', () => {
+    if (bookletSaveState === 'saved') {
+      bookletSaveState = 'idle';
+      bookletSaveBtn.disabled = false;
+      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      bookletGoToLocationBtn.classList.add('hidden');
+    }
+  });
+
+  bookletSaveBtn.addEventListener('click', async () => {
+    if (!booklet || bookletSaveState === 'saving') return;
+
+    let docName = bookletFileNameInput.value.trim();
+    if (!docName) {
+      showToast(t('toast.invalidFileName'));
+      return;
+    }
+    docName = docName.replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '');
+    if (!docName) {
+      showToast(t('toast.invalidFileName'));
+      return;
+    }
+
+    if (await pathExists(`booklets/${docName}`)) {
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: docName }));
+      if (!overwrite) return;
+    }
+
+    bookletSaveState = 'saving';
+    bookletSaveBtn.disabled = true;
+    bookletSaveBtnLabel.classList.add('hidden');
+    bookletSaveSpinner.classList.remove('hidden');
+
+    try {
+      const frontUri = await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
+      await recordOpened({ uri: frontUri, name: `${docName} — Front Side.pdf` });
+      const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
+      await recordOpened({ uri: backUri, name: `${docName} — Back Side.pdf` });
+      bookletFileNameInput.value = docName;
+      actionStatus.textContent = t('status.booklet.saved');
+      bookletSaveState = 'saved';
+      bookletSaveBtnLabel.textContent = t('common.saved');
+      bookletGoToLocationBtn.classList.remove('hidden');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      actionStatus.textContent = t('status.saveFailed', { message });
+      bookletSaveState = 'idle';
+      bookletSaveBtn.disabled = false;
+    } finally {
+      bookletSaveBtnLabel.classList.remove('hidden');
+      bookletSaveSpinner.classList.add('hidden');
+    }
+  });
+
+  bookletGoToLocationBtn.addEventListener('click', () => {
+    currentFolderPath = `booklets/${bookletFileNameInput.value.trim().replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '')}`;
+    showScreen('files');
   });
 
   newFileBtn.addEventListener('click', async () => {
@@ -1237,6 +1301,12 @@ export function initApp(): void {
     }
     resetPicker();
     booklet = null;
+    bookletSaveState = 'idle';
+    bookletFileNameInput.value = '';
+    bookletSaveBtn.disabled = false;
+    bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+    bookletSaveSpinner.classList.add('hidden');
+    bookletGoToLocationBtn.classList.add('hidden');
     frontPreviewImg.classList.add('hidden');
     frontPreviewImg.src = '';
     frontPreviewError.classList.add('hidden');
@@ -4486,7 +4556,7 @@ export function initApp(): void {
       case 'rotate-result': return rotateResultPdf !== null && rotateSaveState !== 'saved';
       case 'page-numbers-result': return pageNumbersResultPdf !== null && pageNumbersSaveState !== 'saved';
       case 'watermark-result': return watermarkResultPdf !== null && watermarkSaveState !== 'saved';
-      case 'result': return booklet !== null;
+      case 'result': return booklet !== null && bookletSaveState !== 'saved';
       default: return false;
     }
   }
