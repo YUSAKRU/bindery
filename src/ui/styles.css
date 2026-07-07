@@ -5,6 +5,7 @@
   --color-on-primary-container: #1e1b4b;
   --color-primary-rgb: 79, 70, 229;
   --color-surface: #fafafb;
+  --color-surface-rgb: 250, 250, 251;
   --color-surface-variant: #eeeff1;
   --color-on-surface: #1c1c1e;
   --color-on-surface-variant: #54565c;
@@ -21,6 +22,10 @@
   --color-info-container: #dbeafe;
   --color-on-info-container: #1e3a5f;
   --color-scrim: rgba(0, 0, 0, 0.4);
+
+  --hub-hero-tint-a: 0.16;
+  --hub-hero-tint-b: 0.05;
+  --hub-hero-border-a: 0.28;
 
   --radius-lg: 12px;
   --radius-md: 8px;
@@ -42,6 +47,7 @@
     --color-on-primary-container: #e0e7ff;
     --color-primary-rgb: 165, 180, 252;
     --color-surface: #131314;
+    --color-surface-rgb: 19, 19, 20;
     --color-surface-variant: #1f2023;
     --color-on-surface: #e3e3e6;
     --color-on-surface-variant: #c5c6cc;
@@ -51,6 +57,9 @@
     --color-on-error-container: #ffdad6;
     --color-success: #8fd9a4;
     --color-success-container: #0a3d1f;
+    --hub-hero-tint-a: 0.12;
+    --hub-hero-tint-b: 0.04;
+    --hub-hero-border-a: 0.22;
     --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
   }
@@ -67,6 +76,7 @@
   --color-on-primary-container: #e0e7ff;
   --color-primary-rgb: 165, 180, 252;
   --color-surface: #131314;
+  --color-surface-rgb: 19, 19, 20;
   --color-surface-variant: #1f2023;
   --color-on-surface: #e3e3e6;
   --color-on-surface-variant: #c5c6cc;
@@ -76,6 +86,9 @@
   --color-on-error-container: #ffdad6;
   --color-success: #8fd9a4;
   --color-success-container: #0a3d1f;
+  --hub-hero-tint-a: 0.12;
+  --hub-hero-tint-b: 0.04;
+  --hub-hero-border-a: 0.22;
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
@@ -87,6 +100,7 @@
   --color-on-primary-container: #1e1b4b;
   --color-primary-rgb: 79, 70, 229;
   --color-surface: #fafafb;
+  --color-surface-rgb: 250, 250, 251;
   --color-surface-variant: #eeeff1;
   --color-on-surface: #1c1c1e;
   --color-on-surface-variant: #54565c;
@@ -96,6 +110,9 @@
   --color-on-error-container: #410002;
   --color-success: #1e6b3c;
   --color-success-container: #d7f5e0;
+  --hub-hero-tint-a: 0.16;
+  --hub-hero-tint-b: 0.05;
+  --hub-hero-border-a: 0.28;
   --shadow-1: 0 1px 3px rgba(27, 27, 31, 0.12), 0 1px 2px rgba(27, 27, 31, 0.08);
   color-scheme: light;
 }
@@ -120,6 +137,9 @@ body {
 /* Fixed-height shell: top bar and bottom nav stay pinned in the flex column
    while `.screen-container` (below) is the only part that scrolls. */
 .app {
+  --reader-topbar-h: calc(max(env(safe-area-inset-top), 20px) + 56px);
+  --reader-subbar-h: 52px;
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -128,12 +148,34 @@ body {
   margin: 0 auto;
 }
 
+/* Glass shell bars: absolutely positioned inside `.app` (which is
+   position:relative) rather than position:fixed, so they track the .app
+   480px column instead of the full viewport on wide screens. */
 .top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: max(env(safe-area-inset-top), 20px) 20px 16px;
-  flex-shrink: 0;
+  background: rgba(var(--color-surface-rgb), 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-surface-variant);
+  transition: transform 0.25s ease;
+}
+
+/* Reader chrome auto-hide: both glass bars slide up together. The subbar
+   sits below the top bar, so it has to travel the top bar's height too. */
+.app.reader-chrome-hidden .top-bar {
+  transform: translateY(-110%);
+}
+
+.app.reader-chrome-hidden .reader-subbar {
+  transform: translateY(calc(-100% - var(--reader-topbar-h)));
 }
 
 .top-bar-title {
@@ -162,11 +204,20 @@ body {
 .screen-container {
   flex: 1;
   min-height: 0;
-  padding: 0 20px max(env(safe-area-inset-bottom), 24px);
+  /* Top/bottom padding reserves the space under the absolute glass bars.
+     Top: bar padding-top + 16px bar padding-bottom + 40px bar content + 8px gap. */
+  padding: calc(max(env(safe-area-inset-top), 20px) + 64px) 20px
+    max(env(safe-area-inset-bottom), 24px);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Only reserve bottom-nav space while the nav is actually shown (it is
+   display:none on non-tab screens such as the reader and result screens). */
+.app:has(.bottom-nav:not(.hidden)) .screen-container {
+  padding-bottom: calc(max(env(safe-area-inset-bottom), 8px) + 76px);
 }
 
 @keyframes fadeIn {
@@ -414,7 +465,8 @@ body {
 .rotate-filename-field,
 .organize-filename-field,
 .page-numbers-filename-field,
-.watermark-filename-field {
+.watermark-filename-field,
+.booklet-filename-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -477,6 +529,67 @@ body {
 .hub-search:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: -1px;
+}
+
+.hub-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px 20px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(var(--color-primary-rgb), var(--hub-hero-border-a));
+  background: linear-gradient(
+    135deg,
+    rgba(var(--color-primary-rgb), var(--hub-hero-tint-a)),
+    rgba(var(--color-primary-rgb), var(--hub-hero-tint-b)) 60%,
+    rgba(var(--color-primary-rgb), var(--hub-hero-tint-a))
+  );
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.hub-hero::before {
+  content: '';
+  position: absolute;
+  top: -70px;
+  right: -50px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.3), transparent 70%);
+  pointer-events: none;
+}
+
+.hub-hero-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.hub-hero-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-on-surface);
+}
+
+.hub-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+
+.hub-carousel::-webkit-scrollbar {
+  display: none;
 }
 
 .tool-category {
@@ -602,6 +715,29 @@ body {
   opacity: 0.6;
 }
 
+.tool-row--carousel {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 130px;
+  gap: 10px;
+  padding: 12px;
+  background: var(--color-surface-variant);
+  border: none;
+  border-radius: var(--radius-lg);
+}
+
+.tool-row--carousel .tool-row-meta {
+  width: 100%;
+}
+
+.tool-row--carousel .tool-row-title {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .badge-soon {
   flex-shrink: 0;
   font-size: 0.68rem;
@@ -616,11 +752,18 @@ body {
 }
 
 .bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
   display: flex;
-  border-top: 1px solid var(--color-outline);
-  background: var(--color-surface);
-  padding: 8px max(env(safe-area-inset-bottom), 8px);
-  flex-shrink: 0;
+  border-top: 1px solid var(--color-surface-variant);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: rgba(var(--color-surface-rgb), 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 8px 8px max(env(safe-area-inset-bottom), 8px);
 }
 
 .bottom-nav-item {
@@ -931,67 +1074,130 @@ body {
   gap: 8px;
 }
 
-.recents-list {
+.hub-recents-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hub-recents-viewall {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.hub-recents-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hub-recent-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 10px;
+  min-width: 0;
+  background: var(--color-surface-variant);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--color-on-surface);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
 }
 
-.recents-row {
+.hub-recent-card:active {
+  background: var(--color-primary-container);
+  transform: scale(0.985);
+}
+
+.hub-recent-thumb {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--color-surface-variant);
+  justify-content: center;
+  height: 110px;
   border-radius: var(--radius-md);
-  padding: 10px 12px;
-  cursor: pointer;
-  border: none;
-  text-align: left;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.hub-recent-thumb-placeholder {
+  font-size: 1.8rem;
+}
+
+.hub-recent-thumb-img {
   width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
 }
 
-.recents-row-meta {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.recents-row-name {
+.hub-recent-name {
+  font-size: 0.8rem;
   font-weight: 600;
-  font-size: 0.88rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.recents-row-page {
-  font-size: 0.75rem;
-  color: var(--color-on-surface-variant);
+.hub-recent-thumb--create {
+  border: 1.5px dashed var(--color-outline);
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .reader-screen {
   position: relative;
-  margin: 0 -20px max(calc(-1 * env(safe-area-inset-bottom)), -24px);
+  /* Pull the screen up under the absolute glass top bar (the container
+     reserves top-bar height + 8px); readerScroll pads the content back
+     down so pages scroll behind the glass. */
+  margin: calc(-1 * (var(--reader-topbar-h) + 8px)) -20px
+    max(calc(-1 * env(safe-area-inset-bottom)), -24px);
   gap: 0;
   min-height: 0;
   overflow: hidden;
 }
 
 .reader-subbar {
+  position: absolute;
+  top: var(--reader-topbar-h);
+  left: 0;
+  right: 0;
+  height: var(--reader-subbar-h);
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
-  background: var(--color-surface-variant);
-  border-bottom: 1px solid var(--color-outline);
-  flex-shrink: 0;
+  padding: 0 16px;
+  background: rgba(var(--color-surface-rgb), 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-surface-variant);
+  transition: transform 0.25s ease;
 }
 
 .reader-page-indicator {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  margin-right: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
   font-size: 0.85rem;
   font-weight: 600;
-  flex: 1;
 }
 
 .reader-scroll {
@@ -999,11 +1205,78 @@ body {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Without this, the browser's own gesture recognizer competes with our
-     pointer-event-based pinch handling and the two-finger gesture never
-     reaches JS cleanly — pan-y keeps native single-finger scrolling. */
-  touch-action: pan-y;
+  /* Fixed chrome padding: content starts below top bar + subbar but scrolls
+     behind the glass. Must NOT change during chrome auto-hide, or scroll
+     offsets (readerListTopOffsetPx) would go stale. */
+  padding-top: calc(var(--reader-topbar-h) + var(--reader-subbar-h));
+  overflow-x: auto;
+  /* pan-x pan-y keeps native scrolling on both axes but disables the
+     browser's own double-tap and pinch zoom, which our pointer-event
+     zoom handling replaces (a touchmove preventDefault guard covers the
+     mid-gesture cases touch-action can't). */
+  touch-action: pan-x pan-y;
   background: #1a1a1a;
+}
+
+.reader-scroll.is-pinching {
+  touch-action: none;
+  /* Freezes native panning immediately (touch-action can't change
+     mid-gesture); does not alter the current scroll position. */
+  overflow: hidden;
+}
+
+.reader-scrubber {
+  position: absolute;
+  top: calc(var(--reader-topbar-h) + var(--reader-subbar-h) + 8px);
+  bottom: 16px;
+  right: 2px;
+  width: 30px;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.reader-scrubber.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reader-scrubber::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 13px;
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.reader-scrubber-thumb {
+  position: absolute;
+  right: 5px;
+  width: 19px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.9);
+  box-shadow: var(--shadow-1);
+  touch-action: none;
+  cursor: grab;
+}
+
+.reader-scrubber-bubble {
+  position: absolute;
+  right: 34px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .reader-page-list {
@@ -1012,6 +1285,11 @@ body {
   align-items: center;
   gap: 6px;
   padding: 6px 0 max(env(safe-area-inset-bottom), 16px);
+  /* When zoomed the pages get wider than the viewport; sizing the list to
+     its content keeps the left edge reachable (a centered flex child
+     overflowing both sides would clip the left side unscrollably). */
+  width: fit-content;
+  min-width: 100%;
 }
 
 .reader-page {
@@ -1021,7 +1299,9 @@ body {
   justify-content: center;
   overflow: hidden;
   width: var(--reader-page-width, 100%);
-  height: var(--reader-page-height, 150px);
+  /* Real per-page height is set as an inline style by renderReaderList
+     (pages can have mixed orientations); this is only a pre-layout fallback. */
+  height: 150px;
 }
 
 .reader-page canvas {
@@ -1053,11 +1333,273 @@ body {
   box-shadow: var(--shadow-1);
 }
 
+.reader-nav-panel {
+  display: flex;
+  flex-direction: column;
+  height: 72%;
+  padding: 12px 16px max(env(safe-area-inset-bottom), 16px);
+}
+
+/* Shared bottom-sheet grabber + title (tools + nav sheets) */
+.reader-sheet-grabber {
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: var(--color-outline);
+}
+
+.reader-sheet-title {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+/* Reader tools sheet: 2-column tile grid */
+.reader-tools-panel--grid {
+  max-height: 72%;
+  overflow-y: auto;
+}
+
+.reader-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.reader-tool-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 18px 12px;
+  background: var(--color-surface-variant);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  text-align: center;
+  color: var(--color-on-surface);
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+}
+
+.reader-tool-tile:active {
+  background: var(--color-primary-container);
+  transform: scale(0.97);
+}
+
+.reader-tool-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-container);
+}
+
+.reader-tool-tile-icon .tool-icon {
+  width: 24px;
+  height: 24px;
+  stroke: var(--color-primary);
+}
+
+.reader-tool-tile-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-on-surface);
+}
+
+.reader-nav-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.reader-nav-tab {
+  appearance: none;
+  border: none;
+  background: var(--color-surface-variant);
+  color: var(--color-on-surface-variant);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.reader-nav-tab.is-active {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
+.reader-nav-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.reader-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.reader-nav-cell {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.reader-nav-cell-thumb {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-variant);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.reader-nav-cell.is-current .reader-nav-cell-thumb {
+  border-color: var(--color-primary);
+}
+
+.reader-nav-cell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.reader-nav-cell-thumb img.is-loaded {
+  opacity: 1;
+}
+
+.reader-nav-cell-num {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+}
+
+.reader-nav-cell.is-current .reader-nav-cell-num {
+  color: var(--color-primary);
+}
+
+.reader-nav-outline {
+  display: flex;
+  flex-direction: column;
+}
+
+.reader-nav-outline-row {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--color-on-surface);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-nav-outline-row:active {
+  background: var(--color-primary-container);
+}
+
+.reader-nav-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader-nav-recent-row {
+  appearance: none;
+  border: none;
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-on-surface);
+}
+
+.reader-nav-recent-thumb {
+  width: 34px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.reader-nav-recent-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.reader-nav-recent-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reader-nav-recent-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-nav-recent-page {
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+}
+
+.reader-nav-empty {
+  color: var(--color-on-surface-variant);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
 /* Files Sort Sheet */
 .files-sort-sheet {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 1000;
 }
 
 .files-sort-backdrop {
@@ -1814,6 +2356,11 @@ body {
    ========================================================================== */
 
 .reader-search-panel {
+  position: absolute;
+  top: calc(var(--reader-topbar-h) + var(--reader-subbar-h));
+  left: 0;
+  right: 0;
+  z-index: 29;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1826,6 +2373,15 @@ body {
 
 .reader-search-panel.hidden {
   display: none;
+}
+
+.input-shake {
+  animation: inputShake 0.3s ease;
+}
+
+@keyframes inputShake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
 }
 
 @keyframes slideDown {
@@ -2078,20 +2634,17 @@ body {
   align-items: center;
   gap: 12px;
   background: var(--color-surface-variant);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
+  border-radius: var(--radius-xl);
+  padding: 10px 12px;
   cursor: pointer;
   border: 1px solid transparent;
+  box-shadow: var(--shadow-1);
   transition: background 0.15s, border-color 0.15s;
   user-select: none;
 }
 
 .file-item-card:active {
   background: rgba(var(--color-primary-rgb), 0.25);
-}
-
-.file-item-card.is-folder {
-  border-left: 3px solid var(--color-primary);
 }
 
 .file-item-card.is-selected {
@@ -2102,6 +2655,33 @@ body {
 .file-item-icon {
   font-size: 1.5rem;
   flex-shrink: 0;
+}
+
+.file-item-thumb {
+  width: 48px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.file-item-thumb--folder {
+  background: var(--color-primary-container);
+}
+
+.file-item-thumb--folder .tool-icon {
+  stroke: var(--color-primary);
+}
+
+.file-item-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
 }
 
 .file-item-details {
@@ -2137,6 +2717,23 @@ body {
   padding: 8px 14px !important;
   font-size: 0.82rem !important;
   border-radius: var(--radius-md) !important;
+}
+
+/* Inline lucide SVG sized for .icon-btn-sm and other small controls */
+.icon-svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.files-search {
+  margin: 0 16px;
+  width: auto;
 }
 
 /* Icon-only small action button */
@@ -2411,9 +3008,59 @@ body {
 }
 .reader-night .reader-subbar {
   background: #181818;
-  border-top-color: rgba(255, 255, 255, .07);
+  border-bottom-color: rgba(255, 255, 255, .07);
 }
 .reader-night .reader-subbar .reader-page-indicator {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, .08);
+}
+.reader-night .reader-scrubber-thumb {
+  background: rgba(187, 134, 252, .85);
+}
+.reader-night .reader-nav-panel,
+.reader-night .reader-tools-panel {
+  background: #181818;
+}
+.reader-night .reader-sheet-grabber {
+  background: rgba(255, 255, 255, .2);
+}
+.reader-night .reader-sheet-title,
+.reader-night .reader-tool-tile-title {
+  color: #e0e0e0;
+}
+.reader-night .reader-tool-tile {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .1);
+  color: #e0e0e0;
+}
+.reader-night .reader-tool-tile:active {
+  background: rgba(187, 134, 252, .25);
+}
+.reader-night .reader-tool-tile-icon {
+  background: rgba(187, 134, 252, .20);
+}
+.reader-night .reader-tool-tile-icon .tool-icon {
+  stroke: #d0aaff;
+}
+.reader-night .reader-nav-tab {
+  background: rgba(255, 255, 255, .08);
+  color: #e0e0e0;
+}
+.reader-night .reader-nav-tab.is-active {
+  background: rgba(187, 134, 252, .25);
+  color: #d0aaff;
+}
+.reader-night .reader-nav-outline-row,
+.reader-night .reader-nav-recent-row {
+  color: #e0e0e0;
+}
+.reader-night .reader-nav-recent-row,
+.reader-night .reader-nav-cell-thumb {
+  background: rgba(255, 255, 255, .06);
+}
+.reader-night .reader-nav-cell-num,
+.reader-night .reader-nav-recent-page,
+.reader-night .reader-nav-empty {
   color: #aaaaaa;
 }
 .reader-night .reader-subbar .icon-btn-sm,

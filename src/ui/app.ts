@@ -64,6 +64,7 @@ type ScreenId =
   | 'crop'
   | 'reader'
   | 'recents'
+  | 'tools-all'
   | 'files'
   | 'settings';
 
@@ -85,6 +86,7 @@ const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   crop: 'image-to-pdf',
   reader: 'hub',
   recents: 'hub',
+  'tools-all': 'hub',
   files: 'hub',
   settings: 'hub',
 };
@@ -133,6 +135,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   crop: 'screenTitle.crop',
   reader: 'screenTitle.brand',
   recents: 'hub.recentlyOpened',
+  'tools-all': 'tools.allTitle',
   files: 'screenTitle.files',
   settings: 'settings.title',
 };
@@ -172,6 +175,7 @@ export function initApp(): void {
     crop: byId('screen-crop'),
     reader: byId('screen-reader'),
     recents: byId('screen-recents'),
+    'tools-all': byId('screen-tools-all'),
     files: byId('screen-files'),
     settings: byId('screen-settings'),
   };
@@ -184,6 +188,7 @@ export function initApp(): void {
   const filesNewFolderBtn = byId<HTMLButtonElement>('filesNewFolderBtn');
   const filesDownloadBtn = byId<HTMLButtonElement>('filesDownloadBtn');
   const filesSortBtn = byId<HTMLButtonElement>('filesSortBtn');
+  const filesSearchInput = byId<HTMLInputElement>('filesSearchInput');
   const filesSortSheet = byId<HTMLDivElement>('filesSortSheet');
   const filesSortBackdrop = byId<HTMLDivElement>('filesSortBackdrop');
   const filesSortRows = Array.from(filesSortSheet.querySelectorAll<HTMLButtonElement>('.tool-row[data-sort]'));
@@ -258,8 +263,16 @@ export function initApp(): void {
   const bottomNav = byId<HTMLElement>('bottomNav');
   const hubSearchInput = byId<HTMLInputElement>('hubSearchInput');
   const toast = byId<HTMLDivElement>('toast');
-  const toolRows = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool-row'));
-  const toolCategories = Array.from(document.querySelectorAll<HTMLElement>('.tool-category'));
+  // Only the hub carousel and All-Tools rows use this navigate-or-"coming soon"
+  // handler. The reader tools sheet and the files sort sheet reuse the .tool-row
+  // styling but have their own dedicated click handlers, so exclude them here —
+  // otherwise their rows also fire a spurious "coming soon" toast.
+  const toolRows = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool-row')).filter(
+    (row) => !row.closest('#readerToolsSheet') && !row.closest('#filesSortSheet'),
+  );
+  const carouselToolRows = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('.hub-carousel .tool-row'),
+  );
 
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
   const fileCard = byId<HTMLDivElement>('fileCard');
@@ -289,6 +302,11 @@ export function initApp(): void {
   const backPreviewImg = byId<HTMLImageElement>('backPreviewImg');
   const backPreviewSpinner = byId<HTMLDivElement>('backPreviewSpinner');
   const backPreviewError = byId<HTMLParagraphElement>('backPreviewError');
+  const bookletFileNameInput = byId<HTMLInputElement>('bookletFileNameInput');
+  const bookletSaveBtn = byId<HTMLButtonElement>('bookletSaveBtn');
+  const bookletSaveBtnLabel = byId<HTMLSpanElement>('bookletSaveBtnLabel');
+  const bookletSaveSpinner = byId<HTMLSpanElement>('bookletSaveSpinner');
+  const bookletGoToLocationBtn = byId<HTMLButtonElement>('bookletGoToLocationBtn');
 
   const errorTitle = byId<HTMLHeadingElement>('errorTitle');
   const errorMessage = byId<HTMLParagraphElement>('errorMessage');
@@ -313,6 +331,7 @@ export function initApp(): void {
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
   let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array } | null = null;
+  let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -452,10 +471,19 @@ export function initApp(): void {
   let watermarkSaveState: 'idle' | 'saving' | 'saved' = 'idle';
 
   const hubOpenReaderBtn = byId<HTMLButtonElement>('hubOpenReaderBtn');
-  const recentsSection = byId<HTMLDivElement>('recentsSection');
   const recentsList = byId<HTMLDivElement>('recentsList');
-  const readerPageIndicator = byId<HTMLSpanElement>('readerPageIndicator');
+  const recentsViewAllBtn = byId<HTMLButtonElement>('recentsViewAllBtn');
+  const toolsViewAllBtn = byId<HTMLButtonElement>('toolsViewAllBtn');
+  const readerPageIndicator = byId<HTMLButtonElement>('readerPageIndicator');
   const readerNightModeBtn = byId<HTMLButtonElement>('readerNightModeBtn');
+  const readerScrubber = byId<HTMLDivElement>('readerScrubber');
+  const readerScrubberThumb = byId<HTMLDivElement>('readerScrubberThumb');
+  const readerScrubberBubble = byId<HTMLDivElement>('readerScrubberBubble');
+  const goToPageModal = byId<HTMLDivElement>('goToPageModal');
+  const goToPageInput = byId<HTMLInputElement>('goToPageInput');
+  const goToPageCancelBtn = byId<HTMLButtonElement>('goToPageCancelBtn');
+  const goToPageConfirmBtn = byId<HTMLButtonElement>('goToPageConfirmBtn');
+  const appShell = byId<HTMLDivElement>('appRoot');
   const readerFullscreenBtn = byId<HTMLButtonElement>('readerFullscreenBtn');
   const readerFullscreenOverlay = byId<HTMLDivElement>('readerFullscreenOverlay');
   const fsOverlayBar = byId<HTMLDivElement>('fsOverlayBar');
@@ -472,6 +500,20 @@ export function initApp(): void {
   const readerToolRows = Array.from(
     readerToolsSheet.querySelectorAll<HTMLButtonElement>('.tool-row'),
   );
+  const readerNavBtn = byId<HTMLButtonElement>('readerNavBtn');
+  const readerNavSheet = byId<HTMLDivElement>('readerNavSheet');
+  const readerNavBackdrop = byId<HTMLDivElement>('readerNavBackdrop');
+  const readerNavTabButtons = Array.from(
+    byId<HTMLDivElement>('readerNavTabs').querySelectorAll<HTMLButtonElement>('.reader-nav-tab'),
+  );
+  const readerNavOutlineTab = byId<HTMLButtonElement>('readerNavOutlineTab');
+  const readerNavBody = byId<HTMLDivElement>('readerNavBody');
+  const readerNavPagesPane = byId<HTMLDivElement>('readerNavPagesPane');
+  const readerNavOutlinePane = byId<HTMLDivElement>('readerNavOutlinePane');
+  const readerNavRecentsPane = byId<HTMLDivElement>('readerNavRecentsPane');
+  const readerNavGrid = byId<HTMLDivElement>('readerNavGrid');
+  const readerNavOutlineList = byId<HTMLDivElement>('readerNavOutlineList');
+  const readerNavRecentsList = byId<HTMLDivElement>('readerNavRecentsList');
 
   // Search panel elements
   const readerSearchBtn = byId<HTMLButtonElement>('readerSearchBtn');
@@ -496,12 +538,149 @@ export function initApp(): void {
   const readerRendered = new Map<number, HTMLCanvasElement>();
   let readerNightMode = false;
   let readerBaseWidthPx = 0;
-  let readerAspectRatio = Math.SQRT2;
   let readerIndicatorRaf = 0;
   let readerLastPageSaveTimer: ReturnType<typeof setTimeout> | undefined;
   // Must match .reader-page-list's `gap` and top padding in styles.css.
   const READER_PAGE_GAP_PX = 6;
   const READER_LIST_TOP_PADDING_PX = 6;
+  // Per-page layout metadata, rebuilt on every document open (renderReaderList).
+  // Pages can have mixed orientations, so slot math is per-page, not uniform:
+  // readerPageOffsets[i] is the distance from the top of the page list to
+  // page i+1's top edge (gaps included), before the list's own top offset.
+  let readerPageHeights: number[] = [];
+  let readerPageOffsets: number[] = [];
+  // Aspect ratios (h/w) from the open-time size scan; heights/offsets are
+  // derived from these on every relayout without touching the PDF again.
+  let readerPageAspects: number[] = [];
+  // Distance from scrollTop=0 to the first page's top edge (the scroll
+  // container's own padding plus the list's top padding), measured after
+  // layout in renderReaderList.
+  let readerListTopOffsetPx = READER_LIST_TOP_PADDING_PX;
+  // Zoom factor (1..3) on top of readerBaseWidthPx; the effective layout
+  // width actually applied to the DOM is tracked separately so focal-point
+  // math during a zoom change can still see the outgoing width.
+  let readerZoom = 1;
+  let readerLayoutWidthPx = 0;
+  const READER_ZOOM_MIN = 1;
+  const READER_ZOOM_MAX = 3;
+
+  /** Current page for a given readerScroll.scrollTop (binary search over offsets). */
+  function readerPageAtScrollTop(scrollTop: number): number {
+    if (readerPageOffsets.length === 0) return 1;
+    // At the hard bottom the last page's top may never reach scrollTop (it can
+    // be shorter than the viewport), so top-anchored search would undercount.
+    const maxScroll = readerScroll.scrollHeight - readerScroll.clientHeight;
+    if (maxScroll > 0 && scrollTop >= maxScroll - 2) return readerPageOffsets.length;
+    // +0.75px bias: fractional scrollTop restores land a hair short of exact
+    // page-top boundaries and must not flip the result to the previous page.
+    const offset = Math.max(0, scrollTop - readerListTopOffsetPx) + 0.75;
+    let lo = 0;
+    let hi = readerPageOffsets.length - 1;
+    let ans = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (readerPageOffsets[mid] <= offset) {
+        ans = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return ans + 1;
+  }
+
+  /** scrollTop that puts the given 1-based page's top at the top of the viewport. */
+  function readerScrollTopForPage(pageNumber: number): number {
+    if (readerPageOffsets.length === 0) return 0;
+    const idx = Math.min(Math.max(pageNumber - 1, 0), readerPageOffsets.length - 1);
+    return readerPageOffsets[idx] + readerListTopOffsetPx;
+  }
+
+  /**
+   * Recomputes the whole page layout from readerPageAspects at the current
+   * readerBaseWidthPx * readerZoom width — used by orientation/resize and by
+   * zoom changes. Rendered pages are evicted and re-observed so the
+   * IntersectionObserver re-renders the visible ones at the new width.
+   *
+   * `focus` is a viewport point (relative to readerScroll's box) whose
+   * underlying content point must stay put across the relayout. The anchor is
+   * kept as page + in-page fraction, so the fixed inter-page gaps can't
+   * accumulate drift on long documents.
+   */
+  function relayoutReader(focus?: { viewportX: number; viewportY: number }): void {
+    if (!readerDoc) return;
+    const numPages = readerPageAspects.length;
+    if (numPages === 0) return;
+    const newLayoutW = readerBaseWidthPx * readerZoom;
+
+    let anchor: { idx: number; fracY: number; fracX: number } | null = null;
+    if (focus && readerPageOffsets.length === numPages && readerLayoutWidthPx > 0) {
+      const cy = readerScroll.scrollTop + focus.viewportY;
+      const cx = readerScroll.scrollLeft + focus.viewportX;
+      const idx = Math.min(readerPageAtScrollTop(cy) - 1, numPages - 1);
+      const fracY =
+        readerPageHeights[idx] > 0
+          ? (cy - readerListTopOffsetPx - readerPageOffsets[idx]) / readerPageHeights[idx]
+          : 0;
+      anchor = {
+        idx,
+        fracY: Math.min(Math.max(fracY, 0), 1),
+        fracX: Math.min(Math.max(cx / readerLayoutWidthPx, 0), 1),
+      };
+    }
+
+    readerPageHeights = new Array<number>(numPages);
+    readerPageOffsets = new Array<number>(numPages);
+    let acc = 0;
+    for (let i = 0; i < numPages; i += 1) {
+      readerPageHeights[i] = newLayoutW * readerPageAspects[i];
+      readerPageOffsets[i] = acc;
+      acc += readerPageHeights[i] + READER_PAGE_GAP_PX;
+    }
+    readerPageList.style.setProperty('--reader-page-width', `${newLayoutW}px`);
+    readerLayoutWidthPx = newLayoutW;
+    readerScroll.classList.toggle('is-zoomed', readerZoom > 1);
+
+    readerPageList.querySelectorAll<HTMLDivElement>('.reader-page').forEach((el) => {
+      const pageNumber = Number(el.dataset.pageNumber);
+      el.style.height = `${readerPageHeights[pageNumber - 1]}px`;
+      if (readerRendered.has(pageNumber)) {
+        // Stretch-and-swap instead of evicting: keep the old (now blurry)
+        // canvas visible at the new size until the sharp re-render lands —
+        // renderReaderPageInto swaps the wrapper atomically. Dropping the
+        // map entry is what makes the re-observed IO callback re-render.
+        const wrapper = el.querySelector<HTMLDivElement>('.pdf-page-wrapper');
+        if (wrapper) {
+          wrapper.style.width = `${newLayoutW}px`;
+          wrapper.style.height = `${readerPageHeights[pageNumber - 1]}px`;
+          // The old text layer is scaled for the outgoing width — hide it
+          // rather than leave mis-aligned selectable text in the interim.
+          const textLayer = wrapper.querySelector<HTMLElement>('.textLayer');
+          if (textLayer) textLayer.style.display = 'none';
+        }
+        readerRendered.delete(pageNumber);
+      }
+      // Re-observing forces an initial IntersectionObserver callback, which
+      // re-renders pages that are already in the viewport (a plain content
+      // change would not re-fire the observer).
+      readerObserver?.unobserve(el);
+      readerObserver?.observe(el);
+    });
+
+    if (anchor && focus) {
+      readerScroll.scrollTop =
+        readerListTopOffsetPx +
+        readerPageOffsets[anchor.idx] +
+        anchor.fracY * readerPageHeights[anchor.idx] -
+        focus.viewportY;
+      readerScroll.scrollLeft = anchor.fracX * newLayoutW - focus.viewportX;
+    }
+    // The scroll restore above is programmatic — sync the auto-hide baseline
+    // so the resulting scroll event can't flip the chrome.
+    readerLastScrollTop = readerScroll.scrollTop;
+    updateScrubberThumb();
+    scheduleReaderPageIndicatorUpdate();
+  }
 
   // Search state
   type SearchMatch = { pageNumber: number; spanIndex: number; text: string };
@@ -623,13 +802,16 @@ export function initApp(): void {
     if (getCurrentScreenId() === 'reader' && id !== 'reader') {
       void closeReaderDocument();
       void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
+      setReaderChromeHidden(false);
+      readerScrubber.classList.remove('is-visible');
+      resetReaderZoomState();
     }
     for (const [key, el] of Object.entries(screens)) {
       el.classList.toggle('hidden', key !== id);
     }
     topBarTitle.textContent = t(SCREEN_TITLES[id]);
 
-    const isTab = id === 'hub' || id === 'recents' || id === 'files' || id === 'settings';
+    const isTab = id === 'hub' || id === 'files' || id === 'settings';
     backBtn.hidden = isTab;
 
     const isReader = id === 'reader';
@@ -644,7 +826,7 @@ export function initApp(): void {
     if (id === 'reader') {
       void ScreenOrientation.unlock().catch(() => {});
     } else if (id === 'hub') {
-      void renderRecentsList();
+      void renderHubRecentsGrid();
     } else if (id === 'recents') {
       void renderRecentsListLarge();
     } else if (id === 'files') {
@@ -677,6 +859,7 @@ export function initApp(): void {
   toolRows.forEach((row) => {
     row.addEventListener('click', () => {
       const tool = row.dataset.tool;
+      if (!tool) return; // sort-sheet rows reuse .tool-row styling but are not tools
       const enabled = row.dataset.enabled === 'true';
       const entryScreen = tool ? TOOL_ENTRY_SCREEN[tool] : undefined;
       if (enabled && entryScreen) {
@@ -689,16 +872,10 @@ export function initApp(): void {
 
   hubSearchInput.addEventListener('input', () => {
     const query = hubSearchInput.value.trim().toLowerCase();
-    for (const category of toolCategories) {
-      let visibleCount = 0;
-      category.querySelectorAll<HTMLButtonElement>('.tool-row').forEach((row) => {
-        const title = row.querySelector('.tool-row-title')?.textContent?.toLowerCase() ?? '';
-        const desc = row.querySelector('.tool-row-desc')?.textContent?.toLowerCase() ?? '';
-        const matches = query === '' || title.includes(query) || desc.includes(query);
-        row.classList.toggle('hidden', !matches);
-        if (matches) visibleCount += 1;
-      });
-      category.classList.toggle('hidden', visibleCount === 0);
+    for (const row of carouselToolRows) {
+      const title = row.querySelector('.tool-row-title')?.textContent?.toLowerCase() ?? '';
+      const matches = query === '' || title.includes(query);
+      row.classList.toggle('hidden', !matches);
     }
   });
 
@@ -709,6 +886,14 @@ export function initApp(): void {
         showScreen(nav);
       }
     });
+  });
+
+  recentsViewAllBtn.addEventListener('click', () => {
+    showScreen('recents');
+  });
+
+  toolsViewAllBtn.addEventListener('click', () => {
+    showScreen('tools-all');
   });
 
   let currentPickerPath = '';
@@ -968,6 +1153,12 @@ export function initApp(): void {
       });
 
       booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf };
+      bookletSaveState = 'idle';
+      bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
+      bookletSaveBtn.disabled = false;
+      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      bookletSaveSpinner.classList.add('hidden');
+      bookletGoToLocationBtn.classList.add('hidden');
 
       statOriginal.textContent = String(result.originalPages);
       statSheets.textContent = String(result.sheetsCount);
@@ -1027,29 +1218,81 @@ export function initApp(): void {
     }
   }
 
-  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action]').forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
     button.addEventListener('click', async () => {
       if (!booklet) return;
       const target = button.dataset.target as 'front' | 'back';
-      const action = button.dataset.action as 'save' | 'share';
       const bytes = target === 'front' ? booklet.frontPdf : booklet.backPdf;
       const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'booklet'}_${target}.pdf`;
       const label = target === 'front' ? t('booklet.frontSideLower') : t('booklet.backSideLower');
 
       try {
-        if (action === 'save') {
-          const savedUri = await savePdfPrivately(bytes, `booklets/${filename}`);
-          await recordOpened({ uri: savedUri, name: filename });
-          actionStatus.textContent = t('status.booklet.savedToBindery', { label });
-        } else {
-          await sharePdf(bytes, filename, `${label} PDF`);
-          actionStatus.textContent = t('status.booklet.shared', { label });
-        }
+        await sharePdf(bytes, filename, `${label} PDF`);
+        actionStatus.textContent = t('status.booklet.shared', { label });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         actionStatus.textContent = t('status.booklet.actionFailed', { label, message });
       }
     });
+  });
+
+  bookletFileNameInput.addEventListener('input', () => {
+    if (bookletSaveState === 'saved') {
+      bookletSaveState = 'idle';
+      bookletSaveBtn.disabled = false;
+      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      bookletGoToLocationBtn.classList.add('hidden');
+    }
+  });
+
+  bookletSaveBtn.addEventListener('click', async () => {
+    if (!booklet || bookletSaveState === 'saving') return;
+
+    let docName = bookletFileNameInput.value.trim();
+    if (!docName) {
+      showToast(t('toast.invalidFileName'));
+      return;
+    }
+    docName = docName.replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '');
+    if (!docName) {
+      showToast(t('toast.invalidFileName'));
+      return;
+    }
+
+    if (await pathExists(`booklets/${docName}`)) {
+      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: docName }));
+      if (!overwrite) return;
+    }
+
+    bookletSaveState = 'saving';
+    bookletSaveBtn.disabled = true;
+    bookletSaveBtnLabel.classList.add('hidden');
+    bookletSaveSpinner.classList.remove('hidden');
+
+    try {
+      const frontUri = await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
+      await recordOpened({ uri: frontUri, name: `${docName} — Front Side.pdf` });
+      const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
+      await recordOpened({ uri: backUri, name: `${docName} — Back Side.pdf` });
+      bookletFileNameInput.value = docName;
+      actionStatus.textContent = t('status.booklet.saved');
+      bookletSaveState = 'saved';
+      bookletSaveBtnLabel.textContent = t('common.saved');
+      bookletGoToLocationBtn.classList.remove('hidden');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      actionStatus.textContent = t('status.saveFailed', { message });
+      bookletSaveState = 'idle';
+      bookletSaveBtn.disabled = false;
+    } finally {
+      bookletSaveBtnLabel.classList.remove('hidden');
+      bookletSaveSpinner.classList.add('hidden');
+    }
+  });
+
+  bookletGoToLocationBtn.addEventListener('click', () => {
+    currentFolderPath = `booklets/${bookletFileNameInput.value.trim().replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '')}`;
+    showScreen('files');
   });
 
   newFileBtn.addEventListener('click', async () => {
@@ -1058,6 +1301,12 @@ export function initApp(): void {
     }
     resetPicker();
     booklet = null;
+    bookletSaveState = 'idle';
+    bookletFileNameInput.value = '';
+    bookletSaveBtn.disabled = false;
+    bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+    bookletSaveSpinner.classList.add('hidden');
+    bookletGoToLocationBtn.classList.add('hidden');
     frontPreviewImg.classList.add('hidden');
     frontPreviewImg.src = '';
     frontPreviewError.classList.add('hidden');
@@ -2713,9 +2962,32 @@ export function initApp(): void {
     }
   });
 
+  let readerResizeTimer: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener('resize', () => {
     if (getCurrentScreenId() === 'crop') {
       updateCropUI();
+    }
+    // Orientation changes surface as resizes in the Capacitor WebView; the
+    // relayout also runs while the fullscreen overlay is up so the list
+    // behind it stays consistent (the overlay has its own orientation handler).
+    if (getCurrentScreenId() === 'reader' && readerDoc) {
+      if (readerResizeTimer) clearTimeout(readerResizeTimer);
+      readerResizeTimer = setTimeout(() => {
+        readerResizeTimer = undefined;
+        if (getCurrentScreenId() !== 'reader' || !readerDoc) return;
+        const newBase = readerScroll.clientWidth;
+        if (newBase <= 0) return;
+        // Only a genuine width change (orientation/window resize) needs a
+        // relayout. The soft keyboard opening/closing fires a height-only
+        // resize; relaying out there would re-anchor scroll to the top of the
+        // viewport and hijack an in-flight smooth scroll (e.g. Go-to-Page
+        // landing on the wrong page as the keyboard dismisses).
+        if (Math.abs(newBase - readerBaseWidthPx) < 0.5) return;
+        readerBaseWidthPx = newBase;
+        // Anchor the top of the currently-read position (page + in-page
+        // fraction survive the width change exactly).
+        relayoutReader({ viewportX: readerScroll.clientWidth / 2, viewportY: 0 });
+      }, 200);
     }
   });
 
@@ -2734,6 +3006,7 @@ export function initApp(): void {
     searchCurrentIndex = -1;
     searchActiveQuery = '';
     updateSearchUI();
+    resetReaderNavState();
     if (readerDoc) {
       const doc = readerDoc;
       readerDoc = null;
@@ -2741,15 +3014,9 @@ export function initApp(): void {
     }
   }
 
-  function readerSlotHeight(): number {
-    return readerBaseWidthPx * readerAspectRatio + READER_PAGE_GAP_PX;
-  }
-
   function updateReaderPageIndicator(): void {
     if (!readerDoc) return;
-    const slot = readerSlotHeight();
-    const offset = Math.max(0, readerScroll.scrollTop - READER_LIST_TOP_PADDING_PX);
-    const current = slot > 0 ? Math.min(readerDoc.proxy.numPages, Math.floor(offset / slot) + 1) : 1;
+    const current = Math.min(readerDoc.proxy.numPages, readerPageAtScrollTop(readerScroll.scrollTop));
     readerPageIndicator.textContent = `${current} / ${readerDoc.proxy.numPages}`;
 
     if (readerLastPageSaveTimer) clearTimeout(readerLastPageSaveTimer);
@@ -2766,20 +3033,320 @@ export function initApp(): void {
     });
   }
 
+  // ── Reader chrome auto-hide + edge scrubber ────────────────────────────────
+
+  let readerChromeHidden = false;
+  let readerLastScrollTop = 0;
+  let isScrubberDragging = false;
+  let scrubberHideTimer: ReturnType<typeof setTimeout> | undefined;
+  const READER_SCROLL_JITTER_PX = 12;
+
+  function setReaderChromeHidden(hidden: boolean): void {
+    if (readerChromeHidden === hidden) return;
+    readerChromeHidden = hidden;
+    appShell.classList.toggle('reader-chrome-hidden', hidden);
+  }
+
+  function updateScrubberThumb(): void {
+    const max = readerScroll.scrollHeight - readerScroll.clientHeight;
+    if (max <= 0) return;
+    const trackH = readerScrubber.clientHeight - readerScrubberThumb.offsetHeight;
+    readerScrubberThumb.style.top = `${(readerScroll.scrollTop / max) * trackH}px`;
+  }
+
+  function showScrubberTemporarily(): void {
+    if (readerScrubber.classList.contains('hidden')) return;
+    readerScrubber.classList.add('is-visible');
+    if (scrubberHideTimer) clearTimeout(scrubberHideTimer);
+    scrubberHideTimer = setTimeout(() => {
+      if (!isScrubberDragging) readerScrubber.classList.remove('is-visible');
+    }, 1500);
+  }
+
+  readerScroll.addEventListener('scroll', () => {
+    // While pinching the scroll position is locked — snap back any movement
+    // (overflow:hidden blocks touch panning; this catches everything else)
+    // and skip indicator/scrubber/auto-hide work entirely.
+    if (isPinching) {
+      if (readerScroll.scrollTop !== pinchLockScrollTop) readerScroll.scrollTop = pinchLockScrollTop;
+      if (readerScroll.scrollLeft !== pinchLockScrollLeft) readerScroll.scrollLeft = pinchLockScrollLeft;
+      readerLastScrollTop = pinchLockScrollTop;
+      return;
+    }
+    scheduleReaderPageIndicatorUpdate();
+    updateScrubberThumb();
+    showScrubberTemporarily();
+
+    const top = readerScroll.scrollTop;
+    if (isScrubberDragging) {
+      readerLastScrollTop = top;
+      return;
+    }
+    // Chrome must stay visible while searching, and always at the very top.
+    if (!readerSearchPanel.classList.contains('hidden')) {
+      setReaderChromeHidden(false);
+      readerLastScrollTop = top;
+      return;
+    }
+    if (top <= 0) {
+      setReaderChromeHidden(false);
+      readerLastScrollTop = 0;
+      return;
+    }
+    const delta = top - readerLastScrollTop;
+    if (Math.abs(delta) > READER_SCROLL_JITTER_PX) {
+      setReaderChromeHidden(delta > 0);
+      readerLastScrollTop = top;
+    }
+  });
+
+  // ── Zoom (double-tap + pinch) ──────────────────────────────────────────────
+
+  const activePinchPointers = new Map<number, { x: number; y: number }>();
+  let isPinching = false;
+  let pinchStartDist = 0;
+  let pinchCenter = { x: 0, y: 0 }; // relative to readerScroll's box
+  let pinchPreviewScale = 1;
+  let pinchLockScrollTop = 0;
+  let pinchLockScrollLeft = 0;
+  let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+  let pendingChromeToggle: ReturnType<typeof setTimeout> | undefined;
+
+  function resetReaderZoomState(): void {
+    readerZoom = 1;
+    readerPageList.style.transform = '';
+    readerPageList.style.transformOrigin = '';
+    readerScroll.classList.remove('is-zoomed', 'is-pinching');
+    activePinchPointers.clear();
+    isPinching = false;
+    pinchPreviewScale = 1;
+    lastTapTime = 0;
+    if (pendingChromeToggle) {
+      clearTimeout(pendingChromeToggle);
+      pendingChromeToggle = undefined;
+    }
+  }
+
+  function setReaderZoom(zoom: number, focus: { viewportX: number; viewportY: number }): void {
+    const clamped = Math.min(READER_ZOOM_MAX, Math.max(READER_ZOOM_MIN, zoom));
+    if (clamped === readerZoom) return;
+    readerZoom = clamped;
+    relayoutReader(focus);
+  }
+
+  readerScroll.addEventListener('click', (e) => {
+    if (isPinching) return;
+    if (window.getSelection()?.toString()) return;
+    if (!readerSearchPanel.classList.contains('hidden')) return;
+    const target = e.target as HTMLElement;
+    if (target !== readerScroll && !target.closest('.reader-page-list')) return;
+
+    const now = Date.now();
+    const isDoubleTap =
+      now - lastTapTime <= 300 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) <= 30;
+    if (isDoubleTap) {
+      lastTapTime = 0;
+      if (pendingChromeToggle) {
+        clearTimeout(pendingChromeToggle);
+        pendingChromeToggle = undefined;
+      }
+      const rect = readerScroll.getBoundingClientRect();
+      setReaderZoom(readerZoom === 1 ? 2 : 1, {
+        viewportX: e.clientX - rect.left,
+        viewportY: e.clientY - rect.top,
+      });
+      return;
+    }
+    lastTapTime = now;
+    lastTapX = e.clientX;
+    lastTapY = e.clientY;
+    if (pendingChromeToggle) clearTimeout(pendingChromeToggle);
+    // Hold the chrome toggle back for the double-tap window so zooming
+    // doesn't also flip the bars.
+    pendingChromeToggle = setTimeout(() => {
+      pendingChromeToggle = undefined;
+      setReaderChromeHidden(!readerChromeHidden);
+    }, 300);
+  });
+
+  function pinchDistAndCenter(): { dist: number; x: number; y: number } {
+    const [a, b] = [...activePinchPointers.values()];
+    const rect = readerScroll.getBoundingClientRect();
+    return {
+      dist: Math.hypot(a.x - b.x, a.y - b.y),
+      x: (a.x + b.x) / 2 - rect.left,
+      y: (a.y + b.y) / 2 - rect.top,
+    };
+  }
+
+  function endPinch(): void {
+    if (!isPinching) return;
+    isPinching = false;
+    readerScroll.classList.remove('is-pinching');
+    readerPageList.style.transform = '';
+    readerPageList.style.transformOrigin = '';
+    const target = readerZoom * pinchPreviewScale;
+    pinchPreviewScale = 1;
+    setReaderZoom(target, { viewportX: pinchCenter.x, viewportY: pinchCenter.y });
+    // Suppress the click the browser may synthesize right after the gesture.
+    lastTapTime = 0;
+  }
+
+  readerScroll.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    activePinchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePinchPointers.size === 2 && !isPinching && readerDoc) {
+      isPinching = true;
+      pinchLockScrollTop = readerScroll.scrollTop;
+      pinchLockScrollLeft = readerScroll.scrollLeft;
+      readerScroll.classList.add('is-pinching');
+      const { dist, x, y } = pinchDistAndCenter();
+      pinchStartDist = Math.max(dist, 1);
+      pinchCenter = { x, y };
+      pinchPreviewScale = 1;
+      // Freeze the transform origin now, while the list is untransformed.
+      // Recomputing it per-move from getBoundingClientRect() reads the
+      // already-scaled rect — a feedback loop that drags the content away
+      // from under the fingers.
+      const listRect = readerPageList.getBoundingClientRect();
+      const scrollRect = readerScroll.getBoundingClientRect();
+      readerPageList.style.transformOrigin = `${x + scrollRect.left - listRect.left}px ${y + scrollRect.top - listRect.top}px`;
+      if (pendingChromeToggle) {
+        clearTimeout(pendingChromeToggle);
+        pendingChromeToggle = undefined;
+      }
+    }
+  });
+
+  readerScroll.addEventListener('pointermove', (e) => {
+    if (!activePinchPointers.has(e.pointerId)) return;
+    activePinchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!isPinching || activePinchPointers.size < 2) return;
+    const { dist } = pinchDistAndCenter();
+    const k = dist / pinchStartDist;
+    // Cheap visual preview only — the sharp re-render happens once on release.
+    pinchPreviewScale = Math.min(
+      READER_ZOOM_MAX / readerZoom,
+      Math.max(READER_ZOOM_MIN / readerZoom / 1.2, k),
+    );
+    // Origin was frozen at pinch start; only the scale changes per move.
+    readerPageList.style.transform = `scale(${pinchPreviewScale})`;
+  });
+
+  const onPinchPointerEnd = (e: PointerEvent): void => {
+    if (!activePinchPointers.delete(e.pointerId)) return;
+    if (isPinching && activePinchPointers.size < 2) endPinch();
+  };
+  readerScroll.addEventListener('pointerup', onPinchPointerEnd);
+  readerScroll.addEventListener('pointercancel', onPinchPointerEnd);
+
+  // touch-action can't change mid-gesture, so additionally block the
+  // browser's own two-finger handling while a pinch is being tracked.
+  readerScroll.addEventListener(
+    'touchmove',
+    (e) => {
+      if (e.touches.length >= 2) e.preventDefault();
+    },
+    { passive: false },
+  );
+
+  readerScrubberThumb.addEventListener('pointerdown', (e) => {
+    if (!readerDoc) return;
+    isScrubberDragging = true;
+    try {
+      readerScrubberThumb.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer already released (or synthetic event) — drag still works
+      // while the pointer stays over the thumb.
+    }
+    readerScrubber.classList.add('is-visible');
+    readerScrubberBubble.classList.remove('hidden');
+    e.preventDefault();
+  });
+
+  readerScrubberThumb.addEventListener('pointermove', (e) => {
+    if (!isScrubberDragging || !readerDoc) return;
+    const rect = readerScrubber.getBoundingClientRect();
+    const thumbH = readerScrubberThumb.offsetHeight;
+    const trackH = rect.height - thumbH;
+    const y = Math.min(Math.max(e.clientY - rect.top - thumbH / 2, 0), Math.max(trackH, 0));
+    const max = readerScroll.scrollHeight - readerScroll.clientHeight;
+    // Instant, not smooth: the thumb must track the finger 1:1.
+    readerScroll.scrollTop = trackH > 0 ? (y / trackH) * max : 0;
+    readerScrubberThumb.style.top = `${y}px`;
+    readerScrubberBubble.textContent =
+      `${readerPageAtScrollTop(readerScroll.scrollTop)} / ${readerDoc.proxy.numPages}`;
+    readerScrubberBubble.style.top = `${y + thumbH / 2}px`;
+  });
+
+  const endScrubberDrag = (): void => {
+    if (!isScrubberDragging) return;
+    isScrubberDragging = false;
+    readerScrubberBubble.classList.add('hidden');
+    showScrubberTemporarily();
+  };
+  readerScrubberThumb.addEventListener('pointerup', endScrubberDrag);
+  readerScrubberThumb.addEventListener('pointercancel', endScrubberDrag);
+
+  // ── Go to page ─────────────────────────────────────────────────────────────
+
+  readerPageIndicator.addEventListener('click', () => {
+    if (!readerDoc) return;
+    goToPageInput.value = '';
+    goToPageInput.classList.remove('input-shake');
+    goToPageInput.placeholder = `1–${readerDoc.proxy.numPages}`;
+    openModal(goToPageModal, readerPageIndicator);
+    goToPageInput.focus();
+  });
+
+  function confirmGoToPage(): void {
+    if (!readerDoc) return;
+    const page = Number.parseInt(goToPageInput.value.trim(), 10);
+    if (!Number.isFinite(page) || page < 1 || page > readerDoc.proxy.numPages) {
+      goToPageInput.classList.remove('input-shake');
+      void goToPageInput.offsetWidth; // restart the animation
+      goToPageInput.classList.add('input-shake');
+      return;
+    }
+    closeModal(goToPageModal);
+    readerScroll.scrollTo({ top: readerScrollTopForPage(page), behavior: 'smooth' });
+  }
+
+  goToPageConfirmBtn.addEventListener('click', confirmGoToPage);
+  goToPageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmGoToPage();
+  });
+  goToPageCancelBtn.addEventListener('click', () => closeModal(goToPageModal));
+
   async function renderReaderPageInto(container: HTMLDivElement, pageNumber: number): Promise<void> {
     if (!readerDoc) return;
     try {
-      const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, readerBaseWidthPx, readerNightMode);
+      // Layout width (base * zoom, as last applied by relayoutReader) is the
+      // single source of truth for render width — night-mode re-renders and
+      // zoomed renders must agree with the placeholder sizes.
+      const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, readerLayoutWidthPx, readerNightMode);
       if (!readerDoc || !document.contains(container)) return;
       container.innerHTML = '';
-      // Container size is always driven by applyReaderPageSize, never by
-      // the canvas — the canvas just fits inside it (.reader-page canvas
-      // has max-width/max-height: 100%). This keeps layout/scroll math
-      // (readerSlotHeight) exact and decoupled from per-page render
+      // Container size is always driven by the placeholder's explicit
+      // per-page height (set in renderReaderList), never by the canvas —
+      // the canvas just fits inside it (.reader-page canvas has
+      // max-width/max-height: 100%). This keeps layout/scroll math
+      // (readerPageOffsets) exact and decoupled from per-page render
       // precision, so re-rendering a page for sharpness can never itself
       // shift the scroll position.
       container.appendChild(wrapper);
       readerRendered.set(pageNumber, canvas);
+      // A re-render rebuilds the text layer, dropping any search highlights —
+      // restore them (relayout after zoom/resize, eviction round-trips, etc.).
+      if (searchActiveQuery && searchMatches.length > 0) {
+        const active = searchCurrentIndex >= 0 ? searchMatches[searchCurrentIndex] : undefined;
+        applySearchHighlightsOnPage(
+          pageNumber,
+          active && active.pageNumber === pageNumber ? active.spanIndex : null,
+        );
+      }
     } catch {
       // Placeholder stays empty; re-entering the viewport will retry since
       // readerRendered has no entry for this page.
@@ -2808,20 +3375,41 @@ export function initApp(): void {
   async function renderReaderList(): Promise<void> {
     if (!readerDoc) return;
     const numPages = readerDoc.proxy.numPages;
-    const firstPage = await readerDoc.proxy.getPage(1);
-    const baseViewport = firstPage.getViewport({ scale: 1 });
-    readerAspectRatio = baseViewport.height / baseViewport.width;
-    readerBaseWidthPx = Math.min(window.innerWidth, 1000);
+    // The .app column caps at 480px — the scroll viewport, not the window,
+    // is the correct width reference (window.innerWidth overflowed on wide screens).
+    readerBaseWidthPx = readerScroll.clientWidth || Math.min(window.innerWidth, 1000);
+    resetReaderZoomState();
+
+    // Scan every page's intrinsic aspect ratio (metadata only, no rendering)
+    // so mixed-orientation documents get exact per-page slot heights. Batched
+    // so a 1000+ page document doesn't serialize into a long stall.
+    const doc = readerDoc;
+    readerPageAspects = new Array<number>(numPages);
+    const SIZE_SCAN_BATCH = 8;
+    for (let start = 1; start <= numPages; start += SIZE_SCAN_BATCH) {
+      const end = Math.min(numPages, start + SIZE_SCAN_BATCH - 1);
+      const batch: Promise<void>[] = [];
+      for (let p = start; p <= end; p += 1) {
+        batch.push(
+          doc.proxy.getPage(p).then((page) => {
+            const vp = page.getViewport({ scale: 1 });
+            readerPageAspects[p - 1] = vp.height / vp.width;
+          }),
+        );
+      }
+      await Promise.all(batch);
+      if (readerDoc !== doc) return; // document was closed/replaced mid-scan
+    }
 
     readerPageList.innerHTML = '';
     readerRendered.clear();
 
-    const pageHeight = readerBaseWidthPx * readerAspectRatio;
-    readerPageList.style.setProperty('--reader-page-width', `${readerBaseWidthPx}px`);
-    readerPageList.style.setProperty('--reader-page-height', `${pageHeight}px`);
-
     readerObserver = new IntersectionObserver(
       (entries) => {
+        // The pinch preview transform shifts every placeholder rect, which
+        // would otherwise trigger render/evict churn at the stale width for
+        // the whole gesture; endPinch's relayout re-observes everything.
+        if (isPinching) return;
         for (const entry of entries) {
           const el = entry.target as HTMLDivElement;
           const pageNumber = Number(el.dataset.pageNumber);
@@ -2843,9 +3431,31 @@ export function initApp(): void {
       placeholder.className = 'reader-page';
       placeholder.dataset.pageNumber = String(i);
       readerPageList.appendChild(placeholder);
-      readerObserver.observe(placeholder);
     }
 
+    // Sizes every placeholder, sets --reader-page-width and observes the
+    // placeholders (observe fires the initial render callbacks).
+    relayoutReader();
+
+    // Filling the list can materialize a classic (non-overlay) vertical
+    // scrollbar, shrinking clientWidth after the fact — re-measure once so
+    // zoom-1 content never overflows horizontally.
+    if (readerScroll.clientWidth > 0 && Math.abs(readerScroll.clientWidth - readerBaseWidthPx) > 0.5) {
+      readerBaseWidthPx = readerScroll.clientWidth;
+      relayoutReader();
+    }
+
+    // Measure where page 1 actually starts relative to scrollTop=0 — the
+    // scroll container's fixed chrome padding plus the list's top padding.
+    readerScroll.scrollTop = 0;
+    readerScroll.scrollLeft = 0;
+    readerListTopOffsetPx =
+      readerPageList.getBoundingClientRect().top -
+      readerScroll.getBoundingClientRect().top +
+      READER_LIST_TOP_PADDING_PX;
+
+    readerScrubber.classList.toggle('hidden', numPages <= 3);
+    readerScrubberThumb.style.top = '0px';
     readerPageIndicator.textContent = `1 / ${numPages}`;
   }
 
@@ -2867,6 +3477,9 @@ export function initApp(): void {
       await validatePdf(bytes);
       await closeReaderDocument();
       readerDoc = await openReaderDocument(bytes);
+      readerOutline = (await readerDoc.proxy.getOutline().catch(() => null)) as
+        | OutlineItem[]
+        | null;
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
@@ -2879,7 +3492,7 @@ export function initApp(): void {
       topBarTitle.textContent = readerName;
       await renderReaderList();
       if (initialPage > 1) {
-        readerScroll.scrollTop = (initialPage - 1) * readerSlotHeight() + READER_LIST_TOP_PADDING_PX;
+        readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
       await recordOpened({ uri: sourceUri, name });
     } catch (error) {
@@ -2891,36 +3504,112 @@ export function initApp(): void {
     }
   }
 
-  async function renderRecentsList(): Promise<void> {
-    const recents = await getRecents();
-    recentsSection.classList.toggle('hidden', recents.length === 0);
-    recentsList.innerHTML = '';
-    for (const entry of recents) {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'recents-row';
+  // First-page thumbnail cache shared by the hub recents grid and the files
+  // list. Keyed by `uri|size|lastModified` where metadata is known (files) or
+  // plain uri (recents); Map insertion order doubles as the eviction order.
+  const pdfThumbnailCache = new Map<string, string>();
+  const PDF_THUMBNAIL_CACHE_MAX = 50;
 
-      const meta = document.createElement('span');
-      meta.className = 'recents-row-meta';
-      const nameEl = document.createElement('span');
-      nameEl.className = 'recents-row-name';
-      nameEl.textContent = entry.name;
-      const pageEl = document.createElement('span');
-      pageEl.className = 'recents-row-page';
-      pageEl.textContent = t('common.pageLabel', { n: entry.lastPage });
-      meta.append(nameEl, pageEl);
-      row.appendChild(meta);
-
-      row.addEventListener('click', () => void openRecent(entry));
-      recentsList.appendChild(row);
+  /**
+   * Renders page 1 of the PDF behind `uri` to a data URL, caching the result
+   * under `cacheKey`. Returns null on any failure (missing/unreadable/encrypted
+   * file) — callers keep their placeholder; never throws into a render path.
+   */
+  async function getPdfThumbnail(uri: string, cacheKey: string): Promise<string | null> {
+    const cached = pdfThumbnailCache.get(cacheKey);
+    if (cached) return cached;
+    try {
+      const picked = await readPdfFromUri(uri);
+      const doc = await loadPdfForThumbnails(picked.bytes);
+      try {
+        const dataUrl = await renderPageThumbnail(doc, 1, 220);
+        pdfThumbnailCache.set(cacheKey, dataUrl);
+        if (pdfThumbnailCache.size > PDF_THUMBNAIL_CACHE_MAX) {
+          const oldest = pdfThumbnailCache.keys().next().value;
+          if (oldest !== undefined) pdfThumbnailCache.delete(oldest);
+        }
+        return dataUrl;
+      } finally {
+        await destroyThumbnailDoc(doc);
+      }
+    } catch {
+      return null;
     }
+  }
+
+  /**
+   * Loads the first page of a recent entry as a real thumbnail and swaps it
+   * into `container`. Keeps the placeholder icon on any failure (missing uri,
+   * unreadable file) — never throws into the render path.
+   */
+  async function loadHubRecentThumbnail(entry: RecentEntry, container: HTMLElement): Promise<void> {
+    if (!entry.uri) return;
+    const dataUrl = await getPdfThumbnail(entry.uri, entry.uri);
+    if (!dataUrl) return;
+    const img = document.createElement('img');
+    img.className = 'hub-recent-thumb-img';
+    img.alt = '';
+    img.src = dataUrl;
+    container.replaceChildren(img);
+  }
+
+  async function renderHubRecentsGrid(): Promise<void> {
+    const recents = (await getRecents()).slice(0, 3);
+    recentsList.innerHTML = '';
+
+    for (const entry of recents) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'hub-recent-card';
+
+      const thumb = document.createElement('span');
+      thumb.className = 'hub-recent-thumb';
+      const placeholder = document.createElement('span');
+      placeholder.className = 'hub-recent-thumb-placeholder';
+      placeholder.textContent = '📄';
+      placeholder.ariaHidden = 'true';
+      thumb.appendChild(placeholder);
+      card.appendChild(thumb);
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'hub-recent-name';
+      nameEl.textContent = entry.name;
+      card.appendChild(nameEl);
+
+      card.addEventListener('click', () => void openRecent(entry));
+      recentsList.appendChild(card);
+
+      void loadHubRecentThumbnail(entry, thumb);
+    }
+
+    const createCard = document.createElement('button');
+    createCard.type = 'button';
+    createCard.className = 'hub-recent-card hub-recent-card--create';
+
+    const createIcon = document.createElement('span');
+    createIcon.className = 'hub-recent-thumb hub-recent-thumb--create';
+    createIcon.ariaHidden = 'true';
+    createIcon.textContent = '+';
+    createCard.appendChild(createIcon);
+
+    const createLabel = document.createElement('span');
+    createLabel.className = 'hub-recent-name';
+    createLabel.dataset.i18n = 'hub.recents.createNew';
+    createLabel.textContent = t('hub.recents.createNew');
+    createCard.appendChild(createLabel);
+
+    createCard.addEventListener('click', () => {
+      const entryScreen = TOOL_ENTRY_SCREEN['image-to-pdf'];
+      if (entryScreen) showScreen(entryScreen);
+    });
+    recentsList.appendChild(createCard);
   }
 
   async function openRecent(entry: RecentEntry): Promise<void> {
     if (!entry.uri) {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry.name);
-      await renderRecentsList();
+      await renderHubRecentsGrid();
       return;
     }
     if (isOpeningReader) return;
@@ -2932,7 +3621,7 @@ export function initApp(): void {
     } catch {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry.name);
-      await renderRecentsList();
+      await renderHubRecentsGrid();
     } finally {
       hideReaderOpening();
     }
@@ -3043,9 +3732,7 @@ export function initApp(): void {
     const { pageNumber } = match;
 
     // Scroll the page into view
-    const slot = readerSlotHeight();
-    const targetScrollTop = (pageNumber - 1) * slot + READER_LIST_TOP_PADDING_PX;
-    readerScroll.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+    readerScroll.scrollTo({ top: readerScrollTopForPage(pageNumber), behavior: 'smooth' });
 
     // Wait until the IntersectionObserver has rendered this page (up to 800 ms)
     let waited = 0;
@@ -3197,6 +3884,283 @@ export function initApp(): void {
 
   readerToolsBackdrop.addEventListener('click', () => {
     readerToolsSheet.classList.add('hidden');
+  });
+
+  // ── Reader navigation sheet (pages grid / outline / recents) ───────────────
+
+  type ReaderNavTab = 'pages' | 'outline' | 'recents';
+  type OutlineItem = { title: string; dest: unknown; url: string | null; items?: OutlineItem[] };
+  let readerNavActiveTab: ReaderNavTab = 'pages';
+  let readerOutline: OutlineItem[] | null = null;
+  let navGridDoc: unknown = null; // proxy the grid was built for
+  const navThumbCache = new Map<number, string>();
+  const NAV_THUMB_CACHE_MAX = 200;
+  const navOutlinePageCache = new Map<OutlineItem, number>();
+  let navThumbObserver: IntersectionObserver | null = null;
+  let navThumbActive = 0;
+  const navThumbPending: { page: number; img: HTMLImageElement }[] = [];
+  const NAV_THUMB_WIDTH_PX = 120;
+
+  function resetReaderNavState(): void {
+    readerNavSheet.classList.add('hidden');
+    readerNavActiveTab = 'pages';
+    readerOutline = null;
+    navGridDoc = null;
+    navThumbCache.clear();
+    navOutlinePageCache.clear();
+    navThumbPending.length = 0;
+    navThumbObserver?.disconnect();
+    navThumbObserver = null;
+    readerNavGrid.innerHTML = '';
+    readerNavOutlineList.innerHTML = '';
+    readerNavRecentsList.innerHTML = '';
+  }
+
+  function closeReaderNavSheet(): void {
+    readerNavSheet.classList.add('hidden');
+  }
+
+  /**
+   * Small standalone thumbnail render for the grid — deliberately NOT
+   * renderReaderPage: its per-page-number task map would cancel the main
+   * reader's in-flight render of the same page. Always day-mode.
+   */
+  async function renderNavThumb(pageNumber: number): Promise<string | null> {
+    const doc = readerDoc;
+    if (!doc) return null;
+    try {
+      const page = await doc.proxy.getPage(pageNumber);
+      const vp1 = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: NAV_THUMB_WIDTH_PX / vp1.width });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvas, viewport }).promise;
+      const url = canvas.toDataURL('image/jpeg', 0.8);
+      canvas.width = 0;
+      canvas.height = 0;
+      return url;
+    } catch {
+      return null;
+    }
+  }
+
+  function pumpNavThumbs(): void {
+    // At most 2 concurrent thumb renders so the sheet never starves the
+    // main reader's own page renders.
+    while (navThumbActive < 2 && navThumbPending.length > 0) {
+      const task = navThumbPending.shift()!;
+      navThumbActive += 1;
+      void (async () => {
+        try {
+          if (!readerDoc || !document.contains(task.img)) return;
+          let url = navThumbCache.get(task.page) ?? null;
+          if (!url) {
+            url = await renderNavThumb(task.page);
+            if (url) {
+              navThumbCache.set(task.page, url);
+              if (navThumbCache.size > NAV_THUMB_CACHE_MAX) {
+                const oldest = navThumbCache.keys().next().value;
+                if (oldest !== undefined) navThumbCache.delete(oldest);
+              }
+            }
+          }
+          if (url) {
+            task.img.src = url;
+            task.img.classList.add('is-loaded');
+          } else {
+            delete task.img.dataset.queued; // failed — allow a retry on re-enter
+          }
+        } finally {
+          navThumbActive -= 1;
+          pumpNavThumbs();
+        }
+      })();
+    }
+  }
+
+  function buildNavGrid(): void {
+    if (!readerDoc) return;
+    if (navGridDoc === readerDoc.proxy) return; // already built for this document
+    navGridDoc = readerDoc.proxy;
+    readerNavGrid.innerHTML = '';
+    navThumbPending.length = 0;
+    navThumbObserver?.disconnect();
+    navThumbObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const img = entry.target.querySelector('img');
+          if (!img || img.dataset.queued) continue;
+          img.dataset.queued = 'true';
+          navThumbPending.push({ page: Number((entry.target as HTMLElement).dataset.page), img });
+        }
+        pumpNavThumbs();
+      },
+      { root: readerNavBody, rootMargin: '200px 0px' },
+    );
+
+    const numPages = readerDoc.proxy.numPages;
+    for (let i = 1; i <= numPages; i += 1) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'reader-nav-cell';
+      cell.dataset.page = String(i);
+
+      const thumb = document.createElement('span');
+      thumb.className = 'reader-nav-cell-thumb';
+      const img = document.createElement('img');
+      img.alt = '';
+      const aspect = readerPageAspects[i - 1] ?? Math.SQRT2;
+      thumb.style.aspectRatio = `${1 / aspect}`;
+      thumb.appendChild(img);
+      cell.appendChild(thumb);
+
+      const num = document.createElement('span');
+      num.className = 'reader-nav-cell-num';
+      num.textContent = String(i);
+      cell.appendChild(num);
+
+      cell.addEventListener('click', () => {
+        closeReaderNavSheet();
+        readerScroll.scrollTop = readerScrollTopForPage(i);
+      });
+      readerNavGrid.appendChild(cell);
+      navThumbObserver.observe(cell);
+    }
+  }
+
+  async function resolveOutlineToPage(item: OutlineItem): Promise<number | null> {
+    if (!readerDoc) return null;
+    const cached = navOutlinePageCache.get(item);
+    if (cached !== undefined) return cached;
+    try {
+      let destArray: unknown = item.dest;
+      if (typeof destArray === 'string') {
+        destArray = await readerDoc.proxy.getDestination(destArray);
+      }
+      if (!Array.isArray(destArray) || !destArray[0]) return null;
+      const idx = await readerDoc.proxy.getPageIndex(destArray[0]);
+      const page = idx + 1;
+      navOutlinePageCache.set(item, page);
+      return page;
+    } catch {
+      return null;
+    }
+  }
+
+  function buildNavOutline(): void {
+    if (readerNavOutlineList.childElementCount > 0) return; // built once per document
+    const walk = (items: OutlineItem[], level: number): void => {
+      for (const item of items) {
+        if (item.url) continue; // external links have no in-document target
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'reader-nav-outline-row';
+        // Indent up to 3 levels deep; anything deeper aligns with level 3.
+        row.style.paddingLeft = `${12 + Math.min(level, 2) * 16}px`;
+        row.textContent = item.title || '—';
+        row.addEventListener('click', async () => {
+          const page = await resolveOutlineToPage(item);
+          if (page === null) {
+            showToast(t('reader.outlineLinkFailed'));
+            return;
+          }
+          closeReaderNavSheet();
+          readerScroll.scrollTop = readerScrollTopForPage(page);
+        });
+        readerNavOutlineList.appendChild(row);
+        if (item.items && item.items.length > 0) walk(item.items, level + 1);
+      }
+    };
+    walk(readerOutline ?? [], 0);
+  }
+
+  async function buildNavRecents(): Promise<void> {
+    const recents = (await getRecents()).filter((r) => r.uri !== readerUri);
+    readerNavRecentsList.innerHTML = '';
+    if (recents.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'reader-nav-empty';
+      empty.textContent = t('reader.noOtherRecents');
+      readerNavRecentsList.appendChild(empty);
+      return;
+    }
+    for (const entry of recents) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'reader-nav-recent-row';
+
+      const thumb = document.createElement('span');
+      thumb.className = 'reader-nav-recent-thumb';
+      const cachedThumb = entry.uri ? pdfThumbnailCache.get(entry.uri) : undefined;
+      if (cachedThumb) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = cachedThumb;
+        thumb.appendChild(img);
+      } else {
+        thumb.innerHTML = FILES_ICON_FILE_TEXT;
+      }
+      row.appendChild(thumb);
+
+      const meta = document.createElement('span');
+      meta.className = 'reader-nav-recent-meta';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'reader-nav-recent-name';
+      nameEl.textContent = entry.name;
+      meta.appendChild(nameEl);
+      const pageEl = document.createElement('span');
+      pageEl.className = 'reader-nav-recent-page';
+      pageEl.textContent = t('recents.pageAbbrev', { n: entry.lastPage });
+      meta.appendChild(pageEl);
+      row.appendChild(meta);
+
+      row.addEventListener('click', () => {
+        closeReaderNavSheet();
+        void openRecent(entry);
+      });
+      readerNavRecentsList.appendChild(row);
+    }
+  }
+
+  function setNavTab(tab: ReaderNavTab): void {
+    readerNavActiveTab = tab;
+    readerNavTabButtons.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.navtab === tab);
+    });
+    readerNavPagesPane.classList.toggle('hidden', tab !== 'pages');
+    readerNavOutlinePane.classList.toggle('hidden', tab !== 'outline');
+    readerNavRecentsPane.classList.toggle('hidden', tab !== 'recents');
+  }
+
+  function openReaderNavSheet(): void {
+    if (!readerDoc) return;
+    const hasOutline = !!readerOutline && readerOutline.length > 0;
+    readerNavOutlineTab.classList.toggle('hidden', !hasOutline);
+    if (!hasOutline && readerNavActiveTab === 'outline') readerNavActiveTab = 'pages';
+    buildNavGrid();
+    if (hasOutline) buildNavOutline();
+    void buildNavRecents();
+    setNavTab(readerNavActiveTab);
+    readerNavSheet.classList.remove('hidden');
+
+    // Highlight the current page's cell and bring it into view.
+    const current = readerPageAtScrollTop(readerScroll.scrollTop);
+    readerNavGrid.querySelectorAll('.reader-nav-cell').forEach((cell) => {
+      cell.classList.toggle('is-current', Number((cell as HTMLElement).dataset.page) === current);
+    });
+    if (readerNavActiveTab === 'pages') {
+      readerNavGrid
+        .querySelector(`.reader-nav-cell[data-page="${current}"]`)
+        ?.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  readerNavBtn.addEventListener('click', openReaderNavSheet);
+  readerNavBackdrop.addEventListener('click', closeReaderNavSheet);
+  readerNavTabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => setNavTab(btn.dataset.navtab as ReaderNavTab));
   });
 
   readerToolRows.forEach((row) => {
@@ -3502,9 +4466,7 @@ export function initApp(): void {
     fsRotationAngle = 0;
 
     // Find current page in vertical scroll
-    const slot = readerSlotHeight();
-    const offset = Math.max(0, readerScroll.scrollTop - READER_LIST_TOP_PADDING_PX);
-    fullscreenCurrentPage = slot > 0 ? Math.min(readerDoc.proxy.numPages, Math.floor(offset / slot) + 1) : 1;
+    fullscreenCurrentPage = Math.min(readerDoc.proxy.numPages, readerPageAtScrollTop(readerScroll.scrollTop));
 
     readerFullscreenOverlay.classList.remove('hidden');
     updateFullscreenOrientation();
@@ -3527,8 +4489,7 @@ export function initApp(): void {
 
     // Sync back scroll position in normal reader
     if (readerDoc) {
-      const slot = readerSlotHeight();
-      readerScroll.scrollTop = (fullscreenCurrentPage - 1) * slot + READER_LIST_TOP_PADDING_PX;
+      readerScroll.scrollTop = readerScrollTopForPage(fullscreenCurrentPage);
     }
   }
 
@@ -3595,7 +4556,7 @@ export function initApp(): void {
       case 'rotate-result': return rotateResultPdf !== null && rotateSaveState !== 'saved';
       case 'page-numbers-result': return pageNumbersResultPdf !== null && pageNumbersSaveState !== 'saved';
       case 'watermark-result': return watermarkResultPdf !== null && watermarkSaveState !== 'saved';
-      case 'result': return booklet !== null;
+      case 'result': return booklet !== null && bookletSaveState !== 'saved';
       default: return false;
     }
   }
@@ -3617,6 +4578,10 @@ export function initApp(): void {
       }
       if (isFullscreenReaderActive) {
         closeFullscreenReader();
+        return;
+      }
+      if (!readerNavSheet.classList.contains('hidden')) {
+        closeReaderNavSheet();
         return;
       }
       if (!readerToolsSheet.classList.contains('hidden')) {
@@ -3700,7 +4665,7 @@ export function initApp(): void {
       }
       
       closeModal(saveDocModal);
-      void renderRecentsList();
+      void renderHubRecentsGrid();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('toast.saveError', { message }));
@@ -3744,7 +4709,7 @@ export function initApp(): void {
       void renderFilesList();
       return;
     }
-    if (current === 'hub' || current === 'recents' || current === 'files' || current === 'settings') {
+    if (current === 'hub' || current === 'files' || current === 'settings') {
       void App.exitApp();
     } else {
       backBtn.click();
@@ -4019,8 +4984,35 @@ export function initApp(): void {
     openModal(fileActionsModal);
   }
 
+  const FILES_ICON_FOLDER =
+    '<svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
+  const FILES_ICON_FILE_TEXT =
+    '<svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>';
+  const FILES_ICON_ELLIPSIS =
+    '<svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
+
+  // Bumped on every renderFilesList() call so in-flight async thumbnail loops
+  // from a previous render (other folder / other sort order) stop writing to
+  // the rebuilt DOM.
+  let filesRenderGeneration = 0;
+  let filesLastRenderedPath: string | null = null;
+
+  /** Shows/hides already-rendered file cards by name; never re-reads the folder. */
+  function applyFilesSearchFilter(): void {
+    const query = filesSearchInput.value.trim().toLocaleLowerCase();
+    filesList.querySelectorAll<HTMLElement>('.file-item-card').forEach((card) => {
+      const name = (card.dataset.name ?? '').toLocaleLowerCase();
+      card.classList.toggle('hidden', query !== '' && !name.includes(query));
+    });
+  }
+
   async function renderFilesList(): Promise<void> {
     renderFilesBreadcrumb();
+    const generation = ++filesRenderGeneration;
+    if (filesLastRenderedPath !== currentFolderPath) {
+      filesSearchInput.value = '';
+      filesLastRenderedPath = currentFolderPath;
+    }
 
     let raw: Awaited<ReturnType<typeof listPrivateFolder>>;
     try {
@@ -4029,10 +5021,15 @@ export function initApp(): void {
       showToast(t('files.loadError'));
       return;
     }
+    if (generation !== filesRenderGeneration) return;
     const items = sortFileEntries(raw, filesSortMode);
     const isEmpty = items.length === 0;
     filesEmptyHint.classList.toggle('hidden', !isEmpty);
     filesList.innerHTML = '';
+
+    // The list renders instantly with placeholder icons; real PDF thumbnails
+    // are filled in afterwards, one at a time (see loop below the card loop).
+    const thumbTasks: { uri: string; cacheKey: string; thumb: HTMLElement }[] = [];
 
     for (const item of items) {
       const isDir = item.type === 'directory';
@@ -4040,13 +5037,27 @@ export function initApp(): void {
       const card = document.createElement('div');
       card.className = 'file-item-card';
       if (isDir) card.classList.add('is-folder');
+      card.dataset.name = item.name;
 
-      // Icon
-      const icon = document.createElement('span');
-      icon.className = 'file-item-icon';
-      icon.textContent = isDir ? '📂' : '📄';
-      icon.ariaHidden = 'true';
-      card.appendChild(icon);
+      // Thumbnail box: folder icon on tonal background, or file placeholder
+      // that the async loop below swaps for a real first-page render.
+      const thumb = document.createElement('span');
+      thumb.className = 'file-item-thumb';
+      thumb.ariaHidden = 'true';
+      if (isDir) {
+        thumb.classList.add('file-item-thumb--folder');
+        thumb.innerHTML = FILES_ICON_FOLDER;
+      } else {
+        thumb.innerHTML = FILES_ICON_FILE_TEXT;
+        if (item.uri) {
+          thumbTasks.push({
+            uri: item.uri,
+            cacheKey: `${item.uri}|${item.size}|${item.lastModified}`,
+            thumb,
+          });
+        }
+      }
+      card.appendChild(thumb);
 
       // Details column
       const details = document.createElement('div');
@@ -4084,7 +5095,7 @@ export function initApp(): void {
 
       const moreBtn = document.createElement('button');
       moreBtn.className = 'icon-btn-sm';
-      moreBtn.textContent = '⋮';
+      moreBtn.innerHTML = FILES_ICON_ELLIPSIS;
       moreBtn.ariaLabel = t('common.moreActions');
       moreBtn.title = t('common.moreActions');
       moreBtn.addEventListener('click', (e) => {
@@ -4112,6 +5123,25 @@ export function initApp(): void {
 
       filesList.appendChild(card);
     }
+
+    applyFilesSearchFilter();
+
+    // Sequential async fill of real thumbnails; abandoned as soon as a newer
+    // render bumps the generation counter.
+    void (async () => {
+      for (const task of thumbTasks) {
+        if (generation !== filesRenderGeneration) return;
+        const dataUrl = await getPdfThumbnail(task.uri, task.cacheKey);
+        if (generation !== filesRenderGeneration) return;
+        if (dataUrl) {
+          const img = document.createElement('img');
+          img.className = 'file-item-thumb-img';
+          img.alt = '';
+          img.src = dataUrl;
+          task.thumb.replaceChildren(img);
+        }
+      }
+    })();
   }
 
   /** Marks one folder row as the selected move target. */
@@ -4234,6 +5264,8 @@ export function initApp(): void {
       void renderFilesList();
     });
   });
+
+  filesSearchInput.addEventListener('input', applyFilesSearchFilter);
 
   filesDownloadBtn.addEventListener('click', () => {
     showToast(t('toast.openingDownloadModal'));

@@ -157,7 +157,11 @@ export async function renderReaderPage(
 
   const page = await proxy.getPage(pageNumber);
   const baseViewport = page.getViewport({ scale: 1 });
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE);
+  // Absolute canvas width cap: at zoom 3 on a high-dpr wide screen the
+  // backing store would otherwise balloon (memory), so trade a little
+  // sharpness for a bounded canvas — CSS stretches it to the layout width.
+  const MAX_CANVAS_WIDTH_PX = 2800;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE, MAX_CANVAS_WIDTH_PX / widthPx);
   const scale = (widthPx / baseViewport.width) * pixelRatio;
   const viewport = page.getViewport({ scale });
 

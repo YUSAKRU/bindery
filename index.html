@@ -19,6 +19,11 @@
 
       <main class="screen-container">
         <section class="screen" id="screen-hub">
+          <div class="hub-hero">
+            <span class="hub-hero-eyebrow" data-i18n="hub.hero.eyebrow">Welcome</span>
+            <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>
+          </div>
+
           <button type="button" class="btn btn-primary btn-large" id="hubOpenReaderBtn">
             <span data-i18n="hub.openPdf">📖 Open PDF</span>
           </button>
@@ -33,11 +38,66 @@
             data-i18n-placeholder="hub.searchPlaceholder"
           />
 
-          <div class="recents-section hidden" id="recentsSection">
-            <h3 class="tool-category-title" data-i18n="hub.recentlyOpened">Recently Opened</h3>
-            <div class="recents-list" id="recentsList"></div>
+          <div class="hub-recents-head">
+            <h3 class="tool-category-title" data-i18n="nav.tools">Tools</h3>
+            <button type="button" class="hub-recents-viewall" id="toolsViewAllBtn" data-i18n="hub.tools.viewAll">View All</button>
+          </div>
+          <div class="hub-carousel" id="hubCarousel" aria-label="Quick access">
+            <button type="button" class="tool-row tool-row--carousel" data-tool="rotate" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="organize" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="page-numbers" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="merge" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="booklet" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="watermark" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="image-to-pdf" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.imageToPdf.title">Image to PDF</span>
+              </span>
+            </button>
           </div>
 
+          <div class="recents-section" id="recentsSection">
+            <div class="hub-recents-head">
+              <h3 class="tool-category-title" data-i18n="hub.recentlyOpened">Recently Opened</h3>
+              <button type="button" class="hub-recents-viewall" id="recentsViewAllBtn" data-i18n="hub.recents.viewAll">View All</button>
+            </div>
+            <div class="hub-recents-grid" id="recentsList"></div>
+          </div>
+
+        </section>
+
+        <section class="screen hidden" id="screen-tools-all">
           <div class="tool-category" id="categorySayfaIslemleri">
             <h3 class="tool-category-title" data-i18n="hub.category.pageOps">Page Operations</h3>
             <div class="tool-rows">
@@ -115,10 +175,11 @@
 
         <section class="screen hidden reader-screen" id="screen-reader">
           <div class="reader-subbar">
-            <span class="reader-page-indicator" id="readerPageIndicator">- / -</span>
-            <button type="button" class="icon-btn-sm" id="readerNightModeBtn" aria-label="Night mode" data-i18n-aria-label="reader.nightMode">🌙</button>
-            <button type="button" class="icon-btn-sm" id="readerSearchBtn" aria-label="Search" data-i18n-aria-label="reader.search">🔍</button>
-            <button type="button" class="icon-btn-sm" id="readerFullscreenBtn" aria-label="Fullscreen reading" data-i18n-aria-label="reader.fullscreen">📖</button>
+            <button type="button" class="reader-page-indicator" id="readerPageIndicator" aria-label="Go to page" data-i18n-aria-label="reader.goToPage">- / -</button>
+            <button type="button" class="icon-btn-sm" id="readerNightModeBtn" aria-label="Night mode" data-i18n-aria-label="reader.nightMode"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg></button>
+            <button type="button" class="icon-btn-sm" id="readerSearchBtn" aria-label="Search" data-i18n-aria-label="reader.search"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></button>
+            <button type="button" class="icon-btn-sm" id="readerNavBtn" aria-label="Navigate" data-i18n-aria-label="reader.navigate"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></button>
+            <button type="button" class="icon-btn-sm" id="readerFullscreenBtn" aria-label="Fullscreen reading" data-i18n-aria-label="reader.fullscreen"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
             <button type="button" class="btn btn-tonal" id="readerToolsBtn" data-i18n="nav.tools">Tools</button>
           </div>
           <div class="reader-search-panel hidden" id="readerSearchPanel">
@@ -141,6 +202,11 @@
             <div class="reader-page-list" id="readerPageList"></div>
           </div>
 
+          <div class="reader-scrubber hidden" id="readerScrubber" aria-hidden="true">
+            <div class="reader-scrubber-thumb" id="readerScrubberThumb"></div>
+            <div class="reader-scrubber-bubble hidden" id="readerScrubberBubble"></div>
+          </div>
+
           <div class="reader-fullscreen-overlay hidden" id="readerFullscreenOverlay">
             <div class="fs-overlay-bar hidden" id="fsOverlayBar">
               <button type="button" class="icon-btn-sm" id="fsExitBtn" aria-label="Close" data-i18n-aria-label="common.close">✕</button>
@@ -155,47 +221,61 @@
 
           <div class="reader-tools-sheet hidden" id="readerToolsSheet">
             <div class="reader-tools-backdrop" id="readerToolsBackdrop"></div>
-            <div class="reader-tools-panel">
-              <div class="tool-rows">
-                <button type="button" class="tool-row" data-tool="rotate">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
-                  </span>
+            <div class="reader-tools-panel reader-tools-panel--grid">
+              <div class="reader-sheet-grabber" aria-hidden="true"></div>
+              <h3 class="reader-sheet-title" data-i18n="reader.toolsTitle">Tools</h3>
+              <div class="reader-tools-grid">
+                <button type="button" class="tool-row reader-tool-tile" data-tool="rotate">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.rotate.title">Rotate</span>
                 </button>
-                <button type="button" class="tool-row" data-tool="organize">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
-                  </span>
+                <button type="button" class="tool-row reader-tool-tile" data-tool="organize">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.organize.title">Organize Pages</span>
                 </button>
-                <button type="button" class="tool-row" data-tool="page-numbers">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
-                  </span>
+                <button type="button" class="tool-row reader-tool-tile" data-tool="page-numbers">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
                 </button>
-                <button type="button" class="tool-row" data-tool="watermark">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
-                  </span>
+                <button type="button" class="tool-row reader-tool-tile" data-tool="watermark">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.watermark.title">Watermark</span>
                 </button>
-                <button type="button" class="tool-row" data-tool="merge">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
-                  </span>
+                <button type="button" class="tool-row reader-tool-tile" data-tool="merge">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.merge.title">Merge</span>
                 </button>
-                <button type="button" class="tool-row" data-tool="booklet">
-                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
-                  <span class="tool-row-meta">
-                    <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
-                  </span>
+                <button type="button" class="tool-row reader-tool-tile" data-tool="booklet">
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+                  <span class="reader-tool-tile-title" data-i18n="tool.booklet.title">Booklet</span>
                 </button>
               </div>
             </div>
           </div>
+
+          <div class="reader-tools-sheet hidden" id="readerNavSheet">
+            <div class="reader-tools-backdrop" id="readerNavBackdrop"></div>
+            <div class="reader-tools-panel reader-nav-panel">
+              <div class="reader-sheet-grabber" aria-hidden="true"></div>
+              <div class="reader-nav-tabs" id="readerNavTabs">
+                <button type="button" class="reader-nav-tab is-active" data-navtab="pages" data-i18n="reader.tabPages">Pages</button>
+                <button type="button" class="reader-nav-tab hidden" data-navtab="outline" id="readerNavOutlineTab" data-i18n="reader.tabOutline">Contents</button>
+                <button type="button" class="reader-nav-tab" data-navtab="recents" data-i18n="reader.tabRecents">Recent Files</button>
+              </div>
+              <div class="reader-nav-body" id="readerNavBody">
+                <div class="reader-nav-pane" id="readerNavPagesPane">
+                  <div class="reader-nav-grid" id="readerNavGrid"></div>
+                </div>
+                <div class="reader-nav-pane hidden" id="readerNavOutlinePane">
+                  <div class="reader-nav-outline" id="readerNavOutlineList"></div>
+                </div>
+                <div class="reader-nav-pane hidden" id="readerNavRecentsPane">
+                  <div class="reader-nav-recents" id="readerNavRecentsList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </section>
 
         <section class="screen hidden" id="screen-picker">
@@ -717,24 +797,34 @@
             </div>
           </div>
 
+          <div class="booklet-filename-field">
+            <label for="bookletFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="bookletFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
           <div class="action-list">
             <div class="action-row">
               <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
               <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="front" data-action="save" data-i18n="common.save">Save</button>
                 <button class="btn btn-tonal" data-target="front" data-action="share" data-i18n="common.share">Share</button>
               </div>
             </div>
             <div class="action-row">
               <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
               <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="back" data-action="save" data-i18n="common.save">Save</button>
                 <button class="btn btn-tonal" data-target="back" data-action="share" data-i18n="common.share">Share</button>
               </div>
             </div>
           </div>
 
+          <button class="btn btn-primary btn-large" id="bookletSaveBtn">
+            <span id="bookletSaveBtnLabel" data-i18n="booklet.saveBoth">Save Both</span>
+            <span class="spinner hidden" id="bookletSaveSpinner"></span>
+          </button>
+
           <p class="action-status" id="actionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="bookletGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
 
           <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
         </section>
@@ -755,10 +845,20 @@
         <section class="screen hidden" id="screen-files">
           <div class="files-explorer-header">
             <div class="files-breadcrumb" id="filesBreadcrumb"></div>
-            <button class="icon-btn-sm" id="filesSortBtn" aria-label="Sort" title="Sort" data-i18n-aria-label="files.sort">⇅</button>
-            <button class="icon-btn-sm" id="filesDownloadBtn" aria-label="Download PDF from URL" title="Download PDF from URL" data-i18n-aria-label="files.downloadPdf">📥</button>
-            <button class="icon-btn-sm" id="filesNewFolderBtn" aria-label="New Folder" title="New Folder" data-i18n-aria-label="files.newFolder">📁+</button>
+            <button class="icon-btn-sm" id="filesSortBtn" aria-label="Sort" title="Sort" data-i18n-aria-label="files.sort"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg></button>
+            <button class="icon-btn-sm" id="filesDownloadBtn" aria-label="Download PDF from URL" title="Download PDF from URL" data-i18n-aria-label="files.downloadPdf"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
+            <button class="icon-btn-sm" id="filesNewFolderBtn" aria-label="New Folder" title="New Folder" data-i18n-aria-label="files.newFolder"><svg class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></button>
           </div>
+
+          <input
+            type="text"
+            class="hub-search files-search"
+            id="filesSearchInput"
+            placeholder="Search files..."
+            aria-label="Search files"
+            data-i18n-aria-label="files.searchAriaLabel"
+            data-i18n-placeholder="files.searchPlaceholder"
+          />
 
           <div class="files-list" id="filesList"></div>
           <p class="empty-hint hidden" id="filesEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
@@ -768,19 +868,19 @@
             <div class="files-sort-panel">
               <div class="tool-rows">
                 <button type="button" class="tool-row" data-sort="name-asc">
-                  <span class="tool-row-icon" aria-hidden="true">🔤</span>
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></svg></span>
                   <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameAsc">Name (A→Z)</span></span>
                 </button>
                 <button type="button" class="tool-row" data-sort="name-desc">
-                  <span class="tool-row-icon" aria-hidden="true">🔤</span>
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M15 4h5l-5 6h5"/><path d="M15 20v-3.5a2.5 2.5 0 0 1 5 0V20"/><path d="M20 18h-5"/></svg></span>
                   <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameDesc">Name (Z→A)</span></span>
                 </button>
                 <button type="button" class="tool-row" data-sort="date-desc">
-                  <span class="tool-row-icon" aria-hidden="true">🕐</span>
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
                   <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateDesc">Newest first</span></span>
                 </button>
                 <button type="button" class="tool-row" data-sort="date-asc">
-                  <span class="tool-row-icon" aria-hidden="true">🕐</span>
+                  <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
                   <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateAsc">Oldest first</span></span>
                 </button>
               </div>
@@ -827,7 +927,7 @@
               <h3 class="settings-group-title" data-i18n="settings.group.about">About</h3>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.appVersion">App Version</span>
-                <span class="info-value" id="appVersionValue">v0.2.0</span>
+                <span class="info-value" id="appVersionValue">v0.2.3</span>
               </div>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.developer">Developer</span>
@@ -848,17 +948,13 @@
       </main>
 
       <nav class="bottom-nav" id="bottomNav">
-        <button type="button" class="bottom-nav-item is-active" id="navTools" data-nav="hub">
-          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg></span>
-          <span class="nav-label" data-i18n="nav.tools">Tools</span>
-        </button>
-        <button type="button" class="bottom-nav-item" data-nav="recents">
-          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
-          <span class="nav-label" data-i18n="nav.recents">Recent</span>
-        </button>
         <button type="button" class="bottom-nav-item" data-nav="files">
           <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
           <span class="nav-label" data-i18n="nav.files">Files</span>
+        </button>
+        <button type="button" class="bottom-nav-item is-active" id="navTools" data-nav="hub">
+          <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg></span>
+          <span class="nav-label" data-i18n="nav.hub">Hub</span>
         </button>
         <button type="button" class="bottom-nav-item" data-nav="settings">
           <span class="nav-icon" aria-hidden="true"><svg class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></span>
@@ -1084,6 +1180,28 @@
 
     <div class="toast hidden" id="toast" aria-live="polite"></div>
     <div id="errorLiveRegion" role="alert" aria-live="assertive" class="sr-only"></div>
+
+    <!-- Go to Page Modal (reader) -->
+    <div class="modal-overlay hidden" id="goToPageModal"
+         role="dialog" aria-modal="true" aria-labelledby="goToPageTitle">
+      <div class="modal-card">
+        <h3 class="modal-title" id="goToPageTitle" data-i18n="reader.goToPage">Go to Page</h3>
+        <div class="modal-body">
+          <input
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            class="hub-search"
+            id="goToPageInput"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="goToPageCancelBtn" data-i18n="common.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="goToPageConfirmBtn" data-i18n="common.apply">Apply</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Confirm Dialog Modal -->
     <div class="modal-overlay hidden" id="confirmModal"
