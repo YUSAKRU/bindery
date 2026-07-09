@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import { BookletError } from '../engine/types';
+import type { FlipEdge } from '../engine/types';
 import { makeBooklet } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
@@ -285,6 +286,8 @@ export function initApp(): void {
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
   const creepSlider = byId<HTMLInputElement>('creepSlider');
   const creepValueLabel = byId<HTMLSpanElement>('creepValueLabel');
+  const flipEdgeGroup = byId<HTMLDivElement>('flipEdgeGroup');
+  const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
@@ -332,6 +335,7 @@ export function initApp(): void {
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
   let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array; combinedPdf: Uint8Array } | null = null;
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
+  let bookletFlipEdge: FlipEdge = 'short';
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -847,6 +851,9 @@ export function initApp(): void {
     fileCard.classList.add('hidden');
     continueBtn.classList.add('hidden');
     pickFileBtn.classList.remove('hidden');
+    mixedSizeWarning.classList.add('hidden');
+    bookletFlipEdge = 'short';
+    setActiveSegment(flipEdgeGroup, 'flip', 'short');
   }
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
@@ -1108,6 +1115,29 @@ export function initApp(): void {
     fileCard.classList.remove('hidden');
     pickFileBtn.classList.add('hidden');
     continueBtn.classList.remove('hidden');
+    mixedSizeWarning.classList.add('hidden');
+    void showMixedSizeWarningIfNeeded(bytes);
+  }
+
+  // Non-blocking heads-up: if the document mixes page sizes (beyond a small
+  // tolerance), the booklet's per-slot scaling will differ page to page.
+  async function showMixedSizeWarningIfNeeded(bytes: Uint8Array): Promise<void> {
+    try {
+      const { pageSizes } = await validatePdf(bytes);
+      const TOL = 0.5;
+      const distinct = pageSizes.filter(
+        ([w, h], i) =>
+          pageSizes.findIndex(
+            ([w0, h0]) => Math.abs(w0 - w) <= TOL && Math.abs(h0 - h) <= TOL,
+          ) === i,
+      );
+      // Guard against a race where the user cleared/replaced the file meanwhile.
+      if (selectedFile?.bytes === bytes) {
+        mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
+      }
+    } catch {
+      // Validation errors surface later on generate; don't block the warning path.
+    }
   }
 
   pickFileBtn.addEventListener('click', async () => {
@@ -1136,6 +1166,14 @@ export function initApp(): void {
     creepValueLabel.textContent = `${Number(creepSlider.value).toFixed(1)} pt`;
   });
 
+  flipEdgeGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    if (!btn) return;
+    const flip = btn.dataset.flip === 'long' ? 'long' : 'short';
+    bookletFlipEdge = flip;
+    setActiveSegment(flipEdgeGroup, 'flip', flip);
+  });
+
   generateBtn.addEventListener('click', async () => {
     if (!selectedFile) {
       showScreen('picker');
@@ -1150,6 +1188,7 @@ export function initApp(): void {
       const result = await makeBooklet(selectedFile.bytes, {
         gutter: Number(gutterSlider.value),
         creep: Number(creepSlider.value),
+        flipEdge: bookletFlipEdge,
       });
 
       booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf, combinedPdf: result.combinedPdf };
@@ -2033,7 +2072,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });

@@ -9,9 +9,18 @@ export interface PdfMetadata {
   pageSizes: Array<[number, number]>;
 }
 
+export type FlipEdge = 'short' | 'long';
+
 export interface BookletOptions {
   gutter?: number;
   creep?: number;
+  /**
+   * Duplex flip edge of the printer. 'short' (default) matches short-edge
+   * binding — the back sheet is laid out identically to the front. 'long'
+   * compensates long-edge flipping by rotating the entire back composition
+   * 180°, so the back content prints upright relative to the front.
+   */
+  flipEdge?: FlipEdge;
 }
 
 export interface BookletResult {

@@ -177,6 +177,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.gutterHint': 'Space left between pages along the fold line.',
     'config.creep': 'Creep',
     'config.creepHint': 'Amount inner pages shift inward to compensate for paper thickness.',
+    'config.flipEdge': 'Flip edge',
+    'config.flipEdge.short': 'Short edge (recommended)',
+    'config.flipEdge.long': 'Long edge',
+    'config.flipEdgeHint': "Must match your printer's duplex flip setting.",
+    'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'config.generateBooklet': 'Create Booklet',
 
     'stat.blankPagesAdded': 'Blank Pages Added',
@@ -516,6 +521,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.gutterHint': 'Katlama çizgisinde sayfalar arasında bırakılacak boşluk.',
     'config.creep': 'Kağıt Taşma Payı (Creep)',
     'config.creepHint': 'Kağıt kalınlığını telafi etmek için iç sayfaların içe kaydırılma miktarı.',
+    'config.flipEdge': 'Çevirme kenarı',
+    'config.flipEdge.short': 'Kısa kenar (önerilen)',
+    'config.flipEdge.long': 'Uzun kenar',
+    'config.flipEdgeHint': 'Yazıcının arkalı önlü çevirme ayarıyla aynı olmalı.',
+    'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 
     'stat.blankPagesAdded': 'Eklenen Boş Sayfa',

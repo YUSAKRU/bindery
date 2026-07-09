@@ -296,6 +296,11 @@
             <button class="icon-btn" id="clearFileBtn" aria-label="Remove" data-i18n-aria-label="common.remove">✕</button>
           </div>
 
+          <div class="warning-banner hidden" id="mixedSizeWarning" role="status">
+            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+            <span data-i18n="picker.mixedSizeWarning">This document has mixed page sizes; scaling may look inconsistent in the booklet.</span>
+          </div>
+
           <button class="btn btn-primary btn-large hidden" id="continueBtn" data-i18n="common.continue">Continue</button>
         </section>
 
@@ -751,6 +756,17 @@
             </div>
             <input type="range" id="creepSlider" min="0" max="5" step="0.1" value="0" class="slider" />
             <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <label data-i18n="config.flipEdge">Flip edge</label>
+            </div>
+            <div class="segmented-group" id="flipEdgeGroup">
+              <button type="button" class="segmented-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
+              <button type="button" class="segmented-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
           </div>
 
           <button class="btn btn-primary btn-large" id="generateBtn">

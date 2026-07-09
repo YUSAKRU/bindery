@@ -429,6 +429,25 @@ body {
   color: var(--color-on-surface-variant);
 }
 
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-container);
+  color: var(--color-warning);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.warning-banner-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
