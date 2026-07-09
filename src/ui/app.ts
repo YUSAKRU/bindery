@@ -330,7 +330,7 @@ export function initApp(): void {
   const mergeNewBtn = byId<HTMLButtonElement>('mergeNewBtn');
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
-  let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array } | null = null;
+  let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array; combinedPdf: Uint8Array } | null = null;
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let returnScreenOnError: ScreenId = 'picker';
 
@@ -1152,7 +1152,7 @@ export function initApp(): void {
         creep: Number(creepSlider.value),
       });
 
-      booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf };
+      booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf, combinedPdf: result.combinedPdf };
       bookletSaveState = 'idle';
       bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
       bookletSaveBtn.disabled = false;
@@ -1221,10 +1221,20 @@ export function initApp(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
     button.addEventListener('click', async () => {
       if (!booklet) return;
-      const target = button.dataset.target as 'front' | 'back';
-      const bytes = target === 'front' ? booklet.frontPdf : booklet.backPdf;
+      const target = button.dataset.target as 'front' | 'back' | 'combined';
+      const bytes =
+        target === 'front'
+          ? booklet.frontPdf
+          : target === 'back'
+            ? booklet.backPdf
+            : booklet.combinedPdf;
       const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'booklet'}_${target}.pdf`;
-      const label = target === 'front' ? t('booklet.frontSideLower') : t('booklet.backSideLower');
+      const label =
+        target === 'front'
+          ? t('booklet.frontSideLower')
+          : target === 'back'
+            ? t('booklet.backSideLower')
+            : t('booklet.combinedLower');
 
       try {
         await sharePdf(bytes, filename, `${label} PDF`);
@@ -1274,6 +1284,8 @@ export function initApp(): void {
       await recordOpened({ uri: frontUri, name: `${docName} — Front Side.pdf` });
       const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
       await recordOpened({ uri: backUri, name: `${docName} — Back Side.pdf` });
+      const combinedUri = await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
+      await recordOpened({ uri: combinedUri, name: `${docName} — Combined Booklet.pdf` });
       bookletFileNameInput.value = docName;
       actionStatus.textContent = t('status.booklet.saved');
       bookletSaveState = 'saved';

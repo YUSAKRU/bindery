@@ -141,6 +141,15 @@ export async function makeBooklet(
   const frontPdf = await frontDoc.save();
   const backPdf = await backDoc.save();
 
+  const combinedDoc = await PDFDocument.create();
+  const frontPages = await combinedDoc.copyPages(frontDoc, Array.from({ length: S }, (_, i) => i));
+  const backPages = await combinedDoc.copyPages(backDoc, Array.from({ length: S }, (_, i) => i));
+  for (let j = 0; j < S; j++) {
+    combinedDoc.addPage(frontPages[j]);
+    combinedDoc.addPage(backPages[j]);
+  }
+  const combinedPdf = await combinedDoc.save();
+
   return {
     originalPages: originalPageCount,
     paddedPages: N,
@@ -148,5 +157,6 @@ export async function makeBooklet(
     paddingApplied,
     frontPdf,
     backPdf,
+    combinedPdf,
   };
 }

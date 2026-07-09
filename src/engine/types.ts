@@ -21,4 +21,5 @@ export interface BookletResult {
   paddingApplied: number;
   frontPdf: Uint8Array;
   backPdf: Uint8Array;
+  combinedPdf: Uint8Array;
 }

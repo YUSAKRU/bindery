@@ -51,6 +51,7 @@ mcp_notebook.py
 login.mjs
 sync_docs.mjs
 sync_notebooks.mjs
+notebook_sync_status.json
 
 # Project management (local only)
 STATUS.md

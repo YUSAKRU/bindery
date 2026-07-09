@@ -183,6 +183,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'stat.totalSheets': 'Total Sheets',
     'booklet.frontSidePdf': 'Front Side PDF',
     'booklet.backSidePdf': 'Back Side PDF',
+    'booklet.combinedPdf': 'Combined Booklet PDF',
     'booklet.saveBoth': 'Save Both',
 
     'recents.subtitle': 'Documents you opened or edited most recently.',
@@ -322,6 +323,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.watermark.saved': 'Watermarked document saved to Bindery.',
     'booklet.frontSideLower': 'Front side',
     'booklet.backSideLower': 'Back side',
+    'booklet.combinedLower': 'combined booklet',
     'status.booklet.savedToBindery': '{label} saved to Bindery.',
     'status.booklet.saved': 'Booklet saved to Bindery.',
     'status.booklet.shared': '{label} shared.',
@@ -520,6 +522,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'stat.totalSheets': 'Toplam Yaprak',
     'booklet.frontSidePdf': 'Ön Yüz PDF',
     'booklet.backSidePdf': 'Arka Yüz PDF',
+    'booklet.combinedPdf': 'Birleşik Kitapçık PDF',
     'booklet.saveBoth': 'İkisini de Kaydet',
 
     'recents.subtitle': 'En son açtığınız veya düzenlediğiniz belgeler.',
@@ -659,6 +662,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'status.watermark.saved': 'Filigranlı belge Bindery içine kaydedildi.',
     'booklet.frontSideLower': 'Ön yüz',
     'booklet.backSideLower': 'Arka yüz',
+    'booklet.combinedLower': 'birleşik kitapçık',
     'status.booklet.savedToBindery': '{label} Bindery içine kaydedildi.',
     'status.booklet.saved': 'Kitapçık Bindery içine kaydedildi.',
     'status.booklet.shared': '{label} paylaşıldı.',

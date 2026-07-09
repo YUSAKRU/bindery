@@ -1,7 +1,7 @@
 {
   "name": "pdf-booklet-mobile",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,10 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
+    "patch-package": "^8.0.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",
-    "vitest": "^4.1.9",
-    "patch-package": "^8.0.1"
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -28,6 +28,7 @@
     "@capacitor/share": "^8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.3",
     "lucide-static": "^1.21.0",
+    "patchright": "^1.61.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.0.227"
   }

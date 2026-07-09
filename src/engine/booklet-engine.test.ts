@@ -62,4 +62,11 @@ describe('makeBooklet', () => {
     expect(frontDoc.getPageCount()).toBe(result.sheetsCount);
     expect(backDoc.getPageCount()).toBe(result.sheetsCount);
   });
+
+  it('produces combined PDF with 2 * sheetsCount pages', async () => {
+    const input = await buildTestPdf(8);
+    const result = await makeBooklet(input);
+    const combinedDoc = await PDFDocument.load(result.combinedPdf);
+    expect(combinedDoc.getPageCount()).toBe(2 * result.sheetsCount);
+  });
 });
