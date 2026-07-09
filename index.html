@@ -760,6 +760,20 @@
 
           <div class="setting-card">
             <div class="setting-row">
+              <label data-i18n="config.paperSize">Paper size</label>
+            </div>
+            <div class="segmented-group" id="paperSizeGroup">
+              <button type="button" class="segmented-btn is-active" data-paper="A4">A4</button>
+              <button type="button" class="segmented-btn" data-paper="Letter">Letter</button>
+              <button type="button" class="segmented-btn" data-paper="A5">A5</button>
+              <button type="button" class="segmented-btn" data-paper="A3">A3</button>
+              <button type="button" class="segmented-btn" data-paper="source" data-i18n="config.paperSize.source">Source size</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.paperSizeHint">The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
               <label data-i18n="config.flipEdge">Flip edge</label>
             </div>
             <div class="segmented-group" id="flipEdgeGroup">

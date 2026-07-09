@@ -11,6 +11,15 @@ export interface PdfMetadata {
 
 export type FlipEdge = 'short' | 'long';
 
+export type PaperSizePreset = 'A4' | 'Letter' | 'A5' | 'A3' | 'source';
+
+/**
+ * Physical (landscape) size of the printed sheet. Each half becomes one booklet
+ * page. A named preset, `'source'` (derived from the document's mode page size),
+ * or an explicit landscape `{ width, height }` in points.
+ */
+export type PaperSize = PaperSizePreset | { width: number; height: number };
+
 export interface BookletOptions {
   gutter?: number;
   creep?: number;
@@ -21,6 +30,11 @@ export interface BookletOptions {
    * 180°, so the back content prints upright relative to the front.
    */
   flipEdge?: FlipEdge;
+  /**
+   * Physical sheet size to print on. Defaults to 'A4' (842×595pt landscape),
+   * which reproduces the historical fixed output.
+   */
+  paperSize?: PaperSize;
 }
 
 export interface BookletResult {

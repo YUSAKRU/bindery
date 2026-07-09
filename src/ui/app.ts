@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import { BookletError } from '../engine/types';
-import type { FlipEdge } from '../engine/types';
+import type { FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
@@ -286,6 +286,7 @@ export function initApp(): void {
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
   const creepSlider = byId<HTMLInputElement>('creepSlider');
   const creepValueLabel = byId<HTMLSpanElement>('creepValueLabel');
+  const paperSizeGroup = byId<HTMLDivElement>('paperSizeGroup');
   const flipEdgeGroup = byId<HTMLDivElement>('flipEdgeGroup');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
@@ -336,6 +337,7 @@ export function initApp(): void {
   let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array; combinedPdf: Uint8Array } | null = null;
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
+  let bookletPaperSize: PaperSize = 'A4';
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -854,6 +856,8 @@ export function initApp(): void {
     mixedSizeWarning.classList.add('hidden');
     bookletFlipEdge = 'short';
     setActiveSegment(flipEdgeGroup, 'flip', 'short');
+    bookletPaperSize = 'A4';
+    setActiveSegment(paperSizeGroup, 'paper', 'A4');
   }
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
@@ -1166,6 +1170,14 @@ export function initApp(): void {
     creepValueLabel.textContent = `${Number(creepSlider.value).toFixed(1)} pt`;
   });
 
+  paperSizeGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const paper = btn?.dataset.paper;
+    if (!paper) return;
+    bookletPaperSize = paper as PaperSize;
+    setActiveSegment(paperSizeGroup, 'paper', paper);
+  });
+
   flipEdgeGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     if (!btn) return;
@@ -1189,6 +1201,7 @@ export function initApp(): void {
         gutter: Number(gutterSlider.value),
         creep: Number(creepSlider.value),
         flipEdge: bookletFlipEdge,
+        paperSize: bookletPaperSize,
       });
 
       booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf, combinedPdf: result.combinedPdf };
@@ -2072,7 +2085,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });

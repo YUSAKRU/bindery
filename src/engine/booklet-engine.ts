@@ -1,10 +1,65 @@
 import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees } from 'pdf-lib';
 import { validatePdf } from './validator';
 import { BookletError } from './types';
-import type { BookletOptions, BookletResult } from './types';
+import type { BookletOptions, BookletResult, PaperSize } from './types';
 
 const TARGET_WIDTH = 842.0; // A4 landscape, points
 const TARGET_HEIGHT = 595.0;
+
+// Named sheet presets, in points and always landscape (width >= height). Each
+// half of the sheet holds one booklet page.
+const SHEET_PRESETS = {
+  A4: [842, 595],
+  Letter: [792, 612],
+  A5: [595, 420],
+  A3: [1191, 842],
+} as const satisfies Record<string, readonly [number, number]>;
+
+// PDF spec caps a page dimension at 14400pt (200 inches); 72pt (1 inch) is a
+// sane floor for a printable sheet.
+const MIN_SHEET_PT = 72;
+const MAX_SHEET_PT = 14400;
+
+/**
+ * Resolves a {@link PaperSize} into a concrete `[width, height]` sheet size in
+ * points. `'source'` derives the sheet from the document's most common page
+ * size (width = 2×modeWidth so each half matches the source page), which needs
+ * `srcDoc`/`pageCount`. Custom sizes are validated against the PDF page bounds.
+ * Pure aside from the optional mode-size lookup, so it is unit-testable.
+ */
+export function resolveSheetSize(
+  paperSize: PaperSize | undefined,
+  srcDoc?: PDFDocument,
+  pageCount?: number,
+): [number, number] {
+  if (paperSize === undefined) {
+    return [TARGET_WIDTH, TARGET_HEIGHT];
+  }
+
+  if (typeof paperSize === 'string') {
+    if (paperSize === 'source') {
+      if (!srcDoc || pageCount === undefined) {
+        throw new BookletError("'source' kağıt boyutu için kaynak belge gerekli.");
+      }
+      const [modeWidth, modeHeight] = modePageSize(srcDoc, pageCount);
+      return [2 * modeWidth, modeHeight];
+    }
+    const preset = SHEET_PRESETS[paperSize];
+    if (!preset) {
+      throw new BookletError(`Geçersiz kağıt boyutu: ${paperSize}.`);
+    }
+    return [preset[0], preset[1]];
+  }
+
+  const { width, height } = paperSize;
+  const inBounds = (v: number) => Number.isFinite(v) && v >= MIN_SHEET_PT && v <= MAX_SHEET_PT;
+  if (!inBounds(width) || !inBounds(height)) {
+    throw new BookletError(
+      `Geçersiz kağıt boyutu: ${width}×${height}pt. Her iki kenar da ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt aralığında olmalı.`,
+    );
+  }
+  return [width, height];
+}
 
 export interface FitRect {
   x: number;
@@ -19,15 +74,18 @@ export interface FitRect {
  * per-sheet layout so it can be unit-tested against hand-computed constants.
  *
  * `sheetIndex` is the 0-based sheet number, `gutter` the total binding gutter
- * and `creep` the per-sheet creep step (all in points).
+ * and `creep` the per-sheet creep step (all in points). `sheetWidth`/
+ * `sheetHeight` default to A4 landscape so existing callers are unaffected.
  */
 export function computeSlotRects(
   sheetIndex: number,
   gutter: number,
   creep: number,
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
 ): { left: FitRect; right: FitRect } {
-  const wSlot = TARGET_WIDTH / 2.0;
-  const hSlot = TARGET_HEIGHT;
+  const wSlot = sheetWidth / 2.0;
+  const hSlot = sheetHeight;
   const creepShift = sheetIndex * creep;
   const shiftInward = creepShift - gutter / 2.0;
 
@@ -46,6 +104,8 @@ function drawFitted(
   embedded: PDFEmbeddedPage,
   rect: FitRect,
   rotate180 = false,
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
 ): void {
   const scale = Math.min(rect.width / embedded.width, rect.height / embedded.height);
   const drawnWidth = embedded.width * scale;
@@ -62,12 +122,13 @@ function drawFitted(
   // centre (point reflection). pdf-lib's drawPage rotates about the supplied
   // (x, y) origin, and with rotate:180 the scaled page extends *down-left* from
   // that origin. Passing the point-reflected top-right corner
-  // (TARGET_WIDTH - x, TARGET_HEIGHT - y) therefore lands the rotated page in
-  // the reflected rectangle. Offset verified against the emitted content-stream
-  // matrix in booklet-engine.test.ts (not assumed).
+  // (sheetWidth - x, sheetHeight - y) therefore lands the rotated page in the
+  // reflected rectangle — the reflection MUST use the actual sheet size, not a
+  // fixed A4 constant. Offset verified against the emitted content-stream matrix
+  // in booklet-engine.test.ts (not assumed).
   page.drawPage(embedded, {
-    x: TARGET_WIDTH - x,
-    y: TARGET_HEIGHT - y,
+    x: sheetWidth - x,
+    y: sheetHeight - y,
     width: drawnWidth,
     height: drawnHeight,
     rotate: degrees(180),
@@ -153,9 +214,6 @@ export async function makeBooklet(
   const creepStep = options.creep ?? 0;
   const flipEdge = options.flipEdge ?? 'short';
 
-  if (baseGutter < 0 || baseGutter >= TARGET_WIDTH / 2) {
-    throw new BookletError(`Geçersiz gutter değeri: ${baseGutter}. 0 ile ${TARGET_WIDTH / 2} arasında olmalı.`);
-  }
   if (creepStep < 0) {
     throw new BookletError('Creep değeri negatif olamaz.');
   }
@@ -166,7 +224,14 @@ export async function makeBooklet(
   const { pageCount: originalPageCount } = await validatePdf(inputBytes);
   const srcDoc = await PDFDocument.load(inputBytes);
 
-  const wSlot = TARGET_WIDTH / 2.0;
+  // Resolve the physical sheet size; every slot/shift below is derived from it
+  // rather than the fixed A4 constants. 'source' needs the pre-padding pages.
+  const [sheetWidth, sheetHeight] = resolveSheetSize(options.paperSize, srcDoc, originalPageCount);
+  const wSlot = sheetWidth / 2.0;
+
+  if (baseGutter < 0 || baseGutter >= wSlot) {
+    throw new BookletError(`Geçersiz gutter değeri: ${baseGutter}. 0 ile ${wSlot} arasında olmalı.`);
+  }
 
   // 1. Dynamic blank page padding so the page count is a multiple of 4.
   //    Blank pages take the document's most common (mode) page size rather
@@ -217,15 +282,21 @@ export async function makeBooklet(
   //    also carries the gutter/creep shift to the correct side automatically.
   const rotateBack = flipEdge === 'long';
   for (let j = 0; j < S; j++) {
-    const { left: leftRect, right: rightRect } = computeSlotRects(j, baseGutter, creepStep);
+    const { left: leftRect, right: rightRect } = computeSlotRects(
+      j,
+      baseGutter,
+      creepStep,
+      sheetWidth,
+      sheetHeight,
+    );
 
-    const frontPage = frontDoc.addPage([TARGET_WIDTH, TARGET_HEIGHT]);
+    const frontPage = frontDoc.addPage([sheetWidth, sheetHeight]);
     drawFitted(frontPage, frontEmbedded[2 * j], leftRect);
     drawFitted(frontPage, frontEmbedded[2 * j + 1], rightRect);
 
-    const backPage = backDoc.addPage([TARGET_WIDTH, TARGET_HEIGHT]);
-    drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack);
-    drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack);
+    const backPage = backDoc.addPage([sheetWidth, sheetHeight]);
+    drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack, sheetWidth, sheetHeight);
+    drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack, sheetWidth, sheetHeight);
   }
 
   const frontPdf = await frontDoc.save();

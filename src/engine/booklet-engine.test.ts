@@ -1,6 +1,12 @@
 import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
-import { computeSheetMapping, computeSlotRects, makeBooklet, modePageSize } from './booklet-engine';
+import {
+  computeSheetMapping,
+  computeSlotRects,
+  makeBooklet,
+  modePageSize,
+  resolveSheetSize,
+} from './booklet-engine';
 import type { BookletOptions } from './types';
 
 /** One drawn source page as reconstructed from the sheet's content stream. */
@@ -300,5 +306,124 @@ describe('makeBooklet flipEdge', () => {
     await expect(
       makeBooklet(input, { flipEdge: 'diagonal' } as unknown as BookletOptions),
     ).rejects.toThrow(/çevirme kenarı/i);
+  });
+});
+
+describe('resolveSheetSize', () => {
+  it('returns the documented landscape presets (hand constants)', () => {
+    expect(resolveSheetSize(undefined)).toEqual([842, 595]); // default = A4
+    expect(resolveSheetSize('A4')).toEqual([842, 595]);
+    expect(resolveSheetSize('Letter')).toEqual([792, 612]);
+    expect(resolveSheetSize('A5')).toEqual([595, 420]);
+    expect(resolveSheetSize('A3')).toEqual([1191, 842]);
+  });
+
+  it("derives 'source' as [2 * modeWidth, modeHeight]", async () => {
+    const doc = await buildMixedDoc([[595, 842], [595, 842], [595, 842]]);
+    // Portrait 595x842 source -> sheet 1190 x 842.
+    expect(resolveSheetSize('source', doc, 3)).toEqual([1190, 842]);
+  });
+
+  it("throws when 'source' is requested without a document", () => {
+    expect(() => resolveSheetSize('source')).toThrow(/source/i);
+  });
+
+  it('accepts custom sizes inside [72, 14400] and rejects out-of-bounds ones', () => {
+    expect(resolveSheetSize({ width: 1000, height: 700 })).toEqual([1000, 700]);
+    expect(resolveSheetSize({ width: 72, height: 72 })).toEqual([72, 72]);
+    expect(resolveSheetSize({ width: 14400, height: 14400 })).toEqual([14400, 14400]);
+    // 71pt is below the 72pt floor.
+    expect(() => resolveSheetSize({ width: 71, height: 500 })).toThrow(/kağıt boyutu/i);
+    // 14401pt exceeds the PDF 14400pt page cap.
+    expect(() => resolveSheetSize({ width: 500, height: 14401 })).toThrow(/kağıt boyutu/i);
+  });
+
+  it('rejects an unknown preset string', () => {
+    expect(() => resolveSheetSize('B5' as never)).toThrow(/kağıt boyutu/i);
+  });
+});
+
+describe('makeBooklet paperSize', () => {
+  function expectDraw(
+    draw: DrawnPage,
+    x: number,
+    y: number,
+    scale: number,
+    rot: [number, number] = [1, 1],
+  ): void {
+    expect(draw.translate[4]).toBeCloseTo(x, 3);
+    expect(draw.translate[5]).toBeCloseTo(y, 3);
+    expect(draw.scale[0]).toBeCloseTo(scale, 6);
+    expect(draw.scale[3]).toBeCloseTo(scale, 6);
+    expect(draw.rotate[0]).toBeCloseTo(rot[0], 6);
+    expect(draw.rotate[3]).toBeCloseTo(rot[1], 6);
+    expect(draw.rotate[1]).toBeCloseTo(0, 6);
+    expect(draw.rotate[2]).toBeCloseTo(0, 6);
+  }
+
+  // ---- Hand-computed Letter geometry (INDEPENDENTLY derived) ----
+  // Sheet Letter landscape = 792 x 612 ; slot = 396 x 612.
+  // Source 595 x 842 into slot: scale = min(396/595, 612/842) = 396/595 = 0.6655462 (width-bound).
+  // Drawn width  = 595 * 0.6655462 = 396.0 (fills slot width exactly).
+  // Drawn height = 842 * 0.6655462 = 842 * 396 / 595 = 560.38992.
+  // Vertical centring y = (612 - 560.38992) / 2 = 25.80504.  (NOT 25.72)
+  // Left slot x = 0 ; right slot x = 396.
+  const LETTER_SCALE = 0.6655462;
+  const LETTER_Y = 25.80504;
+  const LETTER_LONG_Y = 612 - LETTER_Y; // 586.19496
+
+  it('lays a Letter sheet out at the hand-computed offsets', async () => {
+    const input = await buildTestPdf(8);
+    const result = await makeBooklet(input, { paperSize: 'Letter' });
+
+    // Both front & back sheets are 792 x 612.
+    const backDoc = await PDFDocument.load(result.backPdf);
+    expect(backDoc.getPage(0).getSize()).toEqual({ width: 792, height: 612 });
+
+    const [left, right] = await drawnPagesOf(result.backPdf, 0);
+    expectDraw(left, 0, LETTER_Y, LETTER_SCALE);
+    expectDraw(right, 396, LETTER_Y, LETTER_SCALE);
+  });
+
+  it('reflects the Letter back sheet about the Letter centre in long mode', async () => {
+    const input = await buildTestPdf(8);
+    const result = await makeBooklet(input, { paperSize: 'Letter', flipEdge: 'long' });
+    const [left, right] = await drawnPagesOf(result.backPdf, 0);
+
+    // Point reflection uses 792 x 612 (the SHEET size), not A4 842 x 595:
+    //   left : (792 - 0,   612 - 25.80504) = (792, 586.19496)
+    //   right: (792 - 396, 612 - 25.80504) = (396, 586.19496)
+    expectDraw(left, 792, LETTER_LONG_Y, LETTER_SCALE, [-1, -1]);
+    expectDraw(right, 396, LETTER_LONG_Y, LETTER_SCALE, [-1, -1]);
+  });
+
+  it('produces the same layout with no options as with paperSize:A4 (default preserved)', async () => {
+    const input = await buildTestPdf(8);
+    const defaultBack = await drawnPagesOf((await makeBooklet(input)).backPdf, 0);
+    const a4Back = await drawnPagesOf((await makeBooklet(input, { paperSize: 'A4' })).backPdf, 0);
+    expect(defaultBack).toEqual(a4Back);
+  });
+
+  it("sizes an 'source' sheet to twice the source page width", async () => {
+    // 8 portrait pages 595x842 -> sheet 1190 x 842.
+    const input = await buildTestPdf(8, [595, 842]);
+    const result = await makeBooklet(input, { paperSize: 'source' });
+    const backDoc = await PDFDocument.load(result.backPdf);
+    expect(backDoc.getPage(0).getSize()).toEqual({ width: 1190, height: 842 });
+  });
+
+  it('scales the gutter bound to the selected sheet width', async () => {
+    const input = await buildTestPdf(8);
+    // A5 slot half-width = 595/2 = 297.5 -> gutter 300 overflows.
+    await expect(makeBooklet(input, { paperSize: 'A5', gutter: 300 })).rejects.toThrow(/gutter/i);
+    // A4 slot half-width = 842/2 = 421 -> the same gutter is fine.
+    await expect(makeBooklet(input, { paperSize: 'A4', gutter: 300 })).resolves.toBeDefined();
+  });
+
+  it('rejects a custom sheet size outside the PDF page bounds', async () => {
+    const input = await buildTestPdf(8);
+    await expect(
+      makeBooklet(input, { paperSize: { width: 50, height: 500 } }),
+    ).rejects.toThrow(/kağıt boyutu/i);
   });
 });
