@@ -2,6 +2,7 @@ import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees } from 'pdf-lib';
 import { validatePdf } from './validator';
 import { BookletError } from './types';
 import type { BookletOptions, BookletResult, PaperSize } from './types';
+import { makeInstructionsPage } from './instructions-page';
 
 const TARGET_WIDTH = 842.0; // A4 landscape, points
 const TARGET_HEIGHT = 595.0;
@@ -92,6 +93,16 @@ export function computeSlotRects(
   const left: FitRect = { x: shiftInward, y: 0, width: wSlot, height: hSlot };
   const right: FitRect = { x: wSlot - shiftInward, y: 0, width: wSlot, height: hSlot };
   return { left, right };
+}
+
+/** Human-readable label for the resolved sheet, for the instructions page. */
+function paperLabel(paperSize: PaperSize | undefined, width: number, height: number): string {
+  if (paperSize === undefined) return 'A4 landscape';
+  if (typeof paperSize === 'string') {
+    if (paperSize === 'source') return `${Math.round(width)} x ${Math.round(height)} pt (source)`;
+    return `${paperSize} landscape`;
+  }
+  return `${Math.round(width)} x ${Math.round(height)} pt`;
 }
 
 /**
@@ -186,6 +197,21 @@ export function resolveSignatureSize(N: number, signatureSize?: number | 'auto')
     throw new BookletError(`Geçersiz imza boyutu: ${signatureSize}. Pozitif ve 4'ün katı olmalı.`);
   }
   return signatureSize;
+}
+
+/**
+ * Returns the 1-based page number (within the padded block) at which each
+ * signature begins — i.e. the front-right slot of each signature's first sheet.
+ * Callers imposing a separate cover add the inner-block offset themselves. Used
+ * by the printed instructions/reading-order check. Pure and test-friendly.
+ */
+export function signatureStartPages(N: number, signatureSize?: number | 'auto'): number[] {
+  const sigLen = resolveSignatureSize(N, signatureSize);
+  const starts: number[] = [];
+  for (let start = 0; start < N; start += sigLen) {
+    starts.push(start + 1);
+  }
+  return starts;
 }
 
 /**
@@ -494,6 +520,29 @@ export async function makeBooklet(
     coverPdf = await combineFrontBack(coverFront, coverBack);
   }
 
+  // Optional English printing-instructions + reading-order sheet. Standalone;
+  // the book PDFs above are untouched.
+  let instructionsPdf: Uint8Array | undefined;
+  if (options.includeInstructions) {
+    const coverOffset = separateCover ? 2 : 0;
+    instructionsPdf = await makeInstructionsPage({
+      sheetWidth,
+      sheetHeight,
+      paperLabel: paperLabel(options.paperSize, sheetWidth, sheetHeight),
+      totalSheets: S,
+      signaturesCount,
+      sheetsPerSignature: signatures.map((signature) => signature.length),
+      signatureStartPages: signatureStartPages(N, options.signatureSize).map(
+        (p) => p + coverOffset,
+      ),
+      flipEdge,
+      binding,
+      separateCover,
+      gutter: baseGutter,
+      creep: creepStep,
+    });
+  }
+
   return {
     originalPages: originalPageCount,
     paddedPages: N,
@@ -504,5 +553,6 @@ export async function makeBooklet(
     backPdf,
     combinedPdf,
     coverPdf,
+    instructionsPdf,
   };
 }

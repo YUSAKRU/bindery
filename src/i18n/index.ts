@@ -197,6 +197,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.cover.together': 'Together',
     'config.cover.separate': 'Print separately',
     'config.coverHint': 'Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.',
+    'config.instructions': 'Instructions page',
+    'config.instructions.none': 'None',
+    'config.instructions.add': 'Add',
+    'config.instructionsHint': 'Generates a one-page English PDF with the printing and folding steps.',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'config.generateBooklet': 'Create Booklet',
 
@@ -557,6 +561,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.cover.together': 'Birlikte',
     'config.cover.separate': 'Ayrı bas',
     'config.coverHint': 'Kapağı (ilk 2 + son 2 sayfa) kalın kâğıda ayrı basmak için ayrı PDF üretir.',
+    'config.instructions': 'Talimat sayfası',
+    'config.instructions.none': 'Yok',
+    'config.instructions.add': 'Ekle',
+    'config.instructionsHint': 'Baskı ve katlama adımlarını anlatan tek sayfalık İngilizce talimat PDF\'i üretir.',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 

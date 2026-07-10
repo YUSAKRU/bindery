@@ -819,6 +819,17 @@
             <p class="setting-hint" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
           </div>
 
+          <div class="setting-card">
+            <div class="setting-row">
+              <label data-i18n="config.instructions">Instructions page</label>
+            </div>
+            <div class="segmented-group" id="instructionsGroup">
+              <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
+              <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page English PDF with the printing and folding steps.</p>
+          </div>
+
           <button class="btn btn-primary btn-large" id="generateBtn">
             <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
             <span class="spinner hidden" id="generateSpinner"></span>

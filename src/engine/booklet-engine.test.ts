@@ -9,7 +9,38 @@ import {
   modePageSize,
   resolveSheetSize,
   resolveSignatureSize,
+  signatureStartPages,
 } from './booklet-engine';
+
+/**
+ * Extracts the visible text of a generated PDF by decoding the hex string tokens
+ * (`<...> Tj/TJ`) pdf-lib emits for subset-embedded fonts. Output-only — no
+ * production text-layout code is invoked.
+ */
+async function extractText(pdf: Uint8Array): Promise<string> {
+  const doc = await PDFDocument.load(pdf);
+  let raw = '';
+  for (const [, obj] of doc.context.enumerateIndirectObjects()) {
+    if (obj instanceof PDFRawStream) {
+      try {
+        const t = new TextDecoder().decode(decodePDFRawStream(obj).decode());
+        if (t.includes('Tj') || t.includes('TJ')) raw += `${t}\n`;
+      } catch {
+        /* not a content stream */
+      }
+    }
+  }
+  return [...raw.matchAll(/<([0-9A-Fa-f]+)>/g)]
+    .map((m) => {
+      const hex = m[1];
+      let s = '';
+      for (let i = 0; i + 1 < hex.length; i += 2) {
+        s += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
+      }
+      return s;
+    })
+    .join('\n');
+}
 import type { BookletOptions } from './types';
 
 /** One drawn source page as reconstructed from the sheet's content stream. */
@@ -664,5 +695,95 @@ describe('makeBooklet separateCover', () => {
   it('leaves coverPdf undefined by default', async () => {
     const result = await makeBooklet(await buildTestPdf(12));
     expect(result.coverPdf).toBeUndefined();
+  });
+});
+
+describe('signatureStartPages', () => {
+  it('matches the hand-derived examples', () => {
+    expect(signatureStartPages(16)).toEqual([1]); // single signature
+    expect(signatureStartPages(44, 'auto')).toEqual([1, 17, 33]); // 16-page signatures
+    // A separate-cover inner block of 44 pages, but the +2 cover offset is
+    // applied by the caller, so the pure helper still returns [1, 17, 33].
+    expect(signatureStartPages(44, 16)).toEqual([1, 17, 33]);
+    expect(signatureStartPages(32, 8)).toEqual([1, 9, 17, 25]);
+  });
+});
+
+describe('makeBooklet includeInstructions', () => {
+  it('emits a single instructions page at the selected sheet size', async () => {
+    const input = await buildTestPdf(16);
+    const result = await makeBooklet(input, { includeInstructions: true, paperSize: 'Letter' });
+    expect(result.instructionsPdf).toBeDefined();
+    const doc = await PDFDocument.load(result.instructionsPdf!);
+    expect(doc.getPageCount()).toBe(1);
+    expect(doc.getPage(0).getSize()).toEqual({ width: 792, height: 612 });
+  });
+
+  it('reflects the duplex flip edge in the copy', async () => {
+    const input = await buildTestPdf(16);
+    const shortText = await extractText(
+      (await makeBooklet(input, { includeInstructions: true, flipEdge: 'short' })).instructionsPdf!,
+    );
+    expect(shortText).toContain('SHORT edge');
+    expect(shortText).not.toContain('LONG edge');
+
+    const longText = await extractText(
+      (await makeBooklet(input, { includeInstructions: true, flipEdge: 'long' })).instructionsPdf!,
+    );
+    expect(longText).toContain('LONG edge');
+  });
+
+  it('lists the signature count and reading-order start pages', async () => {
+    // 44 pages, auto -> 3 signatures starting at pages 1, 17, 33.
+    const input = await buildTestPdf(44);
+    const text = await extractText(
+      (await makeBooklet(input, { includeInstructions: true, signatureSize: 'auto' })).instructionsPdf!,
+    );
+    expect(text).toContain('Signatures: 3');
+    expect(text).toContain('Signature 2 starts at page 17');
+    expect(text).toContain('Signature 3 starts at page 33');
+  });
+
+  it('offsets reading-order pages by the cover when a cover is separated', async () => {
+    // 48 pages, separate cover -> inner block 44 -> signatures at 1,17,33, then
+    // shifted +2 for the two leading cover pages: 3, 19, 35.
+    const input = await buildTestPdf(48);
+    const text = await extractText(
+      (
+        await makeBooklet(input, {
+          includeInstructions: true,
+          signatureSize: 16,
+          separateCover: true,
+        })
+      ).instructionsPdf!,
+    );
+    expect(text).toContain('Signature 1 starts at page 3');
+    expect(text).toContain('Signature 2 starts at page 19');
+    expect(text).toContain('Signature 3 starts at page 35');
+  });
+
+  it('caps the reading-order list for many signatures and stays one page', async () => {
+    // 400 pages, auto -> 16-page signatures -> 25 signatures. The list shows the
+    // first 10 and collapses the rest into a single summary line.
+    const input = await buildTestPdf(400);
+    const result = await makeBooklet(input, { includeInstructions: true, signatureSize: 'auto' });
+    const doc = await PDFDocument.load(result.instructionsPdf!);
+    expect(doc.getPageCount()).toBe(1);
+
+    const text = await extractText(result.instructionsPdf!);
+    expect(text).toContain('Signature 10 starts at page');
+    expect(text).toContain('and 15 more signatures (every 16 pages)');
+    expect(text).not.toContain('Signature 25');
+  });
+
+  it('leaves instructionsPdf undefined by default and does not touch the book PDFs', async () => {
+    const input = await buildTestPdf(16);
+    const withInstr = await makeBooklet(input, { includeInstructions: true });
+    const without = await makeBooklet(input);
+    expect(without.instructionsPdf).toBeUndefined();
+    // The book block is identical whether or not instructions are generated.
+    const a = await drawnPagesOf(withInstr.backPdf, 0);
+    const b = await drawnPagesOf(without.backPdf, 0);
+    expect(a).toEqual(b);
   });
 });

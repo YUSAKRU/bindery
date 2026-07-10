@@ -56,6 +56,12 @@ export interface BookletOptions {
    * combined book block. Requires at least 8 original pages. Default false.
    */
   separateCover?: boolean;
+  /**
+   * When true, an English single-page printing-instructions + reading-order
+   * sheet is generated as `instructionsPdf`. The front/back/combined book PDFs
+   * are unaffected. Default false.
+   */
+  includeInstructions?: boolean;
 }
 
 export interface BookletResult {
@@ -73,4 +79,9 @@ export interface BookletResult {
    * was requested. The book block PDFs above exclude these pages.
    */
   coverPdf?: Uint8Array;
+  /**
+   * A single-page English printing-instructions sheet, present only when
+   * `includeInstructions` was requested.
+   */
+  instructionsPdf?: Uint8Array;
 }
