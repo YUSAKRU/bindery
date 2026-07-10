@@ -385,6 +385,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'confirm.discardResult': 'You have an unsaved result. Go back and discard it?',
     'toast.fileTooLarge': 'File is too large ({mb} MB). Maximum is 50 MB.',
     'booklet.previewUnavailable': 'Preview unavailable',
+    'booklet.previewCover': 'Cover',
+    'booklet.previewFront': 'Front · sheet 1',
+    'booklet.previewBack': 'Back · sheet 1',
     'reader.opening': 'Opening document…',
   },
   tr: {
@@ -771,6 +774,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'confirm.discardResult': 'Kaydedilmemiş sonucunuz var. Geri dönmek ve silmek istiyor musunuz?',
     'toast.fileTooLarge': 'Dosya çok büyük ({mb} MB). En fazla 50 MB olabilir.',
     'booklet.previewUnavailable': 'Önizleme yok',
+    'booklet.previewCover': 'Kapak',
+    'booklet.previewFront': 'Ön yüz · 1. yaprak',
+    'booklet.previewBack': 'Arka yüz · 1. yaprak',
     'reader.opening': 'Belge açılıyor…',
   },
 };

@@ -3021,6 +3021,14 @@ body {
   gap: 12px;
   justify-content: center;
   padding: 12px 0 4px;
+  flex-wrap: wrap;
+}
+.booklet-preview-label {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  text-align: center;
 }
 .booklet-preview-cell {
   display: flex;

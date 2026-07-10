@@ -889,19 +889,26 @@
           </div>
 
           <div class="booklet-preview-strip">
+            <div class="booklet-preview-cell hidden" id="coverPreviewCell">
+              <div class="booklet-preview-spinner" id="coverPreviewSpinner" aria-hidden="true"></div>
+              <img id="coverPreviewImg" class="booklet-preview-img hidden" alt="">
+              <p class="booklet-preview-error hidden" id="coverPreviewError"
+                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+              <p class="booklet-preview-label" data-i18n="booklet.previewCover">Cover</p>
+            </div>
             <div class="booklet-preview-cell">
               <div class="booklet-preview-spinner" id="frontPreviewSpinner" aria-hidden="true"></div>
-              <img id="frontPreviewImg" class="booklet-preview-img hidden" alt=""
-                   aria-label="" data-i18n-aria-label="booklet.frontSidePdf">
+              <img id="frontPreviewImg" class="booklet-preview-img hidden" alt="">
               <p class="booklet-preview-error hidden" id="frontPreviewError"
                  data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+              <p class="booklet-preview-label" data-i18n="booklet.previewFront">Front · sheet 1</p>
             </div>
             <div class="booklet-preview-cell">
               <div class="booklet-preview-spinner" id="backPreviewSpinner" aria-hidden="true"></div>
-              <img id="backPreviewImg" class="booklet-preview-img hidden" alt=""
-                   aria-label="" data-i18n-aria-label="booklet.backSidePdf">
+              <img id="backPreviewImg" class="booklet-preview-img hidden" alt="">
               <p class="booklet-preview-error hidden" id="backPreviewError"
                  data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+              <p class="booklet-preview-label" data-i18n="booklet.previewBack">Back · sheet 1</p>
             </div>
           </div>
 

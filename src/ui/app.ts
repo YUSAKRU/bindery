@@ -323,6 +323,10 @@ export function initApp(): void {
   const backPreviewImg = byId<HTMLImageElement>('backPreviewImg');
   const backPreviewSpinner = byId<HTMLDivElement>('backPreviewSpinner');
   const backPreviewError = byId<HTMLParagraphElement>('backPreviewError');
+  const coverPreviewCell = byId<HTMLDivElement>('coverPreviewCell');
+  const coverPreviewImg = byId<HTMLImageElement>('coverPreviewImg');
+  const coverPreviewSpinner = byId<HTMLDivElement>('coverPreviewSpinner');
+  const coverPreviewError = byId<HTMLParagraphElement>('coverPreviewError');
   const bookletFileNameInput = byId<HTMLInputElement>('bookletFileNameInput');
   const bookletSaveBtn = byId<HTMLButtonElement>('bookletSaveBtn');
   const bookletSaveBtnLabel = byId<HTMLSpanElement>('bookletSaveBtnLabel');
@@ -1471,6 +1475,7 @@ export function initApp(): void {
 
       coverActionRow.classList.toggle('hidden', !booklet.coverPdf);
       instructionsActionRow.classList.toggle('hidden', !booklet.instructionsPdf);
+      coverPreviewCell.classList.toggle('hidden', !booklet.coverPdf);
 
       statOriginal.textContent = String(result.originalPages);
       statSheets.textContent = String(result.sheetsCount);
@@ -1495,7 +1500,7 @@ export function initApp(): void {
       actionStatus.textContent = '';
 
       showScreen('result');
-      void renderBookletPreviews(result.frontPdf, result.backPdf);
+      void renderBookletPreviews();
     } catch (error) {
       const message =
         error instanceof BookletError
@@ -1511,35 +1516,49 @@ export function initApp(): void {
     }
   });
 
-  async function renderBookletPreviews(frontBytes: Uint8Array, backBytes: Uint8Array): Promise<void> {
-    async function renderOne(
-      bytes: Uint8Array,
-      imgEl: HTMLImageElement,
-      spinnerEl: HTMLDivElement,
-    ): Promise<void> {
+  // Renders page `pageIndex` (1-based) of `bytes` into one preview cell, owning
+  // that cell's spinner/error state so front, back and cover all share one path.
+  // renderPageThumbnail returns a data URL (not an object URL), so there is
+  // nothing to revoke.
+  async function renderPreviewInto(
+    bytes: Uint8Array,
+    imgEl: HTMLImageElement,
+    spinnerEl: HTMLDivElement,
+    errorEl: HTMLElement,
+    pageIndex = 1,
+  ): Promise<void> {
+    spinnerEl.classList.remove('hidden');
+    imgEl.classList.add('hidden');
+    imgEl.src = '';
+    errorEl.classList.add('hidden');
+    try {
       const proxy = await loadPdfForThumbnails(bytes.slice());
       try {
-        const dataUrl = await renderPageThumbnail(proxy, 1, 160);
-        imgEl.src = dataUrl;
+        imgEl.src = await renderPageThumbnail(proxy, pageIndex, 160);
         imgEl.classList.remove('hidden');
       } finally {
         await destroyThumbnailDoc(proxy);
-        spinnerEl.classList.add('hidden');
       }
+    } catch {
+      errorEl.classList.remove('hidden');
+    } finally {
+      spinnerEl.classList.add('hidden');
     }
+  }
 
-    const results = await Promise.allSettled([
-      renderOne(frontBytes, frontPreviewImg, frontPreviewSpinner),
-      renderOne(backBytes,  backPreviewImg,  backPreviewSpinner),
-    ]);
-    if (results[0].status === 'rejected') {
-      frontPreviewSpinner.classList.add('hidden');
-      frontPreviewError.classList.remove('hidden');
+  async function renderBookletPreviews(): Promise<void> {
+    if (!booklet) return;
+    const jobs = [
+      renderPreviewInto(booklet.frontPdf, frontPreviewImg, frontPreviewSpinner, frontPreviewError),
+      renderPreviewInto(booklet.backPdf, backPreviewImg, backPreviewSpinner, backPreviewError),
+    ];
+    if (booklet.coverPdf) {
+      // Cover front leaf is page 1 of coverPdf.
+      jobs.push(
+        renderPreviewInto(booklet.coverPdf, coverPreviewImg, coverPreviewSpinner, coverPreviewError),
+      );
     }
-    if (results[1].status === 'rejected') {
-      backPreviewSpinner.classList.add('hidden');
-      backPreviewError.classList.remove('hidden');
-    }
+    await Promise.allSettled(jobs);
   }
 
   document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
@@ -1681,6 +1700,11 @@ export function initApp(): void {
     backPreviewImg.src = '';
     backPreviewError.classList.add('hidden');
     backPreviewSpinner.classList.remove('hidden');
+    coverPreviewCell.classList.add('hidden');
+    coverPreviewImg.classList.add('hidden');
+    coverPreviewImg.src = '';
+    coverPreviewError.classList.add('hidden');
+    coverPreviewSpinner.classList.remove('hidden');
     showScreen('picker');
   });
 
