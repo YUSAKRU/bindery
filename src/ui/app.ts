@@ -305,6 +305,10 @@ export function initApp(): void {
   const statSheets = byId<HTMLSpanElement>('statSheets');
   const statSignaturesCard = byId<HTMLDivElement>('statSignaturesCard');
   const statSignatures = byId<HTMLSpanElement>('statSignatures');
+  const statBlanksCard = byId<HTMLDivElement>('statBlanksCard');
+  const statBlanks = byId<HTMLSpanElement>('statBlanks');
+  const coverActionRow = byId<HTMLDivElement>('coverActionRow');
+  const instructionsActionRow = byId<HTMLDivElement>('instructionsActionRow');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
   const newFileBtn = byId<HTMLButtonElement>('newFileBtn');
   const readerOpeningOverlay = byId<HTMLDivElement>('readerOpeningOverlay');
@@ -896,6 +900,21 @@ export function initApp(): void {
     return Number(bookletSignature);
   }
 
+  // How many PDFs a save will write: front, back, combined, plus optional cover
+  // and instructions.
+  function savedPdfCount(): number {
+    if (!booklet) return 3;
+    return 3 + (booklet.coverPdf ? 1 : 0) + (booklet.instructionsPdf ? 1 : 0);
+  }
+
+  // Keeps the save button label in sync with state and PDF count / language.
+  function refreshSaveLabel(): void {
+    bookletSaveBtnLabel.textContent =
+      bookletSaveState === 'saved'
+        ? t('common.saved')
+        : t('booklet.saveAll', { count: savedPdfCount() });
+  }
+
   // Parses the comma-separated "insert blank after" field. Returns the page
   // numbers, [] when empty (feature off), or null if a token is not a
   // non-negative integer (range is validated by the engine).
@@ -1317,9 +1336,12 @@ export function initApp(): void {
       bookletSaveState = 'idle';
       bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
       bookletSaveBtn.disabled = false;
-      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      refreshSaveLabel();
       bookletSaveSpinner.classList.add('hidden');
       bookletGoToLocationBtn.classList.add('hidden');
+
+      coverActionRow.classList.toggle('hidden', !booklet.coverPdf);
+      instructionsActionRow.classList.toggle('hidden', !booklet.instructionsPdf);
 
       statOriginal.textContent = String(result.originalPages);
       statSheets.textContent = String(result.sheetsCount);
@@ -1334,6 +1356,12 @@ export function initApp(): void {
         statSignaturesCard.classList.remove('hidden');
       } else {
         statSignaturesCard.classList.add('hidden');
+      }
+      if (result.blanksInserted > 0) {
+        statBlanks.textContent = `+${result.blanksInserted}`;
+        statBlanksCard.classList.remove('hidden');
+      } else {
+        statBlanksCard.classList.add('hidden');
       }
       actionStatus.textContent = '';
 
@@ -1388,20 +1416,30 @@ export function initApp(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
     button.addEventListener('click', async () => {
       if (!booklet) return;
-      const target = button.dataset.target as 'front' | 'back' | 'combined';
-      const bytes =
-        target === 'front'
-          ? booklet.frontPdf
-          : target === 'back'
-            ? booklet.backPdf
-            : booklet.combinedPdf;
+      const target = button.dataset.target as
+        | 'front'
+        | 'back'
+        | 'combined'
+        | 'cover'
+        | 'instructions';
+      const bytesByTarget: Record<typeof target, Uint8Array | undefined> = {
+        front: booklet.frontPdf,
+        back: booklet.backPdf,
+        combined: booklet.combinedPdf,
+        cover: booklet.coverPdf,
+        instructions: booklet.instructionsPdf,
+      };
+      const bytes = bytesByTarget[target];
+      if (!bytes) return;
       const filename = `${selectedFile?.name.replace(/\.pdf$/i, '') ?? 'booklet'}_${target}.pdf`;
-      const label =
-        target === 'front'
-          ? t('booklet.frontSideLower')
-          : target === 'back'
-            ? t('booklet.backSideLower')
-            : t('booklet.combinedLower');
+      const labelKeyByTarget: Record<typeof target, string> = {
+        front: 'booklet.frontSideLower',
+        back: 'booklet.backSideLower',
+        combined: 'booklet.combinedLower',
+        cover: 'booklet.coverLower',
+        instructions: 'booklet.instructionsLower',
+      };
+      const label = t(labelKeyByTarget[target]);
 
       try {
         await sharePdf(bytes, filename, `${label} PDF`);
@@ -1417,7 +1455,7 @@ export function initApp(): void {
     if (bookletSaveState === 'saved') {
       bookletSaveState = 'idle';
       bookletSaveBtn.disabled = false;
-      bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+      refreshSaveLabel();
       bookletGoToLocationBtn.classList.add('hidden');
     }
   });
@@ -1462,9 +1500,19 @@ export function initApp(): void {
         await recordOpened({ uri: instrUri, name: `${docName} — Instructions.pdf` });
       }
       bookletFileNameInput.value = docName;
-      actionStatus.textContent = t('status.booklet.saved');
+      const savedFiles = [
+        t('booklet.fileFront'),
+        t('booklet.fileBack'),
+        t('booklet.fileCombined'),
+      ];
+      if (booklet.coverPdf) savedFiles.push(t('booklet.fileCover'));
+      if (booklet.instructionsPdf) savedFiles.push(t('booklet.fileInstructions'));
+      actionStatus.textContent = t('status.booklet.savedList', {
+        count: savedFiles.length,
+        files: savedFiles.join(', '),
+      });
       bookletSaveState = 'saved';
-      bookletSaveBtnLabel.textContent = t('common.saved');
+      refreshSaveLabel();
       bookletGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1491,9 +1539,11 @@ export function initApp(): void {
     bookletSaveState = 'idle';
     bookletFileNameInput.value = '';
     bookletSaveBtn.disabled = false;
-    bookletSaveBtnLabel.textContent = t('booklet.saveBoth');
+    refreshSaveLabel();
     bookletSaveSpinner.classList.add('hidden');
     bookletGoToLocationBtn.classList.add('hidden');
+    coverActionRow.classList.add('hidden');
+    instructionsActionRow.classList.add('hidden');
     frontPreviewImg.classList.add('hidden');
     frontPreviewImg.src = '';
     frontPreviewError.classList.add('hidden');
@@ -5640,6 +5690,9 @@ export function initApp(): void {
     syncSettingsLangButtons();
     renderOnboarding();
     refreshTopBarTitle();
+    // The save-button label is built dynamically (count/state), so re-apply it
+    // after the static data-i18n pass.
+    refreshSaveLabel();
   }
 
   function startOnboarding(): void {

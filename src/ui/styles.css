@@ -374,6 +374,10 @@ body {
   color: var(--color-on-surface-variant);
 }
 
+.setting-error {
+  color: var(--color-error);
+}
+
 .slider {
   width: 100%;
   appearance: none;

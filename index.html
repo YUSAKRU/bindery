@@ -836,7 +836,7 @@
             </div>
             <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
             <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
-            <p class="setting-hint hidden" id="insertBlankError" style="color: var(--color-error);" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+            <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
           </div>
 
           <button class="btn btn-primary btn-large" id="generateBtn">
@@ -867,6 +867,10 @@
             <div class="stat-card hidden" id="statSignaturesCard">
               <span class="stat-value" id="statSignatures">0</span>
               <span class="stat-label" data-i18n="stat.signatures">Signatures</span>
+            </div>
+            <div class="stat-card hidden" id="statBlanksCard">
+              <span class="stat-value" id="statBlanks">0</span>
+              <span class="stat-label" data-i18n="stat.insertedBlanks">Inserted Blanks</span>
             </div>
           </div>
 
@@ -911,10 +915,22 @@
                 <button class="btn btn-tonal" data-target="combined" data-action="share" data-i18n="common.share">Share</button>
               </div>
             </div>
+            <div class="action-row hidden" id="coverActionRow">
+              <span class="action-label" data-i18n="booklet.coverPdfLabel">Cover PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="cover" data-action="share" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+            <div class="action-row hidden" id="instructionsActionRow">
+              <span class="action-label" data-i18n="booklet.instructionsPdfLabel">Instructions PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="instructions" data-action="share" data-i18n="common.share">Share</button>
+              </div>
+            </div>
           </div>
 
           <button class="btn btn-primary btn-large" id="bookletSaveBtn">
-            <span id="bookletSaveBtnLabel" data-i18n="booklet.saveBoth">Save Both</span>
+            <span id="bookletSaveBtnLabel">Save All</span>
             <span class="spinner hidden" id="bookletSaveSpinner"></span>
           </button>
 
