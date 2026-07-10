@@ -296,6 +296,9 @@ export function initApp(): void {
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
   const configSummary = byId<HTMLDivElement>('configSummary');
+  const advancedToggle = byId<HTMLButtonElement>('advancedToggle');
+  const advancedPanel = byId<HTMLDivElement>('advancedPanel');
+  const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
@@ -899,6 +902,8 @@ export function initApp(): void {
     bookletOriginalPages = 0;
     updateCoverAvailability();
     refreshConfigSummary();
+    setAdvancedOpen(false);
+    updateAdvancedBadge();
   }
 
   // Maps the segmented signature value to the engine option.
@@ -936,6 +941,32 @@ export function initApp(): void {
       setActiveSegment(coverModeGroup, 'cover', 'together');
     }
     coverHintText.textContent = tooFew ? t('config.coverDisabledHint') : t('config.coverHint');
+  }
+
+  // True when any control inside the Advanced accordion differs from its
+  // default, so a "modified" badge can warn the user about settings hidden
+  // behind the collapsed panel. Defaults: flip=short, binding=ltr, gutter=0,
+  // creep=0, cover=together, instructions=none, blank field empty.
+  function isAdvancedModified(): boolean {
+    return (
+      bookletFlipEdge !== 'short' ||
+      bookletBinding !== 'ltr' ||
+      Number(gutterSlider.value) !== 0 ||
+      Number(creepSlider.value) !== 0 ||
+      bookletSeparateCover ||
+      bookletIncludeInstructions ||
+      insertBlankInput.value.trim() !== ''
+    );
+  }
+
+  function updateAdvancedBadge(): void {
+    advancedBadge.classList.toggle('hidden', !isAdvancedModified());
+  }
+
+  function setAdvancedOpen(open: boolean): void {
+    advancedPanel.classList.toggle('hidden', !open);
+    advancedToggle.classList.toggle('is-open', open);
+    advancedToggle.setAttribute('aria-expanded', String(open));
   }
 
   // Short paper label for the summary band ("A4" / "Letter" / "Kaynak" ...).
@@ -1305,15 +1336,19 @@ export function initApp(): void {
   continueBtn.addEventListener('click', () => {
     updateCoverAvailability();
     refreshConfigSummary();
+    setAdvancedOpen(false);
+    updateAdvancedBadge();
     showScreen('config');
   });
 
   gutterSlider.addEventListener('input', () => {
     gutterValueLabel.textContent = `${gutterSlider.value} pt`;
+    updateAdvancedBadge();
   });
 
   creepSlider.addEventListener('input', () => {
     creepValueLabel.textContent = `${Number(creepSlider.value).toFixed(1)} pt`;
+    updateAdvancedBadge();
   });
 
   paperSizeGroup.addEventListener('click', (event) => {
@@ -1331,6 +1366,7 @@ export function initApp(): void {
     const flip = btn.dataset.flip === 'long' ? 'long' : 'short';
     bookletFlipEdge = flip;
     setActiveSegment(flipEdgeGroup, 'flip', flip);
+    updateAdvancedBadge();
   });
 
   signatureSizeGroup.addEventListener('click', (event) => {
@@ -1348,6 +1384,7 @@ export function initApp(): void {
     const binding = btn.dataset.binding === 'rtl' ? 'rtl' : 'ltr';
     bookletBinding = binding;
     setActiveSegment(bindingGroup, 'binding', binding);
+    updateAdvancedBadge();
   });
 
   coverModeGroup.addEventListener('click', (event) => {
@@ -1357,6 +1394,7 @@ export function initApp(): void {
     bookletSeparateCover = cover === 'separate';
     setActiveSegment(coverModeGroup, 'cover', cover);
     refreshConfigSummary();
+    updateAdvancedBadge();
   });
 
   instructionsGroup.addEventListener('click', (event) => {
@@ -1366,11 +1404,21 @@ export function initApp(): void {
     bookletIncludeInstructions = instr === 'add';
     setActiveSegment(instructionsGroup, 'instr', instr);
     refreshConfigSummary();
+    updateAdvancedBadge();
   });
 
   insertBlankInput.addEventListener('input', () => {
     insertBlankError.classList.add('hidden');
     refreshConfigSummary();
+    updateAdvancedBadge();
+  });
+
+  advancedToggle.addEventListener('click', () => {
+    const willOpen = advancedPanel.classList.contains('hidden');
+    setAdvancedOpen(willOpen);
+    if (willOpen) {
+      advancedPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   });
 
   generateBtn.addEventListener('click', async () => {

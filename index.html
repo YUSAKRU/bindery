@@ -740,24 +740,7 @@
         <section class="screen hidden" id="screen-config">
           <h2 class="screen-title" data-i18n="screenTitle.config">Folding Settings</h2>
 
-          <div class="setting-card">
-            <div class="setting-row">
-              <label for="gutterSlider" data-i18n="config.gutter">Gutter</label>
-              <span class="setting-value" id="gutterValueLabel">0 pt</span>
-            </div>
-            <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
-            <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line.</p>
-          </div>
-
-          <div class="setting-card">
-            <div class="setting-row">
-              <label for="creepSlider" data-i18n="config.creep">Creep</label>
-              <span class="setting-value" id="creepValueLabel">0.0 pt</span>
-            </div>
-            <input type="range" id="creepSlider" min="0" max="5" step="0.1" value="0" class="slider" />
-            <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
-          </div>
-
+          <!-- Basic: always visible -->
           <div class="setting-card">
             <div class="setting-row">
               <label data-i18n="config.paperSize">Paper size</label>
@@ -774,28 +757,6 @@
 
           <div class="setting-card">
             <div class="setting-row">
-              <label data-i18n="config.flipEdge">Flip edge</label>
-            </div>
-            <div class="segmented-group" id="flipEdgeGroup">
-              <button type="button" class="segmented-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
-              <button type="button" class="segmented-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
-            </div>
-            <p class="setting-hint" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
-          </div>
-
-          <div class="setting-card">
-            <div class="setting-row">
-              <label data-i18n="config.binding">Binding direction</label>
-            </div>
-            <div class="segmented-group" id="bindingGroup">
-              <button type="button" class="segmented-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
-              <button type="button" class="segmented-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
-            </div>
-            <p class="setting-hint" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
-          </div>
-
-          <div class="setting-card">
-            <div class="setting-row">
               <label data-i18n="config.signatureSize">Signature size</label>
             </div>
             <div class="segmented-group" id="signatureSizeGroup">
@@ -808,35 +769,86 @@
             <p class="setting-hint" data-i18n="config.signatureHint">Group of sheets folded together. Smaller signatures fold and stitch more easily for thick documents.</p>
           </div>
 
-          <div class="setting-card">
-            <div class="setting-row">
-              <label data-i18n="config.cover">Cover</label>
-            </div>
-            <div class="segmented-group" id="coverModeGroup">
-              <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
-              <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
-            </div>
-            <p class="setting-hint" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
-          </div>
+          <!-- Advanced: collapsed accordion -->
+          <button type="button" class="advanced-toggle" id="advancedToggle" aria-expanded="false" aria-controls="advancedPanel">
+            <span class="advanced-toggle-label">
+              <span data-i18n="config.advanced">Advanced settings</span>
+              <span class="advanced-badge hidden" id="advancedBadge" data-i18n="config.advancedModified">· modified</span>
+            </span>
+            <span class="advanced-chevron" aria-hidden="true">▸</span>
+          </button>
 
-          <div class="setting-card">
-            <div class="setting-row">
-              <label data-i18n="config.instructions">Instructions page</label>
+          <div class="advanced-panel hidden" id="advancedPanel" role="region" aria-labelledby="advancedToggle">
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="config.flipEdge">Flip edge</label>
+              </div>
+              <div class="segmented-group" id="flipEdgeGroup">
+                <button type="button" class="segmented-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
+                <button type="button" class="segmented-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
             </div>
-            <div class="segmented-group" id="instructionsGroup">
-              <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
-              <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
-            </div>
-            <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page English PDF with the printing and folding steps.</p>
-          </div>
 
-          <div class="setting-card">
-            <div class="setting-row">
-              <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="config.binding">Binding direction</label>
+              </div>
+              <div class="segmented-group" id="bindingGroup">
+                <button type="button" class="segmented-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
+                <button type="button" class="segmented-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
             </div>
-            <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
-            <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
-            <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label for="gutterSlider" data-i18n="config.gutter">Gutter</label>
+                <span class="setting-value" id="gutterValueLabel">0 pt</span>
+              </div>
+              <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
+              <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label for="creepSlider" data-i18n="config.creep">Creep</label>
+                <span class="setting-value" id="creepValueLabel">0.0 pt</span>
+              </div>
+              <input type="range" id="creepSlider" min="0" max="5" step="0.1" value="0" class="slider" />
+              <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="config.cover">Cover</label>
+              </div>
+              <div class="segmented-group" id="coverModeGroup">
+                <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
+                <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
+              </div>
+              <p class="setting-hint" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="config.instructions">Instructions page</label>
+              </div>
+              <div class="segmented-group" id="instructionsGroup">
+                <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
+                <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page English PDF with the printing and folding steps.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
+              </div>
+              <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
+              <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
+              <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+            </div>
           </div>
 
           <div class="config-summary hidden" id="configSummary" aria-live="polite"></div>

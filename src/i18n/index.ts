@@ -210,6 +210,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.summaryCover': ' · +cover',
     'config.summaryInstructions': ' · +instructions',
     'config.summary.source': 'Source',
+    'config.advanced': 'Advanced settings',
+    'config.advancedModified': '· modified',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'config.generateBooklet': 'Create Booklet',
 
@@ -594,6 +596,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.summaryCover': ' · +kapak',
     'config.summaryInstructions': ' · +talimat',
     'config.summary.source': 'Kaynak',
+    'config.advanced': 'Gelişmiş ayarlar',
+    'config.advancedModified': '· değişiklik var',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 
