@@ -11,6 +11,8 @@ export interface PdfMetadata {
 
 export type FlipEdge = 'short' | 'long';
 
+export type Binding = 'ltr' | 'rtl';
+
 export type PaperSizePreset = 'A4' | 'Letter' | 'A5' | 'A3' | 'source';
 
 /**
@@ -42,6 +44,18 @@ export interface BookletOptions {
    * document, reproducing the historical output.
    */
   signatureSize?: number | 'auto';
+  /**
+   * Binding direction. 'ltr' (default) places page 1 on the right of the first
+   * sheet's front; 'rtl' mirrors every sheet for right-to-left books (Arabic,
+   * Ottoman, manga).
+   */
+  binding?: Binding;
+  /**
+   * When true, the original first 2 + last 2 pages are imposed as a separate
+   * cover sheet (returned as `coverPdf`) and excluded from the front/back/
+   * combined book block. Requires at least 8 original pages. Default false.
+   */
+  separateCover?: boolean;
 }
 
 export interface BookletResult {
@@ -54,4 +68,9 @@ export interface BookletResult {
   frontPdf: Uint8Array;
   backPdf: Uint8Array;
   combinedPdf: Uint8Array;
+  /**
+   * The cover sheet (2 pages: front + back), present only when `separateCover`
+   * was requested. The book block PDFs above exclude these pages.
+   */
+  coverPdf?: Uint8Array;
 }

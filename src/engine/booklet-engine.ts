@@ -222,15 +222,13 @@ export function computeSignatureMappings(
 const SIZE_TOLERANCE = 0.5;
 
 /**
- * Returns the most common (mode) page size across the first `pageCount` pages
- * of `doc`. Sizes within SIZE_TOLERANCE points on both axes are grouped as the
- * same size; ties are broken in favour of the size that appears earliest, so a
- * uniform document (and a tie) always yields the first page's size.
+ * Returns the most common (mode) size from a list. Sizes within SIZE_TOLERANCE
+ * points on both axes are grouped as the same size; ties are broken in favour of
+ * the size that appears earliest, so a uniform list (and a tie) yields the first.
  */
-export function modePageSize(doc: PDFDocument, pageCount: number): [number, number] {
+function modeOfSizes(sizes: Array<[number, number]>): [number, number] {
   const buckets: Array<{ size: [number, number]; count: number; firstIndex: number }> = [];
-  for (let i = 0; i < pageCount; i++) {
-    const { width, height } = doc.getPage(i).getSize();
+  sizes.forEach(([width, height], i) => {
     const bucket = buckets.find(
       (b) =>
         Math.abs(b.size[0] - width) <= SIZE_TOLERANCE &&
@@ -241,7 +239,7 @@ export function modePageSize(doc: PDFDocument, pageCount: number): [number, numb
     } else {
       buckets.push({ size: [width, height], count: 1, firstIndex: i });
     }
-  }
+  });
 
   let best = buckets[0];
   for (const b of buckets) {
@@ -252,10 +250,110 @@ export function modePageSize(doc: PDFDocument, pageCount: number): [number, numb
   return best.size;
 }
 
+/** Page sizes of `srcDoc` at the given 0-based indices. */
+function pageSizesAt(doc: PDFDocument, indices: number[]): Array<[number, number]> {
+  return indices.map((i) => {
+    const { width, height } = doc.getPage(i).getSize();
+    return [width, height];
+  });
+}
+
+/**
+ * Returns the most common (mode) page size across the first `pageCount` pages
+ * of `doc`. Ties break toward the earliest page (uniform docs yield page 0).
+ */
+export function modePageSize(doc: PDFDocument, pageCount: number): [number, number] {
+  return modeOfSizes(pageSizesAt(doc, Array.from({ length: pageCount }, (_, i) => i)));
+}
+
+/**
+ * Mirrors each sheet's slot assignment left↔right (front and back) for
+ * right-to-left (RTL) binding — Arabic, Ottoman, manga. The gutter/creep shift
+ * geometry is symmetric across the two slots, so only *which* page lands in each
+ * slot changes, not the slot rectangles. Pure and test-friendly.
+ */
+export function mirrorMapping(sheets: SheetMapping[]): SheetMapping[] {
+  return sheets.map((s) => ({
+    frontLeft: s.frontRight,
+    frontRight: s.frontLeft,
+    backLeft: s.backRight,
+    backRight: s.backLeft,
+  }));
+}
+
+interface SheetLayout {
+  sheetWidth: number;
+  sheetHeight: number;
+  gutter: number;
+  creep: number;
+  rotateBack: boolean;
+}
+
+/**
+ * Imposes a flat sheet list into separate front/back PDFDocuments, embedding the
+ * required source pages from `srcDoc`. `toSrcIndex` maps a mapping's local page
+ * index to the actual `srcDoc` page index (identity for a whole document, a
+ * lookup table for a padded sub-block or the cover). Shared by the book block
+ * and the separate cover so both go through identical drawing code.
+ */
+async function imposeFrontBack(
+  srcDoc: PDFDocument,
+  flatSheets: Array<{ sheet: SheetMapping; sheetInSignature: number }>,
+  toSrcIndex: (localIndex: number) => number,
+  layout: SheetLayout,
+): Promise<{ frontDoc: PDFDocument; backDoc: PDFDocument }> {
+  const frontIndices: number[] = [];
+  const backIndices: number[] = [];
+  for (const { sheet } of flatSheets) {
+    frontIndices.push(toSrcIndex(sheet.frontLeft), toSrcIndex(sheet.frontRight));
+    backIndices.push(toSrcIndex(sheet.backLeft), toSrcIndex(sheet.backRight));
+  }
+
+  const frontDoc = await PDFDocument.create();
+  const backDoc = await PDFDocument.create();
+  const frontEmbedded = await frontDoc.embedPdf(srcDoc, frontIndices);
+  const backEmbedded = await backDoc.embedPdf(srcDoc, backIndices);
+
+  const { sheetWidth, sheetHeight, gutter, creep, rotateBack } = layout;
+  for (let j = 0; j < flatSheets.length; j++) {
+    const { left: leftRect, right: rightRect } = computeSlotRects(
+      flatSheets[j].sheetInSignature,
+      gutter,
+      creep,
+      sheetWidth,
+      sheetHeight,
+    );
+
+    const frontPage = frontDoc.addPage([sheetWidth, sheetHeight]);
+    drawFitted(frontPage, frontEmbedded[2 * j], leftRect);
+    drawFitted(frontPage, frontEmbedded[2 * j + 1], rightRect);
+
+    const backPage = backDoc.addPage([sheetWidth, sheetHeight]);
+    drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack, sheetWidth, sheetHeight);
+    drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack, sheetWidth, sheetHeight);
+  }
+
+  return { frontDoc, backDoc };
+}
+
+/** Interleaves front/back sheets (front₀, back₀, front₁, …) into one PDF. */
+async function combineFrontBack(frontDoc: PDFDocument, backDoc: PDFDocument): Promise<Uint8Array> {
+  const S = frontDoc.getPageCount();
+  const combinedDoc = await PDFDocument.create();
+  const indices = Array.from({ length: S }, (_, i) => i);
+  const frontPages = await combinedDoc.copyPages(frontDoc, indices);
+  const backPages = await combinedDoc.copyPages(backDoc, indices);
+  for (let j = 0; j < S; j++) {
+    combinedDoc.addPage(frontPages[j]);
+    combinedDoc.addPage(backPages[j]);
+  }
+  return combinedDoc.save();
+}
+
 /**
  * Performs the booklet imposition: pads the source to a multiple of 4 pages,
- * then splits it into front/back A4-landscape sheets ready for duplex
- * printing and center folding.
+ * then splits it into front/back landscape sheets ready for duplex printing and
+ * center folding.
  *
  * Page-mapping arithmetic and gutter/creep shift formulas are a direct port
  * of pdf_booklet/engine.py (BookletEngine.make_booklet) — kept numerically
@@ -268,12 +366,17 @@ export async function makeBooklet(
   const baseGutter = options.gutter ?? 0;
   const creepStep = options.creep ?? 0;
   const flipEdge = options.flipEdge ?? 'short';
+  const binding = options.binding ?? 'ltr';
+  const separateCover = options.separateCover ?? false;
 
   if (creepStep < 0) {
     throw new BookletError('Creep değeri negatif olamaz.');
   }
   if (flipEdge !== 'short' && flipEdge !== 'long') {
     throw new BookletError(`Geçersiz çevirme kenarı değeri: ${flipEdge}. 'short' veya 'long' olmalı.`);
+  }
+  if (binding !== 'ltr' && binding !== 'rtl') {
+    throw new BookletError(`Geçersiz cilt yönü değeri: ${binding}. 'ltr' veya 'rtl' olmalı.`);
   }
 
   const { pageCount: originalPageCount } = await validatePdf(inputBytes);
@@ -288,30 +391,59 @@ export async function makeBooklet(
     throw new BookletError(`Geçersiz gutter değeri: ${baseGutter}. 0 ile ${wSlot} arasında olmalı.`);
   }
 
-  // 1. Dynamic blank page padding so the page count is a multiple of 4.
-  //    Blank pages take the document's most common (mode) page size rather
-  //    than merely the last page's, so a stray final page (e.g. a landscape
-  //    cover in a portrait document) doesn't dictate the padding geometry.
-  const remainder = originalPageCount % 4;
+  const rotateBack = flipEdge === 'long';
+  const layout: SheetLayout = {
+    sheetWidth,
+    sheetHeight,
+    gutter: baseGutter,
+    creep: creepStep,
+    rotateBack,
+  };
+
+  // Split off a separate cover (outer wrap) when requested: the original first 2
+  // and last 2 pages. The remaining inner pages form the "book block" that is
+  // padded and imposed on their own. Without a separate cover the block is the
+  // whole document.
+  let coverIndices: number[] | null = null;
+  let blockOrder: number[];
+  if (separateCover) {
+    if (originalPageCount < 8) {
+      throw new BookletError(
+        `Ayrı kapak için en az 8 sayfa gerekir (kapak + iç yaprak). Belge: ${originalPageCount} sayfa.`,
+      );
+    }
+    coverIndices = [0, 1, originalPageCount - 2, originalPageCount - 1];
+    blockOrder = Array.from({ length: originalPageCount - 4 }, (_, i) => i + 2);
+  } else {
+    blockOrder = Array.from({ length: originalPageCount }, (_, i) => i);
+  }
+
+  // Dynamic blank page padding so the block page count is a multiple of 4.
+  // Blank pages take the block's most common (mode) page size rather than merely
+  // the last page's, so a stray final page doesn't dictate the padding geometry.
+  const remainder = blockOrder.length % 4;
   let paddingApplied = 0;
   if (remainder !== 0) {
     paddingApplied = 4 - remainder;
-    const [padWidth, padHeight] = modePageSize(srcDoc, originalPageCount);
+    const [padWidth, padHeight] = modeOfSizes(pageSizesAt(srcDoc, blockOrder));
     for (let i = 0; i < paddingApplied; i++) {
       const blankPage = srcDoc.addPage([padWidth, padHeight]);
       // pdf-lib only materializes a page's Contents stream once something is
       // drawn on it; embedPdf() requires Contents to exist, so force it here.
       blankPage.pushOperators();
+      blockOrder.push(srcDoc.getPageCount() - 1);
     }
   }
 
-  const N = srcDoc.getPageCount();
+  const N = blockOrder.length;
 
-  // Split into signatures and flatten to a sheet list that remembers each
-  // sheet's index WITHIN its signature. Creep restarts at every signature
-  // because each signature is folded separately, so that local index (not the
-  // global one) drives the creep shift below.
-  const signatures = computeSignatureMappings(N, options.signatureSize);
+  // Split the block into signatures and flatten to a sheet list that remembers
+  // each sheet's index WITHIN its signature (creep restarts at every signature).
+  // For RTL binding, mirror each sheet's slot assignment left↔right.
+  let signatures = computeSignatureMappings(N, options.signatureSize);
+  if (binding === 'rtl') {
+    signatures = signatures.map((signature) => mirrorMapping(signature));
+  }
   const signaturesCount = signatures.length;
   const flatSheets: Array<{ sheet: SheetMapping; sheetInSignature: number }> = [];
   let maxSheetsPerSignature = 0;
@@ -331,56 +463,36 @@ export async function makeBooklet(
     );
   }
 
-  // 2. Flatten the per-sheet source page indices (0-based) for batch embedding,
-  //    in signature order.
-  const frontIndices: number[] = [];
-  const backIndices: number[] = [];
-  for (const { sheet } of flatSheets) {
-    frontIndices.push(sheet.frontLeft, sheet.frontRight);
-    backIndices.push(sheet.backLeft, sheet.backRight);
-  }
-
-  const frontDoc = await PDFDocument.create();
-  const backDoc = await PDFDocument.create();
-
-  const frontEmbedded = await frontDoc.embedPdf(srcDoc, frontIndices);
-  const backEmbedded = await backDoc.embedPdf(srcDoc, backIndices);
-
-  // 3. Lay out each sheet, applying the gutter/creep inward shift. For
-  //    long-edge duplex the back composition is rotated 180° as a whole, which
-  //    also carries the gutter/creep shift to the correct side automatically.
-  const rotateBack = flipEdge === 'long';
-  for (let j = 0; j < S; j++) {
-    // Creep uses the sheet's index within its signature so the shift resets per
-    // fold; the front/back embed order is still the global sheet index j.
-    const { left: leftRect, right: rightRect } = computeSlotRects(
-      flatSheets[j].sheetInSignature,
-      baseGutter,
-      creepStep,
-      sheetWidth,
-      sheetHeight,
-    );
-
-    const frontPage = frontDoc.addPage([sheetWidth, sheetHeight]);
-    drawFitted(frontPage, frontEmbedded[2 * j], leftRect);
-    drawFitted(frontPage, frontEmbedded[2 * j + 1], rightRect);
-
-    const backPage = backDoc.addPage([sheetWidth, sheetHeight]);
-    drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack, sheetWidth, sheetHeight);
-    drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack, sheetWidth, sheetHeight);
-  }
-
+  // Impose the book block. `blockOrder[localIndex]` maps a mapping page index to
+  // the real srcDoc page (identity for a whole document, a lookup for a cover's
+  // inner block or padding pages).
+  const { frontDoc, backDoc } = await imposeFrontBack(
+    srcDoc,
+    flatSheets,
+    (localIndex) => blockOrder[localIndex],
+    layout,
+  );
   const frontPdf = await frontDoc.save();
   const backPdf = await backDoc.save();
+  const combinedPdf = await combineFrontBack(frontDoc, backDoc);
 
-  const combinedDoc = await PDFDocument.create();
-  const frontPages = await combinedDoc.copyPages(frontDoc, Array.from({ length: S }, (_, i) => i));
-  const backPages = await combinedDoc.copyPages(backDoc, Array.from({ length: S }, (_, i) => i));
-  for (let j = 0; j < S; j++) {
-    combinedDoc.addPage(frontPages[j]);
-    combinedDoc.addPage(backPages[j]);
+  // Impose the cover as a single four-page sheet: front [last | first],
+  // back [second | second-last]; mirrored for RTL. Creep is 0 (one sheet).
+  let coverPdf: Uint8Array | undefined;
+  if (coverIndices) {
+    let coverSheets = computeSheetMapping(4);
+    if (binding === 'rtl') {
+      coverSheets = mirrorMapping(coverSheets);
+    }
+    const coverFlat = coverSheets.map((sheet) => ({ sheet, sheetInSignature: 0 }));
+    const { frontDoc: coverFront, backDoc: coverBack } = await imposeFrontBack(
+      srcDoc,
+      coverFlat,
+      (localIndex) => coverIndices![localIndex],
+      { ...layout, creep: 0 },
+    );
+    coverPdf = await combineFrontBack(coverFront, coverBack);
   }
-  const combinedPdf = await combinedDoc.save();
 
   return {
     originalPages: originalPageCount,
@@ -391,5 +503,6 @@ export async function makeBooklet(
     frontPdf,
     backPdf,
     combinedPdf,
+    coverPdf,
   };
 }

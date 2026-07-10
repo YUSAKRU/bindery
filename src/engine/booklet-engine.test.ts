@@ -5,6 +5,7 @@ import {
   computeSignatureMappings,
   computeSlotRects,
   makeBooklet,
+  mirrorMapping,
   modePageSize,
   resolveSheetSize,
   resolveSignatureSize,
@@ -546,5 +547,122 @@ describe('makeBooklet signatureSize', () => {
         makeBooklet(input, { signatureSize: bad }),
       ).rejects.toThrow(/imza boyutu/i);
     }
+  });
+});
+
+describe('mirrorMapping (RTL binding)', () => {
+  it('swaps left<->right slots for the hand-derived 16-page sheet 0', () => {
+    // LTR sheet 0 is {fL:15, fR:0, bL:1, bR:14}; RTL swaps both front and back.
+    const mirrored = mirrorMapping(computeSheetMapping(16));
+    expect(mirrored[0]).toEqual({ frontLeft: 0, frontRight: 15, backLeft: 14, backRight: 1 });
+  });
+
+  it('still covers every page index exactly once', () => {
+    const used = mirrorMapping(computeSheetMapping(24)).flatMap((s) => [
+      s.frontLeft,
+      s.frontRight,
+      s.backLeft,
+      s.backRight,
+    ]);
+    expect(used.slice().sort((a, b) => a - b)).toEqual(Array.from({ length: 24 }, (_, i) => i));
+  });
+});
+
+describe('makeBooklet binding', () => {
+  it('leaves the slot geometry unchanged for RTL (only page assignment swaps)', async () => {
+    // A uniform document: RTL swaps which page goes left/right, but the slot
+    // rectangles are identical, so the front-sheet transform matrices match LTR
+    // byte-for-byte. Verified output-to-output, not via the production formula.
+    const input = await buildTestPdf(8);
+    const ltr = await drawnPagesOf((await makeBooklet(input, { binding: 'ltr' })).frontPdf, 0);
+    const rtl = await drawnPagesOf((await makeBooklet(input, { binding: 'rtl' })).frontPdf, 0);
+    expect(rtl).toEqual(ltr);
+  });
+
+  it('keeps the RTL+long front identical to the LTR front (front is never rotated)', async () => {
+    const input = await buildTestPdf(8);
+    const ltrFront = await drawnPagesOf((await makeBooklet(input)).frontPdf, 0);
+    const rtlLongFront = await drawnPagesOf(
+      (await makeBooklet(input, { binding: 'rtl', flipEdge: 'long' })).frontPdf,
+      0,
+    );
+    expect(rtlLongFront).toEqual(ltrFront);
+  });
+
+  it('preserves the default (undefined === ltr)', async () => {
+    const input = await buildTestPdf(16);
+    const def = await drawnPagesOf((await makeBooklet(input)).backPdf, 0);
+    const ltr = await drawnPagesOf((await makeBooklet(input, { binding: 'ltr' })).backPdf, 0);
+    expect(def).toEqual(ltr);
+  });
+
+  it('rejects an invalid binding value', async () => {
+    const input = await buildTestPdf(8);
+    await expect(
+      makeBooklet(input, { binding: 'diagonal' as unknown as 'ltr' }),
+    ).rejects.toThrow(/cilt yönü/i);
+  });
+});
+
+describe('makeBooklet separateCover', () => {
+  // A 12-page document whose cover pages (0,1,10,11) are 400x600 and whose inner
+  // pages (2..9) are 595x842 — different sizes, so the scale a page is drawn at
+  // reveals whether it landed on the cover or in the book block.
+  async function buildCoverDoc(): Promise<Uint8Array> {
+    const sizes: Array<[number, number]> = [
+      [400, 600],
+      [400, 600],
+      ...Array.from({ length: 8 }, () => [595, 842] as [number, number]),
+      [400, 600],
+      [400, 600],
+    ];
+    return (await buildMixedDoc(sizes)).save();
+  }
+
+  // Uniform-fit scale of a page into the A4 slot (421 x 595).
+  const INNER_SCALE = 595 / 842; // 595x842 -> height-bound = 0.7066508
+  const COVER_SCALE = 595 / 600; // 400x600 -> height-bound = 0.9916667 (min(421/400, 595/600))
+
+  it('emits a 2-page cover and excludes it from the book block', async () => {
+    const result = await makeBooklet(await buildCoverDoc(), { separateCover: true });
+    expect(result.coverPdf).toBeDefined();
+    const coverDoc = await PDFDocument.load(result.coverPdf!);
+    expect(coverDoc.getPageCount()).toBe(2); // front + back of the cover sheet
+
+    // originalPages counts the whole document; the block stats reflect the inner
+    // 8 pages only (cover sheet NOT counted).
+    expect(result.originalPages).toBe(12);
+    expect(result.paddedPages).toBe(8);
+    expect(result.sheetsCount).toBe(2);
+    expect(result.signaturesCount).toBe(1);
+    expect(result.paddingApplied).toBe(0);
+  });
+
+  it('draws the cover pages on the cover and the inner pages in the block', async () => {
+    const result = await makeBooklet(await buildCoverDoc(), { separateCover: true });
+
+    // Book block front sheet draws the inner 595x842 pages.
+    const innerFront = await drawnPagesOf(result.frontPdf, 0);
+    expect(innerFront).toHaveLength(2);
+    for (const draw of innerFront) expect(draw.scale[0]).toBeCloseTo(INNER_SCALE, 5);
+
+    // Cover sheet draws the 400x600 cover pages (2 per side).
+    const coverFront = await drawnPagesOf(result.coverPdf!, 0);
+    const coverBack = await drawnPagesOf(result.coverPdf!, 1);
+    expect(coverFront).toHaveLength(2);
+    expect(coverBack).toHaveLength(2);
+    for (const draw of [...coverFront, ...coverBack]) {
+      expect(draw.scale[0]).toBeCloseTo(COVER_SCALE, 5);
+    }
+  });
+
+  it('throws when a separate cover is requested for fewer than 8 pages', async () => {
+    const input = await buildTestPdf(4);
+    await expect(makeBooklet(input, { separateCover: true })).rejects.toThrow(/kapak/i);
+  });
+
+  it('leaves coverPdf undefined by default', async () => {
+    const result = await makeBooklet(await buildTestPdf(12));
+    expect(result.coverPdf).toBeUndefined();
   });
 });

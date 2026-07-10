@@ -785,6 +785,17 @@
 
           <div class="setting-card">
             <div class="setting-row">
+              <label data-i18n="config.binding">Binding direction</label>
+            </div>
+            <div class="segmented-group" id="bindingGroup">
+              <button type="button" class="segmented-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
+              <button type="button" class="segmented-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
               <label data-i18n="config.signatureSize">Signature size</label>
             </div>
             <div class="segmented-group" id="signatureSizeGroup">
@@ -795,6 +806,17 @@
               <button type="button" class="segmented-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
             </div>
             <p class="setting-hint" data-i18n="config.signatureHint">Group of sheets folded together. Smaller signatures fold and stitch more easily for thick documents.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-row">
+              <label data-i18n="config.cover">Cover</label>
+            </div>
+            <div class="segmented-group" id="coverModeGroup">
+              <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
+              <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
           </div>
 
           <button class="btn btn-primary btn-large" id="generateBtn">

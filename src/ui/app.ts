@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import { BookletError } from '../engine/types';
-import type { FlipEdge, PaperSize } from '../engine/types';
+import type { Binding, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
@@ -289,6 +289,8 @@ export function initApp(): void {
   const paperSizeGroup = byId<HTMLDivElement>('paperSizeGroup');
   const flipEdgeGroup = byId<HTMLDivElement>('flipEdgeGroup');
   const signatureSizeGroup = byId<HTMLDivElement>('signatureSizeGroup');
+  const bindingGroup = byId<HTMLDivElement>('bindingGroup');
+  const coverModeGroup = byId<HTMLDivElement>('coverModeGroup');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
@@ -337,12 +339,19 @@ export function initApp(): void {
   const mergeNewBtn = byId<HTMLButtonElement>('mergeNewBtn');
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
-  let booklet: { frontPdf: Uint8Array; backPdf: Uint8Array; combinedPdf: Uint8Array } | null = null;
+  let booklet: {
+    frontPdf: Uint8Array;
+    backPdf: Uint8Array;
+    combinedPdf: Uint8Array;
+    coverPdf?: Uint8Array;
+  } | null = null;
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
   // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
   let bookletSignature = 'single';
+  let bookletBinding: Binding = 'ltr';
+  let bookletSeparateCover = false;
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -865,6 +874,10 @@ export function initApp(): void {
     setActiveSegment(paperSizeGroup, 'paper', 'A4');
     bookletSignature = 'single';
     setActiveSegment(signatureSizeGroup, 'sig', 'single');
+    bookletBinding = 'ltr';
+    setActiveSegment(bindingGroup, 'binding', 'ltr');
+    bookletSeparateCover = false;
+    setActiveSegment(coverModeGroup, 'cover', 'together');
   }
 
   // Maps the segmented signature value to the engine option.
@@ -1208,6 +1221,22 @@ export function initApp(): void {
     setActiveSegment(signatureSizeGroup, 'sig', sig);
   });
 
+  bindingGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    if (!btn) return;
+    const binding = btn.dataset.binding === 'rtl' ? 'rtl' : 'ltr';
+    bookletBinding = binding;
+    setActiveSegment(bindingGroup, 'binding', binding);
+  });
+
+  coverModeGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const cover = btn?.dataset.cover;
+    if (!cover) return;
+    bookletSeparateCover = cover === 'separate';
+    setActiveSegment(coverModeGroup, 'cover', cover);
+  });
+
   generateBtn.addEventListener('click', async () => {
     if (!selectedFile) {
       showScreen('picker');
@@ -1225,9 +1254,16 @@ export function initApp(): void {
         flipEdge: bookletFlipEdge,
         paperSize: bookletPaperSize,
         signatureSize: signatureOption(),
+        binding: bookletBinding,
+        separateCover: bookletSeparateCover,
       });
 
-      booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf, combinedPdf: result.combinedPdf };
+      booklet = {
+        frontPdf: result.frontPdf,
+        backPdf: result.backPdf,
+        combinedPdf: result.combinedPdf,
+        coverPdf: result.coverPdf,
+      };
       bookletSaveState = 'idle';
       bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
       bookletSaveBtn.disabled = false;
@@ -1367,6 +1403,10 @@ export function initApp(): void {
       await recordOpened({ uri: backUri, name: `${docName} — Back Side.pdf` });
       const combinedUri = await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
       await recordOpened({ uri: combinedUri, name: `${docName} — Combined Booklet.pdf` });
+      if (booklet.coverPdf) {
+        const coverUri = await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
+        await recordOpened({ uri: coverUri, name: `${docName} — Cover.pdf` });
+      }
       bookletFileNameInput.value = docName;
       actionStatus.textContent = t('status.booklet.saved');
       bookletSaveState = 'saved';
@@ -2114,7 +2154,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig' | 'binding' | 'cover', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });
