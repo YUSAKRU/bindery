@@ -787,3 +787,84 @@ describe('makeBooklet includeInstructions', () => {
     expect(a).toEqual(b);
   });
 });
+
+describe('makeBooklet insertBlankAfter', () => {
+  it('rejects non-integer, negative, and out-of-range positions', async () => {
+    const input = await buildTestPdf(8);
+    for (const bad of [-1, 1.5, 9]) {
+      await expect(makeBooklet(input, { insertBlankAfter: [bad] })).rejects.toThrow(
+        /boş sayfa konumu/i,
+      );
+    }
+  });
+
+  it('has no effect for an empty / undefined list (default preserved)', async () => {
+    const input = await buildTestPdf(16);
+    const base = await drawnPagesOf((await makeBooklet(input)).backPdf, 0);
+    const empty = await drawnPagesOf((await makeBooklet(input, { insertBlankAfter: [] })).backPdf, 0);
+    expect(empty).toEqual(base);
+    const single = await makeBooklet(input);
+    expect(single.blanksInserted).toBe(0);
+  });
+
+  it('inserts a blank into the logical order and shifts the real pages', async () => {
+    // Six differently-sized pages so the scale a page is drawn at reveals which
+    // source page occupies a slot. Insert one blank after page 1 -> logical order
+    // is [p1, BLANK, p2, p3, p4, p5, p6], padded to 8 (one trailing blank).
+    const doc = await buildMixedDoc([
+      [100, 200],
+      [110, 210],
+      [120, 220],
+      [130, 230],
+      [140, 240],
+      [150, 250],
+    ]);
+    const input = await doc.save();
+    const result = await makeBooklet(input, { insertBlankAfter: [1] });
+    expect(result.blanksInserted).toBe(1);
+    expect(result.paddingApplied).toBe(1); // 7 logical -> pad 1 -> 8
+    expect(result.paddedPages).toBe(8);
+    expect(result.sheetsCount).toBe(2);
+
+    // Every slot is still drawn (blanks included): 2 draws per sheet page.
+    const front1 = await drawnPagesOf(result.frontPdf, 1);
+    expect(front1).toHaveLength(2);
+
+    // Hand geometry: pages fit height-bound into the 421x595 slot (scale=595/h).
+    const SCALE_210 = 595 / 210; // 2.833333 -> source page 2 (110x210)
+    const SCALE_240 = 595 / 240; // 2.479167 -> source page 5 (140x240)
+    const SCALE_220 = 595 / 220; // 2.704545 -> source page 3 (120x220)
+    // With the insert, sheet 1 front is [p5 (left), p2 (right)].
+    expect(front1[0].scale[0]).toBeCloseTo(SCALE_240, 4);
+    expect(front1[1].scale[0]).toBeCloseTo(SCALE_210, 4);
+
+    // Without the insert, that same right slot holds page 3, not page 2.
+    const noInsert1 = await drawnPagesOf((await makeBooklet(input)).frontPdf, 1);
+    expect(noInsert1[1].scale[0]).toBeCloseTo(SCALE_220, 4);
+    expect(noInsert1[1].scale[0]).not.toBeCloseTo(SCALE_210, 4);
+  });
+
+  it('inserts the blank into the logical order BEFORE the cover split', async () => {
+    // 8 source pages + one blank after page 1 -> 9 logical pages. Cover takes the
+    // first 2 + last 2 logical pages, leaving 5 inner pages padded to 8.
+    const input = await buildTestPdf(8);
+    const result = await makeBooklet(input, { insertBlankAfter: [1], separateCover: true });
+    expect(result.originalPages).toBe(8);
+    expect(result.blanksInserted).toBe(1);
+    expect(result.coverPdf).toBeDefined();
+    expect((await PDFDocument.load(result.coverPdf!)).getPageCount()).toBe(2);
+    // Inner block: 5 logical pages -> padded to 8 -> 2 sheets, 3 padding pages.
+    expect(result.paddedPages).toBe(8);
+    expect(result.paddingApplied).toBe(3);
+    expect(result.sheetsCount).toBe(2);
+  });
+
+  it('inserts multiple blanks for a repeated position', async () => {
+    const input = await buildTestPdf(6);
+    const result = await makeBooklet(input, { insertBlankAfter: [2, 2] });
+    // 6 + 2 blanks = 8 logical pages, already a multiple of 4.
+    expect(result.blanksInserted).toBe(2);
+    expect(result.paddingApplied).toBe(0);
+    expect(result.paddedPages).toBe(8);
+  });
+});

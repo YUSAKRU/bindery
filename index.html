@@ -830,6 +830,15 @@
             <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page English PDF with the printing and folding steps.</p>
           </div>
 
+          <div class="setting-card">
+            <div class="setting-row">
+              <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
+            </div>
+            <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
+            <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
+            <p class="setting-hint hidden" id="insertBlankError" style="color: var(--color-error);" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+          </div>
+
           <button class="btn btn-primary btn-large" id="generateBtn">
             <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
             <span class="spinner hidden" id="generateSpinner"></span>

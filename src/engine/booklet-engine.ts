@@ -426,10 +426,45 @@ export async function makeBooklet(
     rotateBack,
   };
 
-  // Split off a separate cover (outer wrap) when requested: the original first 2
-  // and last 2 pages. The remaining inner pages form the "book block" that is
-  // padded and imposed on their own. Without a separate cover the block is the
-  // whole document.
+  // Build the logical page order: the original pages plus any user-requested
+  // blank pages. Inserted blanks join the order BEFORE the cover split and
+  // padding, so a blank can intentionally land on a chapter start or the inside
+  // of a cover. Blanks take the document's mode page size, like padding.
+  const insertBlankAfter = options.insertBlankAfter ?? [];
+  for (const position of insertBlankAfter) {
+    if (!Number.isInteger(position) || position < 0 || position > originalPageCount) {
+      throw new BookletError(
+        `Geçersiz boş sayfa konumu: ${position}. 0 ile ${originalPageCount} arasında tam sayı olmalı.`,
+      );
+    }
+  }
+  const blanksInserted = insertBlankAfter.length;
+  const sortedInserts = [...insertBlankAfter].sort((a, b) => a - b);
+  const logicalOrder: number[] = [];
+  if (blanksInserted > 0) {
+    const blankSize = modePageSize(srcDoc, originalPageCount);
+    let insertPtr = 0;
+    const emitBlanksAt = (position: number): void => {
+      while (insertPtr < sortedInserts.length && sortedInserts[insertPtr] === position) {
+        const blank = srcDoc.addPage(blankSize);
+        blank.pushOperators();
+        logicalOrder.push(srcDoc.getPageCount() - 1);
+        insertPtr += 1;
+      }
+    };
+    emitBlanksAt(0);
+    for (let p = 1; p <= originalPageCount; p++) {
+      logicalOrder.push(p - 1);
+      emitBlanksAt(p);
+    }
+  } else {
+    for (let i = 0; i < originalPageCount; i++) logicalOrder.push(i);
+  }
+
+  // Split off a separate cover (outer wrap) when requested: the first 2 and last
+  // 2 pages of the LOGICAL order. The remaining inner pages form the "book
+  // block" that is padded and imposed on their own. Without a separate cover the
+  // block is the whole logical order.
   let coverIndices: number[] | null = null;
   let blockOrder: number[];
   if (separateCover) {
@@ -438,10 +473,11 @@ export async function makeBooklet(
         `Ayrı kapak için en az 8 sayfa gerekir (kapak + iç yaprak). Belge: ${originalPageCount} sayfa.`,
       );
     }
-    coverIndices = [0, 1, originalPageCount - 2, originalPageCount - 1];
-    blockOrder = Array.from({ length: originalPageCount - 4 }, (_, i) => i + 2);
+    const L = logicalOrder.length;
+    coverIndices = [logicalOrder[0], logicalOrder[1], logicalOrder[L - 2], logicalOrder[L - 1]];
+    blockOrder = logicalOrder.slice(2, L - 2);
   } else {
-    blockOrder = Array.from({ length: originalPageCount }, (_, i) => i);
+    blockOrder = logicalOrder.slice();
   }
 
   // Dynamic blank page padding so the block page count is a multiple of 4.
@@ -548,6 +584,7 @@ export async function makeBooklet(
     paddedPages: N,
     sheetsCount: S,
     paddingApplied,
+    blanksInserted,
     signaturesCount,
     frontPdf,
     backPdf,

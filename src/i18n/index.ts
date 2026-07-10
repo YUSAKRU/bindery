@@ -201,6 +201,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.instructions.none': 'None',
     'config.instructions.add': 'Add',
     'config.instructionsHint': 'Generates a one-page English PDF with the printing and folding steps.',
+    'config.insertBlank': 'Insert blank pages',
+    'config.insertBlankPlaceholder': 'e.g. 0, 4, 4',
+    'config.insertBlankHint': 'Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.',
+    'config.insertBlankError': 'Enter page numbers separated by commas, e.g. 0, 4, 4.',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'config.generateBooklet': 'Create Booklet',
 
@@ -565,6 +569,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.instructions.none': 'Yok',
     'config.instructions.add': 'Ekle',
     'config.instructionsHint': 'Baskı ve katlama adımlarını anlatan tek sayfalık İngilizce talimat PDF\'i üretir.',
+    'config.insertBlank': 'Boş sayfa ekle',
+    'config.insertBlankPlaceholder': 'örn. 0, 4, 4',
+    'config.insertBlankHint': 'Bu sayfa numaralarından sonra boş sayfa eklenir (0 = belge başı). Bölüm başlarını sağ sayfaya getirmek için kullanılır.',
+    'config.insertBlankError': 'Sayfa numaralarını virgülle ayırarak girin, örn. 0, 4, 4.',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 

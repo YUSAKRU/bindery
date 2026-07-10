@@ -292,6 +292,8 @@ export function initApp(): void {
   const bindingGroup = byId<HTMLDivElement>('bindingGroup');
   const coverModeGroup = byId<HTMLDivElement>('coverModeGroup');
   const instructionsGroup = byId<HTMLDivElement>('instructionsGroup');
+  const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
+  const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
@@ -883,6 +885,8 @@ export function initApp(): void {
     setActiveSegment(coverModeGroup, 'cover', 'together');
     bookletIncludeInstructions = false;
     setActiveSegment(instructionsGroup, 'instr', 'none');
+    insertBlankInput.value = '';
+    insertBlankError.classList.add('hidden');
   }
 
   // Maps the segmented signature value to the engine option.
@@ -890,6 +894,25 @@ export function initApp(): void {
     if (bookletSignature === 'single') return undefined;
     if (bookletSignature === 'auto') return 'auto';
     return Number(bookletSignature);
+  }
+
+  // Parses the comma-separated "insert blank after" field. Returns the page
+  // numbers, [] when empty (feature off), or null if a token is not a
+  // non-negative integer (range is validated by the engine).
+  function parseInsertBlank(): number[] | null {
+    const raw = insertBlankInput.value.trim();
+    if (!raw) return [];
+    const tokens = raw
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    const positions: number[] = [];
+    for (const token of tokens) {
+      const n = Number(token);
+      if (!Number.isInteger(n) || n < 0) return null;
+      positions.push(n);
+    }
+    return positions;
   }
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
@@ -1256,6 +1279,17 @@ export function initApp(): void {
       return;
     }
 
+    // Parse the "insert blank after" field up front. A malformed token is
+    // reported inline (button stays enabled); out-of-range values are left to the
+    // engine, which surfaces them through the normal error flow.
+    const insertBlankAfter = parseInsertBlank();
+    if (insertBlankAfter === null) {
+      insertBlankError.textContent = t('config.insertBlankError');
+      insertBlankError.classList.remove('hidden');
+      return;
+    }
+    insertBlankError.classList.add('hidden');
+
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');
     generateSpinner.classList.remove('hidden');
@@ -1270,6 +1304,7 @@ export function initApp(): void {
         binding: bookletBinding,
         separateCover: bookletSeparateCover,
         includeInstructions: bookletIncludeInstructions,
+        insertBlankAfter,
       });
 
       booklet = {

@@ -62,6 +62,14 @@ export interface BookletOptions {
    * are unaffected. Default false.
    */
   includeInstructions?: boolean;
+  /**
+   * Positions, as 1-based ORIGINAL page numbers, after which to insert one blank
+   * page (0 = before the first page). A value may repeat to insert multiple
+   * blanks; order does not matter. Inserted blanks join the logical page order
+   * before the cover split and padding, so they can deliberately land on a
+   * chapter start or the inside of a cover. Default: none.
+   */
+  insertBlankAfter?: number[];
 }
 
 export interface BookletResult {
@@ -69,6 +77,8 @@ export interface BookletResult {
   paddedPages: number;
   sheetsCount: number;
   paddingApplied: number;
+  /** Number of user-requested blank pages inserted (separate from padding). */
+  blanksInserted: number;
   /** Number of signatures the document was split into (1 for a single booklet). */
   signaturesCount: number;
   frontPdf: Uint8Array;
