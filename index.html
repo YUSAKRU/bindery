@@ -816,7 +816,7 @@
               <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
               <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
             </div>
-            <p class="setting-hint" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
+            <p class="setting-hint" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
           </div>
 
           <div class="setting-card">
@@ -838,6 +838,8 @@
             <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
             <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
           </div>
+
+          <div class="config-summary hidden" id="configSummary" aria-live="polite"></div>
 
           <button class="btn btn-primary btn-large" id="generateBtn">
             <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>

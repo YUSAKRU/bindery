@@ -1034,6 +1034,22 @@ body {
   border-color: var(--color-primary);
 }
 
+.segmented-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.config-summary {
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-variant);
+  color: var(--color-on-surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .number-input {
   width: 100%;
   appearance: none;

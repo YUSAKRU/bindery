@@ -1,7 +1,7 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import { BookletError } from '../engine/types';
 import type { Binding, FlipEdge, PaperSize } from '../engine/types';
-import { makeBooklet } from '../engine/booklet-engine';
+import { makeBooklet, computeSignatureMappings } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
 import {
@@ -292,8 +292,10 @@ export function initApp(): void {
   const bindingGroup = byId<HTMLDivElement>('bindingGroup');
   const coverModeGroup = byId<HTMLDivElement>('coverModeGroup');
   const instructionsGroup = byId<HTMLDivElement>('instructionsGroup');
+  const coverHintText = byId<HTMLParagraphElement>('coverHintText');
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
+  const configSummary = byId<HTMLDivElement>('configSummary');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
@@ -361,6 +363,9 @@ export function initApp(): void {
   let bookletBinding: Binding = 'ltr';
   let bookletSeparateCover = false;
   let bookletIncludeInstructions = false;
+  // Original page count of the selected source (0 = none). Drives the live
+  // config summary and the separate-cover availability check.
+  let bookletOriginalPages = 0;
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -891,6 +896,9 @@ export function initApp(): void {
     setActiveSegment(instructionsGroup, 'instr', 'none');
     insertBlankInput.value = '';
     insertBlankError.classList.add('hidden');
+    bookletOriginalPages = 0;
+    updateCoverAvailability();
+    refreshConfigSummary();
   }
 
   // Maps the segmented signature value to the engine option.
@@ -913,6 +921,62 @@ export function initApp(): void {
       bookletSaveState === 'saved'
         ? t('common.saved')
         : t('booklet.saveAll', { count: savedPdfCount() });
+  }
+
+  // A separate cover needs the original document to have at least 8 pages
+  // (2+2 cover + at least one inner sheet). The rule is on ORIGINAL pages, not
+  // the blank-inflated logical order — matching the engine's validation. Disables
+  // the "separate" option and swaps the hint when the document is too short.
+  function updateCoverAvailability(): void {
+    const separateBtn = coverModeGroup.querySelector<HTMLButtonElement>('[data-cover="separate"]');
+    const tooFew = bookletOriginalPages > 0 && bookletOriginalPages < 8;
+    if (separateBtn) separateBtn.disabled = tooFew;
+    if (tooFew && bookletSeparateCover) {
+      bookletSeparateCover = false;
+      setActiveSegment(coverModeGroup, 'cover', 'together');
+    }
+    coverHintText.textContent = tooFew ? t('config.coverDisabledHint') : t('config.coverHint');
+  }
+
+  // Short paper label for the summary band ("A4" / "Letter" / "Kaynak" ...).
+  function paperSummaryLabel(): string {
+    return bookletPaperSize === 'source' ? t('config.summary.source') : String(bookletPaperSize);
+  }
+
+  // Live "A4 · 52 pages -> 13 sheets · 4 signatures" band. Uses the engine's pure
+  // functions so the imposition math is never duplicated. `pages` shown is the
+  // LOGICAL page count (original + inserted blanks) — the user's own reality;
+  // the sheet count then rounds up naturally (e.g. 52 pages -> 12 sheets + cover).
+  function refreshConfigSummary(): void {
+    if (!selectedFile || bookletOriginalPages <= 0) {
+      configSummary.classList.add('hidden');
+      return;
+    }
+    const parsed = parseInsertBlank();
+    const blanks = parsed === null ? 0 : parsed.length;
+    const logical = bookletOriginalPages + blanks;
+    // Defensive: separate cover on a too-short doc (button is disabled, so this
+    // is only a guard) shows the cover warning instead of a summary.
+    if (bookletSeparateCover && bookletOriginalPages < 8) {
+      configSummary.textContent = t('config.coverDisabledHint');
+      configSummary.classList.remove('hidden');
+      return;
+    }
+    const block = bookletSeparateCover ? logical - 4 : logical;
+    const padded = Math.max(4, Math.ceil(block / 4) * 4);
+    const sheets = padded / 4;
+    const sigs = computeSignatureMappings(padded, signatureOption()).length;
+
+    let text = t('config.summary', {
+      paper: paperSummaryLabel(),
+      pages: logical,
+      sheets,
+      sigs,
+    });
+    if (bookletSeparateCover) text += t('config.summaryCover');
+    if (bookletIncludeInstructions) text += t('config.summaryInstructions');
+    configSummary.textContent = text;
+    configSummary.classList.remove('hidden');
   }
 
   // Parses the comma-separated "insert blank after" field. Returns the page
@@ -1198,10 +1262,11 @@ export function initApp(): void {
   }
 
   // Non-blocking heads-up: if the document mixes page sizes (beyond a small
-  // tolerance), the booklet's per-slot scaling will differ page to page.
+  // tolerance), the booklet's per-slot scaling will differ page to page. Also
+  // captures the page count for the live summary and cover availability.
   async function showMixedSizeWarningIfNeeded(bytes: Uint8Array): Promise<void> {
     try {
-      const { pageSizes } = await validatePdf(bytes);
+      const { pageCount, pageSizes } = await validatePdf(bytes);
       const TOL = 0.5;
       const distinct = pageSizes.filter(
         ([w, h], i) =>
@@ -1212,6 +1277,9 @@ export function initApp(): void {
       // Guard against a race where the user cleared/replaced the file meanwhile.
       if (selectedFile?.bytes === bytes) {
         mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
+        bookletOriginalPages = pageCount;
+        updateCoverAvailability();
+        refreshConfigSummary();
       }
     } catch {
       // Validation errors surface later on generate; don't block the warning path.
@@ -1234,7 +1302,11 @@ export function initApp(): void {
 
   clearFileBtn.addEventListener('click', () => resetPicker());
 
-  continueBtn.addEventListener('click', () => showScreen('config'));
+  continueBtn.addEventListener('click', () => {
+    updateCoverAvailability();
+    refreshConfigSummary();
+    showScreen('config');
+  });
 
   gutterSlider.addEventListener('input', () => {
     gutterValueLabel.textContent = `${gutterSlider.value} pt`;
@@ -1250,6 +1322,7 @@ export function initApp(): void {
     if (!paper) return;
     bookletPaperSize = paper as PaperSize;
     setActiveSegment(paperSizeGroup, 'paper', paper);
+    refreshConfigSummary();
   });
 
   flipEdgeGroup.addEventListener('click', (event) => {
@@ -1266,6 +1339,7 @@ export function initApp(): void {
     if (!sig) return;
     bookletSignature = sig;
     setActiveSegment(signatureSizeGroup, 'sig', sig);
+    refreshConfigSummary();
   });
 
   bindingGroup.addEventListener('click', (event) => {
@@ -1282,6 +1356,7 @@ export function initApp(): void {
     if (!cover) return;
     bookletSeparateCover = cover === 'separate';
     setActiveSegment(coverModeGroup, 'cover', cover);
+    refreshConfigSummary();
   });
 
   instructionsGroup.addEventListener('click', (event) => {
@@ -1290,6 +1365,12 @@ export function initApp(): void {
     if (!instr) return;
     bookletIncludeInstructions = instr === 'add';
     setActiveSegment(instructionsGroup, 'instr', instr);
+    refreshConfigSummary();
+  });
+
+  insertBlankInput.addEventListener('input', () => {
+    insertBlankError.classList.add('hidden');
+    refreshConfigSummary();
   });
 
   generateBtn.addEventListener('click', async () => {
@@ -5690,9 +5771,11 @@ export function initApp(): void {
     syncSettingsLangButtons();
     renderOnboarding();
     refreshTopBarTitle();
-    // The save-button label is built dynamically (count/state), so re-apply it
-    // after the static data-i18n pass.
+    // The save-button label and config summary are built dynamically (count /
+    // state), so re-apply them after the static data-i18n pass.
     refreshSaveLabel();
+    updateCoverAvailability();
+    refreshConfigSummary();
   }
 
   function startOnboarding(): void {
