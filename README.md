@@ -18,6 +18,10 @@ The app manifest doesn't request the internet permission — every PDF operation
 ### Features
 
 - **Booklet Maker** — Turns a PDF into a foldable booklet layout
+  - Multi-signature imposition for thick documents (8/16/32-page or auto signatures, per-signature creep)
+  - Paper size selection (A4 / Letter / A5 / A3 / source size), duplex flip-edge (short/long) support
+  - Right-to-left (RTL) binding, separate cover export for heavier stock
+  - Blank page insertion at chosen positions, printed instructions sheet with a reading-order check
 - **PDF Merge** — Combines multiple PDFs into a single file
 - **Page Management** — Add, delete, and reorder pages
 - **Page Rotation**
@@ -87,6 +91,10 @@ Uygulama manifestosu internet iznini talep etmez — tüm PDF işleme, birleşti
 ### Özellikler
 
 - **Kitapçık (Booklet) Oluşturucu** — PDF'i katlanabilir kitapçık düzenine getirir
+  - Kalın belgeler için çoklu imza dizgisi (8/16/32 sayfalık veya otomatik imzalar, imza başına creep)
+  - Kağıt boyutu seçimi (A4 / Letter / A5 / A3 / kaynak boyutu), duplex çevirme kenarı (kısa/uzun) desteği
+  - Sağdan (RTL) ciltleme, kalın kağıt için ayrı kapak çıktısı
+  - İstenen konuma boş sayfa ekleme, okuma sırası kontrolü içeren baskı talimat sayfası
 - **PDF Birleştir** — Birden fazla PDF'i tek dosyada birleştirir
 - **Sayfa Yönetimi** — Sayfa ekleme, silme, yeniden sıralama
 - **Sayfa Döndürme**
