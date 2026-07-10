@@ -35,6 +35,13 @@ export interface BookletOptions {
    * which reproduces the historical fixed output.
    */
   paperSize?: PaperSize;
+  /**
+   * Pages per signature — a signature is a group of sheets folded together.
+   * A positive multiple of 4, or 'auto' (single signature up to 40 pages, else
+   * 16-page signatures). Defaults to a single signature spanning the whole
+   * document, reproducing the historical output.
+   */
+  signatureSize?: number | 'auto';
 }
 
 export interface BookletResult {
@@ -42,6 +49,8 @@ export interface BookletResult {
   paddedPages: number;
   sheetsCount: number;
   paddingApplied: number;
+  /** Number of signatures the document was split into (1 for a single booklet). */
+  signaturesCount: number;
   frontPdf: Uint8Array;
   backPdf: Uint8Array;
   combinedPdf: Uint8Array;

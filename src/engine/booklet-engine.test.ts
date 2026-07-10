@@ -2,10 +2,12 @@ import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream } from 'pdf-lib
 import { describe, expect, it } from 'vitest';
 import {
   computeSheetMapping,
+  computeSignatureMappings,
   computeSlotRects,
   makeBooklet,
   modePageSize,
   resolveSheetSize,
+  resolveSignatureSize,
 } from './booklet-engine';
 import type { BookletOptions } from './types';
 
@@ -425,5 +427,124 @@ describe('makeBooklet paperSize', () => {
     await expect(
       makeBooklet(input, { paperSize: { width: 50, height: 500 } }),
     ).rejects.toThrow(/kağıt boyutu/i);
+  });
+});
+
+describe('computeSignatureMappings', () => {
+  it('matches the hand-derived 16-page / 8-per-signature example', () => {
+    // Two signatures of two sheets each. Signature 2 == signature 1 shifted +8.
+    // Derived by hand from the saddle-stitch formula on each 8-page range.
+    const sigs = computeSignatureMappings(16, 8);
+    expect(sigs).toHaveLength(2);
+    expect(sigs[0]).toEqual([
+      { frontLeft: 7, frontRight: 0, backLeft: 1, backRight: 6 },
+      { frontLeft: 5, frontRight: 2, backLeft: 3, backRight: 4 },
+    ]);
+    expect(sigs[1]).toEqual([
+      { frontLeft: 15, frontRight: 8, backLeft: 9, backRight: 14 },
+      { frontLeft: 13, frontRight: 10, backLeft: 11, backRight: 12 },
+    ]);
+  });
+
+  it('covers every page index exactly once for several N / signatureSize combos', () => {
+    const cases: Array<{ N: number; size: number }> = [
+      { N: 32, size: 8 },
+      { N: 48, size: 16 },
+      { N: 20, size: 16 }, // last signature is only 4 pages
+    ];
+    for (const { N, size } of cases) {
+      const used = computeSignatureMappings(N, size)
+        .flat()
+        .flatMap((s) => [s.frontLeft, s.frontRight, s.backLeft, s.backRight]);
+      expect(used.slice().sort((a, b) => a - b)).toEqual(
+        Array.from({ length: N }, (_, i) => i),
+      );
+    }
+  });
+
+  it("resolves the 'auto' threshold: <=40 single, >40 into 16-page signatures", () => {
+    // Sheet counts per signature: 16 pages -> 4 sheets, 12 pages -> 3 sheets.
+    expect(computeSignatureMappings(40, 'auto')).toHaveLength(1); // 40 <= 40
+    const auto44 = computeSignatureMappings(44, 'auto');
+    expect(auto44.map((s) => s.length)).toEqual([4, 4, 3]); // 16 + 16 + 12 pages
+  });
+
+  it('treats undefined and a size >= N as a single signature', () => {
+    expect(computeSignatureMappings(16)).toHaveLength(1);
+    expect(computeSignatureMappings(16, 32)).toHaveLength(1);
+    expect(computeSignatureMappings(16)[0]).toEqual(computeSheetMapping(16));
+  });
+});
+
+describe('resolveSignatureSize', () => {
+  it('returns the whole document for undefined / auto-below-threshold', () => {
+    expect(resolveSignatureSize(24)).toBe(24);
+    expect(resolveSignatureSize(40, 'auto')).toBe(40);
+    expect(resolveSignatureSize(44, 'auto')).toBe(16);
+  });
+
+  it('rejects non-positive, non-multiple-of-4, and non-integer sizes', () => {
+    for (const bad of [0, -4, 6, 3.5]) {
+      expect(() => resolveSignatureSize(16, bad)).toThrow(/imza boyutu/i);
+    }
+    expect(resolveSignatureSize(16, 8)).toBe(8);
+  });
+});
+
+describe('makeBooklet signatureSize', () => {
+  it('reports signaturesCount', async () => {
+    const single = await makeBooklet(await buildTestPdf(16));
+    expect(single.signaturesCount).toBe(1);
+    const split = await makeBooklet(await buildTestPdf(16), { signatureSize: 8 });
+    expect(split.signaturesCount).toBe(2);
+    expect(split.sheetsCount).toBe(4); // 2 signatures x 2 sheets
+  });
+
+  it('restarts creep at each signature (verified from the output stream)', async () => {
+    // 16 pages, 8-per-signature, creep=2. Sheet order in the back PDF:
+    //   page 0 = sig1 sheet0 (local index 0)
+    //   page 1 = sig1 sheet1 (local index 1)
+    //   page 2 = sig2 sheet0 (local index 0)  <- creep reset to 0 here
+    //   page 3 = sig2 sheet1 (local index 1)
+    const input = await buildTestPdf(16);
+    const result = await makeBooklet(input, { signatureSize: 8, creep: 2 });
+
+    const sig1sheet0 = await drawnPagesOf(result.backPdf, 0);
+    const sig1sheet1 = await drawnPagesOf(result.backPdf, 1);
+    const sig2sheet0 = await drawnPagesOf(result.backPdf, 2);
+
+    // Creep reset: the first sheet of signature 2 has the SAME transform as the
+    // first sheet of signature 1 (output-to-output, not recomputed).
+    expect(sig2sheet0).toEqual(sig1sheet0);
+
+    // Within a signature, local index 1 shifts the left slot inward by exactly
+    // creep = 2pt versus local index 0 (hand constant).
+    expect(sig1sheet1[0].translate[4] - sig1sheet0[0].translate[4]).toBeCloseTo(2, 6);
+  });
+
+  it('produces byte-identical layout for undefined vs an explicit single signature', async () => {
+    const input = await buildTestPdf(16);
+    const a = await drawnPagesOf((await makeBooklet(input)).backPdf, 0);
+    const b = await drawnPagesOf((await makeBooklet(input, { signatureSize: undefined })).backPdf, 0);
+    expect(a).toEqual(b);
+  });
+
+  it('applies the creep guard per signature (largest signature)', async () => {
+    // 80 pages. Single signature -> 20 sheets -> creep guard trips early.
+    // But 8-per-signature -> max 2 sheets/signature -> creep barely shifts, ok.
+    const input = await buildTestPdf(80);
+    await expect(makeBooklet(input, { creep: 25 })).rejects.toThrow(/creep/i);
+    await expect(
+      makeBooklet(input, { creep: 25, signatureSize: 8 }),
+    ).resolves.toBeDefined();
+  });
+
+  it('rejects invalid signatureSize values', async () => {
+    const input = await buildTestPdf(16);
+    for (const bad of [0, -4, 6, 3.5]) {
+      await expect(
+        makeBooklet(input, { signatureSize: bad }),
+      ).rejects.toThrow(/imza boyutu/i);
+    }
   });
 });

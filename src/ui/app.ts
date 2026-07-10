@@ -288,6 +288,7 @@ export function initApp(): void {
   const creepValueLabel = byId<HTMLSpanElement>('creepValueLabel');
   const paperSizeGroup = byId<HTMLDivElement>('paperSizeGroup');
   const flipEdgeGroup = byId<HTMLDivElement>('flipEdgeGroup');
+  const signatureSizeGroup = byId<HTMLDivElement>('signatureSizeGroup');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
@@ -297,6 +298,8 @@ export function initApp(): void {
   const statPaddingCard = byId<HTMLDivElement>('statPaddingCard');
   const statPadding = byId<HTMLSpanElement>('statPadding');
   const statSheets = byId<HTMLSpanElement>('statSheets');
+  const statSignaturesCard = byId<HTMLDivElement>('statSignaturesCard');
+  const statSignatures = byId<HTMLSpanElement>('statSignatures');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
   const newFileBtn = byId<HTMLButtonElement>('newFileBtn');
   const readerOpeningOverlay = byId<HTMLDivElement>('readerOpeningOverlay');
@@ -338,6 +341,8 @@ export function initApp(): void {
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
+  // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
+  let bookletSignature = 'single';
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -858,6 +863,15 @@ export function initApp(): void {
     setActiveSegment(flipEdgeGroup, 'flip', 'short');
     bookletPaperSize = 'A4';
     setActiveSegment(paperSizeGroup, 'paper', 'A4');
+    bookletSignature = 'single';
+    setActiveSegment(signatureSizeGroup, 'sig', 'single');
+  }
+
+  // Maps the segmented signature value to the engine option.
+  function signatureOption(): number | 'auto' | undefined {
+    if (bookletSignature === 'single') return undefined;
+    if (bookletSignature === 'auto') return 'auto';
+    return Number(bookletSignature);
   }
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
@@ -1186,6 +1200,14 @@ export function initApp(): void {
     setActiveSegment(flipEdgeGroup, 'flip', flip);
   });
 
+  signatureSizeGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const sig = btn?.dataset.sig;
+    if (!sig) return;
+    bookletSignature = sig;
+    setActiveSegment(signatureSizeGroup, 'sig', sig);
+  });
+
   generateBtn.addEventListener('click', async () => {
     if (!selectedFile) {
       showScreen('picker');
@@ -1202,6 +1224,7 @@ export function initApp(): void {
         creep: Number(creepSlider.value),
         flipEdge: bookletFlipEdge,
         paperSize: bookletPaperSize,
+        signatureSize: signatureOption(),
       });
 
       booklet = { frontPdf: result.frontPdf, backPdf: result.backPdf, combinedPdf: result.combinedPdf };
@@ -1219,6 +1242,12 @@ export function initApp(): void {
         statPaddingCard.classList.remove('hidden');
       } else {
         statPaddingCard.classList.add('hidden');
+      }
+      if (result.signaturesCount > 1) {
+        statSignatures.textContent = String(result.signaturesCount);
+        statSignaturesCard.classList.remove('hidden');
+      } else {
+        statSignaturesCard.classList.add('hidden');
       }
       actionStatus.textContent = '';
 
@@ -2085,7 +2114,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });

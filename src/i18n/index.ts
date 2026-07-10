@@ -184,6 +184,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.flipEdge.short': 'Short edge (recommended)',
     'config.flipEdge.long': 'Long edge',
     'config.flipEdgeHint': "Must match your printer's duplex flip setting.",
+    'config.signatureSize': 'Signature size',
+    'config.signature.single': 'Single',
+    'config.signature.auto': 'Auto',
+    'config.signatureHint': 'Group of sheets folded together. Smaller signatures fold and stitch more easily for thick documents.',
+    'stat.signatures': 'Signatures',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'config.generateBooklet': 'Create Booklet',
 
@@ -531,6 +536,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.flipEdge.short': 'Kısa kenar (önerilen)',
     'config.flipEdge.long': 'Uzun kenar',
     'config.flipEdgeHint': 'Yazıcının arkalı önlü çevirme ayarıyla aynı olmalı.',
+    'config.signatureSize': 'İmza boyutu',
+    'config.signature.single': 'Tek imza',
+    'config.signature.auto': 'Otomatik',
+    'config.signatureHint': 'Bir arada katlanan yaprak grubu. Kalın belgelerde küçük imzalar katlamayı ve dikişi kolaylaştırır.',
+    'stat.signatures': 'İmza',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 

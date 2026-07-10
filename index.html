@@ -783,6 +783,20 @@
             <p class="setting-hint" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
           </div>
 
+          <div class="setting-card">
+            <div class="setting-row">
+              <label data-i18n="config.signatureSize">Signature size</label>
+            </div>
+            <div class="segmented-group" id="signatureSizeGroup">
+              <button type="button" class="segmented-btn is-active" data-sig="single" data-i18n="config.signature.single">Single</button>
+              <button type="button" class="segmented-btn" data-sig="8">8</button>
+              <button type="button" class="segmented-btn" data-sig="16">16</button>
+              <button type="button" class="segmented-btn" data-sig="32">32</button>
+              <button type="button" class="segmented-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
+            </div>
+            <p class="setting-hint" data-i18n="config.signatureHint">Group of sheets folded together. Smaller signatures fold and stitch more easily for thick documents.</p>
+          </div>
+
           <button class="btn btn-primary btn-large" id="generateBtn">
             <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
             <span class="spinner hidden" id="generateSpinner"></span>
@@ -807,6 +821,10 @@
             <div class="stat-card">
               <span class="stat-value" id="statSheets">0</span>
               <span class="stat-label" data-i18n="stat.totalSheets">Total Sheets</span>
+            </div>
+            <div class="stat-card hidden" id="statSignaturesCard">
+              <span class="stat-value" id="statSignatures">0</span>
+              <span class="stat-label" data-i18n="stat.signatures">Signatures</span>
             </div>
           </div>
 

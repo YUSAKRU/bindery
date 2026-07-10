@@ -162,6 +162,61 @@ export function computeSheetMapping(N: number): SheetMapping[] {
   return sheets;
 }
 
+// Documents longer than this many pages default (under 'auto') to being split
+// into 16-page signatures rather than one huge saddle-stitched booklet.
+const AUTO_SIGNATURE_THRESHOLD = 40;
+const AUTO_SIGNATURE_SIZE = 16;
+
+/**
+ * Resolves the effective signature length (pages per signature) for an already
+ * padded `N`-page document. `undefined` → a single signature spanning the whole
+ * document (historical behaviour); `'auto'` → one signature up to
+ * {@link AUTO_SIGNATURE_THRESHOLD} pages, else {@link AUTO_SIGNATURE_SIZE}. A
+ * number must be a positive multiple of 4. A size ≥ N collapses to one
+ * signature naturally (no error).
+ */
+export function resolveSignatureSize(N: number, signatureSize?: number | 'auto'): number {
+  if (signatureSize === undefined) {
+    return N;
+  }
+  if (signatureSize === 'auto') {
+    return N <= AUTO_SIGNATURE_THRESHOLD ? N : AUTO_SIGNATURE_SIZE;
+  }
+  if (!Number.isInteger(signatureSize) || signatureSize <= 0 || signatureSize % 4 !== 0) {
+    throw new BookletError(`Geçersiz imza boyutu: ${signatureSize}. Pozitif ve 4'ün katı olmalı.`);
+  }
+  return signatureSize;
+}
+
+/**
+ * Splits an already-padded `N`-page document into signatures — groups of sheets
+ * folded together — and returns the per-sheet mapping for each. The outer array
+ * is the signatures in order; each inner array is that signature's sheets.
+ *
+ * Every signature is imposed with the same saddle-stitch arithmetic as a
+ * standalone booklet ({@link computeSheetMapping}) over its own page range, then
+ * offset by the signature's start index. The final signature may be shorter than
+ * `signatureSize` but is still a multiple of 4 (since both `N` and the size are).
+ */
+export function computeSignatureMappings(
+  N: number,
+  signatureSize?: number | 'auto',
+): SheetMapping[][] {
+  const sigLen = resolveSignatureSize(N, signatureSize);
+  const signatures: SheetMapping[][] = [];
+  for (let start = 0; start < N; start += sigLen) {
+    const len = Math.min(sigLen, N - start);
+    const sheets = computeSheetMapping(len).map((s) => ({
+      frontLeft: s.frontLeft + start,
+      frontRight: s.frontRight + start,
+      backLeft: s.backLeft + start,
+      backRight: s.backRight + start,
+    }));
+    signatures.push(sheets);
+  }
+  return signatures;
+}
+
 // Two page dimensions are treated as equal within this many points, absorbing
 // the sub-point rounding noise common in real PDFs.
 const SIZE_TOLERANCE = 0.5;
@@ -251,22 +306,36 @@ export async function makeBooklet(
   }
 
   const N = srcDoc.getPageCount();
-  const mapping = computeSheetMapping(N);
-  const S = mapping.length;
 
-  // Guard against excessive creep: on the last sheet the inward shift must not
-  // exceed half a slot, otherwise pages would be pushed off their own half.
-  const maxShiftInward = (S - 1) * creepStep - baseGutter / 2.0;
+  // Split into signatures and flatten to a sheet list that remembers each
+  // sheet's index WITHIN its signature. Creep restarts at every signature
+  // because each signature is folded separately, so that local index (not the
+  // global one) drives the creep shift below.
+  const signatures = computeSignatureMappings(N, options.signatureSize);
+  const signaturesCount = signatures.length;
+  const flatSheets: Array<{ sheet: SheetMapping; sheetInSignature: number }> = [];
+  let maxSheetsPerSignature = 0;
+  for (const signature of signatures) {
+    maxSheetsPerSignature = Math.max(maxSheetsPerSignature, signature.length);
+    signature.forEach((sheet, sheetInSignature) => flatSheets.push({ sheet, sheetInSignature }));
+  }
+  const S = flatSheets.length;
+
+  // Guard against excessive creep, evaluated per signature: since creep restarts
+  // each signature, the worst-case inward shift is on the last sheet of the
+  // LARGEST signature — not the last sheet overall.
+  const maxShiftInward = (maxSheetsPerSignature - 1) * creepStep - baseGutter / 2.0;
   if (maxShiftInward > wSlot / 2.0) {
     throw new BookletError(
       `Geçersiz creep değeri: ${creepStep}. Son yaprakta oluşan kayma (${maxShiftInward.toFixed(1)}pt) slot yarısını (${wSlot / 2.0}pt) aşıyor.`,
     );
   }
 
-  // 2. Flatten the per-sheet source page indices (0-based) for batch embedding.
+  // 2. Flatten the per-sheet source page indices (0-based) for batch embedding,
+  //    in signature order.
   const frontIndices: number[] = [];
   const backIndices: number[] = [];
-  for (const sheet of mapping) {
+  for (const { sheet } of flatSheets) {
     frontIndices.push(sheet.frontLeft, sheet.frontRight);
     backIndices.push(sheet.backLeft, sheet.backRight);
   }
@@ -282,8 +351,10 @@ export async function makeBooklet(
   //    also carries the gutter/creep shift to the correct side automatically.
   const rotateBack = flipEdge === 'long';
   for (let j = 0; j < S; j++) {
+    // Creep uses the sheet's index within its signature so the shift resets per
+    // fold; the front/back embed order is still the global sheet index j.
     const { left: leftRect, right: rightRect } = computeSlotRects(
-      j,
+      flatSheets[j].sheetInSignature,
       baseGutter,
       creepStep,
       sheetWidth,
@@ -316,6 +387,7 @@ export async function makeBooklet(
     paddedPages: N,
     sheetsCount: S,
     paddingApplied,
+    signaturesCount,
     frontPdf,
     backPdf,
     combinedPdf,
