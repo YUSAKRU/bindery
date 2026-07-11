@@ -23,7 +23,12 @@
             <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>
           </div>
 
-          <button type="button" class="btn btn-primary btn-large" id="hubOpenReaderBtn">
+          <button type="button" class="btn btn-primary btn-large" id="hubCreateBookletBtn">
+            <svg class="btn-lead-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span data-i18n="hub.createBooklet">Create a booklet</span>
+          </button>
+
+          <button type="button" class="btn btn-tonal btn-large" id="hubOpenReaderBtn">
             <span data-i18n="hub.openPdf">📖 Open PDF</span>
           </button>
 
@@ -42,6 +47,12 @@
             <button type="button" class="hub-recents-viewall" id="toolsViewAllBtn" data-i18n="hub.tools.viewAll">View All</button>
           </div>
           <div class="hub-carousel" id="hubCarousel" aria-label="Quick access">
+            <button type="button" class="tool-row tool-row--carousel tool-row--featured" data-tool="booklet" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
+              </span>
+            </button>
             <button type="button" class="tool-row tool-row--carousel" data-tool="rotate" data-enabled="true">
               <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
               <span class="tool-row-meta">
@@ -64,12 +75,6 @@
               <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
               <span class="tool-row-meta">
                 <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="booklet" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
               </span>
             </button>
             <button type="button" class="tool-row tool-row--carousel" data-tool="watermark" data-enabled="true">

@@ -5100,6 +5100,11 @@ export function initApp(): void {
     }
   });
 
+  byId<HTMLButtonElement>('hubCreateBookletBtn').addEventListener('click', () => {
+    const entry = TOOL_ENTRY_SCREEN.booklet; // same entry point as the Booklet tool-row
+    if (entry) showScreen(entry);
+  });
+
   hubOpenReaderBtn.addEventListener('click', async () => {
     try {
       const picked = await pickPdfWithPersistentUri();

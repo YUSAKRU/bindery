@@ -27,6 +27,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'nav.files': 'Files',
     'nav.settings': 'Settings',
 
+    'hub.createBooklet': 'Create a booklet',
     'hub.openPdf': '📖 Open PDF',
     'hub.recentlyOpened': 'Recently Opened',
     'hub.searchPlaceholder': 'Search tools...',
@@ -443,6 +444,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'nav.files': 'Dosyalar',
     'nav.settings': 'Ayarlar',
 
+    'hub.createBooklet': 'Kitapçık Oluştur',
     'hub.openPdf': '📖 PDF Aç',
     'hub.recentlyOpened': 'Son Okunanlar',
     'hub.searchPlaceholder': 'Araç ara...',
