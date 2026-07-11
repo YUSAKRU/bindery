@@ -758,6 +758,11 @@
           <div class="setting-card">
             <div class="setting-row">
               <label data-i18n="config.signatureSize">Signature size</label>
+              <button type="button" class="info-btn" id="signatureInfoBtn"
+                      aria-haspopup="dialog" aria-controls="signatureInfoSheet"
+                      data-i18n-aria-label="signatureInfo.open" aria-label="What is a signature? Learn more">
+                <span aria-hidden="true">i</span>
+              </button>
             </div>
             <div class="segmented-group" id="signatureSizeGroup">
               <button type="button" class="segmented-btn is-active" data-sig="single" data-i18n="config.signature.single">Single</button>
@@ -1353,6 +1358,62 @@
     <div class="reader-opening-overlay hidden" id="readerOpeningOverlay"
          aria-live="assertive" data-i18n-aria-label="reader.opening">
       <div class="reader-opening-spinner"></div>
+    </div>
+
+    <!-- "What is a signature?" interactive info sheet -->
+    <div class="imza-sheet hidden" id="signatureInfoSheet" tabindex="-1"
+         role="dialog" aria-modal="true" aria-labelledby="signatureInfoTitle">
+      <div class="imza-backdrop" id="signatureInfoBackdrop"></div>
+      <div class="imza-panel">
+        <div class="imza-head">
+          <div class="imza-titles">
+            <span class="imza-kicker" data-i18n="signatureInfo.kicker">Bookbinding</span>
+            <h2 class="imza-title" id="signatureInfoTitle" data-i18n="signatureInfo.title">What is a signature?</h2>
+          </div>
+        </div>
+        <p class="imza-sub" data-i18n="signatureInfo.sub">A signature is a group of sheets folded together. Pick a size — watch how pages become a booklet.</p>
+
+        <div class="imza-stage" id="signatureInfoStage" data-phase="print" aria-hidden="true">
+          <div class="imza-floor"></div>
+          <div class="imza-deck" id="signatureInfoDeck"></div>
+        </div>
+
+        <div class="imza-legend">
+          <div class="imza-bridge" id="signatureInfoBridge"></div>
+          <div class="imza-pick-hint" data-i18n="signatureInfo.pickHint">Tap a size — the animation updates live</div>
+          <div class="imza-picker" id="signatureInfoPicker" role="group"
+               data-i18n-aria-label="signatureInfo.pickerLabel" aria-label="Signature size (pages) — select and watch">
+            <button type="button" data-size="single" aria-pressed="false">
+              <strong data-i18n="config.signature.single">Single</strong><small data-i18n="signatureInfo.sub.single">1 signature</small>
+            </button>
+            <button type="button" data-size="8" aria-pressed="false">
+              <strong>8</strong><small data-i18n="signatureInfo.sub.8">2 sheets</small>
+            </button>
+            <button type="button" data-size="16" aria-pressed="true">
+              <strong>16</strong><small data-i18n="signatureInfo.sub.16">4 sheets</small>
+            </button>
+            <button type="button" data-size="32" aria-pressed="false">
+              <strong>32</strong><small data-i18n="signatureInfo.sub.32">8 sheets</small>
+            </button>
+            <button type="button" data-size="auto" aria-pressed="false">
+              <strong data-i18n="config.signature.auto">Auto</strong><small data-i18n="signatureInfo.sub.auto">≈ 16</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="imza-readout" aria-live="polite">
+          <span class="imza-step-tag" id="signatureInfoTag" data-tone="neutral"><span class="n">01</span> <span id="signatureInfoStepName"></span></span>
+          <p class="imza-step-text" id="signatureInfoStepText"></p>
+          <p class="imza-rm-note" data-i18n="signatureInfo.rmNote">Motion off: showing the result — signatures stacked and bound into a booklet.</p>
+        </div>
+
+        <div class="imza-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+        <div class="imza-actions">
+          <button type="button" class="imza-btn imza-btn--primary" id="signatureInfoReplay" data-i18n="signatureInfo.replay">Replay</button>
+          <button type="button" class="imza-btn imza-btn--ghost" id="signatureInfoGotIt" data-i18n="signatureInfo.gotIt">Got it</button>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

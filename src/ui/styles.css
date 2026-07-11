@@ -3175,3 +3175,318 @@ body {
   }
 }
 
+
+/* ============================================================
+   "What is a signature?" info button + interactive sheet
+   (ported from the approved prototype; app tokens, both themes)
+   ============================================================ */
+.info-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-outline);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  position: relative;
+  align-self: center;
+}
+.info-btn:hover { border-color: var(--color-primary); }
+.info-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.info-btn::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary);
+  opacity: 0;
+  animation: imza-hint 3s ease-out infinite;
+}
+@keyframes imza-hint {
+  0% { opacity: 0.5; transform: scale(0.72); }
+  55% { opacity: 0; transform: scale(1.35); }
+  100% { opacity: 0; }
+}
+
+/* ---- sheet shell (fixed overlay, app bottom-sheet convention) ---- */
+.imza-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  /* paper tones — semantic "paper", not chrome (light defaults) */
+  --imza-paper: #f4efe3;
+  --imza-paper-2: #ece5d4;
+  --imza-paper-edge: #d8cdb4;
+  --imza-paper-back: #e7dfcb;
+  --imza-crease: rgba(58, 52, 43, 0.28);
+  --imza-stage-a: #efece3;
+  --imza-stage-b: #e2ddd0;
+  --imza-floor: rgba(58, 52, 43, 0.2);
+  --imza-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+@media (prefers-color-scheme: dark) {
+  .imza-sheet {
+    --imza-paper: #efe7d5;
+    --imza-paper-2: #e2d8bf;
+    --imza-paper-edge: #cabd9d;
+    --imza-paper-back: #ddd2b8;
+    --imza-crease: rgba(30, 26, 20, 0.32);
+    --imza-stage-a: #211f1a;
+    --imza-stage-b: #171611;
+    --imza-floor: rgba(0, 0, 0, 0.45);
+  }
+}
+:root.dark-theme .imza-sheet {
+  --imza-paper: #efe7d5;
+  --imza-paper-2: #e2d8bf;
+  --imza-paper-edge: #cabd9d;
+  --imza-paper-back: #ddd2b8;
+  --imza-crease: rgba(30, 26, 20, 0.32);
+  --imza-stage-a: #211f1a;
+  --imza-stage-b: #171611;
+  --imza-floor: rgba(0, 0, 0, 0.45);
+}
+:root.light-theme .imza-sheet {
+  --imza-paper: #f4efe3;
+  --imza-paper-2: #ece5d4;
+  --imza-paper-edge: #d8cdb4;
+  --imza-paper-back: #e7dfcb;
+  --imza-crease: rgba(58, 52, 43, 0.28);
+  --imza-stage-a: #efece3;
+  --imza-stage-b: #e2ddd0;
+  --imza-floor: rgba(58, 52, 43, 0.2);
+}
+
+.imza-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+}
+.imza-panel {
+  position: relative;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-3);
+  padding: 8px 18px max(env(safe-area-inset-bottom), 18px);
+  max-height: 92%;
+  overflow-y: auto;
+  animation: imza-rise 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes imza-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.imza-head { display: flex; align-items: flex-start; gap: 10px; padding: 2px 0 4px; }
+.imza-titles { flex: 1 1 auto; display: flex; flex-direction: column; }
+.imza-kicker {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-primary); font-weight: 600;
+}
+.imza-title { margin: 2px 0 0; font-family: var(--imza-serif); font-size: 1.4rem; font-weight: 600; }
+.imza-sub { margin: 2px 0 8px; font-size: 0.82rem; line-height: 1.5; color: var(--color-on-surface-variant); max-width: 44ch; }
+
+/* ---- 3D folding stage ---- */
+.imza-stage {
+  position: relative; height: 236px; margin: 6px 0 2px;
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: radial-gradient(130% 120% at 50% 8%, var(--imza-stage-a), var(--imza-stage-b) 78%);
+  border: 1px solid var(--color-outline);
+  perspective: 1150px; perspective-origin: 50% 40%;
+
+  /* scenario variables (JS overwrites per selected size) */
+  --icenter: 5.5; --center: 1; --jcenter: 1.5;
+  --col: 92px; --fanY: 5px; --fanZ: 1.6deg; --nest: 2.5deg; --nestZ: 1.3px;
+}
+.imza-floor {
+  position: absolute; left: 50%; top: 73%; width: 210px; height: 40px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(50% 50% at 50% 50%, var(--imza-floor), transparent 72%);
+  filter: blur(2px); opacity: 0.9; transition: transform 1.4s ease, opacity 1.4s ease;
+}
+.imza-deck {
+  position: absolute; left: 50%; top: 50%; transform-style: preserve-3d;
+  transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+  transition: transform 1.6s cubic-bezier(0.5, 0.05, 0.2, 1);
+}
+.imza-leaf {
+  --w: 74px; --h: 100px;
+  position: absolute; left: calc(var(--w) * -1); top: calc(var(--h) / -2);
+  width: calc(var(--w) * 2); height: var(--h); transform-style: preserve-3d;
+  transform:
+    translate3d(var(--lx, 0px), var(--ly, 0px), calc(var(--i) * 1.7px))
+    rotateZ(var(--lz, 0deg)) rotateX(var(--lrx, 0deg));
+  transition: transform 1.6s cubic-bezier(0.5, 0.05, 0.2, 1);
+}
+.imza-face { position: absolute; top: 0; width: var(--w); height: var(--h); transform-style: preserve-3d; }
+.imza-paper {
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, var(--imza-paper) 0%, var(--imza-paper-2) 100%);
+  border: 1px solid var(--imza-paper-edge);
+  box-shadow: inset 0 0 22px rgba(58, 52, 43, 0.05);
+  backface-visibility: hidden;
+}
+.imza-paper.back {
+  transform: rotateY(180deg);
+  background: linear-gradient(115deg, var(--imza-paper-back) 0%, var(--imza-paper-2) 100%);
+}
+.imza-face.l { left: 0; transform-origin: right center; }
+.imza-face.r {
+  left: var(--w); transform-origin: left center;
+  transform: rotateY(var(--rrot, 0deg)) translateX(var(--rx, 0px)) translateZ(var(--rz, 0px)) rotateX(var(--rrx, 0deg));
+  transition: transform 1.8s cubic-bezier(0.55, 0.06, 0.28, 1);
+}
+.imza-face.l .imza-paper { border-right: 0; }
+.imza-face.r .imza-paper { border-left: 0; }
+.imza-hingeline {
+  position: absolute; top: 2%; height: 96%; width: 1.5px; left: calc(var(--w) - 0.75px);
+  background: linear-gradient(var(--imza-crease), transparent 8%, transparent 92%, var(--imza-crease));
+  z-index: 2; pointer-events: none; opacity: 0.9; transition: opacity 1s ease;
+}
+.imza-foldshade {
+  position: absolute; inset: 0; pointer-events: none; backface-visibility: hidden;
+  background: linear-gradient(90deg, rgba(30, 26, 20, 0.3), transparent 55%);
+  opacity: var(--shade, 0); transition: opacity 1.6s ease;
+}
+.imza-cover {
+  position: absolute; left: calc(var(--w, 74px) * -1); top: calc(var(--h, 100px) / -2);
+  width: calc(var(--w, 74px) + 10px); height: calc(var(--h, 100px) + 10px);
+  transform-style: preserve-3d;
+  background: linear-gradient(135deg, var(--color-primary), #241d63);
+  border-radius: 2px 5px 5px 2px; box-shadow: var(--shadow-2);
+  opacity: 0; transform: translate3d(-8px, -5px, -8px);
+  transition: opacity 1.2s ease 0.3s, transform 1.6s cubic-bezier(0.5, 0.05, 0.2, 1);
+}
+.imza-cover::after {
+  content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 5px; border-radius: 2px;
+  background: rgba(0, 0, 0, 0.28);
+}
+.imza-cover .imza-emboss {
+  position: absolute; left: 14px; right: 12px; top: 20px; height: 2px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 22px 0 rgba(255, 255, 255, 0.28), 0 44px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ---- phase states: Print → Group → Fold → Bind ---- */
+.imza-stage[data-phase="load"] .imza-deck { transform: translate(-50%, -50%) rotateX(16deg) rotateY(-14deg); }
+.imza-stage[data-phase="load"] .imza-leaf { --ly: -48px; opacity: 0; }
+
+.imza-stage[data-phase="print"] .imza-deck { transform: translate(-50%, -50%) rotateX(16deg) rotateY(-14deg); }
+.imza-stage[data-phase="print"] .imza-leaf {
+  --lz: calc((var(--i) - var(--icenter)) * 0.16deg);
+  transition-delay: calc(var(--i) * 0.052s);
+}
+
+.imza-stage[data-phase="group"] .imza-deck { transform: translate(-50%, -50%) rotateX(26deg) rotateY(0deg); }
+.imza-stage[data-phase="group"] .imza-leaf {
+  --lx: calc((var(--g) - var(--center)) * var(--col));
+  --ly: calc((var(--jcenter) - var(--j)) * var(--fanY));
+  --lz: calc((var(--j) - var(--jcenter)) * var(--fanZ));
+  transition-delay: calc(var(--g) * 0.1s);
+}
+
+.imza-stage[data-phase="fold"] .imza-deck { transform: translate(-50%, -50%) rotateX(22deg) rotateY(-8deg); }
+.imza-stage[data-phase="fold"] .imza-leaf {
+  --lx: calc((var(--g) - var(--center)) * var(--col) + 37px);
+  --ly: calc(var(--j) * -1.1px); --lz: 0deg;
+  transition-delay: calc(var(--g) * 0.28s);
+}
+.imza-stage[data-phase="fold"] .imza-face.r {
+  --rrot: calc(-170deg - var(--j) * var(--nest));
+  --rz: calc(var(--j) * var(--nestZ)); --shade: 0.34;
+  transition-delay: calc(var(--g) * 0.28s);
+}
+
+.imza-stage[data-phase="bind"] .imza-deck { transform: translate(-51%, -50%) rotateX(14deg) rotateY(-28deg); }
+.imza-stage[data-phase="bind"] .imza-leaf {
+  --lx: calc(37px + var(--g) * 1.5px);
+  --ly: calc((var(--g) - var(--center)) * -6px); --lz: 0deg;
+  transition-delay: calc(var(--g) * 0.24s);
+}
+.imza-stage[data-phase="bind"] .imza-face.r {
+  --rrot: calc(-171deg - var(--j) * var(--nest));
+  --rz: calc(var(--j) * var(--nestZ)); --shade: 0.4;
+}
+.imza-stage[data-phase="bind"] .imza-cover { opacity: 1; transform: translate3d(1px, -9px, -10px) rotateY(-2deg); }
+.imza-stage[data-phase="bind"] .imza-floor { transform: translate(-50%, -50%) scaleX(0.62); opacity: 0.75; }
+
+.imza-stage[data-phase="group"] .imza-hingeline { opacity: 0.9; }
+.imza-stage[data-phase="fold"] .imza-hingeline,
+.imza-stage[data-phase="bind"] .imza-hingeline { opacity: 0; }
+
+/* ---- unit bridge + interactive picker ---- */
+.imza-legend { margin: 9px 2px 0; }
+.imza-bridge { font-size: 0.72rem; line-height: 1.5; font-weight: 600; color: var(--color-on-surface); padding: 0 2px; }
+.imza-bridge b { color: var(--color-primary); }
+.imza-pick-hint {
+  display: flex; align-items: center; gap: 6px; margin: 8px 2px 5px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; color: var(--color-on-surface-variant);
+}
+.imza-pick-hint::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary);
+  animation: imza-tap 2.4s ease-out infinite;
+}
+@keyframes imza-tap {
+  0% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.45); }
+  60% { box-shadow: 0 0 0 7px rgba(var(--color-primary-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0); }
+}
+.imza-picker {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  background: var(--color-surface-variant); border-radius: var(--radius-md); padding: 4px;
+}
+.imza-picker button {
+  font: inherit; border: 0; background: transparent; cursor: pointer;
+  padding: 7px 2px 6px; border-radius: var(--radius-sm); color: var(--color-on-surface-variant);
+  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.1;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.imza-picker button strong { font-size: 0.84rem; font-weight: 700; }
+.imza-picker button small { font-size: 0.6rem; font-weight: 600; font-family: ui-monospace, Menlo, monospace; opacity: 0.8; white-space: nowrap; }
+.imza-picker button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--shadow-1); }
+.imza-picker button[aria-pressed="true"] small { opacity: 0.92; }
+.imza-picker button:hover { background: rgba(var(--color-primary-rgb), 0.08); }
+.imza-picker button[aria-pressed="true"]:hover { background: var(--color-primary); }
+.imza-picker button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* ---- caption / dots ---- */
+.imza-readout { margin-top: 12px; min-height: 52px; }
+.imza-step-tag {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+  background: var(--color-surface-variant); color: var(--color-on-surface-variant);
+}
+.imza-step-tag .n { font-family: ui-monospace, Menlo, monospace; }
+.imza-step-tag[data-tone="good"] { background: var(--color-success-container); color: var(--color-success); }
+.imza-step-text { margin: 8px 2px 0; font-size: 0.86rem; line-height: 1.5; color: var(--color-on-surface); }
+.imza-step-text b { font-weight: 650; }
+.imza-rm-note { display: none; margin: 8px 2px 0; font-size: 0.78rem; color: var(--color-on-surface-variant); }
+
+.imza-dots { display: flex; gap: 6px; margin: 14px 2px 2px; }
+.imza-dots i { height: 4px; flex: 1 1 0; border-radius: 999px; background: var(--color-surface-variant); transition: background 0.3s ease; }
+.imza-dots i.on { background: var(--color-primary); }
+.imza-dots i.done { background: rgba(var(--color-primary-rgb), 0.45); }
+
+/* ---- actions ---- */
+.imza-actions { display: flex; gap: 10px; margin-top: 16px; }
+.imza-btn { font: inherit; font-size: 0.86rem; font-weight: 600; border-radius: var(--radius-md); padding: 11px 16px; cursor: pointer; border: 1px solid transparent; }
+.imza-btn--primary { background: var(--color-primary); color: var(--color-on-primary); flex: 1 1 auto; }
+.imza-btn--ghost { background: transparent; color: var(--color-on-surface); border-color: var(--color-outline); }
+.imza-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .info-btn::before { animation: none; }
+  .imza-panel { animation: none; }
+  .imza-rm-note { display: block; }
+}

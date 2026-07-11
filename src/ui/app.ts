@@ -1382,6 +1382,181 @@ export function initApp(): void {
     refreshConfigSummary();
   });
 
+  // ── "What is a signature?" interactive info sheet ───────────────────────────
+  {
+    interface Scenario {
+      key: string; sheetsPerSig: number; sigCount: number;
+      single: boolean; auto: boolean;
+      leaves: number; pages: number; pagesPerSig: number;
+    }
+    const mk = (
+      key: string, sheetsPerSig: number, sigCount: number,
+      opts: { single?: boolean; auto?: boolean } = {},
+    ): Scenario => ({
+      key, sheetsPerSig, sigCount,
+      single: !!opts.single, auto: !!opts.auto,
+      leaves: sheetsPerSig * sigCount,
+      pages: sheetsPerSig * sigCount * 4,
+      pagesPerSig: opts.single ? sheetsPerSig * sigCount * 4 : sheetsPerSig * 4,
+    });
+    // Each selected size → an honest, readable example (sheetsPerSig = size ÷ 4).
+    const SCEN: Record<string, Scenario> = {
+      single: mk('single', 6, 1, { single: true }),
+      '8': mk('8', 2, 3),
+      '16': mk('16', 4, 3),
+      '32': mk('32', 8, 2),
+      auto: mk('auto', 4, 3, { auto: true }),
+    };
+
+    const sheet = byId<HTMLDivElement>('signatureInfoSheet');
+    const stage = byId<HTMLDivElement>('signatureInfoStage');
+    const deck = byId<HTMLDivElement>('signatureInfoDeck');
+    const infoBtn = byId<HTMLButtonElement>('signatureInfoBtn');
+    const bridgeEl = byId<HTMLDivElement>('signatureInfoBridge');
+    const tagEl = byId<HTMLSpanElement>('signatureInfoTag');
+    const stepNameEl = byId<HTMLSpanElement>('signatureInfoStepName');
+    const stepTextEl = byId<HTMLParagraphElement>('signatureInfoStepText');
+    const picker = byId<HTMLDivElement>('signatureInfoPicker');
+    const dots = Array.from(document.querySelectorAll<HTMLElement>('.imza-dots i'));
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    let cover: HTMLDivElement | null = null;
+    function ensureCover(): void {
+      if (!cover) {
+        cover = document.createElement('div');
+        cover.className = 'imza-cover';
+        cover.innerHTML = '<div class="imza-emboss"></div>';
+      }
+      if (cover.parentElement !== deck) deck.appendChild(cover);
+    }
+    function buildLeaves(n: number, per: number): void {
+      deck.querySelectorAll('.imza-leaf').forEach((el) => el.remove());
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < n; i++) {
+        const leaf = document.createElement('div');
+        leaf.className = 'imza-leaf';
+        leaf.style.setProperty('--i', String(i));
+        leaf.style.setProperty('--g', String(Math.floor(i / per)));
+        leaf.style.setProperty('--j', String(i % per));
+        leaf.innerHTML =
+          '<div class="imza-face l"><div class="imza-paper"></div><div class="imza-foldshade"></div></div>' +
+          '<div class="imza-face r"><div class="imza-paper"></div><div class="imza-paper back"></div><div class="imza-foldshade"></div><div class="imza-hingeline"></div></div>';
+        frag.appendChild(leaf);
+      }
+      deck.appendChild(frag);
+    }
+    const clampMax = (v: number, max: number): number => (v < max ? v : max);
+    function setStageVars(s: Scenario): void {
+      const st = stage.style; const n = s.sheetsPerSig;
+      st.setProperty('--icenter', String((s.leaves - 1) / 2));
+      st.setProperty('--center', String((s.sigCount - 1) / 2));
+      st.setProperty('--jcenter', String((n - 1) / 2));
+      st.setProperty('--col', `${s.sigCount >= 3 ? 92 : s.sigCount === 2 ? 116 : 0}px`);
+      st.setProperty('--fanY', `${clampMax(20 / n, 5)}px`);
+      st.setProperty('--fanZ', `${clampMax(7 / n, 1.6)}deg`);
+      st.setProperty('--nest', `${10 / n}deg`);
+      st.setProperty('--nestZ', `${clampMax(8 / n, 1.4)}px`);
+    }
+
+    interface Step { phase: string; n: string; nameKey: string; tone: string; dot: number; text: string; hold: number; }
+    function sizeLabel(s: Scenario): string {
+      if (s.single) return t('config.signature.single');
+      if (s.auto) return t('signatureInfo.autoResolved');
+      return s.key;
+    }
+    function buildSteps(s: Scenario): Step[] {
+      const p = {
+        pages: s.pages, sheets: s.sheetsPerSig,
+        pagesPerSig: s.pagesPerSig, sigs: s.sigCount, size: sizeLabel(s),
+      };
+      return [
+        { phase: 'print', n: '01', nameKey: 'signatureInfo.name.print', tone: 'neutral', dot: 0, text: t('signatureInfo.step.print', p), hold: 3200 },
+        { phase: 'group', n: '02', nameKey: 'signatureInfo.name.group', tone: 'neutral', dot: 1, text: s.single ? t('signatureInfo.step.groupSingle', p) : t('signatureInfo.step.group', p), hold: 4400 },
+        { phase: 'fold', n: '03', nameKey: 'signatureInfo.name.fold', tone: 'neutral', dot: 2, text: s.single ? t('signatureInfo.step.foldSingle', p) : t('signatureInfo.step.fold', p), hold: 4800 },
+        { phase: 'bind', n: '04', nameKey: 'signatureInfo.name.bind', tone: 'good', dot: 3, text: s.single ? t('signatureInfo.step.bindSingle', p) : t('signatureInfo.step.bind', p), hold: 5200 },
+      ];
+    }
+
+    let steps: Step[] = buildSteps(SCEN['16']);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let idx = 0;
+    let currentSize = '16';
+
+    function render(step: Step): void {
+      stage.setAttribute('data-phase', step.phase);
+      tagEl.setAttribute('data-tone', step.tone);
+      const nEl = tagEl.querySelector('.n');
+      if (nEl) nEl.textContent = step.n;
+      stepNameEl.textContent = t(step.nameKey);
+      stepTextEl.innerHTML = step.text;
+      dots.forEach((d, k) => {
+        d.classList.toggle('on', k === step.dot);
+        d.classList.toggle('done', k < step.dot);
+      });
+    }
+    function runStep(): void {
+      render(steps[idx]);
+      if (idx < steps.length - 1) {
+        timer = setTimeout(() => { idx++; runStep(); }, steps[idx].hold);
+      }
+    }
+    function play(): void {
+      if (timer) clearTimeout(timer);
+      idx = 0;
+      stage.setAttribute('data-phase', 'load');
+      void stage.offsetWidth;
+      runStep();
+    }
+    function showFinal(): void {
+      if (timer) clearTimeout(timer);
+      idx = steps.length - 1;
+      render(steps[idx]);
+    }
+    function stopAnim(): void { if (timer) { clearTimeout(timer); timer = null; } }
+
+    const normalizeSize = (size: string): string => (SCEN[size] ? size : '16');
+    function updateChrome(s: Scenario): void {
+      bridgeEl.innerHTML = t('signatureInfo.bridge');
+      picker.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.setAttribute('aria-pressed', b.dataset.size === s.key ? 'true' : 'false');
+      });
+    }
+    function applyScenario(size: string): void {
+      const s = SCEN[normalizeSize(size)];
+      currentSize = s.key;
+      steps = buildSteps(s);
+      setStageVars(s);
+      updateChrome(s);
+      ensureCover();
+      if (reduceMotion.matches) {
+        stage.setAttribute('data-phase', 'bind');
+        buildLeaves(s.leaves, s.sheetsPerSig);
+        showFinal();
+      } else {
+        stage.setAttribute('data-phase', 'load'); // create new leaves already hidden
+        buildLeaves(s.leaves, s.sheetsPerSig);
+        void stage.offsetWidth;
+        play();
+      }
+    }
+
+    infoBtn.addEventListener('click', () => {
+      applyScenario(normalizeSize(bookletSignature)); // reflect the card's current size
+      openModal(sheet, infoBtn, stopAnim);
+      // No grabber / no X: focus the dialog itself so nothing is pre-selected.
+      // Runs after openModal's own focus rAF, so it wins. Esc / backdrop / "Got it" close.
+      requestAnimationFrame(() => sheet.focus());
+    });
+    // in-sheet picker teaches only — it never changes the real setting
+    picker.addEventListener('click', (event) => {
+      const b = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
+      if (b?.dataset.size) applyScenario(b.dataset.size);
+    });
+    byId<HTMLButtonElement>('signatureInfoReplay').addEventListener('click', () => applyScenario(currentSize));
+    byId<HTMLButtonElement>('signatureInfoGotIt').addEventListener('click', () => closeModal(sheet));
+    byId<HTMLDivElement>('signatureInfoBackdrop').addEventListener('click', () => closeModal(sheet));
+  }
+
   bindingGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     if (!btn) return;
