@@ -22,6 +22,7 @@ The app manifest doesn't request the internet permission — every PDF operation
   - Paper size selection (A4 / Letter / A5 / A3 / source size), duplex flip-edge (short/long) support
   - Right-to-left (RTL) binding, separate cover export for heavier stock
   - Blank page insertion at chosen positions, printed instructions sheet with a reading-order check
+  - Interactive "what is a signature?" explainer with a live 3D folding animation
 - **PDF Merge** — Combines multiple PDFs into a single file
 - **Page Management** — Add, delete, and reorder pages
 - **Page Rotation**
@@ -95,6 +96,7 @@ Uygulama manifestosu internet iznini talep etmez — tüm PDF işleme, birleşti
   - Kağıt boyutu seçimi (A4 / Letter / A5 / A3 / kaynak boyutu), duplex çevirme kenarı (kısa/uzun) desteği
   - Sağdan (RTL) ciltleme, kalın kağıt için ayrı kapak çıktısı
   - İstenen konuma boş sayfa ekleme, okuma sırası kontrolü içeren baskı talimat sayfası
+  - Canlı 3B katlama animasyonuyla interaktif "imza nedir?" açıklaması
 - **PDF Birleştir** — Birden fazla PDF'i tek dosyada birleştirir
 - **Sayfa Yönetimi** — Sayfa ekleme, silme, yeniden sıralama
 - **Sayfa Döndürme**
