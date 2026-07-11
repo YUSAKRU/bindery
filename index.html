@@ -19,8 +19,17 @@
 
       <main class="screen-container">
         <section class="screen" id="screen-hub">
-          <div class="hub-hero">
+          <div class="hub-hero" id="hubHero">
+            <div class="hero-stage" id="heroStage" aria-hidden="true"></div>
             <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>
+            <p class="hub-hero-sub" data-i18n="hub.hero.sub">Pages fall into the right order — print, fold, done.</p>
+          </div>
+
+          <!-- Brand-moment overlay booklet (first open = fly-in "A", later = in-place fold "B") -->
+          <div class="hero-fly" id="heroFly" aria-hidden="true">
+            <div class="hero-booklet" id="heroBooklet" data-phase="load">
+              <div class="hero-scene"><div class="hero-floor"></div><div class="hero-deck" id="heroDeck"></div></div>
+            </div>
           </div>
 
           <button type="button" class="btn btn-primary btn-large" id="hubCreateBookletBtn">

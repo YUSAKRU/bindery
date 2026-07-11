@@ -365,6 +365,9 @@ export function initApp(): void {
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
+  // Hub hero brand-moment intro: assigned by the controller block below;
+  // showScreen('hub') and finishOnboarding() call it. No-op until set.
+  let requestHeroIntro: () => void = () => {};
   // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
   let bookletSignature = 'single';
   let bookletBinding: Binding = 'ltr';
@@ -868,6 +871,9 @@ export function initApp(): void {
       void ScreenOrientation.unlock().catch(() => {});
     } else if (id === 'hub') {
       void renderHubRecentsGrid();
+      // Only after onboarding (on first run the hub sits behind the onboarding
+      // overlay; finishOnboarding() triggers the intro instead).
+      if (localStorage.getItem('bindery.onboarded') === 'true') requestHeroIntro();
     } else if (id === 'recents') {
       void renderRecentsListLarge();
     } else if (id === 'files') {
@@ -5105,6 +5111,146 @@ export function initApp(): void {
     if (entry) showScreen(entry);
   });
 
+  // ── Hub hero brand-moment: first-ever open flies in (A); later opens fold in
+  //    place (B); reduced-motion / same-session revisits show it resting. ──────
+  {
+    const BRAND_SEEN_KEY = 'bindery.brandIntroSeen';
+    // QC hooks: ?heroIntro=A|B|off force a path; =reset clears the persisted flag.
+    const forcedHero = new URLSearchParams(location.search).get('heroIntro');
+    if (forcedHero === 'reset') { try { localStorage.removeItem(BRAND_SEEN_KEY); } catch { /* ignore */ } }
+
+    const fly = byId<HTMLDivElement>('heroFly');
+    const booklet = byId<HTMLDivElement>('heroBooklet');
+    const deck = byId<HTMLDivElement>('heroDeck');
+    const stageEl = byId<HTMLDivElement>('heroStage');
+    const hubHero = byId<HTMLDivElement>('hubHero');
+    const hubScreen = byId<HTMLElement>('screen-hub');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const LEAVES = 4;
+    const INTRINSIC_W = 108;
+    const INTRINSIC_H = 74;
+    void fly; // layer referenced only for clarity; visibility follows #screen-hub
+
+    const cover = document.createElement('div');
+    cover.className = 'hero-cover';
+    cover.innerHTML = '<div class="emb"></div>';
+    deck.appendChild(cover);
+    for (let i = 0; i < LEAVES; i++) {
+      const leaf = document.createElement('div');
+      leaf.className = 'hero-leaf';
+      leaf.style.setProperty('--i', String(i));
+      leaf.innerHTML =
+        '<div class="hero-face l"><div class="hero-paper"></div></div>' +
+        '<div class="hero-face r"><div class="hero-paper"></div><div class="hero-paper back"></div><div class="hero-hinge"></div></div>';
+      deck.appendChild(leaf);
+    }
+
+    let homeScale = 1;
+    function homeTransform(): string {
+      const hub = hubScreen.getBoundingClientRect();
+      const st = stageEl.getBoundingClientRect();
+      homeScale = Math.max(0.6, (st.height * 0.62) / INTRINSIC_H);
+      const w = INTRINSIC_W * homeScale, h = INTRINSIC_H * homeScale;
+      const left = (st.left - hub.left) + (st.width - w) / 2;
+      const top = (st.top - hub.top) + (st.height - h) / 2;
+      return `translate(${left}px, ${top}px) scale(${homeScale})`;
+    }
+    function splashTransform(): string {
+      const hub = hubScreen.getBoundingClientRect();
+      const scale = homeScale * 1.8;
+      const w = INTRINSIC_W * scale;
+      const left = (window.innerWidth / 2 - hub.left) - w / 2;
+      const top = (window.innerHeight * 0.3 - hub.top);
+      return `translate(${left}px, ${top}px) scale(${scale})`;
+    }
+
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    let armedSkip: (() => void) | null = null;
+    const clearTimers = (): void => { timers.forEach(clearTimeout); timers = []; };
+    const at = (ms: number, fn: () => void): void => { timers.push(setTimeout(fn, ms)); };
+    function disarmSkip(): void {
+      if (armedSkip) { hubScreen.removeEventListener('pointerdown', armedSkip); armedSkip = null; }
+    }
+    function revealCopy(): void { hubHero.classList.add('hero-revealed'); hubHero.classList.remove('hero-armed'); }
+
+    function settle(): void {
+      clearTimers(); disarmSkip();
+      booklet.classList.add('frozen', 'landed');
+      booklet.style.transition = 'none';
+      booklet.setAttribute('data-phase', 'rest');
+      booklet.style.transform = homeTransform();
+      revealCopy();
+    }
+    function armSkip(): void {
+      disarmSkip();
+      armedSkip = () => settle();
+      hubScreen.addEventListener('pointerdown', armedSkip, { once: true });
+    }
+
+    function playA(): void { // splash → fold → fly into the hero stage
+      clearTimers();
+      booklet.classList.remove('frozen', 'landed');
+      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
+      booklet.style.transition = 'none';
+      booklet.setAttribute('data-phase', 'settle');
+      booklet.style.transform = splashTransform();
+      void booklet.offsetWidth;
+      armSkip();
+      at(340, () => booklet.setAttribute('data-phase', 'fold'));
+      at(340 + 1150, () => {
+        booklet.style.transition = 'transform .92s cubic-bezier(.34,1.3,.5,1)';
+        booklet.classList.add('landed');
+        booklet.setAttribute('data-phase', 'rest');
+        booklet.style.transform = homeTransform();
+        at(200, revealCopy);
+        at(1000, () => { booklet.classList.add('frozen'); disarmSkip(); });
+      });
+      at(2600, settle); // hard fallback: never stay busy past ~2.6s
+    }
+
+    function playB(): void { // fold in place at the hero stage
+      clearTimers();
+      booklet.classList.remove('frozen', 'landed');
+      booklet.classList.add('landed'); // stays glued to the stage the whole time
+      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
+      booklet.style.transition = 'none';
+      booklet.style.transform = homeTransform();
+      booklet.setAttribute('data-phase', 'load');
+      void booklet.offsetWidth;
+      armSkip();
+      at(320, () => booklet.setAttribute('data-phase', 'settle'));
+      at(320 + 900, () => { booklet.setAttribute('data-phase', 'fold'); revealCopy(); });
+      at(320 + 900 + 1050, () => { booklet.setAttribute('data-phase', 'rest'); booklet.classList.add('frozen'); disarmSkip(); });
+      at(3200, disarmSkip);
+    }
+
+    let played = false;
+    function maybePlayHeroIntro(): void {
+      if (getCurrentScreenId() !== 'hub') return;
+      if (played && !forcedHero) { settle(); return; }
+      played = true;
+      requestAnimationFrame(() => {
+        booklet.style.transform = homeTransform();
+        if (reduceMotion.matches || forcedHero === 'off') { settle(); return; }
+        let seen = false;
+        try { seen = localStorage.getItem(BRAND_SEEN_KEY) === 'true'; } catch { seen = false; }
+        if (forcedHero === 'B') { playB(); return; }
+        if (forcedHero === 'A' || !seen) {
+          try { localStorage.setItem(BRAND_SEEN_KEY, 'true'); } catch { /* ignore */ }
+          playA();
+        } else {
+          playB();
+        }
+      });
+    }
+    requestHeroIntro = maybePlayHeroIntro;
+
+    // keep the resting booklet glued to the stage on resize / theme change
+    window.addEventListener('resize', () => {
+      if (booklet.classList.contains('landed')) { booklet.style.transition = 'none'; booklet.style.transform = homeTransform(); }
+    });
+  }
+
   hubOpenReaderBtn.addEventListener('click', async () => {
     try {
       const picked = await pickPdfWithPersistentUri();
@@ -6040,6 +6186,8 @@ export function initApp(): void {
   function finishOnboarding(): void {
     localStorage.setItem('bindery.onboarded', 'true');
     onboardingOverlay.classList.add('hidden');
+    // hub is now actually visible for the first time → play the brand intro
+    requestHeroIntro();
   }
 
   onboardingNextBtn.addEventListener('click', () => {

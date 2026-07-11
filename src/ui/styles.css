@@ -3499,3 +3499,128 @@ body {
   .imza-panel { animation: none; }
   .imza-rm-note { display: block; }
 }
+
+/* ============================================================
+   Hub hero brand-moment: overlay booklet that flies in (first
+   open "A") or folds in place ("B"); static resting otherwise.
+   Ported from approved prototypes; app tokens, both themes.
+   ============================================================ */
+#screen-hub { position: relative; }
+
+/* paper tones for the hero booklet (scoped; both themes, no color-mix) */
+#screen-hub {
+  --hero-paper: #f4efe3; --hero-paper-2: #ece5d4; --hero-paper-edge: #d8cdb4; --hero-paper-back: #e7dfcb;
+  --hero-crease: rgba(58,52,43,.28); --hero-stage-a: #efece3; --hero-stage-b: #e2ddd0; --hero-floor: rgba(58,52,43,.2);
+}
+@media (prefers-color-scheme: dark) {
+  #screen-hub {
+    --hero-paper: #efe7d5; --hero-paper-2: #e2d8bf; --hero-paper-edge: #cabd9d; --hero-paper-back: #ddd2b8;
+    --hero-crease: rgba(30,26,20,.32); --hero-stage-a: #211f1a; --hero-stage-b: #171611; --hero-floor: rgba(0,0,0,.45);
+  }
+}
+:root.dark-theme #screen-hub {
+  --hero-paper: #efe7d5; --hero-paper-2: #e2d8bf; --hero-paper-edge: #cabd9d; --hero-paper-back: #ddd2b8;
+  --hero-crease: rgba(30,26,20,.32); --hero-stage-a: #211f1a; --hero-stage-b: #171611; --hero-floor: rgba(0,0,0,.45);
+}
+:root.light-theme #screen-hub {
+  --hero-paper: #f4efe3; --hero-paper-2: #ece5d4; --hero-paper-edge: #d8cdb4; --hero-paper-back: #e7dfcb;
+  --hero-crease: rgba(58,52,43,.28); --hero-stage-a: #efece3; --hero-stage-b: #e2ddd0; --hero-floor: rgba(58,52,43,.2);
+}
+
+/* stage backdrop (booklet rests / lands here) */
+.hero-stage {
+  height: 148px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-outline);
+  background: radial-gradient(130% 120% at 50% 12%, var(--hero-stage-a), var(--hero-stage-b) 82%);
+}
+.hub-hero-sub {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-on-surface-variant);
+}
+/* title/sub reveal (base visible; JS arms→reveals during intro) */
+.hub-hero-title, .hub-hero-sub { transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1); }
+.hub-hero.hero-armed .hub-hero-title, .hub-hero.hero-armed .hub-hero-sub { opacity: 0; transform: translateY(8px); }
+.hub-hero.hero-revealed .hub-hero-title { opacity: 1; transform: none; }
+.hub-hero.hero-revealed .hub-hero-sub { opacity: 1; transform: none; transition-delay: 0.08s; }
+
+/* overlay layer (fixed within hub; never clipped by the hero's overflow) */
+.hero-fly { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.hero-booklet {
+  position: absolute; left: 0; top: 0; width: 108px; height: 74px;
+  transform-origin: 0 0; will-change: transform;
+  --icenter: 1.5; --nest: 3deg; --nestZ: 1.3px;
+}
+.hero-scene { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 50% 44%; }
+.hero-floor {
+  position: absolute; left: 50%; top: 78%; width: 96px; height: 22px; transform: translate(-50%,-50%);
+  background: radial-gradient(50% 50% at 50% 50%, var(--hero-floor), transparent 72%);
+  filter: blur(2px); opacity: 0.55; transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.hero-deck {
+  position: absolute; left: 50%; top: 50%; transform-style: preserve-3d;
+  transform: translate(-50%,-50%) rotateX(14deg) rotateY(-16deg);
+  transition: transform 1s cubic-bezier(0.5,0.05,0.2,1);
+}
+.hero-leaf {
+  --w: 54px; --h: 74px;
+  position: absolute; left: calc(var(--w) * -1); top: calc(var(--h) / -2);
+  width: calc(var(--w) * 2); height: var(--h); transform-style: preserve-3d;
+  transform: translate3d(var(--lx,0px), var(--ly,0px), calc(var(--i) * 1.5px)) rotateZ(var(--lz,0deg));
+  transition: transform 1s cubic-bezier(0.5,0.05,0.2,1);
+}
+.hero-face { position: absolute; top: 0; width: var(--w); height: var(--h); transform-style: preserve-3d; }
+.hero-paper {
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, var(--hero-paper), var(--hero-paper-2));
+  border: 1px solid var(--hero-paper-edge); box-shadow: inset 0 0 18px rgba(58,52,43,.05);
+  backface-visibility: hidden;
+}
+.hero-paper.back { transform: rotateY(180deg); background: linear-gradient(115deg, var(--hero-paper-back), var(--hero-paper-2)); }
+.hero-face.l { left: 0; transform-origin: right center; }
+.hero-face.r {
+  left: var(--w); transform-origin: left center;
+  transform: rotateY(var(--rrot,0deg)) translateZ(var(--rz,0px));
+  transition: transform 1.05s cubic-bezier(0.55,0.06,0.28,1);
+}
+.hero-face.l .hero-paper { border-right: 0; }
+.hero-face.r .hero-paper { border-left: 0; }
+.hero-hinge {
+  position: absolute; top: 3%; height: 94%; width: 1.5px; left: calc(var(--w) - 0.75px);
+  background: linear-gradient(var(--hero-crease), transparent 8%, transparent 92%, var(--hero-crease));
+  z-index: 2; pointer-events: none; opacity: 0.7; transition: opacity 0.6s ease;
+}
+.hero-cover {
+  position: absolute; left: calc(var(--w,54px) * -1); top: calc(var(--h,74px) / -2);
+  width: calc(var(--w,54px) + 8px); height: calc(var(--h,74px) + 8px); transform-style: preserve-3d;
+  background: linear-gradient(135deg, var(--color-primary), #241d63);
+  border-radius: 2px 5px 5px 2px; box-shadow: var(--shadow-2);
+  opacity: 0; transform: translate3d(-6px,-4px,-8px);
+  transition: opacity 0.6s ease 0.2s, transform 1s cubic-bezier(0.5,0.05,0.2,1);
+}
+.hero-cover::after { content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 4px; border-radius: 2px; background: rgba(0,0,0,.28); }
+.hero-cover .emb { position: absolute; left: 11px; right: 10px; top: 15px; height: 2px; border-radius: 2px; background: rgba(255,255,255,.4); box-shadow: 0 15px 0 rgba(255,255,255,.26), 0 30px 0 rgba(255,255,255,.16); }
+
+/* phases: load -> settle -> fold -> rest (STOPS) */
+.hero-booklet[data-phase="load"] .hero-deck { transform: translate(-50%,-50%) rotateX(15deg) rotateY(-13deg); }
+.hero-booklet[data-phase="load"] .hero-leaf { --ly: -30px; opacity: 0; }
+.hero-booklet[data-phase="settle"] .hero-deck { transform: translate(-50%,-50%) rotateX(15deg) rotateY(-13deg); }
+.hero-booklet[data-phase="settle"] .hero-leaf { --lz: calc((var(--i) - var(--icenter)) * 0.2deg); transition-delay: calc(var(--i) * .07s); }
+.hero-booklet[data-phase="fold"] .hero-deck { transform: translate(-50%,-50%) rotateX(18deg) rotateY(-16deg); }
+.hero-booklet[data-phase="fold"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
+.hero-booklet[data-phase="fold"] .hero-face.r { --rrot: calc(-168deg - var(--i) * var(--nest)); --rz: calc(var(--i) * var(--nestZ)); }
+.hero-booklet[data-phase="rest"] .hero-deck { transform: translate(-51%,-50%) rotateX(12deg) rotateY(-24deg); }
+.hero-booklet[data-phase="rest"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
+.hero-booklet[data-phase="rest"] .hero-face.r { --rrot: calc(-169deg - var(--i) * var(--nest)); --rz: calc(var(--i) * var(--nestZ)); }
+.hero-booklet[data-phase="rest"] .hero-cover { opacity: 1; transform: translate3d(1px,-6px,-9px) rotateY(-2deg); }
+.hero-booklet[data-phase="rest"] .hero-floor { transform: translate(-50%,-50%) scaleX(0.66); opacity: 0.7; }
+.hero-booklet[data-phase="fold"] .hero-hinge, .hero-booklet[data-phase="rest"] .hero-hinge { opacity: 0; }
+
+.hero-booklet.frozen .hero-deck, .hero-booklet.frozen .hero-leaf, .hero-booklet.frozen .hero-face.r,
+.hero-booklet.frozen .hero-cover, .hero-booklet.frozen .hero-floor, .hero-booklet.frozen .hero-hinge { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-deck, .hero-leaf, .hero-face.r, .hero-cover, .hero-floor { transition: none !important; }
+}
