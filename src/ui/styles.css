@@ -585,14 +585,6 @@ body {
   pointer-events: none;
 }
 
-.hub-hero-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-primary);
-}
-
 .hub-hero-title {
   margin: 0;
   font-size: 1.3rem;
