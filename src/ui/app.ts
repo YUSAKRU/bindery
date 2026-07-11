@@ -5116,7 +5116,11 @@ export function initApp(): void {
   {
     const BRAND_SEEN_KEY = 'bindery.brandIntroSeen';
     // QC hooks: ?heroIntro=A|B|off force a path; =reset clears the persisted flag.
-    const forcedHero = new URLSearchParams(location.search).get('heroIntro');
+    // ?heroPhase=load|settle|fold|rest freezes the booklet at one phase (static,
+    // no transition) so the fold geometry can be inspected on-device frame-by-frame.
+    const params = new URLSearchParams(location.search);
+    const forcedHero = params.get('heroIntro');
+    const forcedPhase = params.get('heroPhase');
     if (forcedHero === 'reset') { try { localStorage.removeItem(BRAND_SEEN_KEY); } catch { /* ignore */ } }
 
     const fly = byId<HTMLDivElement>('heroFly');
@@ -5224,13 +5228,23 @@ export function initApp(): void {
       at(3200, disarmSkip);
     }
 
+    function freezePhase(p: string): void { // QC freeze: static, no transition
+      clearTimers(); disarmSkip();
+      booklet.classList.add('frozen', 'landed');
+      booklet.style.transition = 'none';
+      booklet.setAttribute('data-phase', p);
+      booklet.style.transform = homeTransform();
+      revealCopy();
+    }
+
     let played = false;
     function maybePlayHeroIntro(): void {
       if (getCurrentScreenId() !== 'hub') return;
-      if (played && !forcedHero) { settle(); return; }
+      if (played && !forcedHero && !forcedPhase) { settle(); return; }
       played = true;
       requestAnimationFrame(() => {
         booklet.style.transform = homeTransform();
+        if (forcedPhase) { freezePhase(forcedPhase); return; }
         if (reduceMotion.matches || forcedHero === 'off') { settle(); return; }
         let seen = false;
         try { seen = localStorage.getItem(BRAND_SEEN_KEY) === 'true'; } catch { seen = false; }

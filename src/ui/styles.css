@@ -3551,7 +3551,7 @@ body {
 .hero-booklet {
   position: absolute; left: 0; top: 0; width: 108px; height: 74px;
   transform-origin: 0 0; will-change: transform;
-  --icenter: 1.5; --nest: 3deg; --nestZ: 1.3px;
+  --icenter: 1.5; --nest: 3deg;
 }
 .hero-scene { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 50% 44%; }
 .hero-floor {
@@ -3568,7 +3568,7 @@ body {
   --w: 54px; --h: 74px;
   position: absolute; left: calc(var(--w) * -1); top: calc(var(--h) / -2);
   width: calc(var(--w) * 2); height: var(--h); transform-style: preserve-3d;
-  transform: translate3d(var(--lx,0px), var(--ly,0px), calc(var(--i) * 1.5px)) rotateZ(var(--lz,0deg));
+  transform: translate3d(var(--lx,0px), var(--ly,0px), calc(var(--i) * 2px)) rotateZ(var(--lz,0deg));
   transition: transform 1s cubic-bezier(0.5,0.05,0.2,1);
 }
 .hero-face { position: absolute; top: 0; width: var(--w); height: var(--h); transform-style: preserve-3d; }
@@ -3582,7 +3582,9 @@ body {
 .hero-face.l { left: 0; transform-origin: right center; }
 .hero-face.r {
   left: var(--w); transform-origin: left center;
-  transform: rotateY(var(--rrot,0deg)) translateZ(var(--rz,0px));
+  /* translateZ FIRST so the lift is applied in world +z AFTER the fold —
+     each folding half stays clear above the stack (no coplanar intersection). */
+  transform: translateZ(var(--rz,0px)) rotateY(var(--rrot,0deg));
   transition: transform 1.05s cubic-bezier(0.55,0.06,0.28,1);
 }
 .hero-face.l .hero-paper { border-right: 0; }
@@ -3597,8 +3599,10 @@ body {
   width: calc(var(--w,54px) + 8px); height: calc(var(--h,74px) + 8px); transform-style: preserve-3d;
   background: linear-gradient(135deg, var(--color-primary), #241d63);
   border-radius: 2px 5px 5px 2px; box-shadow: var(--shadow-2);
-  opacity: 0; transform: translate3d(-6px,-4px,-8px);
-  transition: opacity 0.6s ease 0.2s, transform 1s cubic-bezier(0.5,0.05,0.2,1);
+  /* the cover sits at its final pose the whole time; it only FADES IN as the
+     pages fold onto it (during the second half of the fold), so no end-pop. */
+  opacity: 0; transform: translate3d(1px,-6px,-9px) rotateY(-2deg);
+  transition: opacity 0.55s ease 0.3s;
 }
 .hero-cover::after { content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 4px; border-radius: 2px; background: rgba(0,0,0,.28); }
 .hero-cover .emb { position: absolute; left: 11px; right: 10px; top: 15px; height: 2px; border-radius: 2px; background: rgba(255,255,255,.4); box-shadow: 0 15px 0 rgba(255,255,255,.26), 0 30px 0 rgba(255,255,255,.16); }
@@ -3610,12 +3614,12 @@ body {
 .hero-booklet[data-phase="settle"] .hero-leaf { --lz: calc((var(--i) - var(--icenter)) * 0.2deg); transition-delay: calc(var(--i) * .07s); }
 .hero-booklet[data-phase="fold"] .hero-deck { transform: translate(-50%,-50%) rotateX(18deg) rotateY(-16deg); }
 .hero-booklet[data-phase="fold"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
-.hero-booklet[data-phase="fold"] .hero-face.r { --rrot: calc(-168deg - var(--i) * var(--nest)); --rz: calc(var(--i) * var(--nestZ)); }
+.hero-booklet[data-phase="fold"] .hero-face.r { --rrot: calc(-168deg - var(--i) * var(--nest)); --rz: calc((var(--i) + 1) * 2.6px); }
 .hero-booklet[data-phase="rest"] .hero-deck { transform: translate(-51%,-50%) rotateX(12deg) rotateY(-24deg); }
 .hero-booklet[data-phase="rest"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
-.hero-booklet[data-phase="rest"] .hero-face.r { --rrot: calc(-169deg - var(--i) * var(--nest)); --rz: calc(var(--i) * var(--nestZ)); }
-.hero-booklet[data-phase="rest"] .hero-cover { opacity: 1; transform: translate3d(1px,-6px,-9px) rotateY(-2deg); }
+.hero-booklet[data-phase="rest"] .hero-face.r { --rrot: calc(-169deg - var(--i) * var(--nest)); --rz: calc((var(--i) + 1) * 2.6px); }
 .hero-booklet[data-phase="rest"] .hero-floor { transform: translate(-50%,-50%) scaleX(0.66); opacity: 0.7; }
+.hero-booklet[data-phase="fold"] .hero-cover, .hero-booklet[data-phase="rest"] .hero-cover { opacity: 1; }
 .hero-booklet[data-phase="fold"] .hero-hinge, .hero-booklet[data-phase="rest"] .hero-hinge { opacity: 0; }
 
 .hero-booklet.frozen .hero-deck, .hero-booklet.frozen .hero-leaf, .hero-booklet.frozen .hero-face.r,
