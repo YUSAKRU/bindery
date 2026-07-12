@@ -64,3 +64,10 @@ docs/
 
 # Local-only Play Store assets
 android/play-store-feature-graphic.png
+# Hcom files
+node_modules/
+.hcom-scaffold-backup/
+.hcom-scaffold.json
+notebook_index.json
+tester/
+patches/
