@@ -9,11 +9,11 @@
 <a name="-english"></a>
 ## English
 
-Bindery is a privacy-focused, **fully offline** PDF toolkit that runs entirely on your mobile device.
+Bindery is a privacy-focused PDF toolkit for Android. Every core tool — booklet making, merging, page management, watermarking — runs entirely on your device.
 
-### Why Offline / Privacy-Focused?
+### Why Privacy-Focused?
 
-The app manifest doesn't request the internet permission — every PDF operation (merging, page management, conversion) happens **entirely locally, on your device's CPU**. Your files never leave your device; nothing is uploaded to a server, and nothing is shared with any analytics or tracking service.
+Every operation on your existing files — merging, page management, conversion, booklet making — happens **entirely locally, on your device's CPU**. Your files never leave your device; nothing is uploaded to a server, and nothing is shared with any analytics or tracking service. The one feature that touches the network is optional: importing a PDF from a URL you provide. Everything else stays local — and since Bindery is open source, you can verify that yourself.
 
 ### Features
 
@@ -83,11 +83,11 @@ This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the ful
 <a name="-türkçe"></a>
 ## Türkçe
 
-Bindery, mobil cihazınızda çalışan, gizlilik odaklı, **tamamen çevrimdışı** bir PDF araç setidir.
+Bindery, Android için gizlilik odaklı bir PDF araç setidir. Kitapçık oluşturma, birleştirme, sayfa düzenleme, filigran gibi tüm çekirdek araçlar tamamen cihazınızda çalışır.
 
-### Neden Çevrimdışı / Gizlilik Odaklı?
+### Neden Gizlilik Odaklı?
 
-Uygulama manifestosu internet iznini talep etmez — tüm PDF işleme, birleştirme, sayfa düzenleme ve dönüştürme işlemleri **cihazınızın CPU'sunda, tamamen yerel olarak** gerçekleşir. Dosyalarınız hiçbir zaman cihazınızdan çıkmaz; hiçbir sunucuya yüklenmez, hiçbir analitik/izleme servisiyle paylaşılmaz.
+Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düzenleme, dönüştürme, kitapçık oluşturma — **cihazınızın CPU'sunda, tamamen yerel olarak** gerçekleşir. Dosyalarınız hiçbir zaman cihazınızdan çıkmaz; hiçbir sunucuya yüklenmez, hiçbir analitik/izleme servisiyle paylaşılmaz. Ağa dokunan tek özellik opsiyoneldir: verdiğiniz bir URL'den PDF içe aktarma. Geri kalan her şey yerelde kalır — ve Bindery açık kaynak olduğu için bunu kendiniz doğrulayabilirsiniz.
 
 ### Özellikler
 
