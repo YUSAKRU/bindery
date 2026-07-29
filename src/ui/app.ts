@@ -276,6 +276,7 @@ export function initApp(): void {
   );
 
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
+  const pickerSampleBtn = byId<HTMLButtonElement>('pickerSampleBtn');
   const fileCard = byId<HTMLDivElement>('fileCard');
   const fileNameLabel = byId<HTMLSpanElement>('fileNameLabel');
   const fileSizeLabel = byId<HTMLSpanElement>('fileSizeLabel');
@@ -1335,6 +1336,20 @@ export function initApp(): void {
         return;
       }
       loadBookletFile(picked.bytes, picked.name);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      goToError(t('error.fileSelectFailed'), message, 'picker');
+    }
+  });
+
+  pickerSampleBtn.addEventListener('click', async () => {
+    const lang = getLanguage();
+    try {
+      const response = await fetch(`onboarding/quick-start-${lang}.pdf`);
+      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      const name = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
+      loadBookletFile(bytes, name);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
@@ -6197,9 +6212,26 @@ export function initApp(): void {
     onboardingOverlay.classList.remove('hidden');
   }
 
+  function seedQuickStartFile(): void {
+    void (async () => {
+      const lang = getLanguage();
+      const filename = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
+      try {
+        if (await pathExists(filename)) return;
+        const response = await fetch(`onboarding/quick-start-${lang}.pdf`);
+        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        await savePdfPrivately(bytes, filename);
+      } catch (e) {
+        console.warn('Quick-start seed file could not be added:', e);
+      }
+    })();
+  }
+
   function finishOnboarding(): void {
     localStorage.setItem('bindery.onboarded', 'true');
     onboardingOverlay.classList.add('hidden');
+    seedQuickStartFile();
     // hub is now actually visible for the first time → play the brand intro
     requestHeroIntro();
   }

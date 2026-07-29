@@ -117,6 +117,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'picker.title': 'Create your booklet',
     'picker.subtitle': 'Pick a PDF and Bindery will turn it into a printable booklet.',
+    'picker.trySample': 'Try with sample content',
 
     'merge.title': 'Merge PDFs',
     'merge.subtitle': 'Add at least two PDFs, set their order, and combine them into one file.',
@@ -535,6 +536,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'picker.title': 'Kitapçığını oluştur',
     'picker.subtitle': 'Bir PDF seç, Bindery onu basılabilir bir kitapçığa dönüştürsün.',
+    'picker.trySample': 'Örnek içerikle dene',
 
     'merge.title': "PDF'leri birleştir",
     'merge.subtitle': 'En az iki PDF ekle, sırasını ayarla ve tek dosyada birleştir.',
