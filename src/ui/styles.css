@@ -2150,6 +2150,17 @@ body {
   background: rgba(var(--color-primary-rgb), 0.1);
 }
 
+.modal-source-btn--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
+.modal-source-btn--primary .modal-radio-desc {
+  color: var(--color-on-primary-container);
+  opacity: 0.85;
+}
+
 .modal-hint {
   font-size: 0.75rem;
   color: var(--color-on-surface-variant);
