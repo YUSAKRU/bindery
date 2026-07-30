@@ -11,9 +11,9 @@ if (localPropertiesFile.exists()) {
 android {
     signingConfigs {
         release {
-            storeFile file("my-release-key.jks")
+            storeFile file(localProperties['release.keystore.path'] ?: "my-release-key.jks")
             storePassword localProperties['release.keystore.password']
-            keyAlias "my-key-alias"
+            keyAlias localProperties['release.key.alias'] ?: "upload"
             keyPassword localProperties['release.key.password']
         }
     }
