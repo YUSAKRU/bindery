@@ -81,6 +81,17 @@ android-deploy
 - APK deploy: ~4-5 seconds
 - The app will launch automatically on the device
 
+### Codebase Memory (MCP)
+
+`codebase-memory-mcp` is installed globally (`~/.claude/.mcp.json`, `~/.claude.json`) — available in every Claude Code session, not just this project. General tool usage guide lives in `~/.claude/skills/codebase-memory/SKILL.md`. If the `mcp__codebase-memory-mcp__*` tools show as deferred, load them with `ToolSearch("select:mcp__codebase-memory-mcp__search_graph,...")` first.
+
+- This project's indexed name: `home-ruveys-Desktop-projects-bindery`
+- Architecture (from `get_architecture`): `ui` is the entry layer (outbound calls only); `engine`, `native`, `i18n` are core layers (high fan-in, zero fan-out)
+- Hotspots to be careful editing: `validatePdf` (13+ direct callers — merge/booklet/rotate/watermark/page-numbers/reader all depend on it), `makeBooklet` (calls into 15 functions directly), `t` (i18n, fan-in 38)
+- The booklet-engine cluster (`makeBooklet`, `resolveSheetSize`, `computeSignatureMappings`, ...) has the highest cohesion (0.82) in the codebase — treat it as one tightly-coupled unit when refactoring
+- Before editing a shared function, run `trace_path(function_name=..., direction="both", risk_labels=true)` to see blast radius; run `detect_changes` after editing to map the diff to affected symbols
+- **Dead-code false positives**: `search_graph(max_degree=0)` flags functions with no `CALLS` edges, but event-listener callbacks (`addEventListener(..., handler)`), object/config property references (e.g. `{ manualChunks }`), and mock object methods never create `CALLS` edges either. Always cross-check with grep before deleting anything it flags.
+
 ---
 
 <a name="-türkçe"></a>
@@ -157,3 +168,14 @@ android-deploy
 - Gradle build: ~1-2 saniye
 - APK deploy: ~4-5 saniye
 - App otomatik olarak cihazda başlayacak
+
+### Kod Hafızası (MCP)
+
+`codebase-memory-mcp` global olarak kurulu (`~/.claude/.mcp.json`, `~/.claude.json`) — sadece bu projede değil, tüm Claude Code oturumlarında mevcut. Genel kullanım rehberi `~/.claude/skills/codebase-memory/SKILL.md` içinde global olarak yazılı. `mcp__codebase-memory-mcp__*` araçları deferred görünüyorsa önce `ToolSearch("select:mcp__codebase-memory-mcp__search_graph,...")` ile yükle.
+
+- Bu projenin grafikte indexli adı: `home-ruveys-Desktop-projects-bindery`
+- Mimari (`get_architecture`'dan): `ui` sadece dışa çağrı yapan giriş katmanı; `engine`, `native`, `i18n` yüksek fan-in / sıfır fan-out'lu çekirdek katmanlar
+- Dikkatli düzenlenmesi gereken hotspot'lar: `validatePdf` (13+ doğrudan çağıran — merge/booklet/rotate/watermark/page-numbers/reader hepsi buna bağlı), `makeBooklet` (doğrudan 15 fonksiyonu çağırıyor), `t` (i18n, fan-in 38)
+- Booklet-engine cluster'ı (`makeBooklet`, `resolveSheetSize`, `computeSignatureMappings`, ...) kod tabanındaki en yüksek uyuma (0.82) sahip — refactor yaparken tek bir sıkı bağlı birim olarak ele al
+- Paylaşılan bir fonksiyonu düzenlemeden önce `trace_path(function_name=..., direction="both", risk_labels=true)` ile etki alanını gör; düzenledikten sonra `detect_changes` ile diff'in hangi sembolleri etkilediğini kontrol et
+- **Dead-code yanlış pozitifleri**: `search_graph(max_degree=0)` hiç `CALLS` edge'i olmayan fonksiyonları işaretliyor, ama event-listener callback'leri (`addEventListener(..., handler)`), obje/config property referansları (örn. `{ manualChunks }`) ve mock obje metotları da `CALLS` edge'i oluşturmuyor. İşaretlenen hiçbir şeyi grep ile çapraz doğrulamadan silme.
