@@ -18,21 +18,39 @@ export class FileTooLargeError extends Error {
   }
 }
 
+// Multiple of 3 so every chunk but the last encodes to a padding-free base64
+// run — btoa() on a non-multiple-of-3 chunk emits '=' padding, which corrupts
+// the output if it lands in the middle of the concatenated string.
+const ENCODE_CHUNK_BYTES = 0x8000 - (0x8000 % 3);
+
 function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  let base64 = '';
+  for (let i = 0; i < bytes.length; i += ENCODE_CHUNK_BYTES) {
+    const chunk = bytes.subarray(i, i + ENCODE_CHUNK_BYTES);
+    let binary = '';
+    for (let j = 0; j < chunk.length; j++) {
+      binary += String.fromCharCode(chunk[j]);
+    }
+    base64 += btoa(binary);
   }
-  return btoa(binary);
+  return base64;
 }
+
+// Multiple of 4 so every slice is independently valid base64 for atob() —
+// splitting mid-group would misalign the decoded bytes.
+const DECODE_CHUNK_CHARS = 0x8000 - (0x8000 % 4);
 
 function base64ToBytes(base64: string): Uint8Array {
   const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
-  const binary = atob(cleaned);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  const paddingLength = cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0;
+  const bytes = new Uint8Array((cleaned.length / 4) * 3 - paddingLength);
+
+  let offset = 0;
+  for (let i = 0; i < cleaned.length; i += DECODE_CHUNK_CHARS) {
+    const binary = atob(cleaned.slice(i, i + DECODE_CHUNK_CHARS));
+    for (let j = 0; j < binary.length; j++) {
+      bytes[offset++] = binary.charCodeAt(j);
+    }
   }
   return bytes;
 }
@@ -173,6 +191,20 @@ export interface FileEntryInfo {
   type: 'file' | 'directory';
 }
 
+// Android: IONFILEExceptions.DoesNotExist -> FilesystemErrors.doesNotExist(), which
+// the native-bridge copies onto the rejected Error as `.code` (see
+// @capacitor/filesystem/android FilesystemErrors.kt and @capacitor/android
+// native-bridge.js's `storedCall.reject(result.error)` path). Web has no plugin bridge
+// and throws a plain `Error('Folder does not exist.')` with no `.code` at all — matched
+// by message as a fallback for that platform.
+const MISSING_DIRECTORY_CODE = 'OS-PLUG-FILE-0008';
+
+function isMissingDirectoryError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if ((error as { code?: unknown }).code === MISSING_DIRECTORY_CODE) return true;
+  return /does not exist/i.test(error.message);
+}
+
 /** Lists all files and folders in a specific subdirectory relative to Directory.Data. */
 export async function listPrivateFolder(subPath: string): Promise<FileEntryInfo[]> {
   try {
@@ -181,31 +213,17 @@ export async function listPrivateFolder(subPath: string): Promise<FileEntryInfo[
       directory: Directory.Data,
     });
 
-    const list: FileEntryInfo[] = await Promise.all(
-      result.files.map(async (file) => {
-        const filePath = subPath ? `${subPath}/${file.name}` : file.name;
-
-        const uriPromise = Filesystem.getUri({ path: filePath, directory: Directory.Data });
-        const statPromise =
-          file.type === 'file'
-            ? Filesystem.stat({ path: filePath, directory: Directory.Data }).catch(() => null)
-            : Promise.resolve(null);
-
-        const [uriResult, stat] = await Promise.all([uriPromise, statPromise]);
-
-        return {
-          name: file.name,
-          uri: uriResult.uri,
-          size: stat?.size ?? 0,
-          lastModified: stat?.mtime ?? Date.now(),
-          type: file.type === 'directory' ? 'directory' as const : 'file' as const,
-        };
-      }),
-    );
-
-    return list;
+    // Filesystem.readdir already returns name/type/size/mtime/uri per entry (Capacitor
+    // 8), so no per-file getUri/stat round trips are needed here.
+    return result.files.map((file) => ({
+      name: file.name,
+      uri: file.uri,
+      size: file.size,
+      lastModified: file.mtime,
+      type: file.type === 'directory' ? ('directory' as const) : ('file' as const),
+    }));
   } catch (error) {
-    // Only auto-create if this looks like a first-run (directory not found)
+    if (!isMissingDirectoryError(error)) throw error;
     try {
       await Filesystem.mkdir({ path: subPath, directory: Directory.Data, recursive: true });
       return [];  // legitimately empty new folder
