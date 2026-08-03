@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BookletError } from './types';
-import { getHomographyMatrix } from './perspective-warp';
+import { getHomographyMatrix, warpPerspective } from './perspective-warp';
 
 describe('Perspective Warp Math', () => {
   it('calculates the correct homography matrix for simple translation', () => {
@@ -56,8 +56,45 @@ describe('Perspective Warp Math', () => {
     const rect = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }];
     expect(() => getHomographyMatrix(collinear, rect)).toThrow(BookletError);
   });
+});
 
-  // NOTE: warpPerspective's full WebGL render path (document.createElement, canvas.getContext)
-  // is browser-only and cannot run under vitest/node. Error paths and math helpers are
-  // covered above; the render path requires an integration/e2e test in a browser environment.
+describe('warpPerspective Resource Management & Bounds Check', () => {
+  it('revokes blob URL even when image loading fails', async () => {
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+
+    class MockImage {
+      onload: (() => void) | null = null;
+      onerror: ((e: any) => void) | null = null;
+      _src = '';
+      set src(val: string) {
+        this._src = val;
+        setTimeout(() => this.onerror && this.onerror(new Error('Load error')), 0);
+      }
+      get src() {
+        return this._src;
+      }
+    }
+
+    vi.stubGlobal('Image', MockImage);
+
+    const corners = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 10 }, { x: 10, y: 10 }];
+    await expect(warpPerspective(new Uint8Array([1, 2, 3]), corners)).rejects.toThrow(/Görsel yüklenemedi/i);
+
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test');
+
+    vi.unstubAllGlobals();
+    revokeObjectURLSpy.mockRestore();
+    createObjectURLSpy.mockRestore();
+  });
+
+  // NOTE: warpPerspective's WebGL render path (getContext('webgl'), texImage2D,
+  // MAX_TEXTURE_SIZE downscaling, resource cleanup) cannot be meaningfully unit
+  // tested here — vitest runs in Node with no GPU. A hand-rolled mock GL object
+  // only asserts that we call the methods the mock was built to expect, which
+  // proves nothing about real driver behaviour and silently passes even when the
+  // real upload fails. The test above is kept because it exercises real control
+  // flow (the try/finally around image loading) with a minimal Image stub.
+  // Everything else here needs a device: see docs/TODO.md, "cihazda test edilmesi
+  // gerekenler".
 });

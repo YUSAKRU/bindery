@@ -156,12 +156,15 @@ export async function warpPerspective(
   const blob = new Blob([imgBytes as any]);
   const imgUrl = URL.createObjectURL(blob);
   const img = new Image();
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = (e) => reject(new Error('Görsel yüklenemedi: ' + String(e)));
-    img.src = imgUrl;
-  });
-  URL.revokeObjectURL(imgUrl);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = (e) => reject(new Error('Görsel yüklenemedi: ' + String(e)));
+      img.src = imgUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(imgUrl);
+  }
 
   const srcWidth = img.naturalWidth;
   const srcHeight = img.naturalHeight;
@@ -176,12 +179,18 @@ export async function warpPerspective(
     throw new BookletError('Cihazınız WebGL grafik hızlandırmasını desteklemiyor.');
   }
 
+  let vs: WebGLShader | null = null;
+  let fs: WebGLShader | null = null;
+  let program: WebGLProgram | null = null;
+  let positionBuffer: WebGLBuffer | null = null;
+  let texture: WebGLTexture | null = null;
+
   try {
     // 3. Compile Shaders and link program
-    const vs = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SRC);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
+    vs = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SRC);
+    fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
 
-    const program = gl.createProgram();
+    program = gl.createProgram();
     if (!program) throw new Error('WebGL programı oluşturulamadı.');
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
@@ -194,7 +203,7 @@ export async function warpPerspective(
 
     // 4. Setup geometry (fullscreen quad)
     const positionLocation = gl.getAttribLocation(program, 'a_position');
-    const positionBuffer = gl.createBuffer();
+    positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -212,7 +221,37 @@ export async function warpPerspective(
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
     // 5. Setup Texture
-    const texture = gl.createTexture();
+    //
+    // A phone camera routinely produces images larger than a low-end device's
+    // MAX_TEXTURE_SIZE (2048 on older Android, vs 4000x3000 for a 12MP shot).
+    // texImage2D fails silently in that case: the shader samples an incomplete
+    // texture and the user gets a fully black page with no error at all. So
+    // downscale into an intermediate 2D canvas whenever the source exceeds the
+    // limit, preserving aspect ratio.
+    //
+    // This is transparent to the shader and must stay that way: the fragment
+    // shader normalises with `uv / u_srcSize`, where `uv` is in ORIGINAL image
+    // pixel coordinates (the homography maps dest -> src using the user's
+    // `corners`, which are themselves in original-image pixels). Texture
+    // sampling is in normalised [0,1] space regardless of the texture's actual
+    // pixel dimensions, so u_srcSize MUST keep the original srcWidth/srcHeight
+    // below — do not "fix" it to match the downscaled canvas.
+    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    let texSource: TexImageSource = img;
+    if (srcWidth > maxTextureSize || srcHeight > maxTextureSize) {
+      const fit = maxTextureSize / Math.max(srcWidth, srcHeight);
+      const scaled = document.createElement('canvas');
+      scaled.width = Math.max(1, Math.floor(srcWidth * fit));
+      scaled.height = Math.max(1, Math.floor(srcHeight * fit));
+      const scaledCtx = scaled.getContext('2d');
+      if (!scaledCtx) {
+        throw new BookletError('Görsel ölçeklendirilemedi: 2D canvas bağlamı alınamadı.');
+      }
+      scaledCtx.drawImage(img, 0, 0, scaled.width, scaled.height);
+      texSource = scaled;
+    }
+
+    texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0); // Do not flip texture Y axis to match HTML-style Y coordinates
 
@@ -221,7 +260,15 @@ export async function warpPerspective(
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texSource);
+
+    // texImage2D reports failure only through the error queue. Without this the
+    // upload can fail and rendering carries on against an incomplete texture,
+    // producing a black page that looks like a successful conversion.
+    const uploadError = gl.getError();
+    if (uploadError !== gl.NO_ERROR) {
+      throw new BookletError(`Görsel GPU'ya yüklenemedi (WebGL hata kodu: ${uploadError}).`);
+    }
 
     // 6. Calculate Homography Matrix
     // Target corners correspond to standard rectangular A4 corners (in top-left starting order)
@@ -256,14 +303,6 @@ export async function warpPerspective(
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    // Clean up WebGL resources
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.deleteTexture(texture);
-    gl.deleteBuffer(positionBuffer);
-    gl.deleteProgram(program);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-
     // 9. Convert Canvas to raw byte array (JPEG format at 90% quality)
     return await new Promise<Uint8Array>((resolve, reject) => {
       canvas.toBlob(
@@ -280,7 +319,31 @@ export async function warpPerspective(
       );
     });
   } catch (error) {
+    if (error instanceof BookletError) {
+      throw error;
+    }
     const msg = error instanceof Error ? error.message : String(error);
     throw new BookletError(`Perspektif dönüşüm hatası: ${msg}`);
+  } finally {
+    if (texture) {
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.deleteTexture(texture);
+    }
+    if (positionBuffer) {
+      gl.deleteBuffer(positionBuffer);
+    }
+    if (program) {
+      gl.deleteProgram(program);
+    }
+    if (vs) {
+      gl.deleteShader(vs);
+    }
+    if (fs) {
+      gl.deleteShader(fs);
+    }
+    const loseContext = gl.getExtension('WEBGL_lose_context');
+    if (loseContext) {
+      loseContext.loseContext();
+    }
   }
 }
