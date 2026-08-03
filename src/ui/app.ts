@@ -116,6 +116,21 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+/**
+ * Resolves a caught error to user-facing, localized text. Engine failures carry a
+ * `code` translated via `t('error.' + code, params)`; anything else (native plugin
+ * errors, unexpected throws) falls back to its own message. `t()` itself falls back
+ * to `en` and then the raw key, so `error.message` is preferred over a bare key if
+ * a translation is ever missing.
+ */
+function errorText(error: unknown): string {
+  if (error instanceof BookletError) {
+    const translated = t(`error.${error.code}`, error.params);
+    return translated === `error.${error.code}` ? error.message : translated;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 // Values are i18n keys, resolved via t() in showScreen().
 const SCREEN_TITLES: Record<ScreenId, string> = {
   hub: 'screenTitle.brand',
@@ -1344,7 +1359,7 @@ export function initApp(): void {
       }
       loadBookletFile(picked.bytes, picked.name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
     }
   });
@@ -1358,7 +1373,7 @@ export function initApp(): void {
       const name = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
       loadBookletFile(bytes, name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
     }
   });
@@ -1705,12 +1720,7 @@ export function initApp(): void {
       showScreen('result');
       void renderBookletPreviews();
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.bookletCreateFailed'), message, 'config');
     } finally {
       generateBtn.disabled = false;
@@ -1796,7 +1806,7 @@ export function initApp(): void {
         await sharePdf(bytes, filename, `${label} PDF`);
         actionStatus.textContent = t('status.booklet.shared', { label });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorText(error);
         actionStatus.textContent = t('status.booklet.actionFailed', { label, message });
       }
     });
@@ -1861,7 +1871,7 @@ export function initApp(): void {
       refreshSaveLabel();
       bookletGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       actionStatus.textContent = t('status.saveFailed', { message });
       bookletSaveState = 'idle';
       bookletSaveBtn.disabled = false;
@@ -1966,7 +1976,7 @@ export function initApp(): void {
         return;
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       showToast(t('toast.fileSelectError', { message }));
       return;
     }
@@ -1977,7 +1987,7 @@ export function initApp(): void {
         await validatePdf(file.bytes);
         mergeFiles.push(file);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorText(error);
         rejected.push(`${file.name}: ${message}`);
       }
     }
@@ -2007,12 +2017,7 @@ export function initApp(): void {
       mergeGoToLocationBtn.classList.add('hidden');
       showScreen('merge-result');
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.mergeFailed'), message, 'merge-picker');
     } finally {
       mergeRunBtn.disabled = mergeFiles.length < 2;
@@ -2059,7 +2064,7 @@ export function initApp(): void {
       mergeSaveBtnLabel.textContent = t('common.saved');
       mergeGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       mergeActionStatus.textContent = t('status.saveFailed', { message });
       mergeSaveState = 'idle';
       mergeSaveBtn.disabled = false;
@@ -2080,7 +2085,7 @@ export function initApp(): void {
       await sharePdf(mergedPdf, 'merged.pdf', t('merge.mergedPdf'));
       mergeActionStatus.textContent = t('status.shared');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       mergeActionStatus.textContent = t('status.shareFailed', { message });
     }
   });
@@ -2223,7 +2228,7 @@ export function initApp(): void {
       }
       await loadOrganizeFile(picked.bytes, picked.name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'organize');
     }
   });
@@ -2248,12 +2253,7 @@ export function initApp(): void {
       organizeGoToLocationBtn.classList.add('hidden');
       showScreen('organize-result');
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.applyFailed'), message, 'organize');
     } finally {
       organizeApplyBtn.disabled = organizePageOrder.length === 0;
@@ -2300,7 +2300,7 @@ export function initApp(): void {
       organizeSaveBtnLabel.textContent = t('common.saved');
       organizeGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       organizeActionStatus.textContent = t('status.saveFailed', { message });
       organizeSaveState = 'idle';
       organizeSaveBtn.disabled = false;
@@ -2326,7 +2326,7 @@ export function initApp(): void {
       await sharePdf(organizeResultPdf, filename, t('organize.editedPdf'));
       organizeActionStatus.textContent = t('status.shared');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       organizeActionStatus.textContent = t('status.shareFailed', { message });
     }
   });
@@ -2454,7 +2454,7 @@ export function initApp(): void {
       }
       await loadRotateFile(picked.bytes, picked.name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'rotate');
     }
   });
@@ -2483,12 +2483,7 @@ export function initApp(): void {
       rotateGoToLocationBtn.classList.add('hidden');
       showScreen('rotate-result');
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.applyFailed'), message, 'rotate');
     } finally {
       rotateApplyBtn.disabled = rotateAngles.length === 0;
@@ -2535,7 +2530,7 @@ export function initApp(): void {
       rotateSaveBtnLabel.textContent = t('common.saved');
       rotateGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       rotateActionStatus.textContent = t('status.saveFailed', { message });
       rotateSaveState = 'idle';
       rotateSaveBtn.disabled = false;
@@ -2561,7 +2556,7 @@ export function initApp(): void {
       await sharePdf(rotateResultPdf, filename, t('rotate.rotatedPdf'));
       rotateActionStatus.textContent = t('status.shared');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       rotateActionStatus.textContent = t('status.shareFailed', { message });
     }
   });
@@ -2640,7 +2635,7 @@ export function initApp(): void {
       }
       await loadPageNumbersFile(picked.bytes, picked.name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'page-numbers');
     }
   });
@@ -2691,12 +2686,7 @@ export function initApp(): void {
       pageNumbersGoToLocationBtn.classList.add('hidden');
       showScreen('page-numbers-result');
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.applyFailed'), message, 'page-numbers');
     } finally {
       pageNumbersApplyBtn.disabled = false;
@@ -2743,7 +2733,7 @@ export function initApp(): void {
       pageNumbersSaveBtnLabel.textContent = t('common.saved');
       pageNumbersGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       pageNumbersActionStatus.textContent = t('status.saveFailed', { message });
       pageNumbersSaveState = 'idle';
       pageNumbersSaveBtn.disabled = false;
@@ -2769,7 +2759,7 @@ export function initApp(): void {
       await sharePdf(pageNumbersResultPdf, filename, t('pageNumbers.numberedPdf'));
       pageNumbersActionStatus.textContent = t('status.shared');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       pageNumbersActionStatus.textContent = t('status.shareFailed', { message });
     }
   });
@@ -2858,7 +2848,7 @@ export function initApp(): void {
       }
       await loadWatermarkFile(picked.bytes, picked.name);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'watermark');
     }
   });
@@ -2886,7 +2876,7 @@ export function initApp(): void {
       watermarkOverlayImage.src = URL.createObjectURL(new Blob([new Uint8Array(picked.bytes)]));
       renderWatermarkPreview();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       watermarkImageStatus.textContent = t('watermark.imageSelectError', { message });
     }
   });
@@ -2950,12 +2940,7 @@ export function initApp(): void {
       watermarkGoToLocationBtn.classList.add('hidden');
       showScreen('watermark-result');
     } catch (error) {
-      const message =
-        error instanceof BookletError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const message = errorText(error);
       goToError(t('error.applyFailed'), message, 'watermark');
     } finally {
       watermarkApplyBtn.disabled = false;
@@ -3002,7 +2987,7 @@ export function initApp(): void {
       watermarkSaveBtnLabel.textContent = t('common.saved');
       watermarkGoToLocationBtn.classList.remove('hidden');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       watermarkActionStatus.textContent = t('status.saveFailed', { message });
       watermarkSaveState = 'idle';
       watermarkSaveBtn.disabled = false;
@@ -3028,7 +3013,7 @@ export function initApp(): void {
       await sharePdf(watermarkResultPdf, filename, t('watermark.watermarkedPdf'));
       watermarkActionStatus.textContent = t('status.shared');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       watermarkActionStatus.textContent = t('status.shareFailed', { message });
     }
   });
@@ -3177,7 +3162,7 @@ export function initApp(): void {
 
       startCropFlow(bytes, name, format);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = errorText(error);
       if (msg.includes('cancelled') || msg.includes('cancel')) {
         return;
       }
@@ -3213,7 +3198,7 @@ export function initApp(): void {
 
       await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfCreateFailed'), message, 'image-to-pdf');
     } finally {
       imgGenerateBtn.disabled = false;
@@ -3512,7 +3497,7 @@ export function initApp(): void {
       cropQueue.shift();
       void processNextCrop();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = errorText(error);
       goToError(t('error.perspectiveFailed'), msg, 'crop');
     } finally {
       cropApplyBtn.disabled = false;
@@ -4064,7 +4049,7 @@ export function initApp(): void {
       }
       await recordOpened({ uri: sourceUri, name });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
     } finally {
       isOpeningReader = false;
@@ -4441,7 +4426,7 @@ export function initApp(): void {
           break;
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'reader');
     }
   }
@@ -5269,7 +5254,7 @@ export function initApp(): void {
       const file = await readPdfFromUri(picked.uri);
       await openReaderWithBytes(file.bytes, file.name, picked.persistent ? picked.uri : null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'hub');
     }
   });
@@ -5412,7 +5397,7 @@ export function initApp(): void {
       closeModal(saveDocModal);
       void renderHubRecentsGrid();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       showToast(t('toast.saveError', { message }));
     } finally {
       saveDocConfirmBtn.disabled = false;
@@ -5426,7 +5411,7 @@ export function initApp(): void {
     try {
       await sharePdf(readerBytes, readerName, t('reader.shareDocument'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       showToast(t('toast.shareErrorDetailed', { message }));
     }
   });
@@ -6078,7 +6063,7 @@ export function initApp(): void {
       await openReaderWithBytes(bytes, filename, savedUri, 'files', 1, targetPath);
       void renderFilesList();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       showToast(t('toast.downloadFailed', { message }));
     } finally {
       downloadPdfConfirmBtn.disabled = false;
@@ -6352,7 +6337,7 @@ export function initApp(): void {
         const picked = await readPdfFromUri(url);
         await openReaderWithBytes(picked.bytes, picked.name, url);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorText(error);
         goToError(t('error.pdfOpenFailed'), message, 'hub');
       }
     })();

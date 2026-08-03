@@ -12,14 +12,16 @@ export async function rotatePages(inputBytes: Uint8Array, angles: number[]): Pro
   const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (angles.length !== pageCount) {
-    throw new BookletError('Sayfa sayısı uyuşmuyor.');
+    throw new BookletError('ROTATE_PAGE_COUNT_MISMATCH', undefined, 'Page count does not match.');
   }
 
   const validAngles = new Set([0, 90, 180, 270]);
   for (const angle of angles) {
     if (!validAngles.has(angle)) {
       throw new BookletError(
-        `Geçersiz döndürme açısı: ${angle}. Sadece 0, 90, 180 ve 270 kabul edilir.`,
+        'ROTATE_INVALID_ANGLE',
+        { angle },
+        `Invalid rotation angle: ${angle}. Only 0, 90, 180, and 270 are accepted.`,
       );
     }
   }

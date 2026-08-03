@@ -26,14 +26,18 @@ export async function loadAndValidatePdf(bytes: Uint8Array): Promise<ValidatedPd
     // checks fail at runtime. Check both instanceof and the message string as a fallback.
     const message = error instanceof Error ? error.message : String(error);
     if (error instanceof EncryptedPDFError || message.includes('is encrypted')) {
-      throw new PDFEncryptedError('The PDF file is encrypted or DRM-protected.');
+      throw new PDFEncryptedError('PDF_ENCRYPTED', undefined, 'The PDF file is encrypted or DRM-protected.');
     }
-    throw new PDFCorruptedError(`PDF file is corrupted or could not be read: ${message}`);
+    throw new PDFCorruptedError(
+      'PDF_CORRUPTED',
+      { message },
+      `PDF file is corrupted or could not be read: ${message}`,
+    );
   }
 
   const pageCount = doc.getPageCount();
   if (pageCount === 0) {
-    throw new InvalidPDFPageError('The PDF file contains no pages.');
+    throw new InvalidPDFPageError('PDF_NO_PAGES', undefined, 'The PDF file contains no pages.');
   }
 
   const pageSizes: Array<[number, number]> = doc.getPages().map((page) => {

@@ -35,7 +35,11 @@ function solve8x8(M: number[][], v: number[]): number[] {
 
     const pivot = mat[i][i];
     if (Math.abs(pivot) < 1e-8) {
-      throw new BookletError('Doğrusal bağımlı noktalar nedeniyle matris çözülemedi.');
+      throw new BookletError(
+        'PERSPECTIVE_SINGULAR_MATRIX',
+        undefined,
+        'Could not solve the transform matrix due to collinear points.',
+      );
     }
 
     // Eliminate below and above (reduced row echelon form)
@@ -63,7 +67,11 @@ function solve8x8(M: number[][], v: number[]): number[] {
  */
 export function getHomographyMatrix(src: Point[], dst: Point[]): number[] {
   if (src.length !== 4 || dst.length !== 4) {
-    throw new BookletError('Perspektif dönüşümü için tam olarak 4 köşe noktası gereklidir.');
+    throw new BookletError(
+      'PERSPECTIVE_NEED_4_CORNERS',
+      undefined,
+      'Exactly 4 corner points are required for the perspective transform.',
+    );
   }
 
   const M: number[][] = [];
@@ -176,7 +184,11 @@ export async function warpPerspective(
 
   const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
   if (!gl) {
-    throw new BookletError('Cihazınız WebGL grafik hızlandırmasını desteklemiyor.');
+    throw new BookletError(
+      'PERSPECTIVE_NO_WEBGL',
+      undefined,
+      'Your device does not support WebGL graphics acceleration.',
+    );
   }
 
   let vs: WebGLShader | null = null;
@@ -245,7 +257,11 @@ export async function warpPerspective(
       scaled.height = Math.max(1, Math.floor(srcHeight * fit));
       const scaledCtx = scaled.getContext('2d');
       if (!scaledCtx) {
-        throw new BookletError('Görsel ölçeklendirilemedi: 2D canvas bağlamı alınamadı.');
+        throw new BookletError(
+          'PERSPECTIVE_CANVAS_CONTEXT_FAILED',
+          undefined,
+          'Could not scale the image: failed to get 2D canvas context.',
+        );
       }
       scaledCtx.drawImage(img, 0, 0, scaled.width, scaled.height);
       texSource = scaled;
@@ -267,7 +283,11 @@ export async function warpPerspective(
     // producing a black page that looks like a successful conversion.
     const uploadError = gl.getError();
     if (uploadError !== gl.NO_ERROR) {
-      throw new BookletError(`Görsel GPU'ya yüklenemedi (WebGL hata kodu: ${uploadError}).`);
+      throw new BookletError(
+        'PERSPECTIVE_GPU_UPLOAD_FAILED',
+        { code: uploadError },
+        `Could not upload the image to the GPU (WebGL error code: ${uploadError}).`,
+      );
     }
 
     // 6. Calculate Homography Matrix
@@ -323,7 +343,11 @@ export async function warpPerspective(
       throw error;
     }
     const msg = error instanceof Error ? error.message : String(error);
-    throw new BookletError(`Perspektif dönüşüm hatası: ${msg}`);
+    throw new BookletError(
+      'PERSPECTIVE_TRANSFORM_FAILED',
+      { message: msg },
+      `Perspective transform error: ${msg}`,
+    );
   } finally {
     if (texture) {
       gl.bindTexture(gl.TEXTURE_2D, null);

@@ -18,13 +18,16 @@ export async function organizePages(inputBytes: Uint8Array, pageOrder: number[])
   const { doc: srcDoc, metadata: { pageCount: originalPageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (pageOrder.length === 0) {
-    throw new BookletError('En az 1 sayfa kalmalı.');
+    throw new BookletError('ORGANIZE_MIN_PAGES', undefined, 'At least 1 page must remain.');
   }
 
   for (const idx of pageOrder) {
     if (!Number.isInteger(idx) || idx < 0 || idx >= originalPageCount) {
+      const max = originalPageCount - 1;
       throw new BookletError(
-        `Geçersiz sayfa indeksi: ${idx}. 0 ile ${originalPageCount - 1} arasında olmalı.`,
+        'ORGANIZE_INVALID_PAGE_INDEX',
+        { index: idx, max },
+        `Invalid page index: ${idx}. Must be between 0 and ${max}.`,
       );
     }
   }

@@ -45,7 +45,8 @@ describe('imagesToPdf', () => {
     const badInput = [{ bytes: pngBytes, format: 'webp' as 'png' }];
     const error = await imagesToPdf(badInput).catch((e) => e);
     expect(error).toBeInstanceOf(BookletError);
-    // Must not be re-wrapped: the original BookletError should surface directly
-    expect(error.message).toContain('Desteklenmeyen görsel formatı');
+    // Must not be re-wrapped as IMAGE_TO_PDF_CONVERT_FAILED: the original
+    // BookletError's own code should surface directly.
+    expect(error.code).toBe('IMAGE_TO_PDF_UNSUPPORTED_FORMAT');
   });
 });

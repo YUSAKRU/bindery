@@ -1,4 +1,19 @@
-export class BookletError extends Error {}
+/**
+ * A `code` identifies the failure for i18n lookup at the UI boundary
+ * (`t('error.' + code, params)`); `message` is a readable English fallback
+ * for developers (console/stack traces, or a key with no translation) and
+ * must never be shown to a user verbatim as the code alone.
+ */
+export class BookletError extends Error {
+  readonly code: string;
+  readonly params?: Record<string, string | number>;
+
+  constructor(code: string, params?: Record<string, string | number>, message?: string) {
+    super(message ?? code);
+    this.code = code;
+    this.params = params;
+  }
+}
 export class PDFCorruptedError extends BookletError {}
 export class PDFEncryptedError extends BookletError {}
 export class InvalidPDFPageError extends BookletError {}

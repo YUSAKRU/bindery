@@ -20,7 +20,7 @@ export interface MergeResult {
  */
 export async function mergePdfs(inputs: MergeInput[]): Promise<MergeResult> {
   if (inputs.length < 2) {
-    throw new BookletError('En az 2 PDF seçmelisiniz.');
+    throw new BookletError('MERGE_MIN_FILES', undefined, 'You must select at least 2 PDFs.');
   }
 
   const mergedDoc = await PDFDocument.create();

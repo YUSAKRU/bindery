@@ -11,6 +11,31 @@ import {
   resolveSignatureSize,
   signatureStartPages,
 } from './booklet-engine';
+import { BookletError } from './types';
+
+/** Asserts a synchronous throw is a BookletError carrying the given code. */
+function expectThrowsCode(fn: () => unknown, code: string): void {
+  let error: unknown;
+  try {
+    fn();
+  } catch (err) {
+    error = err;
+  }
+  expect(error).toBeInstanceOf(BookletError);
+  expect((error as BookletError).code).toBe(code);
+}
+
+/** Asserts a promise rejects with a BookletError carrying the given code. */
+async function expectRejectsCode(promise: Promise<unknown>, code: string): Promise<void> {
+  const error = await promise.then(
+    () => {
+      throw new Error('expected promise to reject, but it resolved');
+    },
+    (err: unknown) => err,
+  );
+  expect(error).toBeInstanceOf(BookletError);
+  expect((error as BookletError).code).toBe(code);
+}
 
 /**
  * Extracts the visible text of a generated PDF by decoding the hex string tokens
@@ -337,9 +362,10 @@ describe('makeBooklet flipEdge', () => {
 
   it('rejects an invalid flipEdge value with a BookletError', async () => {
     const input = await buildTestPdf(8);
-    await expect(
+    await expectRejectsCode(
       makeBooklet(input, { flipEdge: 'diagonal' } as unknown as BookletOptions),
-    ).rejects.toThrow(/çevirme kenarı/i);
+      'BOOKLET_INVALID_FLIP_EDGE',
+    );
   });
 });
 
@@ -361,11 +387,11 @@ describe('resolveSheetSize', () => {
   it("throws when 'source' sheet dimensions are out of bounds", async () => {
     // 2 * 30 = 60 < MIN_SHEET_PT (72)
     const docSmall = await buildMixedDoc([[30, 100]]);
-    expect(() => resolveSheetSize('source', docSmall, 1)).toThrow(/kağıt boyutu/i);
+    expectThrowsCode(() => resolveSheetSize('source', docSmall, 1), 'BOOKLET_INVALID_SHEET_SIZE');
 
     // 2 * 8000 = 16000 > MAX_SHEET_PT (14400)
     const docLarge = await buildMixedDoc([[8000, 500]]);
-    expect(() => resolveSheetSize('source', docLarge, 1)).toThrow(/kağıt boyutu/i);
+    expectThrowsCode(() => resolveSheetSize('source', docLarge, 1), 'BOOKLET_INVALID_SHEET_SIZE');
   });
 
   it("throws when 'source' is requested without a document", () => {
@@ -377,13 +403,13 @@ describe('resolveSheetSize', () => {
     expect(resolveSheetSize({ width: 72, height: 72 })).toEqual([72, 72]);
     expect(resolveSheetSize({ width: 14400, height: 14400 })).toEqual([14400, 14400]);
     // 71pt is below the 72pt floor.
-    expect(() => resolveSheetSize({ width: 71, height: 500 })).toThrow(/kağıt boyutu/i);
+    expectThrowsCode(() => resolveSheetSize({ width: 71, height: 500 }), 'BOOKLET_INVALID_SHEET_SIZE');
     // 14401pt exceeds the PDF 14400pt page cap.
-    expect(() => resolveSheetSize({ width: 500, height: 14401 })).toThrow(/kağıt boyutu/i);
+    expectThrowsCode(() => resolveSheetSize({ width: 500, height: 14401 }), 'BOOKLET_INVALID_SHEET_SIZE');
   });
 
   it('rejects an unknown preset string', () => {
-    expect(() => resolveSheetSize('B5' as never)).toThrow(/kağıt boyutu/i);
+    expectThrowsCode(() => resolveSheetSize('B5' as never), 'BOOKLET_UNKNOWN_PAPER_PRESET');
   });
 });
 
@@ -466,9 +492,10 @@ describe('makeBooklet paperSize', () => {
 
   it('rejects a custom sheet size outside the PDF page bounds', async () => {
     const input = await buildTestPdf(8);
-    await expect(
+    await expectRejectsCode(
       makeBooklet(input, { paperSize: { width: 50, height: 500 } }),
-    ).rejects.toThrow(/kağıt boyutu/i);
+      'BOOKLET_INVALID_SHEET_SIZE',
+    );
   });
 });
 
@@ -527,7 +554,7 @@ describe('resolveSignatureSize', () => {
 
   it('rejects non-positive, non-multiple-of-4, and non-integer sizes', () => {
     for (const bad of [0, -4, 6, 3.5]) {
-      expect(() => resolveSignatureSize(16, bad)).toThrow(/imza boyutu/i);
+      expectThrowsCode(() => resolveSignatureSize(16, bad), 'BOOKLET_INVALID_SIGNATURE_SIZE');
     }
     expect(resolveSignatureSize(16, 8)).toBe(8);
   });
@@ -584,9 +611,7 @@ describe('makeBooklet signatureSize', () => {
   it('rejects invalid signatureSize values', async () => {
     const input = await buildTestPdf(16);
     for (const bad of [0, -4, 6, 3.5]) {
-      await expect(
-        makeBooklet(input, { signatureSize: bad }),
-      ).rejects.toThrow(/imza boyutu/i);
+      await expectRejectsCode(makeBooklet(input, { signatureSize: bad }), 'BOOKLET_INVALID_SIGNATURE_SIZE');
     }
   });
 });
@@ -639,9 +664,10 @@ describe('makeBooklet binding', () => {
 
   it('rejects an invalid binding value', async () => {
     const input = await buildTestPdf(8);
-    await expect(
+    await expectRejectsCode(
       makeBooklet(input, { binding: 'diagonal' as unknown as 'ltr' }),
-    ).rejects.toThrow(/cilt yönü/i);
+      'BOOKLET_INVALID_BINDING',
+    );
   });
 });
 
@@ -699,7 +725,7 @@ describe('makeBooklet separateCover', () => {
 
   it('throws when a separate cover is requested for fewer than 8 pages', async () => {
     const input = await buildTestPdf(4);
-    await expect(makeBooklet(input, { separateCover: true })).rejects.toThrow(/kapak/i);
+    await expectRejectsCode(makeBooklet(input, { separateCover: true }), 'BOOKLET_COVER_MIN_PAGES');
   });
 
   it('leaves coverPdf undefined by default', async () => {
@@ -802,8 +828,9 @@ describe('makeBooklet insertBlankAfter', () => {
   it('rejects non-integer, negative, and out-of-range positions', async () => {
     const input = await buildTestPdf(8);
     for (const bad of [-1, 1.5, 9]) {
-      await expect(makeBooklet(input, { insertBlankAfter: [bad] })).rejects.toThrow(
-        /boş sayfa konumu/i,
+      await expectRejectsCode(
+        makeBooklet(input, { insertBlankAfter: [bad] }),
+        'BOOKLET_INVALID_BLANK_POSITION',
       );
     }
   });

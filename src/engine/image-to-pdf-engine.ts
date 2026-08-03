@@ -12,7 +12,11 @@ export interface ImagePageInput {
  */
 export async function imagesToPdf(images: ImagePageInput[]): Promise<Uint8Array> {
   if (images.length === 0) {
-    throw new BookletError('PDF oluşturmak için en az bir görsel eklemelisiniz.');
+    throw new BookletError(
+      'IMAGE_TO_PDF_NO_IMAGES',
+      undefined,
+      'You must add at least one image to create a PDF.',
+    );
   }
 
   try {
@@ -20,7 +24,11 @@ export async function imagesToPdf(images: ImagePageInput[]): Promise<Uint8Array>
 
     for (const imgData of images) {
       if (imgData.format !== 'png' && imgData.format !== 'jpg') {
-        throw new BookletError(`Desteklenmeyen görsel formatı: ${imgData.format}. Sadece png ve jpg kabul edilir.`);
+        throw new BookletError(
+          'IMAGE_TO_PDF_UNSUPPORTED_FORMAT',
+          { format: imgData.format },
+          `Unsupported image format: ${imgData.format}. Only png and jpg are accepted.`,
+        );
       }
 
       let embedImg;
@@ -59,6 +67,10 @@ export async function imagesToPdf(images: ImagePageInput[]): Promise<Uint8Array>
   } catch (error) {
     if (error instanceof BookletError) throw error;
     const message = error instanceof Error ? error.message : String(error);
-    throw new BookletError(`Görseller PDF'e dönüştürülemedi: ${message}`);
+    throw new BookletError(
+      'IMAGE_TO_PDF_CONVERT_FAILED',
+      { message },
+      `Could not convert images to PDF: ${message}`,
+    );
   }
 }

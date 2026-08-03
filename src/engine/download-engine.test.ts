@@ -38,9 +38,9 @@ describe('downloadPdfFromUrl', () => {
     timeoutError.name = 'TimeoutError';
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(timeoutError);
 
-    await expect(downloadPdfFromUrl('https://example.com/test.pdf')).rejects.toThrow(
-      /zaman aşımına uğradı/i,
-    );
+    const promise = downloadPdfFromUrl('https://example.com/test.pdf');
+    await expect(promise).rejects.toBeInstanceOf(NetworkError);
+    await expect(promise).rejects.toMatchObject({ code: 'DOWNLOAD_TIMEOUT' });
 
     fetchSpy.mockRestore();
   });
@@ -80,9 +80,9 @@ describe('downloadPdfFromUrl', () => {
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
 
-    await expect(downloadPdfFromUrl('https://example.com/large.pdf')).rejects.toThrow(
-      /boyutu çok büyük/i,
-    );
+    const promise = downloadPdfFromUrl('https://example.com/large.pdf');
+    await expect(promise).rejects.toBeInstanceOf(NetworkError);
+    await expect(promise).rejects.toMatchObject({ code: 'DOWNLOAD_FILE_TOO_LARGE' });
 
     fetchSpy.mockRestore();
   });
@@ -98,9 +98,9 @@ describe('downloadPdfFromUrl', () => {
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
 
-    await expect(downloadPdfFromUrl('https://example.com/large.pdf')).rejects.toThrow(
-      /boyutu çok büyük/i,
-    );
+    const promise = downloadPdfFromUrl('https://example.com/large.pdf');
+    await expect(promise).rejects.toBeInstanceOf(NetworkError);
+    await expect(promise).rejects.toMatchObject({ code: 'DOWNLOAD_FILE_TOO_LARGE' });
 
     fetchSpy.mockRestore();
   });

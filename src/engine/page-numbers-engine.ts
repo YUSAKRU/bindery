@@ -98,7 +98,11 @@ export async function addPageNumbers(inputBytes: Uint8Array, options: PageNumber
   const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (!Number.isInteger(options.startNumber) || options.startNumber < 1) {
-    throw new BookletError('Başlangıç numarası 1 veya daha büyük bir tam sayı olmalı.');
+    throw new BookletError(
+      'PAGE_NUMBERS_INVALID_START',
+      undefined,
+      'Start number must be an integer of 1 or greater.',
+    );
   }
 
   const font = await doc.embedFont(StandardFonts.Helvetica);

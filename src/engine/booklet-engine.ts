@@ -42,21 +42,27 @@ export function resolveSheetSize(
   if (typeof paperSize === 'string') {
     if (paperSize === 'source') {
       if (!srcDoc || pageCount === undefined) {
-        throw new BookletError("'source' kağıt boyutu için kaynak belge gerekli.");
+        throw new BookletError(
+          'BOOKLET_SOURCE_SHEET_NEEDS_DOC',
+          undefined,
+          "The 'source' paper size requires a source document.",
+        );
       }
       const [modeWidth, modeHeight] = modePageSize(srcDoc, pageCount);
       const width = 2 * modeWidth;
       const height = modeHeight;
       if (!inBounds(width) || !inBounds(height)) {
         throw new BookletError(
-          `Geçersiz kağıt boyutu: ${width}×${height}pt. Her iki kenar da ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt aralığında olmalı.`,
+          'BOOKLET_INVALID_SHEET_SIZE',
+          { width, height, min: MIN_SHEET_PT, max: MAX_SHEET_PT },
+          `Invalid paper size: ${width}×${height}pt. Both sides must be within ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt.`,
         );
       }
       return [width, height];
     }
     const preset = SHEET_PRESETS[paperSize];
     if (!preset) {
-      throw new BookletError(`Geçersiz kağıt boyutu: ${paperSize}.`);
+      throw new BookletError('BOOKLET_UNKNOWN_PAPER_PRESET', { paperSize }, `Invalid paper size: ${paperSize}.`);
     }
     return [preset[0], preset[1]];
   }
@@ -64,7 +70,9 @@ export function resolveSheetSize(
   const { width, height } = paperSize;
   if (!inBounds(width) || !inBounds(height)) {
     throw new BookletError(
-      `Geçersiz kağıt boyutu: ${width}×${height}pt. Her iki kenar da ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt aralığında olmalı.`,
+      'BOOKLET_INVALID_SHEET_SIZE',
+      { width, height, min: MIN_SHEET_PT, max: MAX_SHEET_PT },
+      `Invalid paper size: ${width}×${height}pt. Both sides must be within ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt.`,
     );
   }
   return [width, height];
@@ -202,7 +210,11 @@ export function resolveSignatureSize(N: number, signatureSize?: number | 'auto')
     return N <= AUTO_SIGNATURE_THRESHOLD ? N : AUTO_SIGNATURE_SIZE;
   }
   if (!Number.isInteger(signatureSize) || signatureSize <= 0 || signatureSize % 4 !== 0) {
-    throw new BookletError(`Geçersiz imza boyutu: ${signatureSize}. Pozitif ve 4'ün katı olmalı.`);
+    throw new BookletError(
+      'BOOKLET_INVALID_SIGNATURE_SIZE',
+      { signatureSize },
+      `Invalid signature size: ${signatureSize}. Must be a positive multiple of 4.`,
+    );
   }
   return signatureSize;
 }
@@ -404,13 +416,21 @@ export async function makeBooklet(
   const separateCover = options.separateCover ?? false;
 
   if (creepStep < 0) {
-    throw new BookletError('Creep değeri negatif olamaz.');
+    throw new BookletError('BOOKLET_NEGATIVE_CREEP', undefined, 'Creep value cannot be negative.');
   }
   if (flipEdge !== 'short' && flipEdge !== 'long') {
-    throw new BookletError(`Geçersiz çevirme kenarı değeri: ${flipEdge}. 'short' veya 'long' olmalı.`);
+    throw new BookletError(
+      'BOOKLET_INVALID_FLIP_EDGE',
+      { flipEdge },
+      `Invalid flip edge value: ${flipEdge}. Must be 'short' or 'long'.`,
+    );
   }
   if (binding !== 'ltr' && binding !== 'rtl') {
-    throw new BookletError(`Geçersiz cilt yönü değeri: ${binding}. 'ltr' veya 'rtl' olmalı.`);
+    throw new BookletError(
+      'BOOKLET_INVALID_BINDING',
+      { binding },
+      `Invalid binding value: ${binding}. Must be 'ltr' or 'rtl'.`,
+    );
   }
 
   const { doc: srcDoc, metadata: { pageCount: originalPageCount } } = await loadAndValidatePdf(inputBytes);
@@ -421,7 +441,11 @@ export async function makeBooklet(
   const wSlot = sheetWidth / 2.0;
 
   if (baseGutter < 0 || baseGutter >= wSlot) {
-    throw new BookletError(`Geçersiz gutter değeri: ${baseGutter}. 0 ile ${wSlot} arasında olmalı.`);
+    throw new BookletError(
+      'BOOKLET_INVALID_GUTTER',
+      { gutter: baseGutter, max: wSlot },
+      `Invalid gutter value: ${baseGutter}. Must be between 0 and ${wSlot}.`,
+    );
   }
 
   const rotateBack = flipEdge === 'long';
@@ -441,7 +465,9 @@ export async function makeBooklet(
   for (const position of insertBlankAfter) {
     if (!Number.isInteger(position) || position < 0 || position > originalPageCount) {
       throw new BookletError(
-        `Geçersiz boş sayfa konumu: ${position}. 0 ile ${originalPageCount} arasında tam sayı olmalı.`,
+        'BOOKLET_INVALID_BLANK_POSITION',
+        { position, max: originalPageCount },
+        `Invalid blank page position: ${position}. Must be an integer between 0 and ${originalPageCount}.`,
       );
     }
   }
@@ -477,7 +503,9 @@ export async function makeBooklet(
   if (separateCover) {
     if (originalPageCount < 8) {
       throw new BookletError(
-        `Ayrı kapak için en az 8 sayfa gerekir (kapak + iç yaprak). Belge: ${originalPageCount} sayfa.`,
+        'BOOKLET_COVER_MIN_PAGES',
+        { pageCount: originalPageCount },
+        `A separate cover requires at least 8 pages (cover + inner block). Document: ${originalPageCount} pages.`,
       );
     }
     const L = logicalOrder.length;
@@ -527,8 +555,12 @@ export async function makeBooklet(
   // LARGEST signature — not the last sheet overall.
   const maxShiftInward = (maxSheetsPerSignature - 1) * creepStep - baseGutter / 2.0;
   if (maxShiftInward > wSlot / 2.0) {
+    const shift = maxShiftInward.toFixed(1);
+    const maxShift = wSlot / 2.0;
     throw new BookletError(
-      `Geçersiz creep değeri: ${creepStep}. Son yaprakta oluşan kayma (${maxShiftInward.toFixed(1)}pt) slot yarısını (${wSlot / 2.0}pt) aşıyor.`,
+      'BOOKLET_EXCESSIVE_CREEP',
+      { creep: creepStep, shift, maxShift },
+      `Invalid creep value: ${creepStep}. The resulting shift on the last leaf (${shift}pt) exceeds half the slot width (${maxShift}pt).`,
     );
   }
 

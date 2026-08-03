@@ -72,7 +72,12 @@ async function loadWatermarkFontBytes(): Promise<ArrayBuffer> {
       })
       .catch((err) => {
         cachedFontBytesPromise = null;
-        throw new BookletError(`Filigran yazı tipi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`);
+        const message = err instanceof Error ? err.message : String(err);
+        throw new BookletError(
+          'WATERMARK_FONT_LOAD_FAILED',
+          { message },
+          `Could not load the watermark font: ${message}`,
+        );
       });
   }
   return cachedFontBytesPromise;
@@ -82,10 +87,10 @@ export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOpt
   const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (options.opacity < 0 || options.opacity > 1) {
-    throw new BookletError('Opaklık 0 ile 1 arasında olmalı.');
+    throw new BookletError('WATERMARK_INVALID_OPACITY', undefined, 'Opacity must be between 0 and 1.');
   }
   if (options.type === 'text' && !options.text.trim()) {
-    throw new BookletError('Filigran metni boş olamaz.');
+    throw new BookletError('WATERMARK_EMPTY_TEXT', undefined, 'Watermark text cannot be empty.');
   }
 
   if (options.type === 'text') {
@@ -116,7 +121,7 @@ export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOpt
     const image = options.imageFormat === 'png' ? await doc.embedPng(options.imageBytes) : await doc.embedJpg(options.imageBytes);
 
     if (image.width === 0) {
-      throw new BookletError('Filigran görseli geçersiz: genişlik sıfır.');
+      throw new BookletError('WATERMARK_INVALID_IMAGE', undefined, 'Invalid watermark image: width is zero.');
     }
 
     doc.getPages().forEach((page) => {
