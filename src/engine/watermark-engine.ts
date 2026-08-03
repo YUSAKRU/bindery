@@ -1,4 +1,5 @@
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb } from 'pdf-lib';
+import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
 import { validatePdf } from './validator';
 import { BookletError } from './types';
 
@@ -54,6 +55,29 @@ export function computeCenteredRotatedPosition(
   };
 }
 
+let cachedFontBytesPromise: Promise<ArrayBuffer> | null = null;
+
+// pdf-lib's StandardFonts are WinAnsi-encoded and throw on Turkish/Cyrillic/etc.
+// (see docs/CODE-REVIEW-2026-08-03.md [C1]), so text watermarks embed this bundled
+// Unicode subset instead. Fetched lazily and cached at module scope since
+// addWatermark can be called repeatedly and the image branch never needs it.
+async function loadWatermarkFontBytes(): Promise<ArrayBuffer> {
+  if (!cachedFontBytesPromise) {
+    cachedFontBytesPromise = fetch(notoSansUrl)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.arrayBuffer();
+      })
+      .catch((err) => {
+        cachedFontBytesPromise = null;
+        throw new BookletError(`Filigran yazı tipi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`);
+      });
+  }
+  return cachedFontBytesPromise;
+}
+
 export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOptions): Promise<WatermarkResult> {
   const { pageCount } = await validatePdf(inputBytes);
 
@@ -67,7 +91,14 @@ export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOpt
   const doc = await PDFDocument.load(inputBytes);
 
   if (options.type === 'text') {
-    const font = await doc.embedFont(StandardFonts.HelveticaBold);
+    // fontkit is ~700kB and is only needed to embed the Unicode TTF, so it is
+    // imported dynamically here rather than at module scope. Without this it
+    // lands in the eagerly-loaded pdf-lib chunk (see vite.config.ts) and every
+    // merge/booklet/rotate operation pays for it too.
+    const { default: fontkit } = await import('@pdf-lib/fontkit');
+    doc.registerFontkit(fontkit);
+    const fontBytes = await loadWatermarkFontBytes();
+    const font = await doc.embedFont(fontBytes, { subset: true });
     const textWidth = font.widthOfTextAtSize(options.text, FONT_SIZE);
 
     doc.getPages().forEach((page) => {

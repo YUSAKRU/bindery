@@ -1,7 +1,29 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PDFDocument } from 'pdf-lib';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { addWatermark, computeCenteredRotatedPosition } from './watermark-engine';
 import { BookletError } from './types';
+
+// The engine fetches its bundled Unicode font via a Vite `?url` asset import,
+// which resolves under vitest but can't be `fetch()`-ed as a plain Node test
+// runner (it isn't an absolute http URL). Stub `fetch` to hand back the real
+// TTF bytes from disk, so tests exercise the actual embedFont/fontkit path
+// rather than a fake one.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fontFileBytes = readFileSync(resolve(__dirname, '../assets/fonts/NotoSans-Latin.ttf'));
+
+function stubFontFetch() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => fontFileBytes.buffer.slice(fontFileBytes.byteOffset, fontFileBytes.byteOffset + fontFileBytes.byteLength),
+    })),
+  );
+}
 
 // Minimal valid 1x1 PNG, used only to exercise embedPng — no fixture file needed.
 const TINY_PNG_BASE64 =
@@ -19,6 +41,14 @@ async function buildTestPdf(pageCount: number): Promise<Uint8Array> {
   }
   return doc.save();
 }
+
+beforeAll(() => {
+  stubFontFetch();
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('computeCenteredRotatedPosition', () => {
   it('centers unrotated content by simple half-extent offset', () => {
@@ -85,5 +115,48 @@ describe('addWatermark', () => {
     expect(result.pageCount).toBe(2);
     const outDoc = await PDFDocument.load(result.watermarkedPdf);
     expect(outDoc.getPageCount()).toBe(2);
+  });
+
+  // Regression test for [C1]: StandardFonts.HelveticaBold is WinAnsi-encoded and
+  // throws on Turkish characters (`WinAnsi cannot encode "ş"`). This must succeed
+  // against the bundled Unicode font and would fail against the old implementation.
+  it('does not throw for Turkish characters', async () => {
+    const input = await buildTestPdf(1);
+    const result = await addWatermark(input, { type: 'text', text: 'ışğİŞĞ', opacity: 0.3, rotateDegrees: 0 });
+
+    expect(result.pageCount).toBe(1);
+    const outDoc = await PDFDocument.load(result.watermarkedPdf);
+    expect(outDoc.getPageCount()).toBe(1);
+  });
+
+  it('does not throw for an em-dash and the Turkish lira sign', async () => {
+    const input = await buildTestPdf(1);
+    const result = await addWatermark(input, { type: 'text', text: 'Gizli — 100₺', opacity: 0.3, rotateDegrees: 0 });
+
+    expect(result.pageCount).toBe(1);
+    const outDoc = await PDFDocument.load(result.watermarkedPdf);
+    expect(outDoc.getPageCount()).toBe(1);
+  });
+
+  it('does not fetch the watermark font for an image watermark', async () => {
+    vi.resetModules();
+    const fetchSpy = vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(0) }));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { addWatermark: freshAddWatermark } = await import('./watermark-engine');
+    const input = await buildTestPdf(1);
+    await freshAddWatermark(input, {
+      type: 'image',
+      imageBytes: tinyPngBytes(),
+      imageFormat: 'png',
+      opacity: 0.4,
+      scale: 0.5,
+      rotateDegrees: 0,
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    // Restore the suite-wide font stub for any tests that run after this one.
+    stubFontFetch();
   });
 });
