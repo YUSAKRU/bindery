@@ -358,6 +358,16 @@ describe('resolveSheetSize', () => {
     expect(resolveSheetSize('source', doc, 3)).toEqual([1190, 842]);
   });
 
+  it("throws when 'source' sheet dimensions are out of bounds", async () => {
+    // 2 * 30 = 60 < MIN_SHEET_PT (72)
+    const docSmall = await buildMixedDoc([[30, 100]]);
+    expect(() => resolveSheetSize('source', docSmall, 1)).toThrow(/kağıt boyutu/i);
+
+    // 2 * 8000 = 16000 > MAX_SHEET_PT (14400)
+    const docLarge = await buildMixedDoc([[8000, 500]]);
+    expect(() => resolveSheetSize('source', docLarge, 1)).toThrow(/kağıt boyutu/i);
+  });
+
   it("throws when 'source' is requested without a document", () => {
     expect(() => resolveSheetSize('source')).toThrow(/source/i);
   });

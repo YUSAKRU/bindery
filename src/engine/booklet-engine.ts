@@ -37,13 +37,22 @@ export function resolveSheetSize(
     return [TARGET_WIDTH, TARGET_HEIGHT];
   }
 
+  const inBounds = (v: number) => Number.isFinite(v) && v >= MIN_SHEET_PT && v <= MAX_SHEET_PT;
+
   if (typeof paperSize === 'string') {
     if (paperSize === 'source') {
       if (!srcDoc || pageCount === undefined) {
         throw new BookletError("'source' kağıt boyutu için kaynak belge gerekli.");
       }
       const [modeWidth, modeHeight] = modePageSize(srcDoc, pageCount);
-      return [2 * modeWidth, modeHeight];
+      const width = 2 * modeWidth;
+      const height = modeHeight;
+      if (!inBounds(width) || !inBounds(height)) {
+        throw new BookletError(
+          `Geçersiz kağıt boyutu: ${width}×${height}pt. Her iki kenar da ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt aralığında olmalı.`,
+        );
+      }
+      return [width, height];
     }
     const preset = SHEET_PRESETS[paperSize];
     if (!preset) {
@@ -53,7 +62,6 @@ export function resolveSheetSize(
   }
 
   const { width, height } = paperSize;
-  const inBounds = (v: number) => Number.isFinite(v) && v >= MIN_SHEET_PT && v <= MAX_SHEET_PT;
   if (!inBounds(width) || !inBounds(height)) {
     throw new BookletError(
       `Geçersiz kağıt boyutu: ${width}×${height}pt. Her iki kenar da ${MIN_SHEET_PT}–${MAX_SHEET_PT}pt aralığında olmalı.`,

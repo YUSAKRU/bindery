@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadPdfFromUrl } from './download-engine';
+import { DOWNLOAD_SIZE_LIMIT_BYTES, DOWNLOAD_TIMEOUT_MS, downloadPdfFromUrl } from './download-engine';
 import { NetworkError, PDFCorruptedError } from './types';
 import { PDFDocument } from 'pdf-lib';
 
 describe('downloadPdfFromUrl', () => {
+  it('exports DOWNLOAD_TIMEOUT_MS and DOWNLOAD_SIZE_LIMIT_BYTES', () => {
+    expect(DOWNLOAD_TIMEOUT_MS).toBe(30_000);
+    expect(DOWNLOAD_SIZE_LIMIT_BYTES).toBe(50 * 1024 * 1024);
+  });
+
   it('successfully downloads and validates a valid PDF', async () => {
     // Generate valid PDF bytes
     const doc = await PDFDocument.create();
@@ -23,7 +28,19 @@ describe('downloadPdfFromUrl', () => {
 
     const result = await downloadPdfFromUrl('https://example.com/test.pdf');
     expect(result).toEqual(pdfBytes);
-    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/test.pdf');
+    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/test.pdf', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+
+    fetchSpy.mockRestore();
+  });
+
+  it('throws NetworkError when fetch times out (TimeoutError)', async () => {
+    const timeoutError = new Error('The operation timed out');
+    timeoutError.name = 'TimeoutError';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(timeoutError);
+
+    await expect(downloadPdfFromUrl('https://example.com/test.pdf')).rejects.toThrow(
+      /zaman aşımına uğradı/i,
+    );
 
     fetchSpy.mockRestore();
   });
@@ -46,6 +63,44 @@ describe('downloadPdfFromUrl', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
 
     await expect(downloadPdfFromUrl('https://example.com/test.pdf')).rejects.toBeInstanceOf(NetworkError);
+
+    fetchSpy.mockRestore();
+  });
+
+  it('throws NetworkError when Content-Length exceeds size limit', async () => {
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        get: (name: string) =>
+          name === 'content-length' ? String(DOWNLOAD_SIZE_LIMIT_BYTES + 1) : null,
+      },
+    } as unknown as Response;
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
+
+    await expect(downloadPdfFromUrl('https://example.com/large.pdf')).rejects.toThrow(
+      /boyutu çok büyük/i,
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('throws NetworkError when buffer length exceeds size limit backstop', async () => {
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: () => null },
+      arrayBuffer: async () => new ArrayBuffer(DOWNLOAD_SIZE_LIMIT_BYTES + 1),
+    } as unknown as Response;
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
+
+    await expect(downloadPdfFromUrl('https://example.com/large.pdf')).rejects.toThrow(
+      /boyutu çok büyük/i,
+    );
 
     fetchSpy.mockRestore();
   });
