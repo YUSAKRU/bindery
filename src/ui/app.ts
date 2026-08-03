@@ -1,5 +1,4 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
-import { BookletError } from '../engine/types';
 import type { Binding, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet, computeSignatureMappings } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
@@ -123,10 +122,12 @@ function formatBytes(bytes: number): string {
  * to `en` and then the raw key, so `error.message` is preferred over a bare key if
  * a translation is ever missing.
  */
-function errorText(error: unknown): string {
-  if (error instanceof BookletError) {
-    const translated = t(`error.${error.code}`, error.params);
-    return translated === `error.${error.code}` ? error.message : translated;
+export function errorText(error: unknown): string {
+  const coded = error as { code?: unknown; params?: Record<string, string | number>; message?: unknown };
+  if (error instanceof Error && typeof coded.code === 'string') {
+    const key = `error.${coded.code}`;
+    const translated = t(key, coded.params);
+    return translated === key ? error.message : translated;
   }
   return error instanceof Error ? error.message : String(error);
 }

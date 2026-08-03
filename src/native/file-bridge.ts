@@ -10,11 +10,16 @@ export interface PickedPdf {
 const FILE_SIZE_LIMIT_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export class FileTooLargeError extends Error {
-  sizeBytes: number;
+  readonly sizeBytes: number;
+  readonly code = 'FILE_TOO_LARGE';
+  readonly params: Record<string, string | number>;
   constructor(sizeBytes: number) {
-    super(`File is too large (${Math.round(sizeBytes / (1024 * 1024))} MB). Maximum allowed size is 50 MB.`);
+    const mb = Math.round(sizeBytes / (1024 * 1024));
+    const limitMb = FILE_SIZE_LIMIT_BYTES / (1024 * 1024);
+    super(`File is too large (${mb} MB). Maximum allowed size is ${limitMb} MB.`);
     this.name = 'FileTooLargeError';
     this.sizeBytes = sizeBytes;
+    this.params = { mb, limitMb };
   }
 }
 
