@@ -44,6 +44,7 @@ import { destroyThumbnailDoc, loadPdfForThumbnails, renderPageThumbnail } from '
 import { openReaderDocument, renderReaderPage, type ReaderDocument } from '../native/pdf-reader-render';
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
+import { safeFileName, safeBaseName } from './filename';
 
 type ScreenId =
   | 'hub'
@@ -246,6 +247,7 @@ export function initApp(): void {
   let moveSourceFile: FileEntryInfo | null = null;
   let moveTargetFolder: string | null = null;
   let openInToolUri: string | null = null;
+  let openInToolRelPath: string | null = null;
 
   function sortFileEntries(items: FileEntryInfo[], mode: FileSortMode): FileEntryInfo[] {
     const dirs = items.filter((i) => i.type === 'directory');
@@ -573,6 +575,8 @@ export function initApp(): void {
   let readerBytes: Uint8Array | null = null;
   let readerUri: string | null = null;
   let readerName = 'Document';
+  /** Directory.Data-relative path of the currently open reader document, when known (see openReaderWithBytes). */
+  let readerRelPath: string | null = null;
   let isFullscreenReaderActive = false;
   let readerReturnTo: ScreenId = 'hub';
   let fsRotationAngle = 0; // 0, 90, 180, 270 / -90
@@ -581,6 +585,9 @@ export function initApp(): void {
   let fullscreenCurrentPage = 1;
   let readerObserver: IntersectionObserver | null = null;
   const readerRendered = new Map<number, HTMLCanvasElement>();
+  /** Counts genuine render failures per page (not cancellations) so a page that fails deterministically stops being retried. */
+  const readerRenderFailures = new Map<number, number>();
+  const READER_RENDER_MAX_RETRIES = 2;
   let readerNightMode = false;
   let readerBaseWidthPx = 0;
   let readerIndicatorRaf = 0;
@@ -1807,12 +1814,7 @@ export function initApp(): void {
   bookletSaveBtn.addEventListener('click', async () => {
     if (!booklet || bookletSaveState === 'saving') return;
 
-    let docName = bookletFileNameInput.value.trim();
-    if (!docName) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-    docName = docName.replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '');
+    const docName = safeBaseName(bookletFileNameInput.value);
     if (!docName) {
       showToast(t('toast.invalidFileName'));
       return;
@@ -1870,7 +1872,7 @@ export function initApp(): void {
   });
 
   bookletGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = `booklets/${bookletFileNameInput.value.trim().replace(/[/\\:*?"<>|]/g, '_').replace(/\.pdf$/i, '')}`;
+    currentFolderPath = `booklets/${safeBaseName(bookletFileNameInput.value)}`;
     showScreen('files');
   });
 
@@ -2031,14 +2033,10 @@ export function initApp(): void {
   mergeSaveBtn.addEventListener('click', async () => {
     if (!mergedPdf || mergeSaveState === 'saving') return;
 
-    let filename = mergeFileNameInput.value.trim();
+    const filename = safeFileName(mergeFileNameInput.value, { ensurePdf: true });
     if (!filename) {
       showToast(t('toast.invalidFileName'));
       return;
-    }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
     }
 
     const targetPath = `merges/${filename}`;
@@ -2276,14 +2274,10 @@ export function initApp(): void {
   organizeSaveBtn.addEventListener('click', async () => {
     if (!organizeResultPdf || organizeSaveState === 'saving') return;
 
-    let filename = organizeFileNameInput.value.trim();
+    const filename = safeFileName(organizeFileNameInput.value, { ensurePdf: true });
     if (!filename) {
       showToast(t('toast.invalidFileName'));
       return;
-    }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
     }
 
     const targetPath = `edits/${filename}`;
@@ -2327,10 +2321,7 @@ export function initApp(): void {
     if (!filename) {
       filename = `${organizeOriginalName}_edited`;
     }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
-    }
+    filename = safeFileName(filename, { ensurePdf: true });
     try {
       await sharePdf(organizeResultPdf, filename, t('organize.editedPdf'));
       organizeActionStatus.textContent = t('status.shared');
@@ -2518,14 +2509,10 @@ export function initApp(): void {
   rotateSaveBtn.addEventListener('click', async () => {
     if (!rotateResultPdf || rotateSaveState === 'saving') return;
 
-    let filename = rotateFileNameInput.value.trim();
+    const filename = safeFileName(rotateFileNameInput.value, { ensurePdf: true });
     if (!filename) {
       showToast(t('toast.invalidFileName'));
       return;
-    }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
     }
 
     const targetPath = `edits/${filename}`;
@@ -2569,10 +2556,7 @@ export function initApp(): void {
     if (!filename) {
       filename = `${rotateOriginalName}_rotated`;
     }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
-    }
+    filename = safeFileName(filename, { ensurePdf: true });
     try {
       await sharePdf(rotateResultPdf, filename, t('rotate.rotatedPdf'));
       rotateActionStatus.textContent = t('status.shared');
@@ -2733,14 +2717,10 @@ export function initApp(): void {
   pageNumbersSaveBtn.addEventListener('click', async () => {
     if (!pageNumbersResultPdf || pageNumbersSaveState === 'saving') return;
 
-    let filename = pageNumbersFileNameInput.value.trim();
+    const filename = safeFileName(pageNumbersFileNameInput.value, { ensurePdf: true });
     if (!filename) {
       showToast(t('toast.invalidFileName'));
       return;
-    }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
     }
 
     const targetPath = `edits/${filename}`;
@@ -2784,10 +2764,7 @@ export function initApp(): void {
     if (!filename) {
       filename = `${pageNumbersOriginalName}_numbered`;
     }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
-    }
+    filename = safeFileName(filename, { ensurePdf: true });
     try {
       await sharePdf(pageNumbersResultPdf, filename, t('pageNumbers.numberedPdf'));
       pageNumbersActionStatus.textContent = t('status.shared');
@@ -2999,14 +2976,10 @@ export function initApp(): void {
   watermarkSaveBtn.addEventListener('click', async () => {
     if (!watermarkResultPdf || watermarkSaveState === 'saving') return;
 
-    let filename = watermarkFileNameInput.value.trim();
+    const filename = safeFileName(watermarkFileNameInput.value, { ensurePdf: true });
     if (!filename) {
       showToast(t('toast.invalidFileName'));
       return;
-    }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
     }
 
     const targetPath = `edits/${filename}`;
@@ -3050,10 +3023,7 @@ export function initApp(): void {
     if (!filename) {
       filename = `${watermarkOriginalName}_watermarked`;
     }
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
-    }
+    filename = safeFileName(filename, { ensurePdf: true });
     try {
       await sharePdf(watermarkResultPdf, filename, t('watermark.watermarkedPdf'));
       watermarkActionStatus.textContent = t('status.shared');
@@ -3237,10 +3207,11 @@ export function initApp(): void {
       const dateStr = new Date().toISOString().slice(0, 10);
       const timeStr = new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
-      const privateUri = await savePdfPrivately(pdfBytes, `scans/${filename}`);
+      const scanRelPath = `scans/${filename}`;
+      const privateUri = await savePdfPrivately(pdfBytes, scanRelPath);
       await recordOpened({ uri: privateUri, name: filename });
 
-      await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf');
+      await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       goToError(t('error.pdfCreateFailed'), message, 'image-to-pdf');
@@ -3582,6 +3553,7 @@ export function initApp(): void {
     readerObserver?.disconnect();
     readerObserver = null;
     readerRendered.clear();
+    readerRenderFailures.clear();
     readerPageList.innerHTML = '';
     readerBytes = null;
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
@@ -3933,9 +3905,15 @@ export function initApp(): void {
           active && active.pageNumber === pageNumber ? active.spanIndex : null,
         );
       }
-    } catch {
-      // Placeholder stays empty; re-entering the viewport will retry since
-      // readerRendered has no entry for this page.
+    } catch (error) {
+      // RenderingCancelledException is expected whenever a stale render is
+      // superseded (scroll/zoom) — stay silent and let the next pass retry.
+      // Genuine failures get logged and capped so a page that fails
+      // deterministically doesn't burn CPU retrying on every scroll pass.
+      if ((error as { name?: string })?.name !== 'RenderingCancelledException') {
+        console.warn(`Reader page ${pageNumber} failed to render:`, error);
+        readerRenderFailures.set(pageNumber, (readerRenderFailures.get(pageNumber) ?? 0) + 1);
+      }
     }
   }
 
@@ -3989,6 +3967,7 @@ export function initApp(): void {
 
     readerPageList.innerHTML = '';
     readerRendered.clear();
+    readerRenderFailures.clear();
 
     readerObserver = new IntersectionObserver(
       (entries) => {
@@ -4000,7 +3979,8 @@ export function initApp(): void {
           const el = entry.target as HTMLDivElement;
           const pageNumber = Number(el.dataset.pageNumber);
           if (entry.isIntersecting) {
-            if (!readerRendered.has(pageNumber)) {
+            const failures = readerRenderFailures.get(pageNumber) ?? 0;
+            if (!readerRendered.has(pageNumber) && failures < READER_RENDER_MAX_RETRIES) {
               void renderReaderPageInto(el, pageNumber);
             }
           } else if (readerRendered.has(pageNumber)) {
@@ -4055,6 +4035,7 @@ export function initApp(): void {
     sourceUri: string | null = null,
     returnTo: ScreenId = 'hub',
     initialPage: number = 1,
+    relPath: string | null = null,
   ): Promise<void> {
     if (isOpeningReader) return;
     isOpeningReader = true;
@@ -4069,6 +4050,7 @@ export function initApp(): void {
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
+      readerRelPath = relPath;
       readerReturnTo = returnTo;
       const savedNightMode = await Preferences.get({ key: 'readerNightMode' });
       readerNightMode = savedNightMode.value === 'true';
@@ -5363,52 +5345,61 @@ export function initApp(): void {
 
   saveDocConfirmBtn.addEventListener('click', async () => {
     if (!readerBytes) return;
-    let newName = saveDocNameInput.value.trim();
+    const newName = safeFileName(saveDocNameInput.value, { ensurePdf: true });
     if (!newName) {
       showToast(t('toast.invalidFileName'));
       return;
     }
-    if (!newName.toLowerCase().endsWith('.pdf')) {
-      newName += '.pdf';
-    }
 
     const option = (saveDocModal.querySelector('input[name="saveOption"]:checked') as HTMLInputElement)?.value || 'private';
+
+    if (option !== 'private') {
+      const existsInDocuments = await Filesystem.stat({ path: newName, directory: Directory.Documents })
+        .then(() => true)
+        .catch(() => false);
+      if (existsInDocuments) {
+        const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: newName }));
+        if (!overwrite) return;
+      }
+    }
+
     saveDocConfirmBtn.disabled = true;
     saveDocConfirmBtnLabel.classList.add('hidden');
     saveDocConfirmSpinner.classList.remove('hidden');
 
     try {
       if (option === 'private') {
-        const privateDirs = ['/scans/', '/booklets/', '/merges/', '/edits/', '/downloads/'];
-        const isCurrentlyPrivate = readerUri && privateDirs.some((d) => readerUri!.includes(d));
         let newUri = '';
-        if (isCurrentlyPrivate && readerUri) {
-          // Determine which subfolder the file is in
-          const match = readerUri.match(/\/(scans|booklets|merges|edits|downloads)\//);
-          const subDir = match ? match[1] : 'scans';
-          newUri = await movePrivateItem(`${subDir}/${readerName}`, `${subDir}/${newName}`);
+        if (readerRelPath) {
+          const lastSlash = readerRelPath.lastIndexOf('/');
+          const dir = lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
+          const newRelPath = dir ? `${dir}/${newName}` : newName;
+          newUri = await movePrivateItem(readerRelPath, newRelPath);
           await removeRecent(readerName);
+          readerRelPath = newRelPath;
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
+          readerRelPath = `scans/${newName}`;
         }
-        
+
         readerName = newName;
         readerUri = newUri;
         topBarTitle.textContent = readerName;
-        
+
         await recordOpened({ uri: newUri, name: newName });
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
-        
+
         readerName = newName;
         readerUri = publicUri;
+        readerRelPath = null;
         topBarTitle.textContent = readerName;
-        
+
         await recordOpened({ uri: publicUri, name: newName });
         showToast(t('toast.savedToDevice'));
       }
-      
+
       closeModal(saveDocModal);
       void renderHubRecentsGrid();
     } catch (error) {
@@ -5592,9 +5583,12 @@ export function initApp(): void {
     });
   }
 
-  const FILE_TOOL_LOADERS: Record<string, (bytes: Uint8Array, name: string, uri: string) => Promise<void>> = {
-    reader: async (bytes, name, uri) => {
-      await openReaderWithBytes(bytes, name, uri);
+  const FILE_TOOL_LOADERS: Record<
+    string,
+    (bytes: Uint8Array, name: string, uri: string, relPath: string | null) => Promise<void>
+  > = {
+    reader: async (bytes, name, uri, relPath) => {
+      await openReaderWithBytes(bytes, name, uri, 'files', 1, relPath);
     },
     booklet: async (bytes, name) => {
       showScreen('picker');
@@ -5627,12 +5621,12 @@ export function initApp(): void {
     },
   };
 
-  async function openFileInTool(toolId: string, uri: string): Promise<void> {
+  async function openFileInTool(toolId: string, uri: string, relPath: string | null): Promise<void> {
     const loader = FILE_TOOL_LOADERS[toolId];
     if (!loader) return;
     try {
       const { bytes, name } = await readPdfFromUri(uri);
-      await loader(bytes, name, uri);
+      await loader(bytes, name, uri, relPath);
     } catch {
       showToast(t('toast.fileOpenError'));
     }
@@ -5657,6 +5651,7 @@ export function initApp(): void {
     if (!isDir) {
       addAction('↗️', 'Open in...', () => {
         openInToolUri = item.uri;
+        openInToolRelPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         openModal(openInToolSheet);
       });
 
@@ -5685,9 +5680,10 @@ export function initApp(): void {
         currentName,
       );
       if (!input || !input.trim()) return;
-      let newName = input.trim().replace(/[/\\:*?"<>|]/g, '_');
-      if (!isDir && !newName.toLowerCase().endsWith('.pdf')) {
-        newName += '.pdf';
+      const newName = safeFileName(input, { ensurePdf: !isDir });
+      if (!newName) {
+        showToast(t('toast.invalidFileName'));
+        return;
       }
       if (newName === currentName) return;
       try {
@@ -5859,7 +5855,8 @@ export function initApp(): void {
         } else {
           try {
             const picked = await readPdfFromUri(item.uri);
-            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files');
+            const relPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
+            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files', 1, relPath);
           } catch {
             showToast(t('toast.fileOpenError'));
           }
@@ -5979,7 +5976,11 @@ export function initApp(): void {
   filesNewFolderBtn.addEventListener('click', async () => {
     const name = prompt(t('common.newFolderPrompt'));
     if (!name || !name.trim()) return;
-    const safeName = name.trim().replace(/[/\\:*?"<>|]/g, '_');
+    const safeName = safeFileName(name, { ensurePdf: false });
+    if (!safeName) {
+      showToast(t('toast.invalidFileName'));
+      return;
+    }
     const newPath = currentFolderPath ? `${currentFolderPath}/${safeName}` : safeName;
     try {
       await createPrivateDirectory(newPath);
@@ -6044,10 +6045,7 @@ export function initApp(): void {
       }
     }
 
-    filename = filename.replace(/[/\\:*?"<>|]/g, '_');
-    if (!filename.toLowerCase().endsWith('.pdf')) {
-      filename += '.pdf';
-    }
+    filename = safeFileName(filename, { ensurePdf: true }) || 'downloaded_document.pdf';
 
     const targetPath = `downloads/${filename}`;
     if (await pathExists(targetPath)) {
@@ -6068,7 +6066,7 @@ export function initApp(): void {
       closeModal(downloadPdfModal);
       
       // Auto-open in reader
-      await openReaderWithBytes(bytes, filename, savedUri, 'files');
+      await openReaderWithBytes(bytes, filename, savedUri, 'files', 1, targetPath);
       void renderFilesList();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -6095,7 +6093,7 @@ export function initApp(): void {
     if (!btn || !openInToolUri) return;
     const toolId = btn.dataset.toolId!;
     closeModal(openInToolSheet);
-    void openFileInTool(toolId, openInToolUri);
+    void openFileInTool(toolId, openInToolUri, openInToolRelPath);
   });
 
   // --- Move modal event listeners ---
