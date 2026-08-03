@@ -15,8 +15,8 @@ You can do everything with a single command:
 
 ```bash
 npm run test && npm run build && \
-export JAVA_HOME=/opt/android-studio/jbr && \
-export ANDROID_HOME=$HOME/Android/Sdk && \
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && \
+export ANDROID_HOME=/opt/android-sdk && \
 export PATH=$PATH:$ANDROID_HOME/platform-tools && \
 npx cap sync && npx cap run android
 ```
@@ -27,7 +27,7 @@ npx cap sync && npx cap run android
 ```bash
 npm run test
 ```
-- 121 tests will run
+- 126 tests will run
 - All of them must pass
 
 #### 2. Build
@@ -39,8 +39,8 @@ npm run build
 
 #### 3. Deploy to Device
 ```bash
-export JAVA_HOME=/opt/android-studio/jbr
-export ANDROID_HOME=$HOME/Android/Sdk
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export ANDROID_HOME=/opt/android-sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 npx cap sync          # Sync web assets
@@ -49,8 +49,8 @@ npx cap run android   # Build + Deploy
 
 ### Setup Info
 
-- **Android SDK**: `$HOME/Android/Sdk`
-- **Java Runtime**: `/opt/android-studio/jbr`
+- **Android SDK**: `/opt/android-sdk`
+- **Java Runtime**: `/usr/lib/jvm/java-21-openjdk`
 - **Connected Device ID**: check with `adb devices` (device-specific, varies by environment)
 - **App ID**: `com.eduplayconnect.bindery`
 - **App Name**: Bindery
@@ -62,8 +62,8 @@ Add to `~/.config/fish/config.fish`:
 ```fish
 function android-deploy
     npm run test && npm run build && \
-    set -x JAVA_HOME /opt/android-studio/jbr && \
-    set -x ANDROID_HOME $HOME/Android/Sdk && \
+    set -x JAVA_HOME /usr/lib/jvm/java-21-openjdk && \
+    set -x ANDROID_HOME /opt/android-sdk && \
     set -x PATH $PATH $ANDROID_HOME/platform-tools && \
     npx cap sync && npx cap run android
 end
@@ -103,8 +103,8 @@ Tüm işlemleri tek komutla yapabilirsin:
 
 ```bash
 npm run test && npm run build && \
-export JAVA_HOME=/opt/android-studio/jbr && \
-export ANDROID_HOME=$HOME/Android/Sdk && \
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && \
+export ANDROID_HOME=/opt/android-sdk && \
 export PATH=$PATH:$ANDROID_HOME/platform-tools && \
 npx cap sync && npx cap run android
 ```
@@ -115,7 +115,7 @@ npx cap sync && npx cap run android
 ```bash
 npm run test
 ```
-- 121 test çalışacak
+- 126 test çalışacak
 - Tümü geçmesi gerekli
 
 #### 2. Build Oluştur
@@ -127,8 +127,8 @@ npm run build
 
 #### 3. Cihaza Deploy Et
 ```bash
-export JAVA_HOME=/opt/android-studio/jbr
-export ANDROID_HOME=$HOME/Android/Sdk
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export ANDROID_HOME=/opt/android-sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 npx cap sync          # Web assets'i senkronize et
@@ -137,8 +137,8 @@ npx cap run android   # Build + Deploy
 
 ### Kurulum Bilgisi
 
-- **Android SDK**: `$HOME/Android/Sdk`
-- **Java Runtime**: `/opt/android-studio/jbr`
+- **Android SDK**: `/opt/android-sdk`
+- **Java Runtime**: `/usr/lib/jvm/java-21-openjdk`
 - **Bağlı Cihaz ID**: `adb devices` ile kontrol edin (cihaza özel, ortama göre değişir)
 - **App ID**: `com.eduplayconnect.bindery`
 - **App Name**: Bindery
@@ -150,8 +150,8 @@ npx cap run android   # Build + Deploy
 ```fish
 function android-deploy
     npm run test && npm run build && \
-    set -x JAVA_HOME /opt/android-studio/jbr && \
-    set -x ANDROID_HOME $HOME/Android/Sdk && \
+    set -x JAVA_HOME /usr/lib/jvm/java-21-openjdk && \
+    set -x ANDROID_HOME /opt/android-sdk && \
     set -x PATH $PATH $ANDROID_HOME/platform-tools && \
     npx cap sync && npx cap run android
 end
