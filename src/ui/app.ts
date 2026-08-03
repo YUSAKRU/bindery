@@ -5353,7 +5353,16 @@ export function initApp(): void {
 
     const option = (saveDocModal.querySelector('input[name="saveOption"]:checked') as HTMLInputElement)?.value || 'private';
 
-    if (option !== 'private') {
+    if (option === 'private') {
+      const lastSlash = readerRelPath ? readerRelPath.lastIndexOf('/') : -1;
+      const dir = readerRelPath && lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
+      const targetRelPath = readerRelPath ? (dir ? `${dir}/${newName}` : newName) : `scans/${newName}`;
+      // Saving under the file's own current path is a no-op rename, not an overwrite.
+      if (targetRelPath !== readerRelPath && (await pathExists(targetRelPath))) {
+        const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: newName }));
+        if (!overwrite) return;
+      }
+    } else {
       const existsInDocuments = await Filesystem.stat({ path: newName, directory: Directory.Documents })
         .then(() => true)
         .catch(() => false);
