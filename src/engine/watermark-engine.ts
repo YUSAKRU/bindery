@@ -1,6 +1,6 @@
-import { degrees, PDFDocument, rgb } from 'pdf-lib';
+import { degrees, rgb } from 'pdf-lib';
 import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
-import { validatePdf } from './validator';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 
 export interface WatermarkBaseOptions {
@@ -79,7 +79,7 @@ async function loadWatermarkFontBytes(): Promise<ArrayBuffer> {
 }
 
 export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOptions): Promise<WatermarkResult> {
-  const { pageCount } = await validatePdf(inputBytes);
+  const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (options.opacity < 0 || options.opacity > 1) {
     throw new BookletError('Opaklık 0 ile 1 arasında olmalı.');
@@ -87,8 +87,6 @@ export async function addWatermark(inputBytes: Uint8Array, options: WatermarkOpt
   if (options.type === 'text' && !options.text.trim()) {
     throw new BookletError('Filigran metni boş olamaz.');
   }
-
-  const doc = await PDFDocument.load(inputBytes);
 
   if (options.type === 'text') {
     // fontkit is ~700kB and is only needed to embed the Unicode TTF, so it is

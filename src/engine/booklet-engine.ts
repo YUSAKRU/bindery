@@ -1,5 +1,5 @@
 import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees } from 'pdf-lib';
-import { validatePdf } from './validator';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 import type { BookletOptions, BookletResult, PaperSize } from './types';
 import { makeInstructionsPage } from './instructions-page';
@@ -413,8 +413,7 @@ export async function makeBooklet(
     throw new BookletError(`Geçersiz cilt yönü değeri: ${binding}. 'ltr' veya 'rtl' olmalı.`);
   }
 
-  const { pageCount: originalPageCount } = await validatePdf(inputBytes);
-  const srcDoc = await PDFDocument.load(inputBytes);
+  const { doc: srcDoc, metadata: { pageCount: originalPageCount } } = await loadAndValidatePdf(inputBytes);
 
   // Resolve the physical sheet size; every slot/shift below is derived from it
   // rather than the fixed A4 constants. 'source' needs the pre-padding pages.

@@ -1,5 +1,5 @@
-import { degrees, PDFDocument } from 'pdf-lib';
-import { validatePdf } from './validator';
+import { degrees } from 'pdf-lib';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 
 export interface RotateResult {
@@ -9,7 +9,7 @@ export interface RotateResult {
 
 /** Sets each page's absolute rotation (0/90/180/270) to the matching entry in `angles`. */
 export async function rotatePages(inputBytes: Uint8Array, angles: number[]): Promise<RotateResult> {
-  const { pageCount } = await validatePdf(inputBytes);
+  const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (angles.length !== pageCount) {
     throw new BookletError('Sayfa sayısı uyuşmuyor.');
@@ -24,7 +24,6 @@ export async function rotatePages(inputBytes: Uint8Array, angles: number[]): Pro
     }
   }
 
-  const doc = await PDFDocument.load(inputBytes);
   doc.getPages().forEach((page, i) => page.setRotation(degrees(angles[i])));
 
   const rotatedPdf = await doc.save();

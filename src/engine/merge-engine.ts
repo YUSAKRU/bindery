@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { validatePdf } from './validator';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 
 export interface MergeInput {
@@ -27,8 +27,7 @@ export async function mergePdfs(inputs: MergeInput[]): Promise<MergeResult> {
   let pageCount = 0;
 
   for (const input of inputs) {
-    await validatePdf(input.bytes);
-    const srcDoc = await PDFDocument.load(input.bytes);
+    const { doc: srcDoc } = await loadAndValidatePdf(input.bytes);
     const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
     copiedPages.forEach((page) => mergedDoc.addPage(page));
     pageCount += copiedPages.length;

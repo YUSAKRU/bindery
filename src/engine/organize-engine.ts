@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { validatePdf } from './validator';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 
 export interface OrganizeResult {
@@ -15,7 +15,7 @@ export interface OrganizeResult {
  * accepts arbitrary/partial/repeated index arrays.
  */
 export async function organizePages(inputBytes: Uint8Array, pageOrder: number[]): Promise<OrganizeResult> {
-  const { pageCount: originalPageCount } = await validatePdf(inputBytes);
+  const { doc: srcDoc, metadata: { pageCount: originalPageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (pageOrder.length === 0) {
     throw new BookletError('En az 1 sayfa kalmalı.');
@@ -29,7 +29,6 @@ export async function organizePages(inputBytes: Uint8Array, pageOrder: number[])
     }
   }
 
-  const srcDoc = await PDFDocument.load(inputBytes);
   const outDoc = await PDFDocument.create();
   const copiedPages = await outDoc.copyPages(srcDoc, pageOrder);
   copiedPages.forEach((page) => outDoc.addPage(page));

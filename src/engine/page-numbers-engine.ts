@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
-import { validatePdf } from './validator';
+import { StandardFonts, degrees } from 'pdf-lib';
+import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 
 export type PageNumberPosition = 'bottom-right' | 'bottom-left' | 'bottom-center' | 'top-right' | 'top-left' | 'top-center';
@@ -95,13 +95,12 @@ export function toContentSpacePosition(
 }
 
 export async function addPageNumbers(inputBytes: Uint8Array, options: PageNumberOptions): Promise<PageNumberResult> {
-  const { pageCount } = await validatePdf(inputBytes);
+  const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
 
   if (!Number.isInteger(options.startNumber) || options.startNumber < 1) {
     throw new BookletError('Başlangıç numarası 1 veya daha büyük bir tam sayı olmalı.');
   }
 
-  const doc = await PDFDocument.load(inputBytes);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const lastNumber = options.startNumber + pageCount - 1;
 

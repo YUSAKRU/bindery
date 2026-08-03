@@ -6,11 +6,18 @@ import {
 } from './types';
 import type { PdfMetadata } from './types';
 
+export interface ValidatedPdf {
+  doc: PDFDocument;
+  metadata: PdfMetadata;
+}
+
 /**
- * Validates an in-memory PDF before imposition: rejects encrypted/DRM
- * documents, corrupted files, and empty page sets.
+ * Loads and validates an in-memory PDF before imposition: rejects
+ * encrypted/DRM documents, corrupted files, and empty page sets. Returns the
+ * loaded document alongside its metadata for callers that need to read or
+ * mutate pages, so they don't have to parse the same bytes a second time.
  */
-export async function validatePdf(bytes: Uint8Array): Promise<PdfMetadata> {
+export async function loadAndValidatePdf(bytes: Uint8Array): Promise<ValidatedPdf> {
   let doc: PDFDocument;
   try {
     doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
@@ -34,5 +41,10 @@ export async function validatePdf(bytes: Uint8Array): Promise<PdfMetadata> {
     return [width, height];
   });
 
-  return { pageCount, pageSizes };
+  return { doc, metadata: { pageCount, pageSizes } };
+}
+
+/** Metadata-only validation, for callers that never need the loaded document. */
+export async function validatePdf(bytes: Uint8Array): Promise<PdfMetadata> {
+  return (await loadAndValidatePdf(bytes)).metadata;
 }
