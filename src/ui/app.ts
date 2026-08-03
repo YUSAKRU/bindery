@@ -3579,7 +3579,7 @@ export function initApp(): void {
 
     if (readerLastPageSaveTimer) clearTimeout(readerLastPageSaveTimer);
     readerLastPageSaveTimer = setTimeout(() => {
-      void updateLastPage(readerName, current);
+      void updateLastPage({ uri: readerUri, name: readerName }, current);
     }, 800);
   }
 
@@ -4176,7 +4176,7 @@ export function initApp(): void {
   async function openRecent(entry: RecentEntry): Promise<void> {
     if (!entry.uri) {
       showToast(t('toast.fileNoLongerAccessible'));
-      await removeRecent(entry.name);
+      await removeRecent(entry);
       await renderHubRecentsGrid();
       return;
     }
@@ -4188,7 +4188,7 @@ export function initApp(): void {
       await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
     } catch {
       showToast(t('toast.fileNoLongerAccessible'));
-      await removeRecent(entry.name);
+      await removeRecent(entry);
       await renderHubRecentsGrid();
     } finally {
       hideReaderOpening();
@@ -4977,7 +4977,7 @@ export function initApp(): void {
             setTimeout(() => {
               fullscreenCurrentPage -= 1;
               void updateFullscreenPages();
-              void updateLastPage(readerName, fullscreenCurrentPage);
+              void updateLastPage({ uri: readerUri, name: readerName }, fullscreenCurrentPage);
             }, 200);
           } else {
             fsViewer.style.transform = `translate(-50%, -50%) rotate(${normalizedAngle}deg) translate3d(-100%, 0, 0)`;
@@ -4988,7 +4988,7 @@ export function initApp(): void {
             setTimeout(() => {
               fullscreenCurrentPage += 1;
               void updateFullscreenPages();
-              void updateLastPage(readerName, fullscreenCurrentPage);
+              void updateLastPage({ uri: readerUri, name: readerName }, fullscreenCurrentPage);
             }, 200);
           } else {
             fsViewer.style.transform = `translate(-50%, -50%) rotate(${normalizedAngle}deg) translate3d(-100%, 0, 0)`;
@@ -5384,7 +5384,7 @@ export function initApp(): void {
           const dir = lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
           const newRelPath = dir ? `${dir}/${newName}` : newName;
           newUri = await movePrivateItem(readerRelPath, newRelPath);
-          await removeRecent(readerName);
+          await removeRecent({ uri: readerUri, name: readerName });
           readerRelPath = newRelPath;
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
@@ -5532,7 +5532,7 @@ export function initApp(): void {
       removeBtn.ariaLabel = t('recents.removeFromHistory');
       removeBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        await removeRecent(entry.name);
+        await removeRecent(entry);
         void renderRecentsListLarge();
       });
       card.appendChild(removeBtn);
@@ -5701,7 +5701,7 @@ export function initApp(): void {
         const newUri = await movePrivateItem(oldPath, newPath);
         if (!isDir) {
           try {
-            await removeRecent(currentName);
+            await removeRecent({ uri: item.uri, name: currentName });
             await recordOpened({ uri: newUri, name: newName });
           } catch {
             // not in recents, ignore
@@ -5723,7 +5723,7 @@ export function initApp(): void {
       try {
         const itemPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         await deletePrivateItem(itemPath, isDir);
-        if (!isDir) await removeRecent(item.name);
+        if (!isDir) await removeRecent(item);
         showToast(isDir ? t('toast.folderDeleted') : t('toast.fileDeleted'));
         void renderFilesList();
       } catch {
@@ -6128,7 +6128,7 @@ export function initApp(): void {
       const newUri = await movePrivateItem(sourceDir, destDir);
       // Update recents with new URI
       try {
-        await removeRecent(moveSourceFile.name);
+        await removeRecent(moveSourceFile);
         await recordOpened({ uri: newUri, name: moveSourceFile.name });
       } catch {
         // not in recents, ignore
