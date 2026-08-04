@@ -116,6 +116,18 @@ function formatBytes(bytes: number): string {
 }
 
 /**
+ * Whether a Directory.Data entry belongs in a user-facing listing. Bindery only
+ * ever writes PDFs and folders, but the Android runtime drops its own artifacts
+ * into the same directory — androidx.profileinstaller leaves a 24-byte
+ * `profileInstalled` marker there — and those surfaced as files the user could
+ * neither open nor account for. Shared by every list so the rule cannot drift
+ * out of sync between them again.
+ */
+function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): boolean {
+  return item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf');
+}
+
+/**
  * Resolves a caught error to user-facing, localized text. Engine failures carry a
  * `code` translated via `t('error.' + code, params)`; anything else (native plugin
  * errors, unexpected throws) falls back to its own message. `t()` itself falls back
@@ -1153,9 +1165,7 @@ export function initApp(): void {
     const items = await listPrivateFolder(currentPickerPath);
     binderyPickerList.innerHTML = '';
 
-    const pdfItems = items.filter(
-      (item) => item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf')
-    );
+    const pdfItems = items.filter(isBrowsableEntry);
     const isEmpty = pdfItems.length === 0;
     binderyPickerEmptyHint.classList.toggle('hidden', !isEmpty);
 
@@ -5758,7 +5768,7 @@ export function initApp(): void {
       return;
     }
     if (generation !== filesRenderGeneration) return;
-    const items = sortFileEntries(raw, filesSortMode);
+    const items = sortFileEntries(raw.filter(isBrowsableEntry), filesSortMode);
     const isEmpty = items.length === 0;
     filesEmptyHint.classList.toggle('hidden', !isEmpty);
     filesList.innerHTML = '';
