@@ -1152,7 +1152,11 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   box-shadow: var(--shadow-1);
-  z-index: 100;
+  /* Above every overlay in the app (modal/sheet 1000, onboarding 2000). A toast
+     reports the outcome of an action, and that action is usually started from
+     inside a modal — at z-index 100 the "download failed" message rendered
+     behind the modal scrim, so the user had to close the dialog to read why. */
+  z-index: 3000;
   max-width: 90%;
   text-align: center;
   animation: toastIn 0.18s cubic-bezier(0.2, 0, 0, 1);
