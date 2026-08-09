@@ -1,5 +1,18 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { buildInstructionsLines, makeInstructionsPage } from './instructions-page';
+import type { InstructionsData } from './instructions-page';
+
+// Wrap the real sheet so tests can see what makeBooklet passes it, while still
+// producing a genuine PDF for the structural assertions below.
+vi.mock('./instructions-page', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./instructions-page')>();
+  return { ...actual, makeInstructionsPage: vi.fn(actual.makeInstructionsPage) };
+});
 import {
   computeSheetMapping,
   computeSignatureMappings,
@@ -12,6 +25,54 @@ import {
   signatureStartPages,
 } from './booklet-engine';
 import { BookletError } from './types';
+
+
+// makeBooklet's instructions sheet now embeds a Unicode font subset, fetched
+// through a Vite `?url` asset import. Feed it the real bytes from disk so these
+// tests exercise the true path rather than a stub.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const readFont = (name: string) => {
+  const b = readFileSync(resolve(__dirname, `../assets/fonts/${name}`));
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+};
+const FONT_REGULAR = readFont('NotoSans-Latin.ttf');
+const FONT_BOLD = readFont('NotoSans-Latin-Bold.ttf');
+
+beforeAll(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => ({
+      ok: true,
+      arrayBuffer: async () => (String(url).includes('Bold') ? FONT_BOLD : FONT_REGULAR),
+    })),
+  );
+});
+afterAll(() => vi.unstubAllGlobals());
+
+/**
+ * Captures the InstructionsData makeBooklet hands to the sheet.
+ *
+ * These assertions used to grep the generated PDF's content stream, which
+ * worked only because the sheet drew ASCII through a WinAnsi StandardFont.
+ * Localising it (Turkish needs ı/ş/ğ/İ) means embedding a Unicode subset, and
+ * subset-encoded text is not readable in the stream any more. Asserting on the
+ * data passed across the boundary is both possible again and a more direct test
+ * of what makeBooklet is actually responsible for.
+ *
+ * Uses vi.mock rather than reassigning the module namespace: booklet-engine
+ * binds the import at load time, so patching the namespace object afterwards
+ * would not be seen by it.
+ */
+async function instructionsDataFor(
+  input: Uint8Array,
+  options: Parameters<typeof makeBooklet>[1],
+): Promise<InstructionsData> {
+  const spy = vi.mocked(makeInstructionsPage);
+  spy.mockClear();
+  await makeBooklet(input, options);
+  expect(spy).toHaveBeenCalledTimes(1);
+  return spy.mock.calls[0][0];
+}
 
 /** Asserts a synchronous throw is a BookletError carrying the given code. */
 function expectThrowsCode(fn: () => unknown, code: string): void {
@@ -37,35 +98,6 @@ async function expectRejectsCode(promise: Promise<unknown>, code: string): Promi
   expect((error as BookletError).code).toBe(code);
 }
 
-/**
- * Extracts the visible text of a generated PDF by decoding the hex string tokens
- * (`<...> Tj/TJ`) pdf-lib emits for subset-embedded fonts. Output-only — no
- * production text-layout code is invoked.
- */
-async function extractText(pdf: Uint8Array): Promise<string> {
-  const doc = await PDFDocument.load(pdf);
-  let raw = '';
-  for (const [, obj] of doc.context.enumerateIndirectObjects()) {
-    if (obj instanceof PDFRawStream) {
-      try {
-        const t = new TextDecoder().decode(decodePDFRawStream(obj).decode());
-        if (t.includes('Tj') || t.includes('TJ')) raw += `${t}\n`;
-      } catch {
-        /* not a content stream */
-      }
-    }
-  }
-  return [...raw.matchAll(/<([0-9A-Fa-f]+)>/g)]
-    .map((m) => {
-      const hex = m[1];
-      let s = '';
-      for (let i = 0; i + 1 < hex.length; i += 2) {
-        s += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
-      }
-      return s;
-    })
-    .join('\n');
-}
 import type { BookletOptions } from './types';
 
 /** One drawn source page as reconstructed from the sheet's content stream. */
@@ -757,45 +789,40 @@ describe('makeBooklet includeInstructions', () => {
 
   it('reflects the duplex flip edge in the copy', async () => {
     const input = await buildTestPdf(16);
-    const shortText = await extractText(
-      (await makeBooklet(input, { includeInstructions: true, flipEdge: 'short' })).instructionsPdf!,
-    );
-    expect(shortText).toContain('SHORT edge');
-    expect(shortText).not.toContain('LONG edge');
 
-    const longText = await extractText(
-      (await makeBooklet(input, { includeInstructions: true, flipEdge: 'long' })).instructionsPdf!,
-    );
-    expect(longText).toContain('LONG edge');
+    const shortCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, flipEdge: 'short' }),
+    ).map((l) => l.text);
+    expect(shortCopy.some((l) => l.includes('SHORT edge'))).toBe(true);
+    expect(shortCopy.some((l) => l.includes('LONG edge'))).toBe(false);
+
+    const longCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, flipEdge: 'long' }),
+    ).map((l) => l.text);
+    expect(longCopy.some((l) => l.includes('LONG edge'))).toBe(true);
   });
 
   it('lists the signature count and reading-order start pages', async () => {
     // 44 pages, auto -> 3 signatures starting at pages 1, 17, 33.
     const input = await buildTestPdf(44);
-    const text = await extractText(
-      (await makeBooklet(input, { includeInstructions: true, signatureSize: 'auto' })).instructionsPdf!,
-    );
-    expect(text).toContain('Signatures: 3');
-    expect(text).toContain('Signature 2 starts at page 17');
-    expect(text).toContain('Signature 3 starts at page 33');
+    const data = await instructionsDataFor(input, {
+      includeInstructions: true,
+      signatureSize: 'auto',
+    });
+    expect(data.signaturesCount).toBe(3);
+    expect(data.signatureStartPages).toEqual([1, 17, 33]);
   });
 
   it('offsets reading-order pages by the cover when a cover is separated', async () => {
     // 48 pages, separate cover -> inner block 44 -> signatures at 1,17,33, then
     // shifted +2 for the two leading cover pages: 3, 19, 35.
     const input = await buildTestPdf(48);
-    const text = await extractText(
-      (
-        await makeBooklet(input, {
-          includeInstructions: true,
-          signatureSize: 16,
-          separateCover: true,
-        })
-      ).instructionsPdf!,
-    );
-    expect(text).toContain('Signature 1 starts at page 3');
-    expect(text).toContain('Signature 2 starts at page 19');
-    expect(text).toContain('Signature 3 starts at page 35');
+    const data = await instructionsDataFor(input, {
+      includeInstructions: true,
+      signatureSize: 16,
+      separateCover: true,
+    });
+    expect(data.signatureStartPages).toEqual([3, 19, 35]);
   });
 
   it('caps the reading-order list for many signatures and stays one page', async () => {
@@ -806,10 +833,12 @@ describe('makeBooklet includeInstructions', () => {
     const doc = await PDFDocument.load(result.instructionsPdf!);
     expect(doc.getPageCount()).toBe(1);
 
-    const text = await extractText(result.instructionsPdf!);
-    expect(text).toContain('Signature 10 starts at page');
-    expect(text).toContain('and 15 more signatures (every 16 pages)');
-    expect(text).not.toContain('Signature 25');
+    const copy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, signatureSize: 'auto' }),
+    ).map((l) => l.text);
+    expect(copy.some((l) => l.includes('Signature 10 starts at page'))).toBe(true);
+    expect(copy.some((l) => l.includes('and 15 more signatures (every 16 pages)'))).toBe(true);
+    expect(copy.some((l) => l.includes('Signature 25'))).toBe(false);
   });
 
   it('leaves instructionsPdf undefined by default and does not touch the book PDFs', async () => {

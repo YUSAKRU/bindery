@@ -1,6 +1,14 @@
 # Bundled fonts
 
-## `NotoSans-Latin.ttf`
+Two weights of the same subset. `NotoSans-Latin.ttf` is used by the watermark tool
+(`src/engine/watermark-engine.ts`); the printed booklet instructions sheet
+(`src/engine/instructions-page.ts`) uses both, since its headings are bold.
+
+Both are produced by the same `pyftsubset` command below — only the source face differs
+(`NotoSans-Regular.ttf` / `NotoSans-Bold.ttf`). Keep them in sync: if you widen the unicode
+ranges for one, do the other too, or bold headings will silently lose glyphs the body text has.
+
+## `NotoSans-Latin.ttf` and `NotoSans-Latin-Bold.ttf`
 
 A subset of **Noto Sans Regular**, bundled so pdf-lib can draw text the WinAnsi-encoded
 `StandardFonts` cannot. See finding **C1** in `docs/CODE-REVIEW-2026-08-03.md`: pdf-lib's
@@ -10,8 +18,8 @@ the watermark tool for any Turkish user who typed Turkish into it.
 | | |
 |---|---|
 | Source | `/usr/share/fonts/noto/NotoSans-Regular.ttf` (Noto Sans Regular, 608 KB) |
-| Subset size | **48 KB** |
-| Glyphs | 674 |
+| Subset size | **48 KB** each (96 KB total) |
+| Glyphs | 674 each |
 | License | SIL Open Font License 1.1 — redistribution in an application is permitted |
 
 ### Coverage (verified, not assumed)

@@ -1,4 +1,9 @@
-import { PDFDocument, PDFFont, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
+import notoSansBoldUrl from '../assets/fonts/NotoSans-Latin-Bold.ttf?url';
+import { t } from '../i18n';
+import { BookletError } from './types';
 import type { Binding, FlipEdge } from './types';
 
 /**
@@ -27,6 +32,119 @@ export interface InstructionsData {
 // a single "... and N more" summary, so the page never overflows.
 const MAX_SIGNATURE_LINES = 10;
 
+// The names of the files makeBooklet actually writes to disk (see the booklet
+// save flow in src/ui/app.ts). They are literal filenames the user will look
+// for, so they stay in English in every locale — only the sentence around them
+// is translated.
+const FILE_COMBINED = 'Combined Booklet.pdf';
+const FILE_COVER = 'Cover.pdf';
+
+let cachedFontsPromise: Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> | null = null;
+
+/**
+ * Loads the bundled Unicode subset used for this sheet. pdf-lib's StandardFonts
+ * are WinAnsi-encoded and cannot draw Turkish ı/ş/ğ/İ, which is why this sheet
+ * used to be English-only; v0.3.5 bundled a Noto Sans subset for the watermark
+ * tool and this reuses it. Fetched lazily and memoised as a promise, so two
+ * concurrent booklet runs share one fetch and the bytes are never re-downloaded.
+ */
+async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
+  if (!cachedFontsPromise) {
+    const grab = async (url: string): Promise<ArrayBuffer> => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.arrayBuffer();
+    };
+    cachedFontsPromise = Promise.all([grab(notoSansUrl), grab(notoSansBoldUrl)])
+      .then(([regular, bold]) => ({ regular, bold }))
+      .catch((err) => {
+        // Reset so a later attempt is not stuck on a permanently rejected promise.
+        cachedFontsPromise = null;
+        throw new BookletError(
+          'INSTRUCTIONS_FONT_LOAD_FAILED',
+          { message: err instanceof Error ? err.message : String(err) },
+          `Could not load the instructions sheet font: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
+  }
+  return cachedFontsPromise;
+}
+
+/** One rendered line of the sheet. `gapAfter` overrides the default leading. */
+export interface InstructionsLine {
+  text: string;
+  size: number;
+  bold?: boolean;
+  gapAfter?: number;
+}
+
+/**
+ * Builds the sheet's copy, in the current language, as an ordered list of lines.
+ *
+ * Separated from the drawing below on purpose. The sheet used to draw ASCII
+ * through a WinAnsi StandardFont, which left the text readable in the PDF
+ * content stream, and the booklet-engine tests asserted on the copy by grepping
+ * that stream. Embedding a Unicode subset — the whole point of localising this
+ * sheet — encodes text as subset glyph IDs, so that trick no longer works.
+ * Exposing the copy as data keeps it directly assertable without weakening the
+ * tests or reading bytes out of a PDF.
+ */
+export function buildInstructionsLines(data: InstructionsData): InstructionsLine[] {
+  const perSignature = data.sheetsPerSignature.join(', ');
+  const out: InstructionsLine[] = [];
+  const push = (text: string, size: number, bold?: boolean, gapAfter?: number) =>
+    out.push({ text, size, bold, gapAfter });
+
+  push(t('instructions.title'), 18, true, 28);
+
+  push(t('instructions.paper', { paper: data.paperLabel }), 10);
+  push(t('instructions.totalSheets', { count: data.totalSheets }), 10);
+  push(t('instructions.signatures', { count: data.signaturesCount, perSignature }), 10);
+  push(
+    t('instructions.separateCover', {
+      value: t(data.separateCover ? 'instructions.yes' : 'instructions.no'),
+    }),
+    10,
+    undefined,
+    10 + 15, // trailing block gap
+  );
+
+  push(t('instructions.steps'), 13, true, 20);
+  const flipLabel = t(
+    data.flipEdge === 'long' ? 'instructions.edge.long' : 'instructions.edge.short',
+  );
+  push(t('instructions.step.duplex', { edge: flipLabel }), 11, true, 17);
+  push(t('instructions.step.print', { file: FILE_COMBINED }), 11);
+  push(t('instructions.step.fold', { perSignature }), 11);
+  let stepNo = 4;
+  if (data.separateCover) {
+    push(t('instructions.step.cover', { n: stepNo, file: FILE_COVER }), 11);
+    stepNo += 1;
+  }
+  if (data.binding === 'rtl') {
+    push(t('instructions.step.rtl', { n: stepNo }), 11);
+  }
+  out[out.length - 1].gapAfter = (out[out.length - 1].size ?? 11) * 1.5 + 10;
+
+  push(t('instructions.readingOrder'), 13, true, 20);
+  const shown = data.signatureStartPages.slice(0, MAX_SIGNATURE_LINES);
+  shown.forEach((startPage, i) => {
+    push(t('instructions.signatureStart', { n: i + 1, page: startPage }), 10);
+  });
+  const remaining = data.signatureStartPages.length - shown.length;
+  if (remaining > 0) {
+    const interval =
+      data.signatureStartPages.length > 1
+        ? data.signatureStartPages[1] - data.signatureStartPages[0]
+        : 0;
+    push(t('instructions.andMore', { count: remaining, interval }), 10);
+  }
+  out[out.length - 1].gapAfter = 10 * 1.5 + 4;
+  push(t('instructions.verify'), 10);
+
+  return out;
+}
+
 // Wraps `text` to lines no wider than `maxWidth` at the given font/size.
 function wrapLines(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const words = text.split(' ');
@@ -47,94 +165,43 @@ function wrapLines(text: string, font: PDFFont, size: number, maxWidth: number):
 
 /**
  * Renders a single-page, printer-shop-style instructions sheet (plus a
- * reading-order check) at the selected sheet size. English only: pdf-lib's
- * StandardFonts are WinAnsi-encoded and cannot draw Turkish ı/ş/ğ/İ; embedding a
- * Unicode font is deliberately out of scope here. All copy is ASCII so it is
- * WinAnsi-safe and greppable in the content stream.
+ * reading-order check) at the selected sheet size, in the app's current
+ * language. The user follows this sheet while folding, or hands it to a print
+ * shop, so it must be readable in their own language — see {@link loadFonts}
+ * for why that was not possible before v0.3.5.
+ *
+ * The output PDF filenames it references are deliberately left untranslated:
+ * they are the actual names on disk.
  */
 export async function makeInstructionsPage(data: InstructionsData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([data.sheetWidth, data.sheetHeight]);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const { regular, bold: boldBytes } = await loadFonts();
+  doc.registerFontkit(fontkit);
+  const font = await doc.embedFont(regular, { subset: true });
+  const bold = await doc.embedFont(boldBytes, { subset: true });
 
   const margin = 48;
   const maxWidth = data.sheetWidth - margin * 2;
   const ink = rgb(0.12, 0.12, 0.13);
   let y = data.sheetHeight - margin;
 
-  const line = (text: string, size: number, f: PDFFont = font, gap = size * 1.5): void => {
-    page.drawText(text, { x: margin, y, size, font: f, color: ink });
-    y -= gap;
-  };
-  const paragraph = (text: string, size: number, f: PDFFont = font): void => {
-    for (const l of wrapLines(text, f, size, maxWidth)) line(l, size, f);
-  };
-  const gap = (h: number): void => {
-    y -= h;
-  };
-
-  line('Booklet Printing Instructions', 18, bold, 28);
-
-  // Summary block.
-  paragraph(`Paper: ${data.paperLabel}`, 10);
-  paragraph(`Total sheets: ${data.totalSheets}`, 10);
-  paragraph(
-    `Signatures: ${data.signaturesCount} (sheets per signature: ${data.sheetsPerSignature.join(', ')})`,
-    10,
-  );
-  paragraph(`Separate cover: ${data.separateCover ? 'yes' : 'no'}`, 10);
-  gap(10);
-
-  // Steps.
-  line('Steps', 13, bold, 20);
-  const flipLabel = data.flipEdge === 'long' ? 'LONG' : 'SHORT';
-  line(`1. Printer duplex: Flip on ${flipLabel} edge.`, 11, bold, 17);
-  paragraph('2. Print Combined Booklet.pdf double-sided (duplex), all sheets.', 11);
-  paragraph(
-    `3. Fold each signature at the center. Sheets per signature: ${data.sheetsPerSignature.join(', ')}.`,
-    11,
-  );
-  let stepNo = 4;
-  if (data.separateCover) {
-    paragraph(
-      `${stepNo}. Print Cover.pdf double-sided on heavier paper; it wraps the folded block.`,
-      11,
-    );
-    stepNo += 1;
+  // Long lines are wrapped to the sheet width; `gapAfter` (when the copy sets
+  // one) applies to the last wrapped row, so block spacing survives wrapping.
+  for (const item of buildInstructionsLines(data)) {
+    const f = item.bold ? bold : font;
+    const rows = wrapLines(item.text, f, item.size, maxWidth);
+    rows.forEach((row, i) => {
+      page.drawText(row, { x: margin, y, size: item.size, font: f, color: ink });
+      const isLast = i === rows.length - 1;
+      y -= isLast ? (item.gapAfter ?? item.size * 1.5) : item.size * 1.5;
+    });
   }
-  if (data.binding === 'rtl') {
-    paragraph(
-      `${stepNo}. Note: right-to-left book - the spine is on the right when folding.`,
-      11,
-    );
-  }
-  gap(10);
-
-  // Reading-order check. Cap the per-signature lines so a document with many
-  // signatures cannot push the list (and everything after it) off the page.
-  line('Reading order check', 13, bold, 20);
-  const shown = data.signatureStartPages.slice(0, MAX_SIGNATURE_LINES);
-  shown.forEach((startPage, i) => {
-    line(`Signature ${i + 1} starts at page ${startPage}`, 10);
-  });
-  const remaining = data.signatureStartPages.length - shown.length;
-  if (remaining > 0) {
-    const interval =
-      data.signatureStartPages.length > 1
-        ? data.signatureStartPages[1] - data.signatureStartPages[0]
-        : 0;
-    paragraph(`... and ${remaining} more signatures (every ${interval} pages).`, 10);
-  }
-  gap(4);
-  paragraph(
-    'After folding and collating, flip through: pages must read 1, 2, 3, ... in order.',
-    10,
-  );
 
   // Footer with the fine geometry values, pinned to a fixed bottom baseline so
   // it is always on the page regardless of how much content precedes it.
-  page.drawText(`Gutter: ${data.gutter} pt   Creep: ${data.creep} pt`, {
+  page.drawText(t('instructions.footer', { gutter: data.gutter, creep: data.creep }), {
     x: margin,
     y: margin,
     size: 8,

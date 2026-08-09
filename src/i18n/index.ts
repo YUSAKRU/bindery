@@ -337,6 +337,31 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.photoPathFailed': 'Could not get photo path.',
     'error.genericTitle': 'Something went wrong',
 
+    // Printed booklet instructions sheet (src/engine/instructions-page.ts).
+    // "Combined Booklet.pdf" / "Cover.pdf" arrive as {file} and are real
+    // filenames on disk — never translate them, only the sentence around them.
+    'instructions.title': 'Booklet Printing Instructions',
+    'instructions.paper': 'Paper: {paper}',
+    'instructions.totalSheets': 'Total sheets: {count}',
+    'instructions.signatures': 'Signatures: {count} (sheets per signature: {perSignature})',
+    'instructions.separateCover': 'Separate cover: {value}',
+    'instructions.yes': 'yes',
+    'instructions.no': 'no',
+    'instructions.steps': 'Steps',
+    'instructions.edge.short': 'SHORT',
+    'instructions.edge.long': 'LONG',
+    'instructions.step.duplex': '1. Printer duplex: Flip on {edge} edge.',
+    'instructions.step.print': '2. Print {file} double-sided (duplex), all sheets.',
+    'instructions.step.fold': '3. Fold each signature at the center. Sheets per signature: {perSignature}.',
+    'instructions.step.cover': '{n}. Print {file} double-sided on heavier paper; it wraps the folded block.',
+    'instructions.step.rtl': '{n}. Note: right-to-left book — the spine is on the right when folding.',
+    'instructions.readingOrder': 'Reading order check',
+    'instructions.signatureStart': 'Signature {n} starts at page {page}',
+    'instructions.andMore': '... and {count} more signatures (every {interval} pages).',
+    'instructions.verify': 'After folding and collating, flip through: pages must read 1, 2, 3, ... in order.',
+    'instructions.footer': 'Gutter: {gutter} pt   Creep: {creep} pt',
+    'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Could not load the instructions sheet font: {message}',
+
     // Engine error bodies, keyed by BookletError.code (see src/engine/types.ts).
     'error.PDF_ENCRYPTED': 'The PDF file is encrypted or DRM-protected.',
     'error.PDF_CORRUPTED': 'PDF file is corrupted or could not be read: {message}',
@@ -798,6 +823,31 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.perspectiveFailed': 'Perspektif düzeltme hatası',
     'error.photoPathFailed': 'Fotoğraf yolu alınamadı.',
     'error.genericTitle': 'Bir sorun oluştu',
+
+    // Basılan kitapçık talimat sayfası (src/engine/instructions-page.ts).
+    // "Combined Booklet.pdf" / "Cover.pdf" {file} olarak geliyor ve diskteki
+    // gerçek dosya adları — asla çevirme, yalnızca etrafındaki cümleyi çevir.
+    'instructions.title': 'Kitapçık Yazdırma Talimatları',
+    'instructions.paper': 'Kağıt: {paper}',
+    'instructions.totalSheets': 'Toplam yaprak: {count}',
+    'instructions.signatures': 'İmza sayısı: {count} (imza başına yaprak: {perSignature})',
+    'instructions.separateCover': 'Ayrı kapak: {value}',
+    'instructions.yes': 'evet',
+    'instructions.no': 'hayır',
+    'instructions.steps': 'Adımlar',
+    'instructions.edge.short': 'KISA',
+    'instructions.edge.long': 'UZUN',
+    'instructions.step.duplex': '1. Yazıcı çift taraflı ayarı: {edge} kenardan çevir.',
+    'instructions.step.print': '2. {file} dosyasını çift taraflı (duplex), tüm yapraklarıyla yazdır.',
+    'instructions.step.fold': '3. Her imzayı ortadan katla. İmza başına yaprak: {perSignature}.',
+    'instructions.step.cover': '{n}. {file} dosyasını daha kalın kağıda çift taraflı yazdır; katlanmış bloğun üzerini sarar.',
+    'instructions.step.rtl': '{n}. Not: sağdan sola kitap — katlarken sırt sağ tarafta kalır.',
+    'instructions.readingOrder': 'Okuma sırası kontrolü',
+    'instructions.signatureStart': '{n}. imza {page}. sayfada başlıyor',
+    'instructions.andMore': '... ve {count} imza daha (her {interval} sayfada bir).',
+    'instructions.verify': 'Katlayıp harmanladıktan sonra sayfaları çevir: 1, 2, 3, ... sırayla okunmalı.',
+    'instructions.footer': 'Cilt payı: {gutter} pt   Kayma: {creep} pt',
+    'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Talimat sayfası yazı tipi yüklenemedi: {message}',
 
     // Engine hata gövdeleri, BookletError.code ile eşleşir (bkz. src/engine/types.ts).
     'error.PDF_ENCRYPTED': 'PDF dosyası şifreli veya DRM korumalı.',
