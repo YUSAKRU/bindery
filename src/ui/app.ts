@@ -44,6 +44,16 @@ import { openReaderDocument, renderReaderPage, type ReaderDocument } from '../na
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
+import { createSaveFlow, type SaveFlowDeps } from './save-flow';
+import {
+  generateDefaultMergeName,
+  paperSummaryLabel,
+  parseInsertBlankList,
+  readerPageAtScrollTop as pageAtScrollTop,
+  readerScrollTopForPage as scrollTopForPage,
+  sortFileEntries,
+  type FileSortMode,
+} from './app-helpers';
 
 type ScreenId =
   | 'hub'
@@ -269,27 +279,12 @@ export function initApp(): void {
   );
 
   // Files explorer state
-  type FileSortMode = 'name-asc' | 'name-desc' | 'date-desc' | 'date-asc';
   let filesSortMode: FileSortMode = (localStorage.getItem('bindery.filesSort') as FileSortMode) ?? 'date-desc';
   let currentFolderPath = '';
   let moveSourceFile: FileEntryInfo | null = null;
   let moveTargetFolder: string | null = null;
   let openInToolUri: string | null = null;
   let openInToolRelPath: string | null = null;
-
-  function sortFileEntries(items: FileEntryInfo[], mode: FileSortMode): FileEntryInfo[] {
-    const dirs = items.filter((i) => i.type === 'directory');
-    const files = items.filter((i) => i.type === 'file');
-    const cmp = (a: FileEntryInfo, b: FileEntryInfo): number => {
-      switch (mode) {
-        case 'name-asc': return a.name.localeCompare(b.name);
-        case 'name-desc': return b.name.localeCompare(a.name);
-        case 'date-asc': return a.lastModified - b.lastModified;
-        case 'date-desc': return b.lastModified - a.lastModified;
-      }
-    };
-    return [...dirs.sort(cmp), ...files.sort(cmp)];
-  }
 
   const bottomNav = byId<HTMLElement>('bottomNav');
   const hubSearchInput = byId<HTMLInputElement>('hubSearchInput');
@@ -412,12 +407,6 @@ export function initApp(): void {
   let mergeFiles: PickedPdf[] = [];
   let mergedPdf: Uint8Array | null = null;
   let mergeSaveState: 'idle' | 'saving' | 'saved' = 'idle';
-
-  function generateDefaultMergeName(): string {
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `Merged_${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-  }
 
   const organizeHero = byId<HTMLDivElement>('organizeHero');
   const organizePickBtn = byId<HTMLButtonElement>('organizePickBtn');
@@ -652,34 +641,21 @@ export function initApp(): void {
 
   /** Current page for a given readerScroll.scrollTop (binary search over offsets). */
   function readerPageAtScrollTop(scrollTop: number): number {
-    if (readerPageOffsets.length === 0) return 1;
-    // At the hard bottom the last page's top may never reach scrollTop (it can
-    // be shorter than the viewport), so top-anchored search would undercount.
-    const maxScroll = readerScroll.scrollHeight - readerScroll.clientHeight;
-    if (maxScroll > 0 && scrollTop >= maxScroll - 2) return readerPageOffsets.length;
-    // +0.75px bias: fractional scrollTop restores land a hair short of exact
-    // page-top boundaries and must not flip the result to the previous page.
-    const offset = Math.max(0, scrollTop - readerListTopOffsetPx) + 0.75;
-    let lo = 0;
-    let hi = readerPageOffsets.length - 1;
-    let ans = 0;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if (readerPageOffsets[mid] <= offset) {
-        ans = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    return ans + 1;
+    return pageAtScrollTop(scrollTop, {
+      pageOffsets: readerPageOffsets,
+      listTopOffsetPx: readerListTopOffsetPx,
+      // Lazy: the original only performs this layout read once it knows there
+      // is at least one page.
+      maxScroll: () => readerScroll.scrollHeight - readerScroll.clientHeight,
+    });
   }
 
   /** scrollTop that puts the given 1-based page's top at the top of the viewport. */
   function readerScrollTopForPage(pageNumber: number): number {
-    if (readerPageOffsets.length === 0) return 0;
-    const idx = Math.min(Math.max(pageNumber - 1, 0), readerPageOffsets.length - 1);
-    return readerPageOffsets[idx] + readerListTopOffsetPx;
+    return scrollTopForPage(pageNumber, {
+      pageOffsets: readerPageOffsets,
+      listTopOffsetPx: readerListTopOffsetPx,
+    });
   }
 
   /**
@@ -871,6 +847,16 @@ export function initApp(): void {
     });
   }
 
+  // Collaborators every single-result save button needs; see `createSaveFlow`.
+  const saveFlowDeps: SaveFlowDeps = {
+    pathExists,
+    savePdfPrivately,
+    recordOpened,
+    showConfirmDialog,
+    showToast,
+    errorText,
+  };
+
   function getCurrentScreenId(): ScreenId {
     return (Object.entries(screens).find(([, el]) => !el.classList.contains('hidden'))?.[0] ??
       'hub') as ScreenId;
@@ -1021,11 +1007,6 @@ export function initApp(): void {
     advancedToggle.setAttribute('aria-expanded', String(open));
   }
 
-  // Short paper label for the summary band ("A4" / "Letter" / "Kaynak" ...).
-  function paperSummaryLabel(): string {
-    return bookletPaperSize === 'source' ? t('config.summary.source') : String(bookletPaperSize);
-  }
-
   // Live "A4 · 52 pages -> 13 sheets · 4 signatures" band. Uses the engine's pure
   // functions so the imposition math is never duplicated. `pages` shown is the
   // LOGICAL page count (original + inserted blanks) — the user's own reality;
@@ -1051,7 +1032,7 @@ export function initApp(): void {
     const sigs = computeSignatureMappings(padded, signatureOption()).length;
 
     let text = t('config.summary', {
-      paper: paperSummaryLabel(),
+      paper: paperSummaryLabel(bookletPaperSize),
       pages: logical,
       sheets,
       sigs,
@@ -1062,23 +1043,9 @@ export function initApp(): void {
     configSummary.classList.remove('hidden');
   }
 
-  // Parses the comma-separated "insert blank after" field. Returns the page
-  // numbers, [] when empty (feature off), or null if a token is not a
-  // non-negative integer (range is validated by the engine).
+  /** Reads the "insert blank after" field; see `parseInsertBlankList`. */
   function parseInsertBlank(): number[] | null {
-    const raw = insertBlankInput.value.trim();
-    if (!raw) return [];
-    const tokens = raw
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-    const positions: number[] = [];
-    for (const token of tokens) {
-      const n = Number(token);
-      if (!Number.isInteger(n) || n < 0) return null;
-      positions.push(n);
-    }
-    return positions;
+    return parseInsertBlankList(insertBlankInput.value);
   }
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
@@ -2043,53 +2010,27 @@ export function initApp(): void {
     }
   });
 
-  mergeFileNameInput.addEventListener('input', () => {
-    if (mergeSaveState === 'saved') {
-      mergeSaveState = 'idle';
-      mergeSaveBtn.disabled = false;
-      mergeSaveBtnLabel.textContent = t('common.save');
-      mergeGoToLocationBtn.classList.add('hidden');
-    }
-  });
+  const mergeSaveFlow = createSaveFlow(
+    {
+      getResultPdf: () => mergedPdf,
+      targetDir: 'merges',
+      savedStatusKey: 'status.merge.saved',
+      getState: () => mergeSaveState,
+      setState: (state) => { mergeSaveState = state; },
+      elements: {
+        fileNameInput: mergeFileNameInput,
+        saveBtn: mergeSaveBtn,
+        saveBtnLabel: mergeSaveBtnLabel,
+        saveSpinner: mergeSaveSpinner,
+        actionStatus: mergeActionStatus,
+        goToLocationBtn: mergeGoToLocationBtn,
+      },
+    },
+    saveFlowDeps,
+  );
 
-  mergeSaveBtn.addEventListener('click', async () => {
-    if (!mergedPdf || mergeSaveState === 'saving') return;
-
-    const filename = safeFileName(mergeFileNameInput.value, { ensurePdf: true });
-    if (!filename) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-
-    const targetPath = `merges/${filename}`;
-    if (await pathExists(targetPath)) {
-      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
-      if (!overwrite) return;
-    }
-
-    mergeSaveState = 'saving';
-    mergeSaveBtn.disabled = true;
-    mergeSaveBtnLabel.classList.add('hidden');
-    mergeSaveSpinner.classList.remove('hidden');
-
-    try {
-      const savedUri = await savePdfPrivately(mergedPdf, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
-      mergeFileNameInput.value = filename.replace(/\.pdf$/i, '');
-      mergeActionStatus.textContent = t('status.merge.saved');
-      mergeSaveState = 'saved';
-      mergeSaveBtnLabel.textContent = t('common.saved');
-      mergeGoToLocationBtn.classList.remove('hidden');
-    } catch (error) {
-      const message = errorText(error);
-      mergeActionStatus.textContent = t('status.saveFailed', { message });
-      mergeSaveState = 'idle';
-      mergeSaveBtn.disabled = false;
-    } finally {
-      mergeSaveBtnLabel.classList.remove('hidden');
-      mergeSaveSpinner.classList.add('hidden');
-    }
-  });
+  mergeFileNameInput.addEventListener('input', mergeSaveFlow.resetSavedState);
+  mergeSaveBtn.addEventListener('click', mergeSaveFlow.save);
 
   mergeGoToLocationBtn.addEventListener('click', () => {
     currentFolderPath = 'merges';
@@ -2283,53 +2224,27 @@ export function initApp(): void {
     }
   });
 
-  organizeFileNameInput.addEventListener('input', () => {
-    if (organizeSaveState === 'saved') {
-      organizeSaveState = 'idle';
-      organizeSaveBtn.disabled = false;
-      organizeSaveBtnLabel.textContent = t('common.save');
-      organizeGoToLocationBtn.classList.add('hidden');
-    }
-  });
+  const organizeSaveFlow = createSaveFlow(
+    {
+      getResultPdf: () => organizeResultPdf,
+      targetDir: 'edits',
+      savedStatusKey: 'status.organize.saved',
+      getState: () => organizeSaveState,
+      setState: (state) => { organizeSaveState = state; },
+      elements: {
+        fileNameInput: organizeFileNameInput,
+        saveBtn: organizeSaveBtn,
+        saveBtnLabel: organizeSaveBtnLabel,
+        saveSpinner: organizeSaveSpinner,
+        actionStatus: organizeActionStatus,
+        goToLocationBtn: organizeGoToLocationBtn,
+      },
+    },
+    saveFlowDeps,
+  );
 
-  organizeSaveBtn.addEventListener('click', async () => {
-    if (!organizeResultPdf || organizeSaveState === 'saving') return;
-
-    const filename = safeFileName(organizeFileNameInput.value, { ensurePdf: true });
-    if (!filename) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-
-    const targetPath = `edits/${filename}`;
-    if (await pathExists(targetPath)) {
-      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
-      if (!overwrite) return;
-    }
-
-    organizeSaveState = 'saving';
-    organizeSaveBtn.disabled = true;
-    organizeSaveBtnLabel.classList.add('hidden');
-    organizeSaveSpinner.classList.remove('hidden');
-
-    try {
-      const savedUri = await savePdfPrivately(organizeResultPdf, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
-      organizeFileNameInput.value = filename.replace(/\.pdf$/i, '');
-      organizeActionStatus.textContent = t('status.organize.saved');
-      organizeSaveState = 'saved';
-      organizeSaveBtnLabel.textContent = t('common.saved');
-      organizeGoToLocationBtn.classList.remove('hidden');
-    } catch (error) {
-      const message = errorText(error);
-      organizeActionStatus.textContent = t('status.saveFailed', { message });
-      organizeSaveState = 'idle';
-      organizeSaveBtn.disabled = false;
-    } finally {
-      organizeSaveBtnLabel.classList.remove('hidden');
-      organizeSaveSpinner.classList.add('hidden');
-    }
-  });
+  organizeFileNameInput.addEventListener('input', organizeSaveFlow.resetSavedState);
+  organizeSaveBtn.addEventListener('click', organizeSaveFlow.save);
 
   organizeGoToLocationBtn.addEventListener('click', () => {
     currentFolderPath = 'edits';
@@ -2517,53 +2432,27 @@ export function initApp(): void {
     }
   });
 
-  rotateFileNameInput.addEventListener('input', () => {
-    if (rotateSaveState === 'saved') {
-      rotateSaveState = 'idle';
-      rotateSaveBtn.disabled = false;
-      rotateSaveBtnLabel.textContent = t('common.save');
-      rotateGoToLocationBtn.classList.add('hidden');
-    }
-  });
+  const rotateSaveFlow = createSaveFlow(
+    {
+      getResultPdf: () => rotateResultPdf,
+      targetDir: 'edits',
+      savedStatusKey: 'status.rotate.saved',
+      getState: () => rotateSaveState,
+      setState: (state) => { rotateSaveState = state; },
+      elements: {
+        fileNameInput: rotateFileNameInput,
+        saveBtn: rotateSaveBtn,
+        saveBtnLabel: rotateSaveBtnLabel,
+        saveSpinner: rotateSaveSpinner,
+        actionStatus: rotateActionStatus,
+        goToLocationBtn: rotateGoToLocationBtn,
+      },
+    },
+    saveFlowDeps,
+  );
 
-  rotateSaveBtn.addEventListener('click', async () => {
-    if (!rotateResultPdf || rotateSaveState === 'saving') return;
-
-    const filename = safeFileName(rotateFileNameInput.value, { ensurePdf: true });
-    if (!filename) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-
-    const targetPath = `edits/${filename}`;
-    if (await pathExists(targetPath)) {
-      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
-      if (!overwrite) return;
-    }
-
-    rotateSaveState = 'saving';
-    rotateSaveBtn.disabled = true;
-    rotateSaveBtnLabel.classList.add('hidden');
-    rotateSaveSpinner.classList.remove('hidden');
-
-    try {
-      const savedUri = await savePdfPrivately(rotateResultPdf, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
-      rotateFileNameInput.value = filename.replace(/\.pdf$/i, '');
-      rotateActionStatus.textContent = t('status.rotate.saved');
-      rotateSaveState = 'saved';
-      rotateSaveBtnLabel.textContent = t('common.saved');
-      rotateGoToLocationBtn.classList.remove('hidden');
-    } catch (error) {
-      const message = errorText(error);
-      rotateActionStatus.textContent = t('status.saveFailed', { message });
-      rotateSaveState = 'idle';
-      rotateSaveBtn.disabled = false;
-    } finally {
-      rotateSaveBtnLabel.classList.remove('hidden');
-      rotateSaveSpinner.classList.add('hidden');
-    }
-  });
+  rotateFileNameInput.addEventListener('input', rotateSaveFlow.resetSavedState);
+  rotateSaveBtn.addEventListener('click', rotateSaveFlow.save);
 
   rotateGoToLocationBtn.addEventListener('click', () => {
     currentFolderPath = 'edits';
@@ -2720,53 +2609,27 @@ export function initApp(): void {
     }
   });
 
-  pageNumbersFileNameInput.addEventListener('input', () => {
-    if (pageNumbersSaveState === 'saved') {
-      pageNumbersSaveState = 'idle';
-      pageNumbersSaveBtn.disabled = false;
-      pageNumbersSaveBtnLabel.textContent = t('common.save');
-      pageNumbersGoToLocationBtn.classList.add('hidden');
-    }
-  });
+  const pageNumbersSaveFlow = createSaveFlow(
+    {
+      getResultPdf: () => pageNumbersResultPdf,
+      targetDir: 'edits',
+      savedStatusKey: 'status.pageNumbers.saved',
+      getState: () => pageNumbersSaveState,
+      setState: (state) => { pageNumbersSaveState = state; },
+      elements: {
+        fileNameInput: pageNumbersFileNameInput,
+        saveBtn: pageNumbersSaveBtn,
+        saveBtnLabel: pageNumbersSaveBtnLabel,
+        saveSpinner: pageNumbersSaveSpinner,
+        actionStatus: pageNumbersActionStatus,
+        goToLocationBtn: pageNumbersGoToLocationBtn,
+      },
+    },
+    saveFlowDeps,
+  );
 
-  pageNumbersSaveBtn.addEventListener('click', async () => {
-    if (!pageNumbersResultPdf || pageNumbersSaveState === 'saving') return;
-
-    const filename = safeFileName(pageNumbersFileNameInput.value, { ensurePdf: true });
-    if (!filename) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-
-    const targetPath = `edits/${filename}`;
-    if (await pathExists(targetPath)) {
-      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
-      if (!overwrite) return;
-    }
-
-    pageNumbersSaveState = 'saving';
-    pageNumbersSaveBtn.disabled = true;
-    pageNumbersSaveBtnLabel.classList.add('hidden');
-    pageNumbersSaveSpinner.classList.remove('hidden');
-
-    try {
-      const savedUri = await savePdfPrivately(pageNumbersResultPdf, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
-      pageNumbersFileNameInput.value = filename.replace(/\.pdf$/i, '');
-      pageNumbersActionStatus.textContent = t('status.pageNumbers.saved');
-      pageNumbersSaveState = 'saved';
-      pageNumbersSaveBtnLabel.textContent = t('common.saved');
-      pageNumbersGoToLocationBtn.classList.remove('hidden');
-    } catch (error) {
-      const message = errorText(error);
-      pageNumbersActionStatus.textContent = t('status.saveFailed', { message });
-      pageNumbersSaveState = 'idle';
-      pageNumbersSaveBtn.disabled = false;
-    } finally {
-      pageNumbersSaveBtnLabel.classList.remove('hidden');
-      pageNumbersSaveSpinner.classList.add('hidden');
-    }
-  });
+  pageNumbersFileNameInput.addEventListener('input', pageNumbersSaveFlow.resetSavedState);
+  pageNumbersSaveBtn.addEventListener('click', pageNumbersSaveFlow.save);
 
   pageNumbersGoToLocationBtn.addEventListener('click', () => {
     currentFolderPath = 'edits';
@@ -2974,53 +2837,27 @@ export function initApp(): void {
     }
   });
 
-  watermarkFileNameInput.addEventListener('input', () => {
-    if (watermarkSaveState === 'saved') {
-      watermarkSaveState = 'idle';
-      watermarkSaveBtn.disabled = false;
-      watermarkSaveBtnLabel.textContent = t('common.save');
-      watermarkGoToLocationBtn.classList.add('hidden');
-    }
-  });
+  const watermarkSaveFlow = createSaveFlow(
+    {
+      getResultPdf: () => watermarkResultPdf,
+      targetDir: 'edits',
+      savedStatusKey: 'status.watermark.saved',
+      getState: () => watermarkSaveState,
+      setState: (state) => { watermarkSaveState = state; },
+      elements: {
+        fileNameInput: watermarkFileNameInput,
+        saveBtn: watermarkSaveBtn,
+        saveBtnLabel: watermarkSaveBtnLabel,
+        saveSpinner: watermarkSaveSpinner,
+        actionStatus: watermarkActionStatus,
+        goToLocationBtn: watermarkGoToLocationBtn,
+      },
+    },
+    saveFlowDeps,
+  );
 
-  watermarkSaveBtn.addEventListener('click', async () => {
-    if (!watermarkResultPdf || watermarkSaveState === 'saving') return;
-
-    const filename = safeFileName(watermarkFileNameInput.value, { ensurePdf: true });
-    if (!filename) {
-      showToast(t('toast.invalidFileName'));
-      return;
-    }
-
-    const targetPath = `edits/${filename}`;
-    if (await pathExists(targetPath)) {
-      const overwrite = await showConfirmDialog(t('common.overwriteConfirm', { name: filename }));
-      if (!overwrite) return;
-    }
-
-    watermarkSaveState = 'saving';
-    watermarkSaveBtn.disabled = true;
-    watermarkSaveBtnLabel.classList.add('hidden');
-    watermarkSaveSpinner.classList.remove('hidden');
-
-    try {
-      const savedUri = await savePdfPrivately(watermarkResultPdf, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
-      watermarkFileNameInput.value = filename.replace(/\.pdf$/i, '');
-      watermarkActionStatus.textContent = t('status.watermark.saved');
-      watermarkSaveState = 'saved';
-      watermarkSaveBtnLabel.textContent = t('common.saved');
-      watermarkGoToLocationBtn.classList.remove('hidden');
-    } catch (error) {
-      const message = errorText(error);
-      watermarkActionStatus.textContent = t('status.saveFailed', { message });
-      watermarkSaveState = 'idle';
-      watermarkSaveBtn.disabled = false;
-    } finally {
-      watermarkSaveBtnLabel.classList.remove('hidden');
-      watermarkSaveSpinner.classList.add('hidden');
-    }
-  });
+  watermarkFileNameInput.addEventListener('input', watermarkSaveFlow.resetSavedState);
+  watermarkSaveBtn.addEventListener('click', watermarkSaveFlow.save);
 
   watermarkGoToLocationBtn.addEventListener('click', () => {
     currentFolderPath = 'edits';
