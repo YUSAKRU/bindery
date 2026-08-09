@@ -440,7 +440,11 @@ export function initApp(): void {
   let organizeOriginalName = 'document';
   let organizePdfDoc: PDFDocumentProxy | null = null;
   let organizePageOrder: number[] = [];
+  // Page thumbnails for the currently loaded document, keyed by original page
+  // index; Map insertion order doubles as the eviction order, as in
+  // `pdfThumbnailCache`/`navThumbCache`. Cleared whenever the panel resets.
   const organizeThumbCache = new Map<number, string>();
+  const ORGANIZE_THUMB_CACHE_MAX = 200;
   let organizeResultPdf: Uint8Array | null = null;
   let organizeThumbObserver: IntersectionObserver | null = null;
   let organizeSaveState: 'idle' | 'saving' | 'saved' = 'idle';
@@ -466,7 +470,9 @@ export function initApp(): void {
   let rotateOriginalName = 'document';
   let rotatePdfDoc: PDFDocumentProxy | null = null;
   let rotateAngles: number[] = [];
+  // Same shape and eviction policy as `organizeThumbCache`, for the rotate list.
   const rotateThumbCache = new Map<number, string>();
+  const ROTATE_THUMB_CACHE_MAX = 200;
   let rotateResultPdf: Uint8Array | null = null;
   let rotateThumbObserver: IntersectionObserver | null = null;
   let rotateSaveState: 'idle' | 'saving' | 'saved' = 'idle';
@@ -2200,6 +2206,10 @@ export function initApp(): void {
     try {
       const dataUrl = await renderPageThumbnail(organizePdfDoc, originalIndex + 1);
       organizeThumbCache.set(originalIndex, dataUrl);
+      if (organizeThumbCache.size > ORGANIZE_THUMB_CACHE_MAX) {
+        const oldest = organizeThumbCache.keys().next().value;
+        if (oldest !== undefined) organizeThumbCache.delete(oldest);
+      }
       if (document.contains(thumbEl)) {
         thumbEl.innerHTML = `<img src="${dataUrl}" alt="" />`;
       }
@@ -2421,6 +2431,10 @@ export function initApp(): void {
     try {
       const dataUrl = await renderPageThumbnail(rotatePdfDoc, originalIndex + 1);
       rotateThumbCache.set(originalIndex, dataUrl);
+      if (rotateThumbCache.size > ROTATE_THUMB_CACHE_MAX) {
+        const oldest = rotateThumbCache.keys().next().value;
+        if (oldest !== undefined) rotateThumbCache.delete(oldest);
+      }
       if (document.contains(thumbEl)) {
         thumbEl.innerHTML = `<img src="${dataUrl}" alt="" />`;
       }
