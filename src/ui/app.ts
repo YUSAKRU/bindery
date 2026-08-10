@@ -42,7 +42,12 @@ import {
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 import { destroyThumbnailDoc, loadPdfForThumbnails, renderPageThumbnail } from '../native/pdf-thumbnails';
-import { openReaderDocument, renderReaderPage, type ReaderDocument } from '../native/pdf-reader-render';
+import {
+  cancelAllReaderRenders,
+  openReaderDocument,
+  renderReaderPage,
+  type ReaderDocument,
+} from '../native/pdf-reader-render';
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
@@ -3410,12 +3415,35 @@ export function initApp(): void {
   });
 
 
+  /**
+   * Frees the backing store of every rendered page, then forgets them.
+   *
+   * A reader canvas is up to 2800px wide (renderReaderPage's cap) and its
+   * pixels do not go away when the element does — the allocation lives until
+   * the collector gets to it. Setting width/height to 0 releases it at once,
+   * which is exactly what evictReaderPage() does for a single page; dropping a
+   * whole document must not be lazier than dropping one page of it.
+   */
+  function discardRenderedPages(): void {
+    for (const canvas of readerRendered.values()) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    readerRendered.clear();
+  }
+
   async function closeReaderDocument(): Promise<void> {
     readerObserver?.disconnect();
     readerObserver = null;
-    readerRendered.clear();
+    discardRenderedPages();
     readerRenderFailures.clear();
-    readerPageList.innerHTML = '';
+    readerPageList.replaceChildren();
+    // One number per page each — small individually, but they outlived the
+    // document they describe, so a long book stayed measured out in memory
+    // until the next one replaced it.
+    readerPageAspects = [];
+    readerPageHeights = [];
+    readerPageOffsets = [];
     readerBytes = null;
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     readerSearchPanel.classList.add('hidden');
@@ -3429,6 +3457,9 @@ export function initApp(): void {
     if (readerDoc) {
       const doc = readerDoc;
       readerDoc = null;
+      // Stop the worker rendering pages that no longer exist before asking it
+      // to shut down; destroy() otherwise waits on work whose result is dead.
+      cancelAllReaderRenders();
       await doc.destroy();
     }
   }
@@ -3826,8 +3857,8 @@ export function initApp(): void {
       if (readerDoc !== doc) return; // document was closed/replaced mid-scan
     }
 
-    readerPageList.innerHTML = '';
-    readerRendered.clear();
+    readerPageList.replaceChildren();
+    discardRenderedPages();
     readerRenderFailures.clear();
 
     readerObserver = new IntersectionObserver(
@@ -3889,6 +3920,27 @@ export function initApp(): void {
   let isOpeningReader = false;
   const showReaderOpening = (): void => readerOpeningOverlay.classList.remove('hidden');
   const hideReaderOpening = (): void => readerOpeningOverlay.classList.add('hidden');
+
+  /**
+   * Reads a PDF with the opening overlay already up.
+   *
+   * openReaderWithBytes() raises the overlay itself, but only once it has the
+   * bytes — and getting them is the slow half: a large file arrives in chunks
+   * and takes seconds. Without this the user taps "open", the picker closes,
+   * and they stare at an unchanged home screen until the document appears out
+   * of nowhere. On success the overlay is deliberately left up so
+   * openReaderWithBytes takes over without a frame of flicker; only the failure
+   * path has to take it down, because nothing else will.
+   */
+  async function readForReader(uri: string): Promise<PickedPdf> {
+    showReaderOpening();
+    try {
+      return await readPdfFromUri(uri);
+    } catch (error) {
+      hideReaderOpening();
+      throw error;
+    }
+  }
 
   async function openReaderWithBytes(
     bytes: Uint8Array,
@@ -4045,10 +4097,9 @@ export function initApp(): void {
       return;
     }
     if (isOpeningReader) return;
-    showReaderOpening();
     const returnTo: ScreenId = getCurrentScreenId() === 'recents' ? 'recents' : 'hub';
     try {
-      const picked = await readPdfFromUri(entry.uri);
+      const picked = await readForReader(entry.uri);
       await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
     } catch {
       showToast(t('toast.fileNoLongerAccessible'));
@@ -5130,7 +5181,7 @@ export function initApp(): void {
     try {
       const picked = await pickPdfWithPersistentUri();
       if (!picked) return;
-      const file = await readPdfFromUri(picked.uri);
+      const file = await readForReader(picked.uri);
       await openReaderWithBytes(file.bytes, file.name, picked.persistent ? picked.uri : null);
     } catch (error) {
       const message = errorText(error);
@@ -5737,7 +5788,7 @@ export function initApp(): void {
           void renderFilesList();
         } else {
           try {
-            const picked = await readPdfFromUri(item.uri);
+            const picked = await readForReader(item.uri);
             const relPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
             await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files', 1, relPath);
           } catch {
@@ -6223,7 +6274,7 @@ export function initApp(): void {
   setupIncomingPdfLinks((url) => {
     void (async () => {
       try {
-        const picked = await readPdfFromUri(url);
+        const picked = await readForReader(url);
         await openReaderWithBytes(picked.bytes, picked.name, url);
       } catch (error) {
         const message = errorText(error);

@@ -81,6 +81,20 @@ export async function openReaderDocument(bytes: Uint8Array): Promise<ReaderDocum
   return { proxy, destroy: () => loadingTask.destroy() };
 }
 
+/**
+ * Cancels every in-flight page render and forgets them.
+ *
+ * Call this before destroying a document. Without it the worker keeps rendering
+ * pages that are already gone from the DOM while teardown is trying to run, and
+ * `activeRenderTasks` — module scope, one map for the whole app — carries the
+ * dead document's entries into the next one, where a stale entry for the same
+ * page number would be cancelled as if it belonged to the new document.
+ */
+export function cancelAllReaderRenders(): void {
+  for (const task of activeRenderTasks.values()) task.cancel();
+  activeRenderTasks.clear();
+}
+
 export interface RenderedPage {
   wrapper: HTMLDivElement;
   canvas: HTMLCanvasElement;
