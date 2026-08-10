@@ -252,10 +252,12 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.frontSidePdf': 'Front Side PDF',
     'booklet.backSidePdf': 'Back Side PDF',
     'booklet.combinedPdf': 'Combined Booklet PDF',
+    'booklet.forTwoSided': 'for a two-sided printer',
+    'booklet.forOneSided': 'for a one-sided printer',
     'booklet.coverPdfLabel': 'Cover PDF',
     'booklet.instructionsPdfLabel': 'Instructions PDF',
     'booklet.printHint':
-      'Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.',
+      '🖨️ Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.',
     'booklet.saveAll': 'Save All · {count} PDFs',
 
     'recents.subtitle': 'Documents you opened or edited most recently.',
@@ -747,10 +749,12 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.frontSidePdf': 'Ön Yüz PDF',
     'booklet.backSidePdf': 'Arka Yüz PDF',
     'booklet.combinedPdf': 'Birleşik Kitapçık PDF',
+    'booklet.forTwoSided': 'çift taraflı yazıcı için',
+    'booklet.forOneSided': 'tek taraflı yazıcı için',
     'booklet.coverPdfLabel': 'Kapak PDF',
     'booklet.instructionsPdfLabel': 'Talimat PDF',
     'booklet.printHint':
-      "Yazıcın çift taraflı basıyorsa Birleşik Kitapçık PDF'ini bas. Tek taraflıysa önce Ön Yüz, sonra Arka Yüz.",
+      "🖨️ Yazıcın çift taraflı basıyorsa Birleşik Kitapçık PDF'ini bas. Tek taraflıysa önce Ön Yüz, sonra Arka Yüz.",
     'booklet.saveAll': 'Tümünü Kaydet · {count} PDF',
 
     'recents.subtitle': 'En son açtığınız veya düzenlediğiniz belgeler.',

@@ -521,6 +521,22 @@ body {
   font-size: 0.9rem;
 }
 
+/* Which file to print depends on the user's printer, and that decision is made
+   at the row, not in a paragraph above it — so the condition rides along with
+   the label instead of only being explained further up. */
+.action-label-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.action-sublabel {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-on-surface-variant);
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;

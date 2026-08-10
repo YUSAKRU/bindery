@@ -937,25 +937,34 @@
             <input type="text" id="bookletFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
           </div>
 
-          <p class="setting-hint" data-i18n="booklet.printHint">Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.</p>
+          <p class="modal-hint" data-i18n="booklet.printHint">🖨️ Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.</p>
 
           <div class="action-list">
             <div class="action-row">
-              <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
+              <span class="action-label-stack">
+                <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
+                <span class="action-sublabel" data-i18n="booklet.forOneSided">for a one-sided printer</span>
+              </span>
               <div class="action-buttons">
                 <button class="btn btn-tonal" data-target="front" data-action="share" data-i18n="common.share">Share</button>
                 <button class="btn btn-tonal" data-target="front" data-action="print" data-i18n="common.print">Print</button>
               </div>
             </div>
             <div class="action-row">
-              <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
+              <span class="action-label-stack">
+                <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
+                <span class="action-sublabel" data-i18n="booklet.forOneSided">for a one-sided printer</span>
+              </span>
               <div class="action-buttons">
                 <button class="btn btn-tonal" data-target="back" data-action="share" data-i18n="common.share">Share</button>
                 <button class="btn btn-tonal" data-target="back" data-action="print" data-i18n="common.print">Print</button>
               </div>
             </div>
             <div class="action-row">
-              <span class="action-label" data-i18n="booklet.combinedPdf">Combined Booklet PDF</span>
+              <span class="action-label-stack">
+                <span class="action-label" data-i18n="booklet.combinedPdf">Combined Booklet PDF</span>
+                <span class="action-sublabel" data-i18n="booklet.forTwoSided">for a two-sided printer</span>
+              </span>
               <div class="action-buttons">
                 <button class="btn btn-tonal" data-target="combined" data-action="share" data-i18n="common.share">Share</button>
                 <button class="btn btn-tonal" data-target="combined" data-action="print" data-i18n="common.print">Print</button>
