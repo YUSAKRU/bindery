@@ -1735,7 +1735,7 @@ export function initApp(): void {
     imgEl.src = '';
     errorEl.classList.add('hidden');
     try {
-      const proxy = await loadPdfForThumbnails(bytes.slice());
+      const proxy = await loadPdfForThumbnails(bytes);
       try {
         imgEl.src = await renderPageThumbnail(proxy, pageIndex, 160);
         imgEl.classList.remove('hidden');
@@ -2184,7 +2184,7 @@ export function initApp(): void {
     // of the bytes it's given, so it gets a copy — organizeOriginalBytes must
     // stay intact for organizePages() later.
     if (organizePdfDoc) await destroyThumbnailDoc(organizePdfDoc);
-    organizePdfDoc = await loadPdfForThumbnails(bytes.slice());
+    organizePdfDoc = await loadPdfForThumbnails(bytes);
     organizePageOrder = Array.from({ length: organizePdfDoc.numPages }, (_, i) => i);
     organizeThumbCache.clear();
 
@@ -2383,7 +2383,7 @@ export function initApp(): void {
     // of the bytes it's given, so it gets a copy — rotateOriginalBytes must
     // stay intact for rotatePages() later.
     if (rotatePdfDoc) await destroyThumbnailDoc(rotatePdfDoc);
-    rotatePdfDoc = await loadPdfForThumbnails(bytes.slice());
+    rotatePdfDoc = await loadPdfForThumbnails(bytes);
     rotateAngles = [];
     for (let i = 1; i <= rotatePdfDoc.numPages; i++) {
       const page = await rotatePdfDoc.getPage(i);
@@ -2542,7 +2542,7 @@ export function initApp(): void {
     // of the bytes it's given, so it gets a copy — pageNumbersOriginalBytes
     // must stay intact for addPageNumbers() later.
     if (pageNumbersPdfDoc) await destroyThumbnailDoc(pageNumbersPdfDoc);
-    pageNumbersPdfDoc = await loadPdfForThumbnails(bytes.slice());
+    pageNumbersPdfDoc = await loadPdfForThumbnails(bytes);
     pageNumbersPreviewImg.src = await renderPageThumbnail(pageNumbersPdfDoc, 1, 220);
 
     pageNumbersHero.classList.add('hidden');
@@ -2728,7 +2728,7 @@ export function initApp(): void {
     // pdf.js's worker transport can transfer/detach the underlying ArrayBuffer
     // of the bytes it's given, so it gets a copy — watermarkOriginalBytes
     // must stay intact for addWatermark() later.
-    const pdfDoc = await loadPdfForThumbnails(bytes.slice());
+    const pdfDoc = await loadPdfForThumbnails(bytes);
     watermarkPreviewImg.src = await renderPageThumbnail(pdfDoc, 1, 220);
     await destroyThumbnailDoc(pdfDoc);
 
@@ -3902,7 +3902,10 @@ export function initApp(): void {
     isOpeningReader = true;
     showReaderOpening();
     try {
-      await validatePdf(bytes);
+      // No validatePdf() here on purpose: it parsed the whole document a second
+      // time with pdf-lib, on the main thread, only to detect encryption or
+      // corruption — which openReaderDocument() now reports from pdf.js's own
+      // parse, in a worker, using the same error codes.
       await closeReaderDocument();
       readerDoc = await openReaderDocument(bytes);
       readerOutline = (await readerDoc.proxy.getOutline().catch(() => null)) as

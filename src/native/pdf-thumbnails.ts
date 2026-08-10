@@ -11,7 +11,19 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 // and document-level resources.
 const loadingTasks = new WeakMap<PDFDocumentProxy, PDFDocumentLoadingTask>();
 
-/** Parses a PDF for rendering — keep the returned proxy around to render multiple pages cheaply. */
+/**
+ * Parses a PDF for rendering — keep the returned proxy around to render multiple
+ * pages cheaply.
+ *
+ * The `.slice()` is required, not defensive. pdf.js posts the array's buffer to
+ * its worker in the transfer list (`sendWithPromise("GetDocRequest", …, [data.buffer])`
+ * in pdfjs-dist), and a transferred ArrayBuffer is detached in the sender — the
+ * caller's `Uint8Array` would silently become length 0. Every caller here keeps
+ * its bytes for the actual PDF operation afterwards, so the copy stays.
+ *
+ * Callers must NOT slice again on their way in: this one copy already protects
+ * them, and a second one costs another full file's worth of memory.
+ */
 export async function loadPdfForThumbnails(bytes: Uint8Array): Promise<PDFDocumentProxy> {
   const task = pdfjsLib.getDocument({ data: bytes.slice() });
   const proxy = await task.promise;

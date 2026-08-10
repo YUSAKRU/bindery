@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock factories are hoisted above module-scope variable declarations, so the
 // mock fns themselves must be created via vi.hoisted() to be visible inside them.
-const { writeFile, readFile, readdir, mkdir, stat, getUri } = vi.hoisted(() => ({
+const { pickFiles } = vi.hoisted(() => ({ pickFiles: vi.fn() }));
+
+const { writeFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri } = vi.hoisted(() => ({
   writeFile: vi.fn(),
   readFile: vi.fn(),
+  readFileInChunks: vi.fn(),
   readdir: vi.fn(),
   mkdir: vi.fn(),
   stat: vi.fn(),
@@ -13,7 +16,7 @@ const { writeFile, readFile, readdir, mkdir, stat, getUri } = vi.hoisted(() => (
 
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Documents: 'DOCUMENTS', Data: 'DATA', Cache: 'CACHE' },
-  Filesystem: { writeFile, readFile, readdir, mkdir, stat, getUri },
+  Filesystem: { writeFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri },
 }));
 
 vi.mock('@capacitor/share', () => ({
@@ -21,7 +24,7 @@ vi.mock('@capacitor/share', () => ({
 }));
 
 vi.mock('@capawesome/capacitor-file-picker', () => ({
-  FilePicker: { pickFiles: vi.fn() },
+  FilePicker: { pickFiles },
 }));
 
 const { printPdfUri, canPrint } = vi.hoisted(() => ({
@@ -31,7 +34,7 @@ const { printPdfUri, canPrint } = vi.hoisted(() => ({
 
 vi.mock('./print', () => ({ printPdfUri, canPrint }));
 
-const { savePdfPrivately, readPdfFromUri, listPrivateFolder, printPdf, sharePdf, PrintUnavailableError } =
+const { savePdfPrivately, readPdfFromUri, listPrivateFolder, pickPdf, pickPdfs, printPdf, sharePdf, PrintUnavailableError } =
   await import('./file-bridge');
 
 // Deterministic pseudo-random byte generator (no crypto dependency needed for a test fixture).
@@ -43,6 +46,22 @@ function pseudoRandomBytes(length: number, seed = 1): Uint8Array {
     bytes[i] = state & 0xff;
   }
   return bytes;
+}
+
+/**
+ * Byte-exact comparison for multi-megabyte fixtures. expect().toEqual() walks
+ * typed arrays element by element and takes seconds on a 4 MB array — long
+ * enough to blow the default test timeout. Buffer.compare does it in one pass,
+ * and on mismatch we point at the first bad byte, which is a better diff than
+ * toEqual would print for an array this size anyway.
+ */
+function expectBytesEqual(actual: Uint8Array, expected: Uint8Array): void {
+  expect(actual.length).toBe(expected.length);
+  if (Buffer.compare(Buffer.from(actual), Buffer.from(expected)) === 0) return;
+  const at = actual.findIndex((b, i) => b !== expected[i]);
+  throw new Error(
+    `bytes differ at index ${at}: got ${actual[at]}, expected ${expected[at]} (length ${actual.length})`,
+  );
 }
 
 beforeEach(() => {
@@ -69,19 +88,98 @@ describe('bytesToBase64 (via savePdfPrivately)', () => {
   });
 });
 
-describe('base64ToBytes (via readPdfFromUri)', () => {
-  const sizes = [0, 1, 2, 3, 100, 250_000, 32768, 32769, 65536, 65537];
+/**
+ * Stands in for the native side of readFileInChunks: slice the file into
+ * chunkSize-byte pieces and base64-encode **each piece independently**, exactly
+ * as Android does. That independence is the whole risk — if the chunk size were
+ * not a multiple of 3, each piece would carry its own '=' padding and the
+ * reassembled file would be corrupt. Encoding per chunk here is what makes
+ * these tests able to catch that.
+ */
+function mockNativeChunkedRead(content: Uint8Array): void {
+  readFileInChunks.mockImplementation(
+    async (options: { chunkSize: number }, callback: (c: { data: string } | null, e?: unknown) => void) => {
+      for (let i = 0; i < content.length; i += options.chunkSize) {
+        const piece = content.subarray(i, i + options.chunkSize);
+        callback({ data: Buffer.from(piece).toString('base64') });
+      }
+      callback({ data: '' }); // empty chunk = end of file
+      return 'callback-id';
+    },
+  );
+}
 
-  it.each(sizes)('decodes %i bytes back to the exact original content', async (size) => {
+describe('readPdfFromUri chunked reading', () => {
+  // Sizes straddling the 1.5 MiB chunk boundary, so reassembly is exercised for
+  // one chunk, an exact multiple, and a ragged tail.
+  const sizes = [0, 1, 2, 3, 100, 250_000, 1_572_863, 1_572_864, 1_572_865, 4_000_000];
+
+  it.each(sizes)('reassembles %i bytes byte-for-byte when the size is known', async (size) => {
     const original = pseudoRandomBytes(size, size + 13);
-    const base64 = Buffer.from(original).toString('base64');
-
-    stat.mockRejectedValueOnce(new Error('stat not supported for this uri'));
-    readFile.mockResolvedValueOnce({ data: base64 });
+    stat.mockResolvedValueOnce({ size, name: 'test.pdf' });
+    mockNativeChunkedRead(original);
 
     const result = await readPdfFromUri('content://fake/test.pdf');
 
-    expect(result.bytes).toEqual(original);
+    expectBytesEqual(result.bytes, original);
+  });
+
+  it.each([0, 3, 250_000, 1_572_865])(
+    'reassembles %i bytes when stat gives no size (collect-and-join path)',
+    async (size) => {
+      const original = pseudoRandomBytes(size, size + 7);
+      stat.mockRejectedValueOnce(new Error('stat not supported for this uri'));
+      mockNativeChunkedRead(original);
+
+      const result = await readPdfFromUri('content://fake/test.pdf');
+
+      expectBytesEqual(result.bytes, original);
+    },
+  );
+
+  it('asks for a chunk size that is a multiple of 3', async () => {
+    stat.mockResolvedValueOnce({ size: 10, name: 'test.pdf' });
+    mockNativeChunkedRead(pseudoRandomBytes(10));
+
+    await readPdfFromUri('content://fake/test.pdf');
+
+    const { chunkSize } = readFileInChunks.mock.calls[0][0];
+    // Android passes chunkSize through unaligned, so getting this wrong yields
+    // '=' padding mid-file and a silently corrupt PDF.
+    expect(chunkSize % 3).toBe(0);
+  });
+
+  it('never asks for the whole file in one piece', async () => {
+    stat.mockResolvedValueOnce({ size: 4_000_000, name: 'big.pdf' });
+    mockNativeChunkedRead(pseudoRandomBytes(4_000_000));
+
+    await readPdfFromUri('content://fake/big.pdf');
+
+    // readFile() is what ran out of memory on a 48 MB PDF; it must not be used.
+    expect(readFile).not.toHaveBeenCalled();
+    expect(readFileInChunks).toHaveBeenCalledTimes(1);
+  });
+
+  it('survives a stat size smaller than what the provider streams', async () => {
+    const original = pseudoRandomBytes(500_000, 3);
+    stat.mockResolvedValueOnce({ size: 100, name: 'lying.pdf' }); // stat under-reports
+    mockNativeChunkedRead(original);
+
+    const result = await readPdfFromUri('content://fake/lying.pdf');
+
+    expectBytesEqual(result.bytes, original);
+  });
+
+  it('rejects when a chunk reports an error mid-stream', async () => {
+    stat.mockResolvedValueOnce({ size: 999, name: 'broken.pdf' });
+    readFileInChunks.mockImplementation(
+      async (_o: unknown, callback: (c: null, e?: unknown) => void) => {
+        callback(null, new Error('read failed at chunk 2'));
+        return 'callback-id';
+      },
+    );
+
+    await expect(readPdfFromUri('content://fake/broken.pdf')).rejects.toThrow(/read failed/);
   });
 });
 
@@ -202,5 +300,51 @@ describe('printPdf', () => {
     expect(printWrite.directory).toBe(shareWrite.directory);
     expect(printWrite.recursive).toBe(shareWrite.recursive);
     expect(printWrite.data).toBe(shareWrite.data);
+  });
+});
+
+describe('file picker reads', () => {
+  it('streams the picked file from its uri instead of asking the plugin for the data', async () => {
+    const original = pseudoRandomBytes(300_000, 5);
+    pickFiles.mockResolvedValueOnce({
+      files: [{ name: 'picked.pdf', size: original.length, path: 'content://picked/1', mimeType: 'application/pdf' }],
+    });
+    mockNativeChunkedRead(original);
+
+    const result = await pickPdf();
+
+    // readData:true made the plugin build one base64 string of the whole file —
+    // the allocation that ran a 48 MB PDF out of heap. It must stay off.
+    expect(pickFiles.mock.calls[0][0].readData).toBeUndefined();
+    expect(readFileInChunks).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'content://picked/1' }),
+      expect.any(Function),
+    );
+    expectBytesEqual(result!.bytes, original);
+    expect(result!.name).toBe('picked.pdf');
+  });
+
+  it('still decodes inline data when a platform supplies it without a path', async () => {
+    const original = pseudoRandomBytes(1_000, 9);
+    pickFiles.mockResolvedValueOnce({
+      files: [{ name: 'web.pdf', size: original.length, data: Buffer.from(original).toString('base64'), mimeType: 'application/pdf' }],
+    });
+
+    const result = await pickPdf();
+
+    expect(readFileInChunks).not.toHaveBeenCalled();
+    expectBytesEqual(result!.bytes, original);
+  });
+
+  it('rejects a multi-file pick whose combined size exceeds the limit before reading anything', async () => {
+    pickFiles.mockResolvedValueOnce({
+      files: [
+        { name: 'a.pdf', size: 30 * 1024 * 1024, path: 'content://a', mimeType: 'application/pdf' },
+        { name: 'b.pdf', size: 30 * 1024 * 1024, path: 'content://b', mimeType: 'application/pdf' },
+      ],
+    });
+
+    await expect(pickPdfs()).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+    expect(readFileInChunks).not.toHaveBeenCalled();
   });
 });

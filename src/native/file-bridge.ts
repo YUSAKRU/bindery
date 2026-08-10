@@ -61,7 +61,21 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
+/**
+ * Turns a picked file into bytes, preferring the streamed path.
+ *
+ * `file.path` is the raw `content://` URI on Android (FilePicker.java's
+ * getPathFromUri is just `uri.toString()`), so it can be read in chunks like any
+ * other URI. That is why the pickers no longer ask for `readData: true`: the
+ * plugin would slurp the whole file into a single base64 Java String, the exact
+ * allocation that ran a 48 MB PDF out of heap. `data` remains as a fallback in
+ * case a platform hands it over anyway, and `blob` covers the web, where the
+ * picker gives a Blob without being asked.
+ */
 async function filePickedToBytes(file: PickedFile): Promise<PickedPdf> {
+  if (file.path) {
+    return { name: file.name, bytes: await readFileChunked(file.path, file.size ?? null) };
+  }
   if (file.data) {
     return { name: file.name, bytes: base64ToBytes(file.data) };
   }
@@ -72,30 +86,104 @@ async function filePickedToBytes(file: PickedFile): Promise<PickedPdf> {
   throw new Error(`'${file.name}' dosyasının verisi okunamadı.`);
 }
 
+// Chunk size for streamed reads, in bytes.
+//
+// MUST be a multiple of 3. Each chunk arrives independently base64-encoded, and
+// base64 only splits cleanly on 3-byte groups — anything else pads the chunk
+// with '=' and corrupts the file when the pieces are put back together. iOS
+// rounds the value up for you (FilesystemOperationExecutor.swift), but Android
+// passes it through untouched (FilesystemMethodOptions.kt), so the caller has
+// to get it right.
+const READ_CHUNK_BYTES = 1_572_864; // 1.5 MiB, and 1572864 % 3 === 0
+
+/**
+ * Reads a file in chunks, decoding each one straight into the destination.
+ *
+ * The whole point is that the file's base64 form never exists in one piece.
+ * `Filesystem.readFile` returns the entire file as a single base64 string,
+ * which for a 48 MB PDF is a ~64 MB Java String that a 256 MB heap cannot
+ * allocate — an OOM observed on a real device. Here only one chunk is encoded
+ * at a time, and it is decoded into a pre-sized buffer immediately.
+ *
+ * `expectedSize` comes from stat(); when a content provider won't give one, the
+ * chunks are collected and joined at the end instead, which costs a second
+ * full-size allocation but keeps the rare path working.
+ */
+async function readFileChunked(uri: string, expectedSize: number | null): Promise<Uint8Array> {
+  return new Promise<Uint8Array>((resolve, reject) => {
+    let target = expectedSize !== null ? new Uint8Array(expectedSize) : null;
+    const collected: Uint8Array[] = [];
+    let offset = 0;
+    let settled = false;
+
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      if (target) {
+        // stat() can disagree with what the provider actually streams; trust
+        // the bytes, not the metadata.
+        resolve(offset === target.length ? target : target.slice(0, offset));
+        return;
+      }
+      const joined = new Uint8Array(offset);
+      let at = 0;
+      for (const part of collected) {
+        joined.set(part, at);
+        at += part.length;
+      }
+      resolve(joined);
+    };
+
+    Filesystem.readFileInChunks({ path: uri, chunkSize: READ_CHUNK_BYTES }, (chunk, err) => {
+      if (settled) return;
+      if (err) {
+        settled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      const data = typeof chunk?.data === 'string' ? chunk.data : '';
+      if (!data) {
+        finish(); // an empty chunk means the file has been read completely
+        return;
+      }
+      const bytes = base64ToBytes(data);
+      if (target && offset + bytes.length > target.length) {
+        // The file is bigger than stat() claimed. Keep what we have and fall
+        // back to collecting, rather than throwing away a nearly-finished read.
+        collected.push(target.subarray(0, offset).slice(), bytes);
+        target = null;
+      } else if (target) {
+        target.set(bytes, offset);
+      } else {
+        collected.push(bytes);
+      }
+      offset += bytes.length;
+    }).catch((error) => {
+      if (settled) return;
+      settled = true;
+      reject(error instanceof Error ? error : new Error(String(error)));
+    });
+  });
+}
+
 /** Reads an arbitrary `content://`/`file://` URI (e.g. from Android's "Open with") into bytes. */
 export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
   // stat() is unreliable on raw content:// URIs (may throw on some Android versions
   // and may return a path segment rather than a display name). Try it first for the
   // size check and a best-effort display name; fall through gracefully on failure.
   let statName: string | undefined;
+  let statSize: number | null = null;
   try {
     const stat = await Filesystem.stat({ path: uri });
     if (stat.size > FILE_SIZE_LIMIT_BYTES) throw new FileTooLargeError(stat.size);
     statName = stat.name;
+    statSize = stat.size;
   } catch (e) {
     if (e instanceof FileTooLargeError) throw e;
     // Some content providers don't support stat — proceed without size guard.
   }
 
-  const file = await Filesystem.readFile({ path: uri });
-
-  let bytes: Uint8Array;
-  if (typeof file.data !== 'string') {
-    const buffer = await (file.data as Blob).arrayBuffer();
-    bytes = new Uint8Array(buffer);
-  } else {
-    bytes = base64ToBytes(file.data);
-  }
+  const bytes = await readFileChunked(uri, statSize);
 
   // Safe name fallback: decode the last path segment of the URI.
   const name =
@@ -110,7 +198,6 @@ export async function pickPdf(): Promise<PickedPdf | null> {
   const result = await FilePicker.pickFiles({
     types: ['application/pdf'],
     limit: 1,
-    readData: true,
   });
 
   const file = result.files[0];
@@ -123,7 +210,6 @@ export async function pickPdf(): Promise<PickedPdf | null> {
 export async function pickPdfs(): Promise<PickedPdf[]> {
   const result = await FilePicker.pickFiles({
     types: ['application/pdf'],
-    readData: true,
   });
 
   const totalSize = result.files.reduce((sum, f) => sum + f.size, 0);
@@ -137,7 +223,6 @@ export async function pickImage(): Promise<PickedPdf | null> {
   const result = await FilePicker.pickFiles({
     types: ['image/png', 'image/jpeg'],
     limit: 1,
-    readData: true,
   });
 
   const file = result.files[0];

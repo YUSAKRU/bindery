@@ -18,14 +18,66 @@ const MAX_RENDER_SCALE = 2;
 const activeRenderTasks = new Map<number, RenderTask>();
 
 /**
+ * Carries a `code` so the UI's errorText() localizes it, without making
+ * src/native depend on src/engine — the same shape FileTooLargeError uses.
+ * The codes match the ones validatePdf throws, so the user sees exactly the
+ * message they saw before this file took over reporting them.
+ */
+class ReaderDocumentError extends Error {
+  readonly code: string;
+  readonly params?: Record<string, string | number>;
+  constructor(code: string, message: string, params?: Record<string, string | number>) {
+    super(message);
+    this.name = 'ReaderDocumentError';
+    this.code = code;
+    this.params = params;
+  }
+}
+
+/** Maps pdf.js's own exceptions onto the app's error codes. */
+function toReaderError(error: unknown): ReaderDocumentError {
+  const name = (error as { name?: string })?.name;
+  const message = error instanceof Error ? error.message : String(error);
+  if (name === 'PasswordException') {
+    return new ReaderDocumentError('PDF_ENCRYPTED', 'The PDF file is encrypted or DRM-protected.');
+  }
+  // InvalidPDFException, MissingPDFException, UnexpectedResponseException and
+  // anything unforeseen all mean the same thing to a reader: unreadable file.
+  return new ReaderDocumentError(
+    'PDF_CORRUPTED',
+    `PDF file is corrupted or could not be read: ${message}`,
+    { message },
+  );
+}
+
+/**
  * Opens a PDF for full-resolution reading. Unlike `pdf-thumbnails.ts`,
  * this keeps the loading task (not just the resolved proxy) — pdf.js's
  * `PDFDocumentProxy` has no `destroy()` of its own; only the loading task
  * does, and skipping it leaks worker/document memory across opens.
+ *
+ * It also reports the file's own problems. The reader used to be preceded by
+ * validatePdf(), which parsed the entire document a second time with pdf-lib on
+ * the main thread purely to discover encryption or corruption — work pdf.js
+ * already does here, in a worker. On a large file that duplicate parse was a
+ * major contributor to running out of memory, so the check lives where the
+ * parsing already happens.
  */
 export async function openReaderDocument(bytes: Uint8Array): Promise<ReaderDocument> {
   const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
-  const proxy = await loadingTask.promise;
+  let proxy: PDFDocumentProxy;
+  try {
+    proxy = await loadingTask.promise;
+  } catch (error) {
+    // Release the worker before surfacing the failure, or a rejected open
+    // leaks it until the next successful one.
+    await loadingTask.destroy().catch(() => {});
+    throw toReaderError(error);
+  }
+  if (proxy.numPages === 0) {
+    await loadingTask.destroy().catch(() => {});
+    throw new ReaderDocumentError('PDF_NO_PAGES', 'The PDF file contains no pages.');
+  }
   return { proxy, destroy: () => loadingTask.destroy() };
 }
 
