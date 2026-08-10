@@ -3994,6 +3994,14 @@ export function initApp(): void {
   const pdfThumbnailCache = new Map<string, string>();
   const PDF_THUMBNAIL_CACHE_MAX = 50;
 
+  // A preview is 220px wide, but producing one costs a full read and parse of
+  // the document — and both scale with file size, on the main thread, with a
+  // second full copy while pdf.js holds the bytes. Past this point the trade
+  // stops making sense: a large PDF would freeze the very screen it decorates,
+  // and the cache lives only in memory, so it would do it again every launch.
+  // Those rows keep the generic document icon instead.
+  const PDF_THUMBNAIL_MAX_SOURCE_BYTES = 12 * 1024 * 1024; // 12 MB
+
   /**
    * Renders page 1 of the PDF behind `uri` to a data URL, caching the result
    * under `cacheKey`. Returns null on any failure (missing/unreadable/encrypted
@@ -4003,6 +4011,11 @@ export function initApp(): void {
     const cached = pdfThumbnailCache.get(cacheKey);
     if (cached) return cached;
     try {
+      // Ask how big it is before reading it. A provider that cannot answer is
+      // rare; there the read goes ahead as before rather than losing the
+      // preview over missing metadata.
+      const { size } = await Filesystem.stat({ path: uri }).catch(() => ({ size: 0 }));
+      if (size > PDF_THUMBNAIL_MAX_SOURCE_BYTES) return null;
       const picked = await readPdfFromUri(uri);
       const doc = await loadPdfForThumbnails(picked.bytes);
       try {
@@ -4037,8 +4050,14 @@ export function initApp(): void {
     container.replaceChildren(img);
   }
 
+  // Bumped by every hub render so a slow thumbnail fill from a previous one
+  // gives up instead of writing into containers that are no longer on screen.
+  let hubRecentsGeneration = 0;
+
   async function renderHubRecentsGrid(): Promise<void> {
     const recents = (await getRecents()).slice(0, 3);
+    const generation = ++hubRecentsGeneration;
+    const thumbTasks: { entry: RecentEntry; thumb: HTMLElement }[] = [];
     recentsList.innerHTML = '';
 
     for (const entry of recents) {
@@ -4063,8 +4082,18 @@ export function initApp(): void {
       card.addEventListener('click', () => void openRecent(entry));
       recentsList.appendChild(card);
 
-      void loadHubRecentThumbnail(entry, thumb);
+      thumbTasks.push({ entry, thumb });
     }
+
+    // One at a time, like the files list. Each thumbnail holds the whole
+    // document in memory while it renders, so three at once meant three
+    // documents at once — on the screen the user sees first at launch.
+    void (async () => {
+      for (const task of thumbTasks) {
+        if (generation !== hubRecentsGeneration) return;
+        await loadHubRecentThumbnail(task.entry, task.thumb);
+      }
+    })();
 
     const createCard = document.createElement('button');
     createCard.type = 'button';
