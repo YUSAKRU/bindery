@@ -1208,7 +1208,7 @@ export function initApp(): void {
           } else {
             closeModal(binderyFilePickerModal);
             try {
-              const picked = await readPdfFromUri(item.uri);
+              const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
               pickerResolve?.(picked);
             } catch (err) {
               if (err instanceof FileTooLargeError) {
@@ -1295,9 +1295,16 @@ export function initApp(): void {
   binderyPickerConfirmBtn.addEventListener('click', async () => {
     closeModal(binderyFilePickerModal);
     try {
-      const pickedList = await Promise.all(
-        selectedPickerFiles.map((file) => readPdfFromUri(file.uri))
-      );
+      // Sequentially, not Promise.all: every read holds a whole document in
+      // memory, so N at once meant N documents at once — and the picker has
+      // already closed, so nothing on screen would explain the crash.
+      const pickedList = await withBusyOverlay(async () => {
+        const out: PickedPdf[] = [];
+        for (const file of selectedPickerFiles) {
+          out.push(await readPdfFromUri(file.uri));
+        }
+        return out;
+      });
       pickerResolve?.(pickedList);
     } catch (err) {
       if (err instanceof FileTooLargeError) {
@@ -3942,6 +3949,23 @@ export function initApp(): void {
     }
   }
 
+  /**
+   * Runs an operation behind the full-screen spinner.
+   *
+   * Reading a PDF costs time proportional to its size, and several places used
+   * to close their modal and then read in silence — the sheet vanished and the
+   * screen behind it sat frozen with nothing to explain why. Same overlay the
+   * reader uses; it is a plain fixed-position spinner, not reader-specific.
+   */
+  async function withBusyOverlay<T>(run: () => Promise<T>): Promise<T> {
+    showReaderOpening();
+    try {
+      return await run();
+    } finally {
+      hideReaderOpening();
+    }
+  }
+
   async function openReaderWithBytes(
     bytes: Uint8Array,
     name: string,
@@ -5588,7 +5612,7 @@ export function initApp(): void {
     const loader = FILE_TOOL_LOADERS[toolId];
     if (!loader) return;
     try {
-      const { bytes, name } = await readPdfFromUri(uri);
+      const { bytes, name } = await withBusyOverlay(() => readPdfFromUri(uri));
       await loader(bytes, name, uri, relPath);
     } catch {
       showToast(t('toast.fileOpenError'));
@@ -5620,7 +5644,7 @@ export function initApp(): void {
 
       addAction('📤', t('common.share'), async () => {
         try {
-          const picked = await readPdfFromUri(item.uri);
+          const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
           await sharePdf(picked.bytes, item.name, t('common.share'));
         } catch {
           showToast(t('toast.shareError'));

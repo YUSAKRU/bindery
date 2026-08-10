@@ -215,7 +215,13 @@ export async function pickPdfs(): Promise<PickedPdf[]> {
   const totalSize = result.files.reduce((sum, f) => sum + f.size, 0);
   if (totalSize > FILE_SIZE_LIMIT_BYTES) throw new FileTooLargeError(totalSize);
 
-  return Promise.all(result.files.map(filePickedToBytes));
+  // One at a time. Promise.all held every picked document in memory at once,
+  // which is how a handful of ordinary files added up to a crash.
+  const picked: PickedPdf[] = [];
+  for (const file of result.files) {
+    picked.push(await filePickedToBytes(file));
+  }
+  return picked;
 }
 
 /** Opens the native file picker restricted to PNG/JPEG images and returns its raw bytes. */
