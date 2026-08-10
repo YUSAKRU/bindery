@@ -24,7 +24,15 @@ vi.mock('@capawesome/capacitor-file-picker', () => ({
   FilePicker: { pickFiles: vi.fn() },
 }));
 
-const { savePdfPrivately, readPdfFromUri, listPrivateFolder } = await import('./file-bridge');
+const { printPdfUri, canPrint } = vi.hoisted(() => ({
+  printPdfUri: vi.fn(),
+  canPrint: vi.fn(() => true),
+}));
+
+vi.mock('./print', () => ({ printPdfUri, canPrint }));
+
+const { savePdfPrivately, readPdfFromUri, listPrivateFolder, printPdf, sharePdf, PrintUnavailableError } =
+  await import('./file-bridge');
 
 // Deterministic pseudo-random byte generator (no crypto dependency needed for a test fixture).
 function pseudoRandomBytes(length: number, seed = 1): Uint8Array {
@@ -135,5 +143,64 @@ describe('listPrivateFolder', () => {
     mkdir.mockRejectedValueOnce(new Error('mkdir failed too'));
 
     await expect(listPrivateFolder('scans')).rejects.toBe(missingDirError);
+  });
+});
+
+describe('printPdf', () => {
+  it('writes the PDF to the cache directory and hands the plugin only its uri', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/Front%20Side.pdf' });
+    const bytes = pseudoRandomBytes(2048);
+
+    await printPdf(bytes, 'Front Side.pdf', 'Front side PDF');
+
+    // Written to Cache, not Data or Documents — it is a scratch copy.
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    const write = writeFile.mock.calls[0][0];
+    expect(write.directory).toBe('CACHE');
+    expect(write.path).toBe('Front Side.pdf');
+
+    // The whole point: the bridge sees a location, never the bytes. Pushing a
+    // 50 MB PDF through as base64 is the memory problem fixed in 0.3.5.
+    expect(printPdfUri).toHaveBeenCalledWith('file:///cache/Front%20Side.pdf', 'Front side PDF');
+    const [uriArg, jobArg] = printPdfUri.mock.calls[0];
+    expect(typeof uriArg).toBe('string');
+    expect(typeof jobArg).toBe('string');
+    expect(printPdfUri.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('refuses before writing anything when the platform cannot print', async () => {
+    canPrint.mockReturnValueOnce(false);
+
+    // One call only — mockReturnValueOnce covers exactly one, and asserting on
+    // the caught error keeps every check on that single rejection.
+    const error = await printPdf(pseudoRandomBytes(64), 'x.pdf', 'x').then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(PrintUnavailableError);
+    // Carries a code, so errorText() renders it in the user's language rather
+    // than leaking the English developer message.
+    expect(error).toMatchObject({ code: 'PRINT_UNAVAILABLE' });
+
+    // No scratch file left behind on a platform that cannot use it.
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(printPdfUri).not.toHaveBeenCalled();
+  });
+
+  it('shares and prints through the same cache write, so neither can drift', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/doc.pdf' });
+    const bytes = pseudoRandomBytes(512);
+
+    await sharePdf(bytes, 'doc.pdf', 'title');
+    const shareWrite = writeFile.mock.calls[0][0];
+    writeFile.mockClear();
+
+    await printPdf(bytes, 'doc.pdf', 'title');
+    const printWrite = writeFile.mock.calls[0][0];
+
+    expect(printWrite.directory).toBe(shareWrite.directory);
+    expect(printWrite.recursive).toBe(shareWrite.recursive);
+    expect(printWrite.data).toBe(shareWrite.data);
   });
 });

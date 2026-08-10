@@ -95,6 +95,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.apply': 'Apply',
     'common.save': 'Save',
     'common.share': 'Share',
+    'common.print': 'Print',
     'common.cancel': 'Cancel',
     'common.reset': 'Reset',
     'common.retry': 'Try Again',
@@ -253,6 +254,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.combinedPdf': 'Combined Booklet PDF',
     'booklet.coverPdfLabel': 'Cover PDF',
     'booklet.instructionsPdfLabel': 'Instructions PDF',
+    'booklet.printHint':
+      'Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.',
     'booklet.saveAll': 'Save All · {count} PDFs',
 
     'recents.subtitle': 'Documents you opened or edited most recently.',
@@ -361,6 +364,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.verify': 'After folding and collating, flip through: pages must read 1, 2, 3, ... in order.',
     'instructions.footer': 'Gutter: {gutter} pt   Creep: {creep} pt',
     'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Could not load the instructions sheet font: {message}',
+    'error.PRINT_UNAVAILABLE': 'This device has no printing service.',
+    'error.PRINT_MISSING_URI': 'No file was supplied to print.',
+    'error.PRINT_FAILED': 'Could not open the print dialog.',
+    'status.printed': 'Sent to the print dialog.',
+    'status.printFailed': 'Could not print: {message}',
 
     // Engine error bodies, keyed by BookletError.code (see src/engine/types.ts).
     'error.PDF_ENCRYPTED': 'The PDF file is encrypted or DRM-protected.',
@@ -582,6 +590,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.apply': 'Uygula',
     'common.save': 'Kaydet',
     'common.share': 'Paylaş',
+    'common.print': 'Yazdır',
     'common.cancel': 'İptal',
     'common.reset': 'Sıfırla',
     'common.retry': 'Tekrar Dene',
@@ -740,6 +749,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.combinedPdf': 'Birleşik Kitapçık PDF',
     'booklet.coverPdfLabel': 'Kapak PDF',
     'booklet.instructionsPdfLabel': 'Talimat PDF',
+    'booklet.printHint':
+      "Yazıcın çift taraflı basıyorsa Birleşik Kitapçık PDF'ini bas. Tek taraflıysa önce Ön Yüz, sonra Arka Yüz.",
     'booklet.saveAll': 'Tümünü Kaydet · {count} PDF',
 
     'recents.subtitle': 'En son açtığınız veya düzenlediğiniz belgeler.',
@@ -848,6 +859,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.verify': 'Katlayıp harmanladıktan sonra sayfaları çevir: 1, 2, 3, ... sırayla okunmalı.',
     'instructions.footer': 'Cilt payı: {gutter} pt   Kayma: {creep} pt',
     'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Talimat sayfası yazı tipi yüklenemedi: {message}',
+    'error.PRINT_UNAVAILABLE': 'Bu cihazda yazdırma servisi yok.',
+    'error.PRINT_MISSING_URI': 'Yazdırılacak dosya verilmedi.',
+    'error.PRINT_FAILED': 'Yazdırma penceresi açılamadı.',
+    'status.printed': 'Yazdırma penceresine gönderildi.',
+    'status.printFailed': 'Yazdırılamadı: {message}',
 
     // Engine hata gövdeleri, BookletError.code ile eşleşir (bkz. src/engine/types.ts).
     'error.PDF_ENCRYPTED': 'PDF dosyası şifreli veya DRM korumalı.',

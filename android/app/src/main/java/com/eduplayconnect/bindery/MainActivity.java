@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         registerPlugin(OpenDocumentPlugin.class);
+        registerPlugin(PrintPlugin.class);
         super.onCreate(savedInstanceState);
         persistIncomingUriPermission(getIntent());
     }

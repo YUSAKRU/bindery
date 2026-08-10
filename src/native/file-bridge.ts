@@ -1,6 +1,7 @@
 import { FilePicker, type PickedFile } from '@capawesome/capacitor-file-picker';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { canPrint, printPdfUri } from './print';
 
 export interface PickedPdf {
   name: string;
@@ -176,15 +177,50 @@ export async function savePdfPrivately(bytes: Uint8Array, relativePath: string):
   return result.uri;
 }
 
-/** Writes a PDF to a temp cache location and opens the native share sheet for it. */
-export async function sharePdf(bytes: Uint8Array, filename: string, title: string): Promise<void> {
+/**
+ * Writes a PDF to the cache directory and returns its uri.
+ *
+ * Both handing a file to the share sheet and handing it to the print dialog
+ * need a real file on disk rather than bytes, so they share this step.
+ */
+async function writePdfToCache(bytes: Uint8Array, filename: string): Promise<string> {
   const { uri } = await Filesystem.writeFile({
     path: filename,
     data: bytesToBase64(bytes),
     directory: Directory.Cache,
     recursive: true,
   });
+  return uri;
+}
+
+/** Writes a PDF to a temp cache location and opens the native share sheet for it. */
+export async function sharePdf(bytes: Uint8Array, filename: string, title: string): Promise<void> {
+  const uri = await writePdfToCache(bytes, filename);
   await Share.share({ title, files: [uri] });
+}
+
+/**
+ * Writes a PDF to a temp cache location and opens the system print dialog for it.
+ *
+ * The bytes go to disk first and only the uri crosses the Capacitor bridge —
+ * base64-ing a 50 MB PDF through the bridge is the memory problem fixed in
+ * 0.3.5, and printing is exactly the feature people reach for with big files.
+ */
+export async function printPdf(bytes: Uint8Array, filename: string, jobName: string): Promise<void> {
+  if (!canPrint()) {
+    throw new PrintUnavailableError();
+  }
+  const uri = await writePdfToCache(bytes, filename);
+  await printPdfUri(uri, jobName);
+}
+
+/** Raised when printing is requested on a platform with no system print dialog. */
+export class PrintUnavailableError extends Error {
+  readonly code = 'PRINT_UNAVAILABLE';
+  constructor() {
+    super('Printing is not available on this platform.');
+    this.name = 'PrintUnavailableError';
+  }
 }
 
 /** Zorunlu arayüz güncellemesi: Klasör ya da dosya ayrımı için type eklendi */

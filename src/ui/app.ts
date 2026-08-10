@@ -20,6 +20,7 @@ import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
+import { canPrint } from '../native/print';
 import {
   pickImage,
   pickPdf,
@@ -28,6 +29,7 @@ import {
   savePdfToDevice,
   savePdfPrivately,
   sharePdf,
+  printPdf,
   listPrivateFolder,
   createPrivateDirectory,
   deletePrivateItem,
@@ -187,6 +189,7 @@ export function initApp(): void {
   const backBtn = byId<HTMLButtonElement>('backBtn');
   const savePdfBtn = byId<HTMLButtonElement>('savePdfBtn');
   const sharePdfBtn = byId<HTMLButtonElement>('sharePdfBtn');
+  const printPdfBtn = byId<HTMLButtonElement>('printPdfBtn');
 
   const saveDocModal = byId<HTMLDivElement>('saveDocModal');
   const saveDocNameInput = byId<HTMLInputElement>('saveDocNameInput');
@@ -889,6 +892,9 @@ export function initApp(): void {
     const isReader = id === 'reader';
     savePdfBtn.hidden = !isReader;
     sharePdfBtn.hidden = !isReader;
+    // Hidden entirely off Android — there is no system print dialog to open
+    // there, and a button that can only fail is worse than no button.
+    printPdfBtn.hidden = !isReader || !canPrint();
 
     bottomNav.classList.toggle('hidden', !isTab);
     if (isTab) {
@@ -1758,9 +1764,12 @@ export function initApp(): void {
     await Promise.allSettled(jobs);
   }
 
-  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action="share"]').forEach((button) => {
+  // Share and Print differ only in the last step, so they share one handler:
+  // same target lookup, same filename, same status line.
+  document.querySelectorAll<HTMLButtonElement>('[data-target][data-action]').forEach((button) => {
     button.addEventListener('click', async () => {
       if (!booklet) return;
+      const action = button.dataset.action === 'print' ? 'print' : 'share';
       const target = button.dataset.target as
         | 'front'
         | 'back'
@@ -1787,8 +1796,13 @@ export function initApp(): void {
       const label = t(labelKeyByTarget[target]);
 
       try {
-        await sharePdf(bytes, filename, `${label} PDF`);
-        actionStatus.textContent = t('status.booklet.shared', { label });
+        if (action === 'print') {
+          await printPdf(bytes, filename, `${label} PDF`);
+          actionStatus.textContent = t('status.printed');
+        } else {
+          await sharePdf(bytes, filename, `${label} PDF`);
+          actionStatus.textContent = t('status.booklet.shared', { label });
+        }
       } catch (error) {
         const message = errorText(error);
         actionStatus.textContent = t('status.booklet.actionFailed', { label, message });
@@ -5275,6 +5289,16 @@ export function initApp(): void {
     } catch (error) {
       const message = errorText(error);
       showToast(t('toast.shareErrorDetailed', { message }));
+    }
+  });
+
+  printPdfBtn.addEventListener('click', async () => {
+    if (!readerBytes) return;
+    try {
+      await printPdf(readerBytes, readerName, readerName);
+      showToast(t('status.printed'));
+    } catch (error) {
+      showToast(t('status.printFailed', { message: errorText(error) }), { type: 'error' });
     }
   });
 
