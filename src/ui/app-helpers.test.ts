@@ -188,10 +188,10 @@ describe('paperSummaryLabel', () => {
     expect(paperSummaryLabel('source')).not.toBe('source');
   });
 
-  it('PRE-EXISTING: a custom {width,height} size stringifies to [object Object]', () => {
-    // The type allows it; the UI only ever assigns presets, so this is latent.
-    // Pinned so it is a visible decision rather than a surprise. Reported to @mika.
-    expect(paperSummaryLabel({ width: 400, height: 600 })).toBe('[object Object]');
+  it('labels a custom {width,height} size with its dimensions', () => {
+    // Still unreachable from the UI, which only assigns presets — this is the
+    // guard for the day it becomes reachable, in place of "[object Object]".
+    expect(paperSummaryLabel({ width: 400, height: 600 })).toBe('400 × 600 pt');
   });
 });
 
@@ -230,11 +230,11 @@ describe('parseInsertBlankList', () => {
     expect(parseInsertBlankList('2,4,-6')).toBeNull();
   });
 
-  it('PRE-EXISTING: accepts exponent and hex forms that are integers to Number()', () => {
-    // `Number('1e3')` is 1000 and `Number('0x10')` is 16, both integers, so the
-    // guard lets them through. Harmless (the engine range-checks) but worth
-    // knowing the field is not digits-only.
-    expect(parseInsertBlankList('1e3')).toEqual([1000]);
-    expect(parseInsertBlankList('0x10')).toEqual([16]);
+  it('rejects exponent and hex forms', () => {
+    // Number() reads these as integers, so they used to pass with no inline
+    // error and then fail in the engine at generation time instead.
+    expect(parseInsertBlankList('1e3')).toBeNull();
+    expect(parseInsertBlankList('0x10')).toBeNull();
+    expect(parseInsertBlankList('2, 0x10')).toBeNull();
   });
 });

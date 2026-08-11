@@ -97,7 +97,14 @@ export function readerScrollTopForPage(
 
 /** Short paper label for the summary band ("A4" / "Letter" / "Kaynak" ...). */
 export function paperSummaryLabel(paperSize: PaperSize): string {
-  return paperSize === 'source' ? t('config.summary.source') : String(paperSize);
+  if (paperSize === 'source') return t('config.summary.source');
+  // A custom size is an object, and String() on one reads "[object Object]".
+  // The segmented control only ever sets presets today, so this is a guard
+  // rather than a fix for something users can currently reach.
+  if (typeof paperSize === 'object') {
+    return `${Math.round(paperSize.width)} × ${Math.round(paperSize.height)} pt`;
+  }
+  return String(paperSize);
 }
 
 /**
@@ -114,6 +121,10 @@ export function parseInsertBlankList(rawValue: string): number[] | null {
     .filter((token) => token.length > 0);
   const positions: number[] = [];
   for (const token of tokens) {
+    // Plain decimal digits only. Number() also accepts '1e3' and '0x10', which
+    // are integers to Number.isInteger and so passed validation silently: the
+    // field showed no error and the engine threw during generation instead.
+    if (!/^\d+$/.test(token)) return null;
     const n = Number(token);
     if (!Number.isInteger(n) || n < 0) return null;
     positions.push(n);

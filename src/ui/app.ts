@@ -1852,18 +1852,18 @@ export function initApp(): void {
 
     try {
       const frontUri = await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
-      await recordOpened({ uri: frontUri, name: `${docName} — Front Side.pdf` });
+      await rememberSaved(frontUri, `${docName} — Front Side.pdf`);
       const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
-      await recordOpened({ uri: backUri, name: `${docName} — Back Side.pdf` });
+      await rememberSaved(backUri, `${docName} — Back Side.pdf`);
       const combinedUri = await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
-      await recordOpened({ uri: combinedUri, name: `${docName} — Combined Booklet.pdf` });
+      await rememberSaved(combinedUri, `${docName} — Combined Booklet.pdf`);
       if (booklet.coverPdf) {
         const coverUri = await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
-        await recordOpened({ uri: coverUri, name: `${docName} — Cover.pdf` });
+        await rememberSaved(coverUri, `${docName} — Cover.pdf`);
       }
       if (booklet.instructionsPdf) {
         const instrUri = await savePdfPrivately(booklet.instructionsPdf, `booklets/${docName}/Instructions.pdf`);
-        await recordOpened({ uri: instrUri, name: `${docName} — Instructions.pdf` });
+        await rememberSaved(instrUri, `${docName} — Instructions.pdf`);
       }
       bookletFileNameInput.value = docName;
       const savedFiles = [
@@ -3082,7 +3082,7 @@ export function initApp(): void {
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
       const scanRelPath = `scans/${filename}`;
       const privateUri = await savePdfPrivately(pdfBytes, scanRelPath);
-      await recordOpened({ uri: privateUri, name: filename });
+      await rememberSaved(privateUri, filename);
 
       await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
@@ -3957,6 +3957,21 @@ export function initApp(): void {
    * screen behind it sat frozen with nothing to explain why. Same overlay the
    * reader uses; it is a plain fixed-position spinner, not reader-specific.
    */
+  /**
+   * Records a just-saved file in "recently opened" without letting that
+   * bookkeeping fail the save. The bytes are on disk by the time this runs, so
+   * reporting "could not be saved" here would be telling the user the one thing
+   * that is certainly untrue — and sending them back to save a file that
+   * already exists.
+   */
+  async function rememberSaved(uri: string, name: string): Promise<void> {
+    try {
+      await recordOpened({ uri, name });
+    } catch (error) {
+      console.warn('Saved, but could not add to recents:', error);
+    }
+  }
+
   async function withBusyOverlay<T>(run: () => Promise<T>): Promise<T> {
     showReaderOpening();
     try {
@@ -5363,7 +5378,7 @@ export function initApp(): void {
         readerUri = newUri;
         topBarTitle.textContent = readerName;
 
-        await recordOpened({ uri: newUri, name: newName });
+        await rememberSaved(newUri, newName);
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);

@@ -122,7 +122,15 @@ export function createSaveFlow(options: SaveFlowOptions, deps: SaveFlowDeps): Sa
 
     try {
       const savedUri = await deps.savePdfPrivately(resultPdf, targetPath);
-      await deps.recordOpened({ uri: savedUri, name: filename });
+      // The file is on disk from here on. Recording it in "recently opened" is
+      // bookkeeping, and its failure used to be reported as "could not be
+      // saved" — the one message guaranteed to be false at this point, and it
+      // sent the user back to save again over a file that already existed.
+      try {
+        await deps.recordOpened({ uri: savedUri, name: filename });
+      } catch (error) {
+        console.warn('Saved, but could not add to recents:', error);
+      }
       el.fileNameInput.value = filename.replace(/\.pdf$/i, '');
       el.actionStatus.textContent = t(options.savedStatusKey);
       options.setState('saved');

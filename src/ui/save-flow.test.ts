@@ -293,9 +293,10 @@ describe('createSaveFlow — failures', () => {
     expect(h.goToLocationClass.ops).toEqual([]);
   });
 
-  it('reports failure when only the recents bookkeeping throws, though the file is on disk', async () => {
-    // Pinning existing behaviour, not endorsing it: recordOpened is inside the
-    // same try, so a recents failure presents to the user as a failed save.
+  it('still reports success when only the recents bookkeeping throws', async () => {
+    // The file is on disk at that point, so "could not be saved" was the one
+    // message guaranteed to be false — and it sent the user back to save again
+    // over a file that already existed.
     const h = makeHarness({
       recordImpl: async () => { throw new Error('recents unavailable'); },
     });
@@ -303,10 +304,8 @@ describe('createSaveFlow — failures', () => {
     await h.save();
 
     expect(h.writes).toHaveLength(1);
-    expect(h.getState()).toBe('idle');
-    expect(h.elements.actionStatus.textContent).toBe(
-      t('status.saveFailed', { message: 'recents unavailable' }),
-    );
+    expect(h.getState()).toBe('saved');
+    expect(h.elements.actionStatus.textContent).not.toContain('recents unavailable');
   });
 
   it('survives a non-Error rejection', async () => {
