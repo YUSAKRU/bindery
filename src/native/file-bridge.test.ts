@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // mock fns themselves must be created via vi.hoisted() to be visible inside them.
 const { pickFiles } = vi.hoisted(() => ({ pickFiles: vi.fn() }));
 
-const { writeFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri } = vi.hoisted(() => ({
+const { writeFile, appendFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri } = vi.hoisted(() => ({
   writeFile: vi.fn(),
+  appendFile: vi.fn(),
   readFile: vi.fn(),
   readFileInChunks: vi.fn(),
   readdir: vi.fn(),
@@ -16,7 +17,7 @@ const { writeFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri } = 
 
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Documents: 'DOCUMENTS', Data: 'DATA', Cache: 'CACHE' },
-  Filesystem: { writeFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri },
+  Filesystem: { writeFile, appendFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri },
 }));
 
 vi.mock('@capacitor/share', () => ({
@@ -346,5 +347,73 @@ describe('file picker reads', () => {
 
     await expect(pickPdfs()).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
     expect(readFileInChunks).not.toHaveBeenCalled();
+  });
+});
+
+describe('chunked writes', () => {
+  /** Rebuilds the file the way the native side would: decode each call's own base64. */
+  function writtenBytes(): Uint8Array {
+    const parts = [
+      Buffer.from(writeFile.mock.calls[0][0].data, 'base64'),
+      ...appendFile.mock.calls.map((c) => Buffer.from(c[0].data, 'base64')),
+    ];
+    return new Uint8Array(Buffer.concat(parts));
+  }
+
+  it.each([0, 1, 3, 1_572_863, 1_572_864, 1_572_865, 4_000_000])(
+    'writes %i bytes back byte-for-byte across the chunk boundary',
+    async (size) => {
+      const original = pseudoRandomBytes(size, size + 3);
+      writeFile.mockResolvedValueOnce({ uri: 'file://out.pdf' });
+      appendFile.mockResolvedValue(undefined);
+
+      await savePdfPrivately(original, 'out.pdf');
+
+      expectBytesEqual(writtenBytes(), original);
+    },
+  );
+
+  it('encodes every chunk on a 3-byte boundary', async () => {
+    // A chunk that is not a whole number of 3-byte groups ends in '=' padding,
+    // which would then sit in the middle of the file. Only the final chunk may
+    // carry padding.
+    const original = pseudoRandomBytes(4_000_000, 11);
+    writeFile.mockResolvedValueOnce({ uri: 'file://out.pdf' });
+    appendFile.mockResolvedValue(undefined);
+
+    await savePdfPrivately(original, 'out.pdf');
+
+    const all = [writeFile.mock.calls[0][0].data, ...appendFile.mock.calls.map((c) => c[0].data)];
+    for (const data of all.slice(0, -1)) {
+      expect(data.endsWith('=')).toBe(false);
+    }
+    expect(appendFile).toHaveBeenCalled();
+  });
+
+  it('starts with writeFile so a failed earlier save cannot be appended to', async () => {
+    const original = pseudoRandomBytes(3_000_000, 21);
+    writeFile.mockResolvedValueOnce({ uri: 'file://out.pdf' });
+    appendFile.mockResolvedValue(undefined);
+
+    await savePdfPrivately(original, 'out.pdf');
+
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    expect(writeFile.mock.calls[0][0].recursive).toBe(true);
+    expect(writeFile.mock.invocationCallOrder[0]).toBeLessThan(
+      appendFile.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('never encodes the whole file in one call', async () => {
+    const original = pseudoRandomBytes(4_000_000, 31);
+    writeFile.mockResolvedValueOnce({ uri: 'file://out.pdf' });
+    appendFile.mockResolvedValue(undefined);
+
+    await savePdfPrivately(original, 'out.pdf');
+
+    // ~5.3 MB of base64 in one string is what killed the WebView on a booklet save.
+    for (const data of [writeFile.mock.calls[0][0].data, ...appendFile.mock.calls.map((c) => c[0].data)]) {
+      expect(data.length).toBeLessThan(3_000_000);
+    }
   });
 });

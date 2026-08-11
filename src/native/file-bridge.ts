@@ -96,6 +96,9 @@ async function filePickedToBytes(file: PickedFile): Promise<PickedPdf> {
 // to get it right.
 const READ_CHUNK_BYTES = 1_572_864; // 1.5 MiB, and 1572864 % 3 === 0
 
+// Same rule, same reason, for the write direction — see writeFileChunked.
+const WRITE_CHUNK_BYTES = 1_572_864; // 1.5 MiB, and 1572864 % 3 === 0
+
 /**
  * Reads a file in chunks, decoding each one straight into the destination.
  *
@@ -236,15 +239,50 @@ export async function pickImage(): Promise<PickedPdf | null> {
   return filePickedToBytes(file);
 }
 
-/** Writes a PDF to the device's Documents directory for permanent storage. */
-export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string> {
-  const result = await Filesystem.writeFile({
-    path: filename,
-    data: bytesToBase64(bytes),
-    directory: Directory.Documents,
+/**
+ * Writes bytes to a file a slice at a time, so the whole file's base64 form
+ * never exists at once.
+ *
+ * The mirror image of readFileChunked, and it exists for the same reason.
+ * Encoding a 48 MB PDF produces a ~64 MB string, and saving a booklet does that
+ * for three to five output files in a row: on a device the WebView grew to
+ * 672 MB and was killed. Here at most one slice is encoded at a time.
+ *
+ * The slice size must be a multiple of 3 for exactly the reason reads need it —
+ * each call carries its own independently-encoded base64, and a slice that is
+ * not a whole number of 3-byte groups ends in '=' padding, which lands in the
+ * middle of the file and corrupts it.
+ *
+ * The first slice goes through writeFile, which creates (and truncates) the
+ * file and honours `recursive` for the parent directories; the rest append.
+ * Truncating first matters: appending onto the leftovers of an earlier failed
+ * save would silently produce a longer, broken PDF.
+ */
+async function writeFileChunked(
+  path: string,
+  directory: Directory,
+  bytes: Uint8Array,
+): Promise<string> {
+  const head = bytes.subarray(0, WRITE_CHUNK_BYTES);
+  const { uri } = await Filesystem.writeFile({
+    path,
+    data: bytesToBase64(head),
+    directory,
     recursive: true,
   });
-  return result.uri;
+  for (let offset = WRITE_CHUNK_BYTES; offset < bytes.length; offset += WRITE_CHUNK_BYTES) {
+    await Filesystem.appendFile({
+      path,
+      data: bytesToBase64(bytes.subarray(offset, offset + WRITE_CHUNK_BYTES)),
+      directory,
+    });
+  }
+  return uri;
+}
+
+/** Writes a PDF to the device's Documents directory for permanent storage. */
+export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string> {
+  return writeFileChunked(filename, Directory.Documents, bytes);
 }
 
 /** Checks whether a file or folder already exists at the given path inside Directory.Data. */
@@ -259,13 +297,7 @@ export async function pathExists(relativePath: string): Promise<boolean> {
 
 /** Saves a PDF privately inside the app's internal Data directory at a specific path. */
 export async function savePdfPrivately(bytes: Uint8Array, relativePath: string): Promise<string> {
-  const result = await Filesystem.writeFile({
-    path: relativePath,
-    data: bytesToBase64(bytes),
-    directory: Directory.Data,
-    recursive: true,
-  });
-  return result.uri;
+  return writeFileChunked(relativePath, Directory.Data, bytes);
 }
 
 /**
@@ -275,13 +307,7 @@ export async function savePdfPrivately(bytes: Uint8Array, relativePath: string):
  * need a real file on disk rather than bytes, so they share this step.
  */
 async function writePdfToCache(bytes: Uint8Array, filename: string): Promise<string> {
-  const { uri } = await Filesystem.writeFile({
-    path: filename,
-    data: bytesToBase64(bytes),
-    directory: Directory.Cache,
-    recursive: true,
-  });
-  return uri;
+  return writeFileChunked(filename, Directory.Cache, bytes);
 }
 
 /** Writes a PDF to a temp cache location and opens the native share sheet for it. */
