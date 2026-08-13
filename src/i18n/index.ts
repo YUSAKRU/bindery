@@ -71,9 +71,22 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.group.storage': 'Storage',
     'settings.clearCache': 'Clear Temporary Cache',
     'settings.clearCacheDesc': 'Deletes temporary files in the cache',
+    'settings.group.diagnostics': 'Diagnostics',
+    'settings.errorLog': 'Recent Errors',
+    'settings.errorLogDesc': 'Kept on this device only, and never sent anywhere',
     'settings.group.about': 'About',
     'settings.appVersion': 'App Version',
     'settings.developer': 'Developer',
+
+    'errorLog.title': 'Recent Errors',
+    'errorLog.subtitle': 'These stay on your device. Share them only if you are reporting a problem.',
+    'errorLog.emptyHint': 'Nothing has gone wrong. There is nothing to report.',
+    'errorLog.share': 'Share Log',
+    'errorLog.clear': 'Clear Log',
+    'errorLog.shareTitle': 'Bindery error log',
+    'errorLog.shareHeader': 'Bindery v{version} — error log ({count} entries)',
+    'errorLog.clearConfirm': 'Delete all recorded errors? This cannot be undone.',
+    'errorLog.cleared': 'Error log cleared',
 
     'screenTitle.brand': 'Bindery',
     'screenTitle.picker': 'Booklet',
@@ -414,6 +427,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.BOOKLET_COVER_MIN_PAGES': 'A separate cover requires at least 8 pages (cover + inner block). Document: {pageCount} pages.',
     'error.BOOKLET_EXCESSIVE_CREEP': 'Invalid creep value: {creep}. The resulting shift on the last leaf ({shift}pt) exceeds half the slot width ({maxShift}pt).',
 
+    'error.ABNORMAL_EXIT_CRASH': 'The app closed unexpectedly while it was open.',
+    'error.ABNORMAL_EXIT_RECLAIMED': 'The app was closed by the system, most likely because the device ran low on memory.',
+    'error.ABNORMAL_EXIT_UNKNOWN': 'The app closed unexpectedly. The reason could not be determined on this Android version.',
+
     'reader.pageLoadFailed': 'Page could not be loaded',
 
     'toast.comingSoon': 'Coming soon 🚧',
@@ -568,9 +585,22 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.group.storage': 'Depolama',
     'settings.clearCache': 'Geçici Belleği Temizle',
     'settings.clearCacheDesc': 'Önbellekteki geçici dosyaları siler',
+    'settings.group.diagnostics': 'Tanılama',
+    'settings.errorLog': 'Son Hatalar',
+    'settings.errorLogDesc': 'Yalnızca bu cihazda tutulur, hiçbir yere gönderilmez',
     'settings.group.about': 'Hakkında',
     'settings.appVersion': 'Uygulama Sürümü',
     'settings.developer': 'Geliştirici',
+
+    'errorLog.title': 'Son Hatalar',
+    'errorLog.subtitle': 'Bu kayıtlar cihazınızda kalır. Yalnızca bir sorunu bildirecekseniz paylaşın.',
+    'errorLog.emptyHint': 'Ters giden bir şey olmamış. Bildirilecek bir kayıt yok.',
+    'errorLog.share': 'Kaydı Paylaş',
+    'errorLog.clear': 'Kaydı Temizle',
+    'errorLog.shareTitle': 'Bindery hata kaydı',
+    'errorLog.shareHeader': 'Bindery v{version} — hata kaydı ({count} kayıt)',
+    'errorLog.clearConfirm': 'Kayıtlı tüm hatalar silinsin mi? Bu işlem geri alınamaz.',
+    'errorLog.cleared': 'Hata kaydı temizlendi',
 
     'screenTitle.brand': 'Bindery',
     'screenTitle.picker': 'Kitapçık',
@@ -910,6 +940,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.BOOKLET_INVALID_BLANK_POSITION': 'Geçersiz boş sayfa konumu: {position}. 0 ile {max} arasında tam sayı olmalı.',
     'error.BOOKLET_COVER_MIN_PAGES': 'Ayrı kapak için en az 8 sayfa gerekir (kapak + iç yaprak). Belge: {pageCount} sayfa.',
     'error.BOOKLET_EXCESSIVE_CREEP': 'Geçersiz creep değeri: {creep}. Son yaprakta oluşan kayma ({shift}pt) slot yarısını ({maxShift}pt) aşıyor.',
+
+    'error.ABNORMAL_EXIT_CRASH': 'Uygulama açıkken beklenmedik şekilde kapandı.',
+    'error.ABNORMAL_EXIT_RECLAIMED': 'Uygulama sistem tarafından kapatıldı; büyük olasılıkla cihazın belleği azalmıştı.',
+    'error.ABNORMAL_EXIT_UNKNOWN': 'Uygulama beklenmedik şekilde kapandı. Bu Android sürümünde nedeni belirlenemedi.',
 
     'reader.pageLoadFailed': 'Sayfa yüklenemedi',
 

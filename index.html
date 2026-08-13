@@ -1093,6 +1093,14 @@
             </div>
 
             <div class="settings-group">
+              <h3 class="settings-group-title" data-i18n="settings.group.diagnostics">Diagnostics</h3>
+              <button class="settings-row-btn" id="settingsErrorLogBtn">
+                <span class="settings-btn-label" data-i18n="settings.errorLog">Recent Errors</span>
+                <span class="settings-btn-sub" data-i18n="settings.errorLogDesc">Kept on this device only, and never sent anywhere</span>
+              </button>
+            </div>
+
+            <div class="settings-group">
               <h3 class="settings-group-title" data-i18n="settings.group.about">About</h3>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.appVersion">App Version</span>
@@ -1103,6 +1111,22 @@
                 <span class="info-value">Bindery Team</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-error-log">
+          <div class="hero">
+            <div class="hero-icon" aria-hidden="true">🩺</div>
+            <h2 data-i18n="errorLog.title">Recent Errors</h2>
+            <p class="hero-subtitle" data-i18n="errorLog.subtitle">These stay on your device. Share them only if you are reporting a problem.</p>
+          </div>
+
+          <div class="error-log-list" id="errorLogList"></div>
+          <p class="empty-hint hidden" id="errorLogEmptyHint" data-i18n="errorLog.emptyHint">Nothing has gone wrong. There is nothing to report.</p>
+
+          <div class="error-log-actions hidden" id="errorLogActions">
+            <button class="btn btn-tonal" id="errorLogShareBtn" data-i18n="errorLog.share">Share Log</button>
+            <button class="btn btn-tonal" id="errorLogClearBtn" data-i18n="errorLog.clear">Clear Log</button>
           </div>
         </section>
 

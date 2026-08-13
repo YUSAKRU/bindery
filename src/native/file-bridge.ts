@@ -317,6 +317,16 @@ export async function sharePdf(bytes: Uint8Array, filename: string, title: strin
 }
 
 /**
+ * Opens the share sheet for plain text — no file, no cache write.
+ *
+ * The error log is the only caller: it is a few KB of text, so putting it
+ * through `sharePdf`'s write-to-cache path would be all cost and no benefit.
+ */
+export async function shareText(text: string, title: string): Promise<void> {
+  await Share.share({ title, text });
+}
+
+/**
  * Writes a PDF to a temp cache location and opens the system print dialog for it.
  *
  * The bytes go to disk first and only the uri crosses the Capacitor bridge —

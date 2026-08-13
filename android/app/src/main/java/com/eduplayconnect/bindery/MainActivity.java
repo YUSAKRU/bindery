@@ -11,6 +11,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OpenDocumentPlugin.class);
         registerPlugin(PrintPlugin.class);
         super.onCreate(savedInstanceState);
+        // After super.onCreate: the bridge does not exist before it.
+        getBridge().addWebViewListener(new BinderyCrashListener(this));
         persistIncomingUriPermission(getIntent());
     }
 

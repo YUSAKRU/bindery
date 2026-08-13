@@ -29,6 +29,7 @@ import {
   savePdfToDevice,
   savePdfPrivately,
   sharePdf,
+  shareText,
   printPdf,
   listPrivateFolder,
   createPrivateDirectory,
@@ -49,6 +50,13 @@ import {
   type ReaderDocument,
 } from '../native/pdf-reader-render';
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import {
+  clearErrors,
+  getErrors,
+  recordError,
+  setErrorScreen,
+  type ErrorEntry,
+} from '../native/error-log';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
 import { createSaveFlow, type SaveFlowDeps } from './save-flow';
@@ -84,7 +92,8 @@ type ScreenId =
   | 'recents'
   | 'tools-all'
   | 'files'
-  | 'settings';
+  | 'settings'
+  | 'error-log';
 
 const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   picker: 'hub',
@@ -107,6 +116,7 @@ const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   'tools-all': 'hub',
   files: 'hub',
   settings: 'hub',
+  'error-log': 'settings',
 };
 
 const TOOL_ENTRY_SCREEN: Partial<Record<string, ScreenId>> = {
@@ -152,6 +162,10 @@ function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): b
  * a translation is ever missing.
  */
 export function errorText(error: unknown): string {
+  // Every error the user is ever shown passes through here, which makes this
+  // the one place worth recording from — the alternative is a log call in each
+  // of the 30-odd catch blocks, kept in sync by hand.
+  recordError('caught', error);
   const coded = error as { code?: unknown; params?: Record<string, string | number>; message?: unknown };
   if (error instanceof Error && typeof coded.code === 'string') {
     const key = `error.${coded.code}`;
@@ -185,6 +199,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   'tools-all': 'tools.allTitle',
   files: 'screenTitle.files',
   settings: 'settings.title',
+  'error-log': 'errorLog.title',
 };
 
 export function initApp(): void {
@@ -226,6 +241,7 @@ export function initApp(): void {
     'tools-all': byId('screen-tools-all'),
     files: byId('screen-files'),
     settings: byId('screen-settings'),
+    'error-log': byId('screen-error-log'),
   };
 
   const recentsListLarge = byId<HTMLElement>('recentsListLarge');
@@ -271,6 +287,12 @@ export function initApp(): void {
   const openInToolCancelBtn = byId<HTMLButtonElement>('openInToolCancelBtn');
   const settingsDarkModeToggle = byId<HTMLInputElement>('settingsDarkModeToggle');
   const settingsClearCacheBtn = byId<HTMLButtonElement>('settingsClearCacheBtn');
+  const settingsErrorLogBtn = byId<HTMLButtonElement>('settingsErrorLogBtn');
+  const errorLogList = byId<HTMLDivElement>('errorLogList');
+  const errorLogEmptyHint = byId<HTMLParagraphElement>('errorLogEmptyHint');
+  const errorLogActions = byId<HTMLDivElement>('errorLogActions');
+  const errorLogShareBtn = byId<HTMLButtonElement>('errorLogShareBtn');
+  const errorLogClearBtn = byId<HTMLButtonElement>('errorLogClearBtn');
   const appVersionValue = byId<HTMLSpanElement>('appVersionValue');
   const settingsLangBtns = Array.from(
     document.querySelectorAll<HTMLButtonElement>('.settings-lang-btn'),
@@ -886,6 +908,9 @@ export function initApp(): void {
       readerScrubber.classList.remove('is-visible');
       resetReaderZoomState();
     }
+    // Gives every later failure — including a native renderer crash, which
+    // cannot read this itself — a screen to be attributed to.
+    setErrorScreen(id);
     for (const [key, el] of Object.entries(screens)) {
       el.classList.toggle('hidden', key !== id);
     }
@@ -917,6 +942,8 @@ export function initApp(): void {
       void renderRecentsListLarge();
     } else if (id === 'files') {
       void renderFilesList();
+    } else if (id === 'error-log') {
+      void renderErrorLog();
     }
     updateReaderNightChrome();
   }
@@ -1754,7 +1781,8 @@ export function initApp(): void {
       } finally {
         await destroyThumbnailDoc(proxy);
       }
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       errorEl.classList.remove('hidden');
     } finally {
       spinnerEl.classList.add('hidden');
@@ -4169,7 +4197,8 @@ export function initApp(): void {
     try {
       const picked = await readForReader(entry.uri);
       await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry);
       await renderHubRecentsGrid();
@@ -4768,7 +4797,8 @@ export function initApp(): void {
     try {
       const { wrapper } = await renderReaderPage(readerDoc.proxy, pageNumber, fitWidth, readerNightMode);
       container.appendChild(wrapper);
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       container.textContent = t('reader.pageLoadFailed');
     }
   }
@@ -5538,6 +5568,87 @@ export function initApp(): void {
     }
   }
 
+  /**
+   * One line per entry. `code` carries the same identity the toast was built
+   * from, so the summary reads as the localized sentence the user already saw;
+   * anything else falls back to the raw message.
+   */
+  function errorSummary(entry: ErrorEntry): string {
+    if (!entry.code) return entry.message;
+    const key = `error.${entry.code}`;
+    // Params matter: several of these strings are templates, and without them
+    // the row shows a literal '{message}' where the detail should be.
+    const translated = t(key, entry.params);
+    return translated === key ? entry.message : translated;
+  }
+
+  async function renderErrorLog(): Promise<void> {
+    const entries = await getErrors();
+    errorLogEmptyHint.classList.toggle('hidden', entries.length > 0);
+    errorLogActions.classList.toggle('hidden', entries.length === 0);
+    errorLogList.innerHTML = '';
+
+    for (const entry of entries) {
+      const row = document.createElement('div');
+      row.className = 'error-log-row';
+
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'error-log-head';
+
+      const meta = document.createElement('span');
+      meta.className = 'error-log-meta';
+      meta.textContent = [formatRelativeDate(entry.at), entry.screen].filter(Boolean).join(' · ');
+      head.appendChild(meta);
+
+      const summary = document.createElement('span');
+      summary.className = 'error-log-summary';
+      summary.textContent = errorSummary(entry);
+      head.appendChild(summary);
+
+      row.appendChild(head);
+
+      // The stack is for whoever receives a shared log, not for the person
+      // reading this screen — so it starts collapsed instead of being
+      // summarized into something neither audience can use.
+      const detail = document.createElement('pre');
+      detail.className = 'error-log-detail hidden';
+      detail.textContent = [
+        `${entry.kind}${entry.code ? ` · ${entry.code}` : ''} · v${entry.appVersion}`,
+        entry.message,
+        entry.stack ?? '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      row.appendChild(detail);
+
+      head.addEventListener('click', () => {
+        detail.classList.toggle('hidden');
+      });
+
+      errorLogList.appendChild(row);
+    }
+  }
+
+  /**
+   * The whole log as one block of text. Absolute timestamps rather than the
+   * screen's relative ones: this text is read away from the device, often days
+   * later, by someone correlating it with something else.
+   */
+  function formatErrorLogForShare(entries: ErrorEntry[]): string {
+    const header = t('errorLog.shareHeader', {
+      version: entries[0]?.appVersion ?? '?',
+      count: entries.length,
+    });
+    const blocks = entries.map((entry, index) => {
+      const stamp = new Date(entry.at).toISOString();
+      const head = `[${index + 1}] ${stamp} · ${entry.screen ?? '-'} · ${entry.kind}`;
+      const body = entry.code ? `${entry.code}: ${entry.message}` : entry.message;
+      return [head, body, entry.stack ?? ''].filter(Boolean).join('\n');
+    });
+    return [header, ...blocks].join('\n\n');
+  }
+
   /** Renders the tappable breadcrumb trail (🏠 › folder › subfolder) for the current path. */
   function renderFilesBreadcrumb(): void {
     filesBreadcrumb.innerHTML = '';
@@ -5629,7 +5740,8 @@ export function initApp(): void {
     try {
       const { bytes, name } = await withBusyOverlay(() => readPdfFromUri(uri));
       await loader(bytes, name, uri, relPath);
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('toast.fileOpenError'));
     }
   }
@@ -5661,7 +5773,8 @@ export function initApp(): void {
         try {
           const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
           await sharePdf(picked.bytes, item.name, t('common.share'));
-        } catch {
+        } catch (error) {
+          recordError('caught', error);
           showToast(t('toast.shareError'));
         }
       });
@@ -5702,7 +5815,8 @@ export function initApp(): void {
         }
         showToast(t('toast.renamed', { name: newName }));
         void renderFilesList();
-      } catch {
+      } catch (error) {
+        recordError('caught', error);
         showToast(t('toast.renameError'));
       }
     });
@@ -5719,7 +5833,8 @@ export function initApp(): void {
         if (!isDir) await removeRecent(item);
         showToast(isDir ? t('toast.folderDeleted') : t('toast.fileDeleted'));
         void renderFilesList();
-      } catch {
+      } catch (error) {
+        recordError('caught', error);
         showToast(t('toast.deleteError'));
       }
     });
@@ -5760,7 +5875,8 @@ export function initApp(): void {
     let raw: Awaited<ReturnType<typeof listPrivateFolder>>;
     try {
       raw = await listPrivateFolder(currentFolderPath);
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('files.loadError'));
       return;
     }
@@ -5859,7 +5975,8 @@ export function initApp(): void {
             const picked = await readForReader(item.uri);
             const relPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
             await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files', 1, relPath);
-          } catch {
+          } catch (error) {
+            recordError('caught', error);
             showToast(t('toast.fileOpenError'));
           }
         }
@@ -5988,7 +6105,8 @@ export function initApp(): void {
       await createPrivateDirectory(newPath);
       showToast(t('toast.folderCreated', { name: safeName }));
       void renderFilesList();
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('toast.folderCreateError'));
     }
   });
@@ -6131,7 +6249,8 @@ export function initApp(): void {
       moveSourceFile = null;
       moveTargetFolder = null;
       void renderFilesList();
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('toast.moveError'));
     } finally {
       moveDocConfirmBtn.disabled = false;
@@ -6288,6 +6407,32 @@ export function initApp(): void {
     { passive: true },
   );
 
+  settingsErrorLogBtn.addEventListener('click', () => {
+    showScreen('error-log');
+  });
+
+  errorLogShareBtn.addEventListener('click', async () => {
+    const entries = await getErrors();
+    if (entries.length === 0) return;
+    try {
+      await shareText(formatErrorLogForShare(entries), t('errorLog.shareTitle'));
+    } catch {
+      // Deliberately not recorded. Dismissing the share sheet rejects here just
+      // like a real failure does, so logging it would add an entry to the very
+      // log the user was trying to send — every cancelled share making the next
+      // one slightly worse.
+      showToast(t('toast.shareError'), { type: 'error' });
+    }
+  });
+
+  errorLogClearBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirmDialog(t('errorLog.clearConfirm'));
+    if (!confirmed) return;
+    await clearErrors();
+    await renderErrorLog();
+    showToast(t('errorLog.cleared'));
+  });
+
   settingsClearCacheBtn.addEventListener('click', async () => {
     try {
       const result = await Filesystem.readdir({
@@ -6314,7 +6459,8 @@ export function initApp(): void {
         }
       }
       showToast(failures === 0 ? t('toast.cacheCleared') : t('toast.cachePartiallyCleared'));
-    } catch {
+    } catch (error) {
+      recordError('caught', error);
       showToast(t('toast.clearCacheError'));
     }
   });
