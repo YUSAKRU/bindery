@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock factories are hoisted above module-scope variable declarations, so the
 // mock fns themselves must be created via vi.hoisted() to be visible inside them.
@@ -109,6 +109,102 @@ function mockNativeChunkedRead(content: Uint8Array): void {
     },
   );
 }
+
+/**
+ * The base64 helpers take the platform methods (Chrome/WebView 140+) when they
+ * exist and the hand-rolled loops otherwise. Node 24 — what this suite runs on —
+ * has neither, so without this block CI would only ever exercise the fallback
+ * and the fast path could rot untested.
+ *
+ * Polyfilling with Buffer proves the *dispatch* is right and that both paths
+ * agree byte for byte. It deliberately does not try to prove V8's own encoder
+ * correct; that was verified on a real device (WebView 150), where all three
+ * encoders produced identical output for a 50 MB payload.
+ */
+describe('base64 helpers: platform path and fallback agree', () => {
+  const sizes = [0, 1, 2, 3, 100, 32766, 32767, 65533, 250_000];
+
+  function installNativeBase64(): void {
+    Object.defineProperty(Uint8Array.prototype, 'toBase64', {
+      value(this: Uint8Array) { return Buffer.from(this).toString('base64'); },
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(Uint8Array, 'fromBase64', {
+      value(s: string) { return new Uint8Array(Buffer.from(s, 'base64')); },
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  function removeNativeBase64(): void {
+    delete (Uint8Array.prototype as { toBase64?: unknown }).toBase64;
+    delete (Uint8Array as { fromBase64?: unknown }).fromBase64;
+  }
+
+  afterEach(() => {
+    removeNativeBase64();
+  });
+
+  it('the host runtime really lacks these, so the fallback is what runs by default', () => {
+    expect(typeof (Uint8Array.prototype as { toBase64?: unknown }).toBase64).toBe('undefined');
+    expect(typeof (Uint8Array as { fromBase64?: unknown }).fromBase64).toBe('undefined');
+  });
+
+  it.each(sizes)('encodes %i bytes to the same string on both paths', async (size) => {
+    const original = pseudoRandomBytes(size, size + 11);
+
+    removeNativeBase64();
+    writeFile.mockResolvedValueOnce({ uri: 'file://x' });
+    await savePdfPrivately(original, 'scans/fallback.pdf');
+    const viaFallback = writeFile.mock.calls[0][0].data as string;
+
+    vi.clearAllMocks();
+
+    installNativeBase64();
+    writeFile.mockResolvedValueOnce({ uri: 'file://x' });
+    await savePdfPrivately(original, 'scans/native.pdf');
+    const viaNative = writeFile.mock.calls[0][0].data as string;
+
+    expect(viaNative).toBe(viaFallback);
+    expect(viaNative).toBe(Buffer.from(original).toString('base64'));
+  });
+
+  it.each(sizes)('decodes %i bytes identically on both paths', async (size) => {
+    const original = pseudoRandomBytes(size, size + 17);
+
+    removeNativeBase64();
+    stat.mockResolvedValueOnce({ size, name: 'test.pdf' });
+    mockNativeChunkedRead(original);
+    const viaFallback = await readPdfFromUri('content://fake/test.pdf');
+    expectBytesEqual(viaFallback.bytes, original);
+
+    vi.clearAllMocks();
+
+    installNativeBase64();
+    stat.mockResolvedValueOnce({ size, name: 'test.pdf' });
+    mockNativeChunkedRead(original);
+    const viaNative = await readPdfFromUri('content://fake/test.pdf');
+    expectBytesEqual(viaNative.bytes, original);
+  });
+
+  it('falls back to the loop when the platform decoder rejects the input', async () => {
+    const original = pseudoRandomBytes(300, 5);
+    // atob() skips ASCII whitespace; Uint8Array.fromBase64 throws on it. If a
+    // platform ever hands back wrapped base64, the read must still succeed.
+    Object.defineProperty(Uint8Array, 'fromBase64', {
+      value() { throw new SyntaxError('invalid character'); },
+      configurable: true,
+      writable: true,
+    });
+    stat.mockResolvedValueOnce({ size: original.length, name: 'wrapped.pdf' });
+    mockNativeChunkedRead(original);
+
+    const result = await readPdfFromUri('content://fake/wrapped.pdf');
+
+    expectBytesEqual(result.bytes, original);
+  });
+});
 
 describe('readPdfFromUri chunked reading', () => {
   // Sizes straddling the 1.5 MiB chunk boundary, so reassembly is exercised for

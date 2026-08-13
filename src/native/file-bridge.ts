@@ -24,18 +24,51 @@ export class FileTooLargeError extends Error {
   }
 }
 
+// The platform base64 methods (Chrome/WebView 140+) do the whole conversion in
+// C++. They are the fast path below; the hand-rolled loops stay as the fallback
+// because minSdk is 24, and Android 7 is capped at WebView 119 forever — Chrome
+// 120 raised the floor to API 26 — so those devices can never reach 140.
+//
+// tsconfig's lib is ES2023 and these are only typed in lib.esnext.typedarrays,
+// so describe just the shape we call. Both are checked per call rather than
+// cached: a typeof on the prototype is free next to encoding 1.5 MiB, and it
+// keeps both paths reachable from tests (Node 24, which the suite runs on, does
+// not have them, so the fallback is what CI exercises by default).
+type NativeBase64Bytes = Uint8Array & { toBase64?: () => string };
+type NativeBase64Ctor = { fromBase64?: (base64: string) => Uint8Array };
+
 // Multiple of 3 so every chunk but the last encodes to a padding-free base64
 // run — btoa() on a non-multiple-of-3 chunk emits '=' padding, which corrupts
 // the output if it lands in the middle of the concatenated string.
 const ENCODE_CHUNK_BYTES = 0x8000 - (0x8000 % 3);
 
+// String.fromCharCode.apply() takes a whole run of bytes per call instead of one
+// per iteration. Kept well under the argument-count limit that makes apply()
+// throw on large arrays.
+const FROM_CHAR_CODE_MAX_ARGS = 8192;
+
+/**
+ * Encodes bytes to base64, preferring the platform encoder.
+ *
+ * Measured on device (Redmi 2412DPC0AG, WebView 150), encoding 50 MB in the
+ * 1.5 MiB slices writeFileChunked actually uses: the byte-by-byte loop cost
+ * 552 ms with a 38.8 ms worst slice, the apply() fallback 274 ms, and
+ * toBase64() 23 ms with a 1.8 ms worst slice. All three produce identical
+ * output — verified on device and in the tests below.
+ */
 function bytesToBase64(bytes: Uint8Array): string {
+  const native = (bytes as NativeBase64Bytes).toBase64;
+  if (typeof native === 'function') return native.call(bytes);
+
   let base64 = '';
   for (let i = 0; i < bytes.length; i += ENCODE_CHUNK_BYTES) {
     const chunk = bytes.subarray(i, i + ENCODE_CHUNK_BYTES);
     let binary = '';
-    for (let j = 0; j < chunk.length; j++) {
-      binary += String.fromCharCode(chunk[j]);
+    for (let j = 0; j < chunk.length; j += FROM_CHAR_CODE_MAX_ARGS) {
+      binary += String.fromCharCode.apply(
+        null,
+        chunk.subarray(j, j + FROM_CHAR_CODE_MAX_ARGS) as unknown as number[],
+      );
     }
     base64 += btoa(binary);
   }
@@ -46,8 +79,30 @@ function bytesToBase64(bytes: Uint8Array): string {
 // splitting mid-group would misalign the decoded bytes.
 const DECODE_CHUNK_CHARS = 0x8000 - (0x8000 % 4);
 
+/**
+ * Decodes base64 to bytes, preferring the platform decoder.
+ *
+ * Runs on every file read, once per 1.5 MiB chunk. Measured on device for a
+ * 48 MB read: the loop cost 207 ms, Uint8Array.fromBase64 58 ms.
+ *
+ * The native decoder is stricter than atob(), which skips ASCII whitespace —
+ * so if a platform ever hands back wrapped base64, fall through to the loop
+ * rather than failing the read. Nothing observed does that (wrapped input would
+ * already break the length arithmetic below, and reads work today), but a file
+ * the user is trying to open is the wrong place to find out.
+ */
 function base64ToBytes(base64: string): Uint8Array {
   const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
+
+  const nativeFrom = (Uint8Array as NativeBase64Ctor).fromBase64;
+  if (typeof nativeFrom === 'function') {
+    try {
+      return nativeFrom.call(Uint8Array, cleaned);
+    } catch {
+      // fall through to the loop
+    }
+  }
+
   const paddingLength = cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0;
   const bytes = new Uint8Array((cleaned.length / 4) * 3 - paddingLength);
 
