@@ -8,7 +8,7 @@ export interface PickedPdf {
   bytes: Uint8Array;
 }
 
-const FILE_SIZE_LIMIT_BYTES = 50 * 1024 * 1024; // 50 MB
+export const FILE_SIZE_LIMIT_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export class FileTooLargeError extends Error {
   readonly sizeBytes: number;

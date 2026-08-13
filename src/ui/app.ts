@@ -37,6 +37,7 @@ import {
   movePrivateItem,
   pathExists,
   FileTooLargeError,
+  FILE_SIZE_LIMIT_BYTES,
   type PickedPdf,
   type FileEntryInfo,
 } from '../native/file-bridge';
@@ -1999,7 +2000,30 @@ export function initApp(): void {
     });
   }
 
+  /**
+   * Guards the merge list's *total* size, which nothing did before.
+   *
+   * The limit is per file everywhere else, and `pickPdfs` sums a single
+   * selection — but "Add file" can be tapped over and over, and the Bindery
+   * picker caps only per file, so a list could grow without bound. It matters
+   * here more than anywhere: a merge holds every input's bytes at once, then
+   * builds a document that copies all of them, then holds the saved output
+   * alongside it. Measured on device (Redmi 2412DPC0AG): 48 MB of inputs took
+   * the WebView renderer from 170 MB to 333 MB RSS, ~3.4x the input bytes. The
+   * 0.4.0 crash was a renderer killed at 672 MB, which that ratio reaches at
+   * roughly 150 MB of inputs — well inside what an uncapped list allowed.
+   *
+   * Reuses FileTooLargeError so the message stays localized, and so this reads
+   * the same as the total-size rejection pickPdfs already does.
+   */
+  function mergeCapacityError(additionalBytes: number): FileTooLargeError | null {
+    const total = mergeFiles.reduce((sum, f) => sum + f.bytes.length, 0) + additionalBytes;
+    return total > FILE_SIZE_LIMIT_BYTES ? new FileTooLargeError(total) : null;
+  }
+
   async function addMergeFile(bytes: Uint8Array, name: string): Promise<void> {
+    const overflow = mergeCapacityError(bytes.length);
+    if (overflow) throw overflow;
     await validatePdf(bytes);
     mergeFiles.push({ name, bytes });
     renderMergeList();
@@ -2022,6 +2046,8 @@ export function initApp(): void {
     const rejected: string[] = [];
     for (const file of picked) {
       try {
+        const overflow = mergeCapacityError(file.bytes.length);
+        if (overflow) throw overflow;
         await validatePdf(file.bytes);
         mergeFiles.push(file);
       } catch (error) {
