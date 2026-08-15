@@ -27,7 +27,7 @@ npx cap sync && npx cap run android
 ```bash
 npm run test
 ```
-- 307 tests will run
+- 310 tests will run
 - All of them must pass
 
 #### 2. Build
@@ -115,7 +115,7 @@ npx cap sync && npx cap run android
 ```bash
 npm run test
 ```
-- 307 test çalışacak
+- 310 test çalışacak
 - Tümü geçmesi gerekli
 
 #### 2. Build Oluştur
