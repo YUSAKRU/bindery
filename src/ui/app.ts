@@ -5461,9 +5461,14 @@ export function initApp(): void {
   });
 
   sharePdfBtn.addEventListener('click', async () => {
-    if (!readerBytes) return;
+    const bytes = readerBytes;
+    if (!bytes) return;
     try {
-      if ((await sharePdf(readerBytes, readerName, t('reader.shareDocument'))) === 'canceled') return;
+      // Large PDFs take real time to write to cache before the share sheet can
+      // open — without this, the screen looks idle, the user can navigate away,
+      // and the share sheet then appears wherever they've moved on to.
+      const outcome = await withBusyOverlay(() => sharePdf(bytes, readerName, t('reader.shareDocument')));
+      if (outcome === 'canceled') return;
     } catch (error) {
       const message = errorText(error);
       showToast(t('toast.shareErrorDetailed', { message }));
