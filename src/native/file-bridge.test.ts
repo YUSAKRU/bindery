@@ -35,8 +35,9 @@ const { printPdfUri, canPrint } = vi.hoisted(() => ({
 
 vi.mock('./print', () => ({ printPdfUri, canPrint }));
 
-const { savePdfPrivately, readPdfFromUri, listPrivateFolder, pickPdf, pickPdfs, printPdf, sharePdf, PrintUnavailableError } =
+const { savePdfPrivately, readPdfFromUri, listPrivateFolder, pickPdf, pickPdfs, printPdf, sharePdf, shareText, PrintUnavailableError } =
   await import('./file-bridge');
+const { Share } = await import('@capacitor/share');
 
 // Deterministic pseudo-random byte generator (no crypto dependency needed for a test fixture).
 function pseudoRandomBytes(length: number, seed = 1): Uint8Array {
@@ -397,6 +398,29 @@ describe('printPdf', () => {
     expect(printWrite.directory).toBe(shareWrite.directory);
     expect(printWrite.recursive).toBe(shareWrite.recursive);
     expect(printWrite.data).toBe(shareWrite.data);
+  });
+
+  it('resolves "canceled" instead of throwing when the share sheet is dismissed', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/doc.pdf' });
+    (Share.share as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Share canceled'));
+
+    await expect(sharePdf(pseudoRandomBytes(64), 'doc.pdf', 'title')).resolves.toBe('canceled');
+  });
+
+  it('still throws — and is still logged — for a genuine share failure', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/doc.pdf' });
+    (Share.share as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('only file urls are supported'));
+
+    await expect(sharePdf(pseudoRandomBytes(64), 'doc.pdf', 'title')).rejects.toThrow(
+      'only file urls are supported',
+    );
+  });
+
+  it('shareText resolves "canceled" the same way sharePdf does, with no cache write', async () => {
+    (Share.share as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Share canceled'));
+
+    await expect(shareText('log contents', 'title')).resolves.toBe('canceled');
+    expect(writeFile).not.toHaveBeenCalled();
   });
 });
 

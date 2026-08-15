@@ -1841,7 +1841,7 @@ export function initApp(): void {
           await printPdf(bytes, filename, `${label} PDF`);
           actionStatus.textContent = t('status.printed');
         } else {
-          await sharePdf(bytes, filename, `${label} PDF`);
+          if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
           actionStatus.textContent = t('status.booklet.shared', { label });
         }
       } catch (error) {
@@ -2120,7 +2120,7 @@ export function initApp(): void {
   mergeShareBtn.addEventListener('click', async () => {
     if (!mergedPdf) return;
     try {
-      await sharePdf(mergedPdf, 'merged.pdf', t('merge.mergedPdf'));
+      if ((await sharePdf(mergedPdf, 'merged.pdf', t('merge.mergedPdf'))) === 'canceled') return;
       mergeActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = errorText(error);
@@ -2339,7 +2339,7 @@ export function initApp(): void {
     }
     filename = safeFileName(filename, { ensurePdf: true });
     try {
-      await sharePdf(organizeResultPdf, filename, t('organize.editedPdf'));
+      if ((await sharePdf(organizeResultPdf, filename, t('organize.editedPdf'))) === 'canceled') return;
       organizeActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = errorText(error);
@@ -2547,7 +2547,7 @@ export function initApp(): void {
     }
     filename = safeFileName(filename, { ensurePdf: true });
     try {
-      await sharePdf(rotateResultPdf, filename, t('rotate.rotatedPdf'));
+      if ((await sharePdf(rotateResultPdf, filename, t('rotate.rotatedPdf'))) === 'canceled') return;
       rotateActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = errorText(error);
@@ -2724,7 +2724,7 @@ export function initApp(): void {
     }
     filename = safeFileName(filename, { ensurePdf: true });
     try {
-      await sharePdf(pageNumbersResultPdf, filename, t('pageNumbers.numberedPdf'));
+      if ((await sharePdf(pageNumbersResultPdf, filename, t('pageNumbers.numberedPdf'))) === 'canceled') return;
       pageNumbersActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = errorText(error);
@@ -2952,7 +2952,7 @@ export function initApp(): void {
     }
     filename = safeFileName(filename, { ensurePdf: true });
     try {
-      await sharePdf(watermarkResultPdf, filename, t('watermark.watermarkedPdf'));
+      if ((await sharePdf(watermarkResultPdf, filename, t('watermark.watermarkedPdf'))) === 'canceled') return;
       watermarkActionStatus.textContent = t('status.shared');
     } catch (error) {
       const message = errorText(error);
@@ -5463,7 +5463,7 @@ export function initApp(): void {
   sharePdfBtn.addEventListener('click', async () => {
     if (!readerBytes) return;
     try {
-      await sharePdf(readerBytes, readerName, t('reader.shareDocument'));
+      if ((await sharePdf(readerBytes, readerName, t('reader.shareDocument'))) === 'canceled') return;
     } catch (error) {
       const message = errorText(error);
       showToast(t('toast.shareErrorDetailed', { message }));
@@ -5798,7 +5798,7 @@ export function initApp(): void {
       addAction('📤', t('common.share'), async () => {
         try {
           const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
-          await sharePdf(picked.bytes, item.name, t('common.share'));
+          if ((await sharePdf(picked.bytes, item.name, t('common.share'))) === 'canceled') return;
         } catch (error) {
           recordError('caught', error);
           showToast(t('toast.shareError'));
@@ -6441,13 +6441,10 @@ export function initApp(): void {
     const entries = await getErrors();
     if (entries.length === 0) return;
     try {
-      await shareText(formatErrorLogForShare(entries), t('errorLog.shareTitle'));
-    } catch {
-      // Deliberately not recorded. Dismissing the share sheet rejects here just
-      // like a real failure does, so logging it would add an entry to the very
-      // log the user was trying to send — every cancelled share making the next
-      // one slightly worse.
-      showToast(t('toast.shareError'), { type: 'error' });
+      if ((await shareText(formatErrorLogForShare(entries), t('errorLog.shareTitle'))) === 'canceled') return;
+    } catch (error) {
+      const message = errorText(error);
+      showToast(t('toast.shareErrorDetailed', { message }));
     }
   });
 

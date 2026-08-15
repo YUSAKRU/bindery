@@ -365,10 +365,32 @@ async function writePdfToCache(bytes: Uint8Array, filename: string): Promise<str
   return writeFileChunked(filename, Directory.Cache, bytes);
 }
 
+/** Whether the share sheet actually shared, or the user dismissed it without picking a target. */
+export type ShareOutcome = 'shared' | 'canceled';
+
+/**
+ * @capacitor/share's only signal for "user dismissed the sheet": SharePlugin.java's
+ * activityResult() rejects with the literal string "Share canceled" on
+ * Activity.RESULT_CANCELED (@capacitor/share ^8.0.1, android/.../SharePlugin.java:60). Not a
+ * `code`, not a typed error — just this message. Version-coupled: if @capacitor/share ever
+ * changes that wording, this stops matching and cancellations silently start reaching
+ * errorText()/the error log again — it will NOT throw or break the build, so re-check this
+ * string by hand whenever @capacitor/share is bumped.
+ */
+function isShareCanceled(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Share canceled';
+}
+
 /** Writes a PDF to a temp cache location and opens the native share sheet for it. */
-export async function sharePdf(bytes: Uint8Array, filename: string, title: string): Promise<void> {
+export async function sharePdf(bytes: Uint8Array, filename: string, title: string): Promise<ShareOutcome> {
   const uri = await writePdfToCache(bytes, filename);
-  await Share.share({ title, files: [uri] });
+  try {
+    await Share.share({ title, files: [uri] });
+    return 'shared';
+  } catch (error) {
+    if (isShareCanceled(error)) return 'canceled';
+    throw error;
+  }
 }
 
 /**
@@ -377,8 +399,14 @@ export async function sharePdf(bytes: Uint8Array, filename: string, title: strin
  * The error log is the only caller: it is a few KB of text, so putting it
  * through `sharePdf`'s write-to-cache path would be all cost and no benefit.
  */
-export async function shareText(text: string, title: string): Promise<void> {
-  await Share.share({ title, text });
+export async function shareText(text: string, title: string): Promise<ShareOutcome> {
+  try {
+    await Share.share({ title, text });
+    return 'shared';
+  } catch (error) {
+    if (isShareCanceled(error)) return 'canceled';
+    throw error;
+  }
 }
 
 /**
