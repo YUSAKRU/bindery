@@ -634,6 +634,23 @@ body {
   display: none;
 }
 
+/* The 480px column is right for forms and lists, and wrong for the reader.
+   A document viewer's whole value on a large screen is reading surface: on a
+   777px tablet the cap squeezes an A4 page into 480px and renders the text
+   unreadably small while ~300px of screen sits empty on either side. Let the
+   shell go full-width while the reader is the visible screen, and snap back
+   after. No JS needed — renderReaderList already derives its page width from
+   readerScroll.clientWidth, and the resize handler relayouts on a real width
+   change, so widening the container is enough for both to follow.
+   `:has()` needs WebView 105+; the oldest WebView this app can reach is 119
+   (Android 7's permanent ceiling), so every device that matches the 600px
+   query also supports the selector. */
+@media (min-width: 600px) {
+  .app:has(#screen-reader:not(.hidden)) {
+    max-width: none;
+  }
+}
+
 /* On a phone the carousel's clipped last card is the scroll affordance — it is
    supposed to be cut, that is what says "swipe for more". On a tablet the same
    cut lands next to a wide empty margin, where it stops reading as a hint and
