@@ -634,6 +634,30 @@ body {
   display: none;
 }
 
+/* On a phone the carousel's clipped last card is the scroll affordance — it is
+   supposed to be cut, that is what says "swipe for more". On a tablet the same
+   cut lands next to a wide empty margin, where it stops reading as a hint and
+   starts reading as a rendering fault. Wrap into a grid there instead: nothing
+   is sliced, and it uses some of the vertical space a large screen has spare.
+   `auto-fill` rather than `auto-fit` so a lone card on the last row keeps a
+   column's width instead of stretching across the whole row. Phones never see
+   this — `.app` is capped at 480px, so 600px only matches large screens. */
+@media (min-width: 600px) {
+  .hub-carousel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    overflow-x: visible;
+    /* the negative margin exists to let the scroller bleed to the screen edge;
+       once it is a grid it should line up with the rest of the content. */
+    margin: 0;
+    padding: 0;
+  }
+
+  .hub-carousel .tool-row--carousel {
+    width: auto; /* let the grid size the column, not the fixed 130px */
+  }
+}
+
 .tool-category {
   display: flex;
   flex-direction: column;
