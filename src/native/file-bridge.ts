@@ -1,3 +1,4 @@
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { FilePicker, type PickedFile } from '@capawesome/capacitor-file-picker';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -292,6 +293,63 @@ export async function pickImage(): Promise<PickedPdf | null> {
   const file = result.files[0];
   if (!file) return null;
   return filePickedToBytes(file);
+}
+
+export interface CapturedPhoto {
+  bytes: Uint8Array;
+  format: 'png' | 'jpg';
+}
+
+export class PhotoPathError extends Error {
+  readonly code = 'photoPathFailed';
+  constructor() {
+    super('Could not get photo path.');
+    this.name = 'PhotoPathError';
+  }
+}
+
+/**
+ * @capacitor/camera's only signal for "user dismissed the camera / photo picker":
+ * LegacyCameraFlow.java:78 and CameraPlugin.swift:315 reject with the literal string
+ * "User cancelled photos app" on Activity.RESULT_CANCELED / imagePickerControllerDidCancel.
+ * Not a `code`, not a typed error — just this message. Version-coupled: if @capacitor/camera
+ * ever changes that wording, this stops matching and cancellations silently start reaching
+ * errorText()/the error log again — it will NOT throw or break the build, so re-check this
+ * string by hand whenever @capacitor/camera is bumped.
+ */
+function isCameraCanceled(error: unknown): boolean {
+  return error instanceof Error && error.message === 'User cancelled photos app';
+}
+
+/**
+ * Opens the native camera to take a photo.
+ * Returns the captured image bytes and format, or null if the user dismissed/cancelled.
+ */
+export async function takePhoto(): Promise<CapturedPhoto | null> {
+  let photo;
+  try {
+    photo = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera,
+    });
+  } catch (error) {
+    if (isCameraCanceled(error)) return null;
+    throw error;
+  }
+
+  if (!photo.webPath) {
+    throw new PhotoPathError();
+  }
+
+  const response = await fetch(photo.webPath);
+  const blob = await response.blob();
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const format: 'png' | 'jpg' = photo.format === 'png' ? 'png' : 'jpg';
+
+  return { bytes, format };
 }
 
 /**

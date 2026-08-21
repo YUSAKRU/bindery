@@ -15,7 +15,7 @@ import { validatePdf } from '../engine/validator';
 import { addWatermark, type WatermarkOptions } from '../engine/watermark-engine';
 import { imagesToPdf } from '../engine/image-to-pdf-engine';
 import { warpPerspective, type Point } from '../engine/perspective-warp';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { setupIncomingPdfLinks } from '../native/app-links';
@@ -31,6 +31,7 @@ import {
   sharePdf,
   shareText,
   printPdf,
+  takePhoto,
   listPrivateFolder,
   createPrivateDirectory,
   deletePrivateItem,
@@ -3083,31 +3084,13 @@ export function initApp(): void {
         return;
       }
 
-      const photo = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-      });
+      const photo = await takePhoto();
+      if (!photo) return;
 
-      if (!photo.webPath) {
-        throw new Error(t('error.photoPathFailed'));
-      }
-
-      const response = await fetch(photo.webPath);
-      const blob = await response.blob();
-      const buffer = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-
-      const format = photo.format === 'png' ? 'png' : 'jpg';
-      const name = `camera_shot_${Date.now()}.${format}`;
-
-      startCropFlow(bytes, name, format);
+      const name = `camera_shot_${Date.now()}.${photo.format}`;
+      startCropFlow(photo.bytes, name, photo.format);
     } catch (error) {
       const msg = errorText(error);
-      if (msg.includes('cancelled') || msg.includes('cancel')) {
-        return;
-      }
       showToast(t('toast.cameraError', { message: msg }));
     }
   });

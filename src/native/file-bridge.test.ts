@@ -28,6 +28,14 @@ vi.mock('@capawesome/capacitor-file-picker', () => ({
   FilePicker: { pickFiles },
 }));
 
+const { getPhoto } = vi.hoisted(() => ({ getPhoto: vi.fn() }));
+
+vi.mock('@capacitor/camera', () => ({
+  Camera: { getPhoto },
+  CameraResultType: { Uri: 'uri' },
+  CameraSource: { Camera: 'CAMERA' },
+}));
+
 const { printPdfUri, canPrint } = vi.hoisted(() => ({
   printPdfUri: vi.fn(),
   canPrint: vi.fn(() => true),
@@ -35,8 +43,19 @@ const { printPdfUri, canPrint } = vi.hoisted(() => ({
 
 vi.mock('./print', () => ({ printPdfUri, canPrint }));
 
-const { savePdfPrivately, readPdfFromUri, listPrivateFolder, pickPdf, pickPdfs, printPdf, sharePdf, shareText, PrintUnavailableError } =
-  await import('./file-bridge');
+const {
+  savePdfPrivately,
+  readPdfFromUri,
+  listPrivateFolder,
+  pickPdf,
+  pickPdfs,
+  printPdf,
+  sharePdf,
+  shareText,
+  takePhoto,
+  PhotoPathError,
+  PrintUnavailableError,
+} = await import('./file-bridge');
 const { Share } = await import('@capacitor/share');
 
 // Deterministic pseudo-random byte generator (no crypto dependency needed for a test fixture).
@@ -421,6 +440,57 @@ describe('printPdf', () => {
 
     await expect(shareText('log contents', 'title')).resolves.toBe('canceled');
     expect(writeFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('camera capture', () => {
+  it('resolves photo bytes and format on successful camera capture', async () => {
+    const rawBytes = pseudoRandomBytes(100);
+    const mockBlob = new Blob([rawBytes as any]);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      blob: () => Promise.resolve(mockBlob),
+    } as Response);
+
+    getPhoto.mockResolvedValueOnce({ webPath: 'blob:http://localhost/shot', format: 'jpeg' });
+
+    const result = await takePhoto();
+    expect(result).not.toBeNull();
+    expect(result?.format).toBe('jpg');
+    expect(result?.bytes).toEqual(rawBytes);
+    fetchSpy.mockRestore();
+  });
+
+  it('resolves png format correctly', async () => {
+    const rawBytes = pseudoRandomBytes(50);
+    const mockBlob = new Blob([rawBytes as any]);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      blob: () => Promise.resolve(mockBlob),
+    } as Response);
+
+    getPhoto.mockResolvedValueOnce({ webPath: 'blob:http://localhost/shot', format: 'png' });
+
+    const result = await takePhoto();
+    expect(result?.format).toBe('png');
+    expect(result?.bytes).toEqual(rawBytes);
+    fetchSpy.mockRestore();
+  });
+
+  it('resolves null instead of throwing when the camera is dismissed / cancelled', async () => {
+    getPhoto.mockRejectedValueOnce(new Error('User cancelled photos app'));
+
+    await expect(takePhoto()).resolves.toBeNull();
+  });
+
+  it('still throws — and is still logged — for a genuine camera failure', async () => {
+    getPhoto.mockRejectedValueOnce(new Error('Device does not have a camera available'));
+
+    await expect(takePhoto()).rejects.toThrow('Device does not have a camera available');
+  });
+
+  it('throws PhotoPathError when photo.webPath is missing', async () => {
+    getPhoto.mockResolvedValueOnce({ webPath: undefined, format: 'jpeg' });
+
+    await expect(takePhoto()).rejects.toThrow(PhotoPathError);
   });
 });
 
