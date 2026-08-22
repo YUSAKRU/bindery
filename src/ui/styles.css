@@ -3077,8 +3077,15 @@ body {
 
 .onboarding-feature-list li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  text-align: left;
   gap: 12px;
+  line-height: 1.4;
+}
+
+.onboarding-feature-list li > span:first-child {
+  flex-shrink: 0;
+  line-height: inherit;
 }
 
 .onboarding-theme-choice {
