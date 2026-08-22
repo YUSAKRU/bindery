@@ -3606,6 +3606,7 @@ export function initApp(): void {
   // ── Zoom (double-tap + pinch) ──────────────────────────────────────────────
 
   const activePinchPointers = new Map<number, { x: number; y: number }>();
+  let pinchPointerIds: [number, number] | null = null;
   let isPinching = false;
   let pinchStartDist = 0;
   let pinchCenter = { x: 0, y: 0 }; // relative to readerScroll's box
@@ -3623,6 +3624,7 @@ export function initApp(): void {
     readerPageList.style.transformOrigin = '';
     readerScroll.classList.remove('is-zoomed', 'is-pinching');
     activePinchPointers.clear();
+    pinchPointerIds = null;
     isPinching = false;
     pinchPreviewScale = 1;
     lastTapTime = 0;
@@ -3675,7 +3677,10 @@ export function initApp(): void {
   });
 
   function pinchDistAndCenter(): { dist: number; x: number; y: number } {
-    const [a, b] = [...activePinchPointers.values()];
+    if (!pinchPointerIds) return { dist: 0, x: 0, y: 0 };
+    const a = activePinchPointers.get(pinchPointerIds[0]);
+    const b = activePinchPointers.get(pinchPointerIds[1]);
+    if (!a || !b) return { dist: 0, x: 0, y: 0 };
     const rect = readerScroll.getBoundingClientRect();
     return {
       dist: Math.hypot(a.x - b.x, a.y - b.y),
@@ -3687,6 +3692,7 @@ export function initApp(): void {
   function endPinch(): void {
     if (!isPinching) return;
     isPinching = false;
+    pinchPointerIds = null;
     readerScroll.classList.remove('is-pinching');
     readerPageList.style.transform = '';
     readerPageList.style.transformOrigin = '';
@@ -3701,6 +3707,8 @@ export function initApp(): void {
     if (e.pointerType !== 'touch') return;
     activePinchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (activePinchPointers.size === 2 && !isPinching && readerDoc) {
+      const keys = [...activePinchPointers.keys()];
+      pinchPointerIds = [keys[0], keys[1]];
       isPinching = true;
       pinchLockScrollTop = readerScroll.scrollTop;
       pinchLockScrollLeft = readerScroll.scrollLeft;
@@ -3740,10 +3748,34 @@ export function initApp(): void {
 
   const onPinchPointerEnd = (e: PointerEvent): void => {
     if (!activePinchPointers.delete(e.pointerId)) return;
-    if (isPinching && activePinchPointers.size < 2) endPinch();
+    if (isPinching && pinchPointerIds && (!activePinchPointers.has(pinchPointerIds[0]) || !activePinchPointers.has(pinchPointerIds[1]))) {
+      endPinch();
+    }
   };
-  readerScroll.addEventListener('pointerup', onPinchPointerEnd);
-  readerScroll.addEventListener('pointercancel', onPinchPointerEnd);
+  window.addEventListener('pointerup', onPinchPointerEnd);
+  window.addEventListener('pointercancel', onPinchPointerEnd);
+  window.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2 && isPinching) endPinch();
+    if (e.touches.length === 0) {
+      activePinchPointers.clear();
+      if (isPinching) endPinch();
+    }
+  });
+  window.addEventListener('touchcancel', (e) => {
+    if (e.touches.length === 0) {
+      activePinchPointers.clear();
+      if (isPinching) endPinch();
+    }
+  });
+  const forceEndPinchTracking = () => {
+    activePinchPointers.clear();
+    pinchPointerIds = null;
+    if (isPinching) endPinch();
+  };
+  window.addEventListener('blur', forceEndPinchTracking);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) forceEndPinchTracking();
+  });
 
   // touch-action can't change mid-gesture, so additionally block the
   // browser's own two-finger handling while a pinch is being tracked.
@@ -3829,12 +3861,13 @@ export function initApp(): void {
       // Layout width (base * zoom, as last applied by relayoutReader) is the
       // single source of truth for render width — night-mode re-renders and
       // zoomed renders must agree with the placeholder sizes.
-      const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, readerLayoutWidthPx, readerNightMode);
-      if (!readerDoc || !document.contains(container)) {
+      const renderWidth = readerLayoutWidthPx;
+      const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, renderWidth, readerNightMode);
+      if (!readerDoc || !document.contains(container) || renderWidth !== readerLayoutWidthPx) {
         // The render finished but its target is gone (doc closed / scrolled
-        // away mid-render) — the new canvas is about to be discarded
-        // unattached, so free its GPU backing store now rather than waiting
-        // on GC.
+        // away mid-render) or stale due to zoom change — the new canvas is
+        // about to be discarded unattached, so free its GPU backing store now
+        // rather than waiting on GC.
         canvas.width = 0;
         canvas.height = 0;
         return;
