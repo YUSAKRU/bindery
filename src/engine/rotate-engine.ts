@@ -1,0 +1,34 @@
+import { degrees } from 'pdf-lib';
+import { loadAndValidatePdf } from './validator';
+import { BookletError } from './types';
+
+export interface RotateResult {
+  pageCount: number;
+  rotatedPdf: Uint8Array;
+}
+
+/** Sets each page's absolute rotation (0/90/180/270) to the matching entry in `angles`. */
+export async function rotatePages(inputBytes: Uint8Array, angles: number[]): Promise<RotateResult> {
+  const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
+
+  if (angles.length !== pageCount) {
+    throw new BookletError('ROTATE_PAGE_COUNT_MISMATCH', undefined, 'Page count does not match.');
+  }
+
+  const validAngles = new Set([0, 90, 180, 270]);
+  for (const angle of angles) {
+    if (!validAngles.has(angle)) {
+      throw new BookletError(
+        'ROTATE_INVALID_ANGLE',
+        { angle },
+        `Invalid rotation angle: ${angle}. Only 0, 90, 180, and 270 are accepted.`,
+      );
+    }
+  }
+
+  doc.getPages().forEach((page, i) => page.setRotation(degrees(angles[i])));
+
+  const rotatedPdf = await doc.save();
+
+  return { pageCount, rotatedPdf };
+}
