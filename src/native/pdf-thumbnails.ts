@@ -61,6 +61,11 @@ export async function renderPageThumbnail(
 
   await page.render({ canvas, viewport }).promise;
   const dataUrl = canvas.toDataURL('image/png');
+  // Never attached to the DOM, so nothing else will ever zero this canvas's
+  // GPU backing store — do it here rather than waiting on GC, same reasoning
+  // as evictReaderPage()/renderReaderPageInto() in app.ts.
+  canvas.width = 0;
+  canvas.height = 0;
   page.cleanup();
   return dataUrl;
 }

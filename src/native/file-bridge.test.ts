@@ -55,6 +55,8 @@ const {
   takePhoto,
   PhotoPathError,
   PrintUnavailableError,
+  readThumbnailFromDiskCache,
+  writeThumbnailToDiskCache,
 } = await import('./file-bridge');
 const { Share } = await import('@capacitor/share');
 
@@ -605,5 +607,85 @@ describe('chunked writes', () => {
     for (const data of [writeFile.mock.calls[0][0].data, ...appendFile.mock.calls.map((c) => c[0].data)]) {
       expect(data.length).toBeLessThan(3_000_000);
     }
+  });
+});
+
+describe('thumbnail disk cache', () => {
+  const CACHE_KEY = 'content://com.example/tree/doc.pdf|123456|1700000000000';
+
+  it('returns null on a cache miss without throwing', async () => {
+    stat.mockRejectedValueOnce(new Error('does not exist'));
+    readFile.mockRejectedValueOnce(new Error('does not exist'));
+
+    const result = await readThumbnailFromDiskCache(CACHE_KEY);
+
+    expect(result).toBeNull();
+  });
+
+  it('writes under Directory.Cache, in a subfolder, with recursive:true', async () => {
+    writeFile.mockResolvedValueOnce({ uri: 'file://cache/thumbnails/x.png' });
+
+    await writeThumbnailToDiskCache(CACHE_KEY, 'data:image/png;base64,aGVsbG8=');
+
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    const call = writeFile.mock.calls[0][0];
+    expect(call.directory).toBe('CACHE');
+    expect(call.recursive).toBe(true);
+    expect(call.path.startsWith('thumbnails/')).toBe(true);
+    expect(call.path.endsWith('.png')).toBe(true);
+    // The data: URL prefix must be stripped — only the raw base64 payload is stored.
+    expect(call.data).toBe('aGVsbG8=');
+  });
+
+  it('round-trips a written thumbnail back into a data URL', async () => {
+    let stored: string | undefined;
+    writeFile.mockImplementationOnce(async ({ data }: { data: string }) => {
+      stored = data;
+      return { uri: 'file://cache/thumbnails/x.png' };
+    });
+    readFile.mockImplementationOnce(async () => ({ data: stored }));
+
+    await writeThumbnailToDiskCache(CACHE_KEY, 'data:image/png;base64,aGVsbG8=');
+    const result = await readThumbnailFromDiskCache(CACHE_KEY);
+
+    expect(result).toBe('data:image/png;base64,aGVsbG8=');
+  });
+
+  it('reads and writes under the same path for the same cache key', async () => {
+    writeFile.mockResolvedValueOnce({ uri: 'file://x' });
+    await writeThumbnailToDiskCache(CACHE_KEY, 'data:image/png;base64,aGVsbG8=');
+    const writtenPath = writeFile.mock.calls[0][0].path;
+
+    readFile.mockResolvedValueOnce({ data: 'aGVsbG8=' });
+    await readThumbnailFromDiskCache(CACHE_KEY);
+    const readPath = readFile.mock.calls[0][0].path;
+
+    expect(readPath).toBe(writtenPath);
+  });
+
+  it('derives different paths for different cache keys', async () => {
+    writeFile.mockResolvedValue({ uri: 'file://x' });
+
+    await writeThumbnailToDiskCache(CACHE_KEY, 'data:image/png;base64,aGVsbG8=');
+    await writeThumbnailToDiskCache('content://other/doc.pdf|999|1', 'data:image/png;base64,aGVsbG8=');
+
+    const [pathA, pathB] = writeFile.mock.calls.map((c) => c[0].path);
+    expect(pathA).not.toBe(pathB);
+  });
+
+  it('swallows write failures instead of throwing', async () => {
+    writeFile.mockRejectedValueOnce(new Error('disk full'));
+
+    await expect(
+      writeThumbnailToDiskCache(CACHE_KEY, 'data:image/png;base64,aGVsbG8='),
+    ).resolves.toBeUndefined();
+  });
+
+  it('treats an empty read result as a cache miss', async () => {
+    readFile.mockResolvedValueOnce({ data: '' });
+
+    const result = await readThumbnailFromDiskCache(CACHE_KEY);
+
+    expect(result).toBeNull();
   });
 });

@@ -514,6 +514,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.previewFront': 'Front · sheet 1',
     'booklet.previewBack': 'Back · sheet 1',
     'reader.opening': 'Opening document…',
+    'reader.largeFileWarning': 'Large document ({mb} MB) — rendering may use more memory than usual.',
   },
   tr: {
     'onboarding.page1.title': "Bindery'ye Hoş Geldiniz",
@@ -1028,6 +1029,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.previewFront': 'Ön yüz · 1. yaprak',
     'booklet.previewBack': 'Arka yüz · 1. yaprak',
     'reader.opening': 'Belge açılıyor…',
+    'reader.largeFileWarning': 'Büyük belge ({mb} MB) — işleme, normalden fazla bellek kullanabilir.',
   },
 };
 

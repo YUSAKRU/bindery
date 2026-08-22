@@ -581,4 +581,64 @@ export async function movePrivateItem(fromPath: string, toPath: string): Promise
   return result.uri;
 }
 
+const THUMBNAIL_CACHE_DIR = 'thumbnails';
 
+/**
+ * Turns a `uri|size|mtime` cache key into a filesystem-safe filename.
+ *
+ * Cache keys carry raw `content://`/`file://` URIs, which contain characters
+ * (`/`, `:`) that are not safe path segments — djb2 collapses the key to a
+ * short hex string instead. Not cryptographic; a thumbnail cache only needs
+ * key stability, not collision resistance against an adversary.
+ */
+function hashCacheKey(key: string): string {
+  let hash = 5381;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) + hash + key.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(16);
+}
+
+function thumbnailCachePath(cacheKey: string): string {
+  return `${THUMBNAIL_CACHE_DIR}/${hashCacheKey(cacheKey)}.png`;
+}
+
+/**
+ * Reads a previously cached thumbnail PNG for `cacheKey` from the Cache
+ * directory. Returns null on any failure (not cached, unreadable) — callers
+ * fall back to rendering the thumbnail themselves.
+ */
+export async function readThumbnailFromDiskCache(cacheKey: string): Promise<string | null> {
+  try {
+    const { data } = await Filesystem.readFile({
+      path: thumbnailCachePath(cacheKey),
+      directory: Directory.Cache,
+    });
+    if (typeof data !== 'string' || !data) return null;
+    return `data:image/png;base64,${data}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes a rendered thumbnail data URL to the Cache directory under
+ * `cacheKey`, so a later launch can skip re-parsing the source PDF. A
+ * thumbnail is a few tens of KB at most, so unlike `writeFileChunked` this
+ * writes in one call. Failures are swallowed: the caller already has the
+ * thumbnail in hand, and a caching failure must never surface as a
+ * rendering failure.
+ */
+export async function writeThumbnailToDiskCache(cacheKey: string, dataUrl: string): Promise<void> {
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    await Filesystem.writeFile({
+      path: thumbnailCachePath(cacheKey),
+      data: base64,
+      directory: Directory.Cache,
+      recursive: true,
+    });
+  } catch {
+    // best-effort cache — see doc comment above.
+  }
+}

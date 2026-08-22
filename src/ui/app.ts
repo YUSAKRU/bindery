@@ -39,6 +39,8 @@ import {
   pathExists,
   FileTooLargeError,
   FILE_SIZE_LIMIT_BYTES,
+  readThumbnailFromDiskCache,
+  writeThumbnailToDiskCache,
   type PickedPdf,
   type FileEntryInfo,
 } from '../native/file-bridge';
@@ -3474,6 +3476,13 @@ export function initApp(): void {
       canvas.height = 0;
     }
     readerRendered.clear();
+    // Defense-in-depth: readerRendered should already track every canvas
+    // ever attached under readerPageList, but a DOM sweep costs nothing and
+    // survives a future render path that forgets to register itself.
+    readerPageList.querySelectorAll('canvas').forEach((c) => {
+      c.width = 0;
+      c.height = 0;
+    });
   }
 
   async function closeReaderDocument(): Promise<void> {
@@ -3821,7 +3830,24 @@ export function initApp(): void {
       // single source of truth for render width — night-mode re-renders and
       // zoomed renders must agree with the placeholder sizes.
       const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, readerLayoutWidthPx, readerNightMode);
-      if (!readerDoc || !document.contains(container)) return;
+      if (!readerDoc || !document.contains(container)) {
+        // The render finished but its target is gone (doc closed / scrolled
+        // away mid-render) — the new canvas is about to be discarded
+        // unattached, so free its GPU backing store now rather than waiting
+        // on GC.
+        canvas.width = 0;
+        canvas.height = 0;
+        return;
+      }
+      // Zero the outgoing canvas's dimensions before dropping it, matching
+      // evictReaderPage() — otherwise its GPU backing store lingers until GC
+      // gets around to it, and a fast zoom/night-mode toggle can pile up
+      // several of these before that happens.
+      const oldCanvas = container.querySelector('canvas');
+      if (oldCanvas) {
+        oldCanvas.width = 0;
+        oldCanvas.height = 0;
+      }
       container.innerHTML = '';
       // Container size is always driven by the placeholder's explicit
       // per-page height (set in renderReaderList), never by the canvas —
@@ -4018,6 +4044,13 @@ export function initApp(): void {
     }
   }
 
+  // Scanned PDFs pack a full-page image per page, so their in-memory render
+  // cost scales with byte size far more than text PDFs do — a file well
+  // under the 50 MB pick-time cap (FILE_SIZE_LIMIT_BYTES) can still pressure
+  // memory once its pages are actually rendered. This only decides whether
+  // to warn the user before opening; it does not block anything.
+  const READER_LARGE_FILE_WARN_BYTES = 30 * 1024 * 1024; // 30 MB
+
   async function openReaderWithBytes(
     bytes: Uint8Array,
     name: string,
@@ -4050,6 +4083,12 @@ export function initApp(): void {
       screens.reader.classList.toggle('night-mode', readerNightMode);
       showScreen('reader');
       topBarTitle.textContent = readerName;
+      // Warn before the heavy per-page rendering work in renderReaderList
+      // starts, not after — the user should see this while pages are still
+      // loading, not once the memory pressure has already happened.
+      if (bytes.length >= READER_LARGE_FILE_WARN_BYTES) {
+        showToast(t('reader.largeFileWarning', { mb: Math.round(bytes.length / 1048576) }), { type: 'info' });
+      }
       await renderReaderList();
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
@@ -4070,22 +4109,48 @@ export function initApp(): void {
   const pdfThumbnailCache = new Map<string, string>();
   const PDF_THUMBNAIL_CACHE_MAX = 50;
 
+  /** Sets an in-memory thumbnail entry and evicts the oldest one past PDF_THUMBNAIL_CACHE_MAX. */
+  function cacheThumbnailInMemory(cacheKey: string, dataUrl: string): void {
+    pdfThumbnailCache.set(cacheKey, dataUrl);
+    if (pdfThumbnailCache.size > PDF_THUMBNAIL_CACHE_MAX) {
+      const oldest = pdfThumbnailCache.keys().next().value;
+      if (oldest !== undefined) pdfThumbnailCache.delete(oldest);
+    }
+  }
+
   // A preview is 220px wide, but producing one costs a full read and parse of
-  // the document — and both scale with file size, on the main thread, with a
-  // second full copy while pdf.js holds the bytes. Past this point the trade
-  // stops making sense: a large PDF would freeze the very screen it decorates,
-  // and the cache lives only in memory, so it would do it again every launch.
-  // Those rows keep the generic document icon instead.
-  const PDF_THUMBNAIL_MAX_SOURCE_BYTES = 12 * 1024 * 1024; // 12 MB
+  // the document, plus a second full copy while pdf.js holds the bytes — both
+  // scaling with file size, on the main thread. A disk-cache hit skips this
+  // entirely on a later launch, but the first render of a large file is still
+  // a real, one-time memory spike, and low-end Android devices in this app's
+  // history have OOM'd well under 50MB (see file-bridge.ts's chunked
+  // read/write comments) — so the ceiling stays well below FILE_SIZE_LIMIT_BYTES
+  // rather than matching it. Anything still rejected keeps the generic
+  // document icon instead.
+  const PDF_THUMBNAIL_MAX_SOURCE_BYTES = 24 * 1024 * 1024; // 24 MB
 
   /**
    * Renders page 1 of the PDF behind `uri` to a data URL, caching the result
-   * under `cacheKey`. Returns null on any failure (missing/unreadable/encrypted
-   * file) — callers keep their placeholder; never throws into a render path.
+   * under `cacheKey` in memory and, for a version-qualified key
+   * (`uri|size|mtime`, see loadHubRecentThumbnail/renderFilesList), on disk
+   * (Cache directory) too. A bare uri with no `|` is not safe to persist:
+   * without size/mtime there is no way to tell a stale disk entry apart from
+   * a fresh one if the file at that uri later changes, so those keys stay
+   * memory-only — which is naturally bounded and cleared on relaunch anyway.
+   * Returns null on any failure (missing/unreadable/encrypted file) — callers
+   * keep their placeholder; never throws into a render path.
    */
   async function getPdfThumbnail(uri: string, cacheKey: string): Promise<string | null> {
     const cached = pdfThumbnailCache.get(cacheKey);
     if (cached) return cached;
+    const isVersionedKey = cacheKey.includes('|');
+    if (isVersionedKey) {
+      const onDisk = await readThumbnailFromDiskCache(cacheKey);
+      if (onDisk) {
+        cacheThumbnailInMemory(cacheKey, onDisk);
+        return onDisk;
+      }
+    }
     try {
       // Ask how big it is before reading it. A provider that cannot answer is
       // rare; there the read goes ahead as before rather than losing the
@@ -4096,11 +4161,8 @@ export function initApp(): void {
       const doc = await loadPdfForThumbnails(picked.bytes);
       try {
         const dataUrl = await renderPageThumbnail(doc, 1, 220);
-        pdfThumbnailCache.set(cacheKey, dataUrl);
-        if (pdfThumbnailCache.size > PDF_THUMBNAIL_CACHE_MAX) {
-          const oldest = pdfThumbnailCache.keys().next().value;
-          if (oldest !== undefined) pdfThumbnailCache.delete(oldest);
-        }
+        cacheThumbnailInMemory(cacheKey, dataUrl);
+        if (isVersionedKey) void writeThumbnailToDiskCache(cacheKey, dataUrl);
         return dataUrl;
       } finally {
         await destroyThumbnailDoc(doc);
@@ -4117,7 +4179,14 @@ export function initApp(): void {
    */
   async function loadHubRecentThumbnail(entry: RecentEntry, container: HTMLElement): Promise<void> {
     if (!entry.uri) return;
-    const dataUrl = await getPdfThumbnail(entry.uri, entry.uri);
+    // A recent entry only stores a uri (see RecentEntry) — stat() at load time
+    // to build a version-qualified cache key, so a file overwritten at the
+    // same uri doesn't serve a stale thumbnail from the disk cache forever.
+    // On stat failure, fall back to the bare uri, which getPdfThumbnail keeps
+    // memory-only for exactly that reason.
+    const stat = await Filesystem.stat({ path: entry.uri }).catch(() => null);
+    const cacheKey = stat ? `${entry.uri}|${stat.size}|${stat.mtime}` : entry.uri;
+    const dataUrl = await getPdfThumbnail(entry.uri, cacheKey);
     if (!dataUrl) return;
     const img = document.createElement('img');
     img.className = 'hub-recent-thumb-img';
@@ -4781,8 +4850,15 @@ export function initApp(): void {
 
   async function renderFullscreenPageInto(container: HTMLDivElement, pageNumber: number): Promise<void> {
     if (!readerDoc) return;
+    // Zero any outgoing canvas before dropping it — same GPU-backing-store
+    // reasoning as evictReaderPage()/renderReaderPageInto().
+    const oldCanvas = container.querySelector('canvas');
+    if (oldCanvas) {
+      oldCanvas.width = 0;
+      oldCanvas.height = 0;
+    }
     container.innerHTML = '';
-    
+
     // Determine target canvas width
     // In portrait modes (0, 180), use window.innerWidth, but cap it if it exceeds screen height.
     // In landscape modes (90, 270), the physical width of the page is the screen's height!
@@ -4804,7 +4880,14 @@ export function initApp(): void {
     }
     
     try {
-      const { wrapper } = await renderReaderPage(readerDoc.proxy, pageNumber, fitWidth, readerNightMode);
+      const { wrapper, canvas } = await renderReaderPage(readerDoc.proxy, pageNumber, fitWidth, readerNightMode);
+      if (!readerDoc || !document.contains(container)) {
+        // Fullscreen closed / container swapped out while this page was
+        // rendering — free the now-orphaned canvas rather than waiting on GC.
+        canvas.width = 0;
+        canvas.height = 0;
+        return;
+      }
       container.appendChild(wrapper);
     } catch (error) {
       recordError('caught', error);

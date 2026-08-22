@@ -81,6 +81,20 @@ android-deploy
 - APK deploy: ~4-5 seconds
 - The app will launch automatically on the device
 
+### Current Project Status (August 2026)
+
+- **Production Live**: `0.4.3` (versionCode `19`) is officially LIVE globally on Google Play Store (ID: `com.eduplayconnect.bindery`).
+- **Tests**: 315 passing tests (`npm test`), clean `tsc --noEmit`.
+- **AlternativeTo**: Form submitted with 9 alternative ties; in moderation queue.
+- **Outreach & PR Package**: Maintained in `docs/COMMUNITY_AND_GROWTH_STRATEGY.md`, `/home/ruveys/Desktop/bindery-share/`, and `/home/ruveys/Desktop/BINDERY_PAYLASIM_PANELI.html`.
+- **Brand Voice Rule (`docs/BRAND.md`)**: NEVER use "create/yaratmak" — use "produce/make/assemble" (üret/hazırla/düzenle). Tone is utilitarian, craft-focused, respectful.
+- **r/zines Rule 4 Compliance**: Genuinely disclosed AI coding assistance in ModMail permission draft (`/home/ruveys/Desktop/MODMAIL_MESAJI.txt`).
+- **Feature Freeze Active**: No new feature dev until real user validation signals arrive.
+- **Version 0.4.4 Candidate Backlog**:
+  1. `renderReaderPageInto` zoom canvas memory eviction (`canvas.width=0; canvas.height=0`).
+  2. Android Share Target (`ACTION_SEND`) to open PDFs directly into booklet flow.
+  3. Thumbnail disk cache in Cache directory (`uri|size|mtime`).
+
 ### Codebase Memory (MCP)
 
 `codebase-memory-mcp` is installed globally (`~/.claude/.mcp.json`, `~/.claude.json`) — available in every Claude Code session, not just this project. General tool usage guide lives in `~/.claude/skills/codebase-memory/SKILL.md`. If the `mcp__codebase-memory-mcp__*` tools show as deferred, load them with `ToolSearch("select:mcp__codebase-memory-mcp__search_graph,...")` first.
