@@ -858,7 +858,18 @@
                 <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
                 <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
               </div>
-              <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page English PDF with the printing and folding steps.</p>
+              <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page PDF with the printing and folding steps, in the app's current language.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
+                <label data-i18n="config.sheetOrder">Sheet order</label>
+              </div>
+              <div class="segmented-group" id="sheetOrderGroup">
+                <button type="button" class="segmented-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
+                <button type="button" class="segmented-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.sheetOrderHint">Reverses each signature's own sheet print order (innermost sheet first); the order of the signatures themselves is unchanged. Corrects feed-order mismatches on printers with an automatic folding unit.</p>
             </div>
 
             <div class="setting-card">

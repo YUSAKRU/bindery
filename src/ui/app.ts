@@ -352,6 +352,7 @@ export function initApp(): void {
   const bindingGroup = byId<HTMLDivElement>('bindingGroup');
   const coverModeGroup = byId<HTMLDivElement>('coverModeGroup');
   const instructionsGroup = byId<HTMLDivElement>('instructionsGroup');
+  const sheetOrderGroup = byId<HTMLDivElement>('sheetOrderGroup');
   const coverHintText = byId<HTMLParagraphElement>('coverHintText');
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
@@ -433,6 +434,7 @@ export function initApp(): void {
   let bookletBinding: Binding = 'ltr';
   let bookletSeparateCover = false;
   let bookletIncludeInstructions = false;
+  let bookletReverseSheetOrder = false;
   // Original page count of the selected source (0 = none). Drives the live
   // config summary and the separate-cover availability check.
   let bookletOriginalPages = 0;
@@ -977,6 +979,8 @@ export function initApp(): void {
     setActiveSegment(coverModeGroup, 'cover', 'together');
     bookletIncludeInstructions = false;
     setActiveSegment(instructionsGroup, 'instr', 'none');
+    bookletReverseSheetOrder = false;
+    setActiveSegment(sheetOrderGroup, 'order', 'default');
     insertBlankInput.value = '';
     insertBlankError.classList.add('hidden');
     bookletOriginalPages = 0;
@@ -1026,7 +1030,8 @@ export function initApp(): void {
   // True when any control inside the Advanced accordion differs from its
   // default, so a "modified" badge can warn the user about settings hidden
   // behind the collapsed panel. Defaults: flip=short, binding=ltr, gutter=0,
-  // creep=0, cover=together, instructions=none, blank field empty.
+  // creep=0, cover=together, instructions=none, sheet order=default, blank
+  // field empty.
   function isAdvancedModified(): boolean {
     return (
       bookletFlipEdge !== 'short' ||
@@ -1035,6 +1040,7 @@ export function initApp(): void {
       Number(creepSlider.value) !== 0 ||
       bookletSeparateCover ||
       bookletIncludeInstructions ||
+      bookletReverseSheetOrder ||
       insertBlankInput.value.trim() !== ''
     );
   }
@@ -1071,7 +1077,8 @@ export function initApp(): void {
     const block = bookletSeparateCover ? logical - 4 : logical;
     const padded = Math.max(4, Math.ceil(block / 4) * 4);
     const sheets = padded / 4;
-    const sigs = computeSignatureMappings(padded, signatureOption()).length;
+    const sigMappings = computeSignatureMappings(padded, signatureOption());
+    const sigs = sigMappings.length;
 
     let text = t('config.summary', {
       paper: paperSummaryLabel(bookletPaperSize),
@@ -1079,8 +1086,17 @@ export function initApp(): void {
       sheets,
       sigs,
     });
+    // Below the fold count, signatures are now balanced (see computeSignatureMappings)
+    // rather than naively chunked, so the split isn't guessable from sheets/sigs alone
+    // — show it whenever there's more than one to break down.
+    if (sigs > 1) {
+      text += t('config.summarySheetsPerSignature', {
+        breakdown: sigMappings.map((s) => s.length).join('-'),
+      });
+    }
     if (bookletSeparateCover) text += t('config.summaryCover');
     if (bookletIncludeInstructions) text += t('config.summaryInstructions');
+    if (bookletReverseSheetOrder) text += t('config.summaryReverseOrder');
     configSummary.textContent = text;
     configSummary.classList.remove('hidden');
   }
@@ -1662,6 +1678,16 @@ export function initApp(): void {
     updateAdvancedBadge();
   });
 
+  sheetOrderGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const order = btn?.dataset.order;
+    if (!order) return;
+    bookletReverseSheetOrder = order === 'reversed';
+    setActiveSegment(sheetOrderGroup, 'order', order);
+    refreshConfigSummary();
+    updateAdvancedBadge();
+  });
+
   insertBlankInput.addEventListener('input', () => {
     insertBlankError.classList.add('hidden');
     refreshConfigSummary();
@@ -1707,6 +1733,7 @@ export function initApp(): void {
         binding: bookletBinding,
         separateCover: bookletSeparateCover,
         includeInstructions: bookletIncludeInstructions,
+        reverseSheetOrder: bookletReverseSheetOrder,
         insertBlankAfter,
       });
 
@@ -2583,7 +2610,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig' | 'binding' | 'cover' | 'instr', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig' | 'binding' | 'cover' | 'instr' | 'order', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });

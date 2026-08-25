@@ -575,6 +575,19 @@ describe('computeSignatureMappings', () => {
     expect(computeSignatureMappings(16, 32)).toHaveLength(1);
     expect(computeSignatureMappings(16)[0]).toEqual(computeSheetMapping(16));
   });
+
+  it('balances the remainder across signatures instead of dumping it in the last one', () => {
+    // Naive fixed-size chunking of 56 pages at 16-per-signature would give
+    // 16/16/16/8 (4/4/4/2 sheets) — one thin "runt" signature. Balancing
+    // spreads the remainder for a sturdier, more even spine.
+    const sigs = computeSignatureMappings(56, 16);
+    expect(sigs.map((s) => s.length)).toEqual([4, 4, 3, 3]); // sheets/signature -> 16/16/12/12 pages
+  });
+
+  it('keeps the same signature count as naive chunking, only redistributing pages', () => {
+    // Same ceil(N/signatureSize) signature count either way.
+    expect(computeSignatureMappings(56, 16)).toHaveLength(4);
+  });
 });
 
 describe('resolveSignatureSize', () => {
@@ -645,6 +658,82 @@ describe('makeBooklet signatureSize', () => {
     for (const bad of [0, -4, 6, 3.5]) {
       await expectRejectsCode(makeBooklet(input, { signatureSize: bad }), 'BOOKLET_INVALID_SIGNATURE_SIZE');
     }
+  });
+});
+
+describe('makeBooklet reverseSheetOrder', () => {
+  it("reverses the front PDF's physical sheet order, each sheet keeping its own creep shift", async () => {
+    // 32 pages, SINGLE signature -> 8 sheets, sheetInSignature 0..7. With only
+    // one signature, "reverse the whole document" and "reverse each
+    // signature's own sheets, signatures in order" are indistinguishable —
+    // see the multi-signature test below for the case that tells them apart.
+    // A nonzero creep makes each sheet's left-slot x-shift distinct and traceable.
+    const input = await buildTestPdf(32);
+    const creep = 2;
+    const forward = await makeBooklet(input, { creep });
+    const reversed = await makeBooklet(input, { creep, reverseSheetOrder: true });
+
+    expect(reversed.sheetsCount).toBe(forward.sheetsCount);
+    const S = forward.sheetsCount;
+
+    const shiftOf = async (pdf: Uint8Array, pageIndex: number) =>
+      (await drawnPagesOf(pdf, pageIndex))[0].translate[4];
+
+    const forwardFirstShift = await shiftOf(forward.frontPdf, 0);
+    const forwardLastShift = await shiftOf(forward.frontPdf, S - 1);
+    const reversedFirstShift = await shiftOf(reversed.frontPdf, 0);
+    const reversedLastShift = await shiftOf(reversed.frontPdf, S - 1);
+
+    expect(reversedFirstShift).toBeCloseTo(forwardLastShift);
+    expect(reversedLastShift).toBeCloseTo(forwardFirstShift);
+  });
+
+  it('defaults to the original (non-reversed) order', async () => {
+    const input = await buildTestPdf(16);
+    const a = await drawnPagesOf((await makeBooklet(input)).frontPdf, 0);
+    const b = await drawnPagesOf(
+      (await makeBooklet(input, { reverseSheetOrder: false })).frontPdf,
+      0,
+    );
+    expect(a).toEqual(b);
+  });
+
+  it("keeps signatures in their original order, reversing only each signature's own sheets", async () => {
+    // r/bookbinding regression: an auto-folding printer nests one signature
+    // backwards, but the FIX must not also swap which signature prints first
+    // — the reporter was explicit that signatures stay in order. 2 signatures
+    // of 16 pages each; signature 1's source pages are a distinct size from
+    // signature 2's, so the drawn scale (embedded page size vs the fixed A4
+    // slot) identifies which signature's content landed on a given output
+    // sheet. Creep-shift geometry alone can't tell these apart here: with
+    // equal-length signatures, reversing the whole flat list and reversing
+    // each signature internally produce the identical sheetInSignature
+    // sequence (3,2,1,0,3,2,1,0) — only the actual page identity differs.
+    const doc = await PDFDocument.create();
+    for (let i = 0; i < 16; i++) doc.addPage([595, 842]).pushOperators(); // signature 1
+    for (let i = 0; i < 16; i++) doc.addPage([400, 600]).pushOperators(); // signature 2
+    const input = await doc.save();
+
+    const SIG1_SCALE = 595 / 842; // height-bound, matches INNER_SCALE elsewhere
+    const SIG2_SCALE = 595 / 600; // height-bound, matches COVER_SCALE elsewhere
+
+    const result = await makeBooklet(input, { signatureSize: 16, reverseSheetOrder: true });
+    expect(result.signaturesCount).toBe(2);
+    expect(result.sheetsCount).toBe(8);
+
+    // First output sheet must still be signature 1's content (its own sheets
+    // reversed internally, so this is signature 1's sheetInSignature 3) — a
+    // whole-document reversal would wrongly put signature 2 here instead.
+    const firstDraw = (await drawnPagesOf(result.frontPdf, 0))[0];
+    expect(firstDraw.scale[0]).toBeCloseTo(SIG1_SCALE, 5);
+
+    // Sheet 4 (0-indexed) is signature 2's first emitted sheet.
+    const fifthDraw = (await drawnPagesOf(result.frontPdf, 4))[0];
+    expect(fifthDraw.scale[0]).toBeCloseTo(SIG2_SCALE, 5);
+
+    // Last output sheet must be signature 2's content.
+    const lastDraw = (await drawnPagesOf(result.frontPdf, 7))[0];
+    expect(lastDraw.scale[0]).toBeCloseTo(SIG2_SCALE, 5);
   });
 });
 
@@ -800,6 +889,47 @@ describe('makeBooklet includeInstructions', () => {
       await instructionsDataFor(input, { includeInstructions: true, flipEdge: 'long' }),
     ).map((l) => l.text);
     expect(longCopy.some((l) => l.includes('LONG edge'))).toBe(true);
+  });
+
+  it('notes reversed sheet order in the copy only when requested', async () => {
+    const input = await buildTestPdf(16);
+
+    const defaultCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(defaultCopy.some((l) => l.includes('innermost-first'))).toBe(false);
+
+    const reversedCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, reverseSheetOrder: true }),
+    ).map((l) => l.text);
+    expect(reversedCopy.some((l) => l.includes('innermost-first'))).toBe(true);
+  });
+
+  it('reports blank pages inserted by the user and/or added as padding', async () => {
+    // 15 pages: 1 auto-padding page needed to reach 16.
+    const paddedOnly = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(15), { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(paddedOnly.some((l) => l.includes('Blank pages: 1 (added to complete the last sheet)'))).toBe(
+      true,
+    );
+
+    // 16 pages + 1 user-requested blank -> 17 -> 3 padding pages to reach 20.
+    const both = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(16), {
+        includeInstructions: true,
+        insertBlankAfter: [0],
+      }),
+    ).map((l) => l.text);
+    expect(
+      both.some((l) => l.includes('Blank pages: 4 (1 inserted by you, 3 added to complete the last sheet)')),
+    ).toBe(true);
+
+    // Evenly-divisible, no inserts -> no blank-pages line at all.
+    const neither = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(16), { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(neither.some((l) => l.includes('Blank pages'))).toBe(false);
   });
 
   it('lists the signature count and reading-order start pages', async () => {

@@ -85,6 +85,15 @@ export interface BookletOptions {
    * chapter start or the inside of a cover. Default: none.
    */
   insertBlankAfter?: number[];
+  /**
+   * When true, emits sheets in the front/back/combined PDFs in reverse order
+   * (last sheet first) — for auto-folding duplex printers whose output
+   * stacking expects the opposite feed order from the default. Reverses the
+   * whole document's sheet sequence in one pass, independent of signature
+   * boundaries; per-sheet page content, creep, and slot geometry are
+   * unaffected. Default false (original order).
+   */
+  reverseSheetOrder?: boolean;
 }
 
 export interface BookletResult {
