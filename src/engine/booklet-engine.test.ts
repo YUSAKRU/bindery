@@ -897,12 +897,12 @@ describe('makeBooklet includeInstructions', () => {
     const defaultCopy = buildInstructionsLines(
       await instructionsDataFor(input, { includeInstructions: true }),
     ).map((l) => l.text);
-    expect(defaultCopy.some((l) => l.includes('reverse order'))).toBe(false);
+    expect(defaultCopy.some((l) => l.includes('innermost-first'))).toBe(false);
 
     const reversedCopy = buildInstructionsLines(
       await instructionsDataFor(input, { includeInstructions: true, reverseSheetOrder: true }),
     ).map((l) => l.text);
-    expect(reversedCopy.some((l) => l.includes('reverse order'))).toBe(true);
+    expect(reversedCopy.some((l) => l.includes('innermost-first'))).toBe(true);
   });
 
   it('reports blank pages inserted by the user and/or added as padding', async () => {
