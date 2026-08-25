@@ -621,7 +621,8 @@ export async function makeBooklet(
     coverPdf = await combineFrontBack(coverFront, coverBack);
   }
 
-  // Optional English printing-instructions + reading-order sheet. Standalone;
+  // Optional printing-instructions + reading-order sheet, in the app's current
+  // language. Standalone;
   // the book PDFs above are untouched.
   let instructionsPdf: Uint8Array | undefined;
   if (options.includeInstructions) {
