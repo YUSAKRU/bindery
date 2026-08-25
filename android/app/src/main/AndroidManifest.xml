@@ -26,6 +26,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+
+            <!-- Share Target: lets other apps' share sheets ("Bindery ile Aç") send a
+                 PDF here via ACTION_SEND. MainActivity rewrites it into the same
+                 ACTION_VIEW flow the intent-filter above already uses. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
         </activity>
 
         <provider
