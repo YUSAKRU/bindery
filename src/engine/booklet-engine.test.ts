@@ -850,6 +850,47 @@ describe('makeBooklet includeInstructions', () => {
     expect(longCopy.some((l) => l.includes('LONG edge'))).toBe(true);
   });
 
+  it('notes reversed sheet order in the copy only when requested', async () => {
+    const input = await buildTestPdf(16);
+
+    const defaultCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(defaultCopy.some((l) => l.includes('reverse order'))).toBe(false);
+
+    const reversedCopy = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, reverseSheetOrder: true }),
+    ).map((l) => l.text);
+    expect(reversedCopy.some((l) => l.includes('reverse order'))).toBe(true);
+  });
+
+  it('reports blank pages inserted by the user and/or added as padding', async () => {
+    // 15 pages: 1 auto-padding page needed to reach 16.
+    const paddedOnly = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(15), { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(paddedOnly.some((l) => l.includes('Blank pages: 1 (added to complete the last sheet)'))).toBe(
+      true,
+    );
+
+    // 16 pages + 1 user-requested blank -> 17 -> 3 padding pages to reach 20.
+    const both = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(16), {
+        includeInstructions: true,
+        insertBlankAfter: [0],
+      }),
+    ).map((l) => l.text);
+    expect(
+      both.some((l) => l.includes('Blank pages: 4 (1 inserted by you, 3 added to complete the last sheet)')),
+    ).toBe(true);
+
+    // Evenly-divisible, no inserts -> no blank-pages line at all.
+    const neither = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(16), { includeInstructions: true }),
+    ).map((l) => l.text);
+    expect(neither.some((l) => l.includes('Blank pages'))).toBe(false);
+  });
+
   it('lists the signature count and reading-order start pages', async () => {
     // 44 pages, auto -> 3 signatures starting at pages 1, 17, 33.
     const input = await buildTestPdf(44);

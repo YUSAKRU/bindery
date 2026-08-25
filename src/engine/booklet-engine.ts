@@ -639,6 +639,9 @@ export async function makeBooklet(
       separateCover,
       gutter: baseGutter,
       creep: creepStep,
+      reverseSheetOrder,
+      blanksInserted,
+      paddingApplied,
     });
   }
 

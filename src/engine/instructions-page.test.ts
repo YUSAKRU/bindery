@@ -71,6 +71,9 @@ const baseData: InstructionsData = {
   separateCover: false,
   gutter: 0,
   creep: 0,
+  reverseSheetOrder: false,
+  blanksInserted: 0,
+  paddingApplied: 0,
 };
 
 async function pageCountOf(bytes: Uint8Array): Promise<number> {
@@ -115,6 +118,9 @@ describe('makeInstructionsPage', () => {
       signatureStartPages: Array.from({ length: 14 }, (_, i) => i * 16 + 1),
       gutter: 12,
       creep: 0.5,
+      reverseSheetOrder: true,
+      blanksInserted: 2,
+      paddingApplied: 1,
     });
     expect(await pageCountOf(pdf)).toBe(1);
   });
