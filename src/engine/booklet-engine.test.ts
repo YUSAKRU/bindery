@@ -575,6 +575,19 @@ describe('computeSignatureMappings', () => {
     expect(computeSignatureMappings(16, 32)).toHaveLength(1);
     expect(computeSignatureMappings(16)[0]).toEqual(computeSheetMapping(16));
   });
+
+  it('balances the remainder across signatures instead of dumping it in the last one', () => {
+    // Naive fixed-size chunking of 56 pages at 16-per-signature would give
+    // 16/16/16/8 (4/4/4/2 sheets) — one thin "runt" signature. Balancing
+    // spreads the remainder for a sturdier, more even spine.
+    const sigs = computeSignatureMappings(56, 16);
+    expect(sigs.map((s) => s.length)).toEqual([4, 4, 3, 3]); // sheets/signature -> 16/16/12/12 pages
+  });
+
+  it('keeps the same signature count as naive chunking, only redistributing pages', () => {
+    // Same ceil(N/signatureSize) signature count either way.
+    expect(computeSignatureMappings(56, 16)).toHaveLength(4);
+  });
 });
 
 describe('resolveSignatureSize', () => {
@@ -645,6 +658,41 @@ describe('makeBooklet signatureSize', () => {
     for (const bad of [0, -4, 6, 3.5]) {
       await expectRejectsCode(makeBooklet(input, { signatureSize: bad }), 'BOOKLET_INVALID_SIGNATURE_SIZE');
     }
+  });
+});
+
+describe('makeBooklet reverseSheetOrder', () => {
+  it("reverses the front PDF's physical sheet order, each sheet keeping its own creep shift", async () => {
+    // 32 pages, single signature -> 8 sheets, sheetInSignature 0..7. A nonzero
+    // creep makes each sheet's left-slot x-shift distinct and traceable.
+    const input = await buildTestPdf(32);
+    const creep = 2;
+    const forward = await makeBooklet(input, { creep });
+    const reversed = await makeBooklet(input, { creep, reverseSheetOrder: true });
+
+    expect(reversed.sheetsCount).toBe(forward.sheetsCount);
+    const S = forward.sheetsCount;
+
+    const shiftOf = async (pdf: Uint8Array, pageIndex: number) =>
+      (await drawnPagesOf(pdf, pageIndex))[0].translate[4];
+
+    const forwardFirstShift = await shiftOf(forward.frontPdf, 0);
+    const forwardLastShift = await shiftOf(forward.frontPdf, S - 1);
+    const reversedFirstShift = await shiftOf(reversed.frontPdf, 0);
+    const reversedLastShift = await shiftOf(reversed.frontPdf, S - 1);
+
+    expect(reversedFirstShift).toBeCloseTo(forwardLastShift);
+    expect(reversedLastShift).toBeCloseTo(forwardFirstShift);
+  });
+
+  it('defaults to the original (non-reversed) order', async () => {
+    const input = await buildTestPdf(16);
+    const a = await drawnPagesOf((await makeBooklet(input)).frontPdf, 0);
+    const b = await drawnPagesOf(
+      (await makeBooklet(input, { reverseSheetOrder: false })).frontPdf,
+      0,
+    );
+    expect(a).toEqual(b);
   });
 });
 

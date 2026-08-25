@@ -239,19 +239,35 @@ export function signatureStartPages(N: number, signatureSize?: number | 'auto'):
  * folded together — and returns the per-sheet mapping for each. The outer array
  * is the signatures in order; each inner array is that signature's sheets.
  *
+ * The number of signatures is `ceil(N / signatureSize)`, same as naive fixed-size
+ * chunking, but the `N` pages are then balanced as evenly as possible across that
+ * many signatures (each still a multiple of 4) instead of dumping the whole
+ * remainder into the last one — e.g. 56 pages at signatureSize 16 gives
+ * 16/16/12/12 rather than 16/16/16/8, avoiding a single thin "runt" signature.
  * Every signature is imposed with the same saddle-stitch arithmetic as a
  * standalone booklet ({@link computeSheetMapping}) over its own page range, then
- * offset by the signature's start index. The final signature may be shorter than
- * `signatureSize` but is still a multiple of 4 (since both `N` and the size are).
+ * offset by the signature's start index.
  */
 export function computeSignatureMappings(
   N: number,
   signatureSize?: number | 'auto',
 ): SheetMapping[][] {
   const sigLen = resolveSignatureSize(N, signatureSize);
+  const totalSheets = N / 4;
+  if (totalSheets === 0) {
+    return [];
+  }
+  const sigLenSheets = sigLen / 4;
+  const numSignatures = Math.ceil(totalSheets / sigLenSheets);
+  const baseSheets = Math.floor(totalSheets / numSignatures);
+  // The first `extraSheetCount` signatures absorb one extra sheet (4 pages)
+  // each so the total still sums to `totalSheets`.
+  const extraSheetCount = totalSheets % numSignatures;
+
   const signatures: SheetMapping[][] = [];
-  for (let start = 0; start < N; start += sigLen) {
-    const len = Math.min(sigLen, N - start);
+  let start = 0;
+  for (let i = 0; i < numSignatures; i++) {
+    const len = (baseSheets + (i < extraSheetCount ? 1 : 0)) * 4;
     const sheets = computeSheetMapping(len).map((s) => ({
       frontLeft: s.frontLeft + start,
       frontRight: s.frontRight + start,
@@ -259,6 +275,7 @@ export function computeSignatureMappings(
       backRight: s.backRight + start,
     }));
     signatures.push(sheets);
+    start += len;
   }
   return signatures;
 }
@@ -414,6 +431,7 @@ export async function makeBooklet(
   const flipEdge = options.flipEdge ?? 'short';
   const binding = options.binding ?? 'ltr';
   const separateCover = options.separateCover ?? false;
+  const reverseSheetOrder = options.reverseSheetOrder ?? false;
 
   if (creepStep < 0) {
     throw new BookletError('BOOKLET_NEGATIVE_CREEP', undefined, 'Creep value cannot be negative.');
@@ -547,6 +565,12 @@ export async function makeBooklet(
   for (const signature of signatures) {
     maxSheetsPerSignature = Math.max(maxSheetsPerSignature, signature.length);
     signature.forEach((sheet, sheetInSignature) => flatSheets.push({ sheet, sheetInSignature }));
+  }
+  // Reverses PDF sheet-emission order only (for printer feed compatibility);
+  // each entry keeps its own sheetInSignature, so creep/slot geometry below
+  // is unaffected — see BookletOptions.reverseSheetOrder.
+  if (reverseSheetOrder) {
+    flatSheets.reverse();
   }
   const S = flatSheets.length;
 

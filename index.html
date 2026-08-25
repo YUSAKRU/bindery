@@ -863,6 +863,17 @@
 
             <div class="setting-card">
               <div class="setting-row">
+                <label data-i18n="config.sheetOrder">Sheet order</label>
+              </div>
+              <div class="segmented-group" id="sheetOrderGroup">
+                <button type="button" class="segmented-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
+                <button type="button" class="segmented-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.sheetOrderHint">Reverses the sheet feed order in the printed PDFs — for auto-folding duplex printers that expect the opposite stacking order.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
                 <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
               </div>
               <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
