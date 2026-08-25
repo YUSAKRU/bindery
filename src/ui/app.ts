@@ -1077,7 +1077,8 @@ export function initApp(): void {
     const block = bookletSeparateCover ? logical - 4 : logical;
     const padded = Math.max(4, Math.ceil(block / 4) * 4);
     const sheets = padded / 4;
-    const sigs = computeSignatureMappings(padded, signatureOption()).length;
+    const sigMappings = computeSignatureMappings(padded, signatureOption());
+    const sigs = sigMappings.length;
 
     let text = t('config.summary', {
       paper: paperSummaryLabel(bookletPaperSize),
@@ -1085,6 +1086,14 @@ export function initApp(): void {
       sheets,
       sigs,
     });
+    // Below the fold count, signatures are now balanced (see computeSignatureMappings)
+    // rather than naively chunked, so the split isn't guessable from sheets/sigs alone
+    // — show it whenever there's more than one to break down.
+    if (sigs > 1) {
+      text += t('config.summarySheetsPerSignature', {
+        breakdown: sigMappings.map((s) => s.length).join('-'),
+      });
+    }
     if (bookletSeparateCover) text += t('config.summaryCover');
     if (bookletIncludeInstructions) text += t('config.summaryInstructions');
     if (bookletReverseSheetOrder) text += t('config.summaryReverseOrder');
