@@ -663,8 +663,11 @@ describe('makeBooklet signatureSize', () => {
 
 describe('makeBooklet reverseSheetOrder', () => {
   it("reverses the front PDF's physical sheet order, each sheet keeping its own creep shift", async () => {
-    // 32 pages, single signature -> 8 sheets, sheetInSignature 0..7. A nonzero
-    // creep makes each sheet's left-slot x-shift distinct and traceable.
+    // 32 pages, SINGLE signature -> 8 sheets, sheetInSignature 0..7. With only
+    // one signature, "reverse the whole document" and "reverse each
+    // signature's own sheets, signatures in order" are indistinguishable —
+    // see the multi-signature test below for the case that tells them apart.
+    // A nonzero creep makes each sheet's left-slot x-shift distinct and traceable.
     const input = await buildTestPdf(32);
     const creep = 2;
     const forward = await makeBooklet(input, { creep });
@@ -693,6 +696,44 @@ describe('makeBooklet reverseSheetOrder', () => {
       0,
     );
     expect(a).toEqual(b);
+  });
+
+  it("keeps signatures in their original order, reversing only each signature's own sheets", async () => {
+    // r/bookbinding regression: an auto-folding printer nests one signature
+    // backwards, but the FIX must not also swap which signature prints first
+    // — the reporter was explicit that signatures stay in order. 2 signatures
+    // of 16 pages each; signature 1's source pages are a distinct size from
+    // signature 2's, so the drawn scale (embedded page size vs the fixed A4
+    // slot) identifies which signature's content landed on a given output
+    // sheet. Creep-shift geometry alone can't tell these apart here: with
+    // equal-length signatures, reversing the whole flat list and reversing
+    // each signature internally produce the identical sheetInSignature
+    // sequence (3,2,1,0,3,2,1,0) — only the actual page identity differs.
+    const doc = await PDFDocument.create();
+    for (let i = 0; i < 16; i++) doc.addPage([595, 842]).pushOperators(); // signature 1
+    for (let i = 0; i < 16; i++) doc.addPage([400, 600]).pushOperators(); // signature 2
+    const input = await doc.save();
+
+    const SIG1_SCALE = 595 / 842; // height-bound, matches INNER_SCALE elsewhere
+    const SIG2_SCALE = 595 / 600; // height-bound, matches COVER_SCALE elsewhere
+
+    const result = await makeBooklet(input, { signatureSize: 16, reverseSheetOrder: true });
+    expect(result.signaturesCount).toBe(2);
+    expect(result.sheetsCount).toBe(8);
+
+    // First output sheet must still be signature 1's content (its own sheets
+    // reversed internally, so this is signature 1's sheetInSignature 3) — a
+    // whole-document reversal would wrongly put signature 2 here instead.
+    const firstDraw = (await drawnPagesOf(result.frontPdf, 0))[0];
+    expect(firstDraw.scale[0]).toBeCloseTo(SIG1_SCALE, 5);
+
+    // Sheet 4 (0-indexed) is signature 2's first emitted sheet.
+    const fifthDraw = (await drawnPagesOf(result.frontPdf, 4))[0];
+    expect(fifthDraw.scale[0]).toBeCloseTo(SIG2_SCALE, 5);
+
+    // Last output sheet must be signature 2's content.
+    const lastDraw = (await drawnPagesOf(result.frontPdf, 7))[0];
+    expect(lastDraw.scale[0]).toBeCloseTo(SIG2_SCALE, 5);
   });
 });
 

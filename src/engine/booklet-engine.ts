@@ -564,13 +564,15 @@ export async function makeBooklet(
   let maxSheetsPerSignature = 0;
   for (const signature of signatures) {
     maxSheetsPerSignature = Math.max(maxSheetsPerSignature, signature.length);
-    signature.forEach((sheet, sheetInSignature) => flatSheets.push({ sheet, sheetInSignature }));
-  }
-  // Reverses PDF sheet-emission order only (for printer feed compatibility);
-  // each entry keeps its own sheetInSignature, so creep/slot geometry below
-  // is unaffected — see BookletOptions.reverseSheetOrder.
-  if (reverseSheetOrder) {
-    flatSheets.reverse();
+    // sheetInSignature is the sheet's physical nesting depth (0 = outermost
+    // fold), which drives creep below — that stays tied to each sheet's
+    // ORIGINAL position regardless of emission order. reverseSheetOrder only
+    // reverses the EMISSION order within this signature (for auto-folding
+    // printers that nest a signature backwards); signatures themselves stay
+    // in their original order — see BookletOptions.reverseSheetOrder.
+    const entries = signature.map((sheet, sheetInSignature) => ({ sheet, sheetInSignature }));
+    if (reverseSheetOrder) entries.reverse();
+    flatSheets.push(...entries);
   }
   const S = flatSheets.length;
 
