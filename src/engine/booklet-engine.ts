@@ -1,4 +1,4 @@
-import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees } from 'pdf-lib';
+import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees, rgb } from 'pdf-lib';
 import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 import type { BookletOptions, BookletResult, PaperSize } from './types';
@@ -20,6 +20,32 @@ const SHEET_PRESETS = {
 // sane floor for a printable sheet.
 const MIN_SHEET_PT = 72;
 const MAX_SHEET_PT = 14400;
+
+// Assembly marks, all in points. See BookletOptions.foldGuides / collationMarks.
+const FOLD_GUIDE_THICKNESS = 0.5;
+const FOLD_GUIDE_DASH = 4;
+const FOLD_GUIDE_GREY = 0.65;
+// Total bar width, centred on the fold, so half lands on each folded half and
+// the folded spine shows a full-width bar. 14pt = ~4.9mm: chosen to stay
+// legible on a folded spine without being obtrusive on the printed sheet.
+const COLLATION_BAR_WIDTH = 14;
+// Cap on the drawn bar height. Each signature owns a band of the spine, but the
+// bar only fills the middle COLLATION_BAR_MAX_HEIGHT of it: 36pt = ~12.7mm.
+// Without the cap a 2-signature booklet prints a 140mm solid black stripe on
+// every outer sheet, which is a lot of toner for a mark that is read as a
+// position, not as an area.
+const COLLATION_BAR_MAX_HEIGHT = 36;
+// Head and tail of the spine left free of marks, so the staircase never runs
+// into the sheet edge.
+const COLLATION_SPINE_MARGIN = 24;
+// Below this per-signature band height (pt), the collation bar's steps are
+// hard to read at printed size even though the geometry is still valid —
+// review measurements: 20 signatures band at 547 / 20 = 27.35pt on A4
+// (flush, still clearly legible); the band falls under 3pt by roughly 200
+// signatures, a count signatureSize 8 reaches on a real 1600+ page document
+// (theses, scanned archives). 4pt sits below the legible reference and fires
+// well before the sub-3pt range, without tripping on ordinary signature counts.
+const COLLATION_BAR_LEGIBILITY_FLOOR = 4;
 
 /**
  * Resolves a {@link PaperSize} into a concrete `[width, height]` sheet size in
@@ -159,6 +185,82 @@ function drawFitted(
     width: drawnWidth,
     height: drawnHeight,
     rotate: degrees(180),
+  });
+}
+
+/** A rectangle on the imposed sheet, in PDF points from the bottom-left. */
+export interface MarkRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Rectangle of the collation (backstep) bar for signature `signatureIndex`
+ * (0-based) of `signaturesCount`, straddling the sheet's fold line.
+ *
+ * The spine is divided into one band per signature, top to bottom, and the bar
+ * sits centred in its own band. Band assignment is what makes the mark work: a
+ * gathered stack shows the bars stepping down one band at a time, so a missing,
+ * doubled or out-of-order signature breaks the staircase. The bar itself is a
+ * fixed {@link COLLATION_BAR_MAX_HEIGHT} tall rather than the full band — it is
+ * read as a POSITION on the spine, not as an area, so filling the band buys no
+ * extra signal and costs a great deal of toner at low signature counts. When
+ * there are enough signatures that a band is shorter than the cap, the bar
+ * shrinks to its band and the steps stay flush.
+ *
+ * Independent of gutter and creep: those shift the drawn CONTENT inward, never
+ * the fold line itself, which stays at `sheetWidth / 2` on every sheet.
+ */
+export function computeCollationMarkRect(
+  signatureIndex: number,
+  signaturesCount: number,
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
+): MarkRect {
+  const bands = Math.max(1, signaturesCount);
+  const usable = Math.max(0, sheetHeight - 2 * COLLATION_SPINE_MARGIN);
+  const band = usable / bands;
+  const height = Math.min(band, COLLATION_BAR_MAX_HEIGHT);
+  const bandBottom = sheetHeight - COLLATION_SPINE_MARGIN - (signatureIndex + 1) * band;
+  return {
+    x: sheetWidth / 2 - COLLATION_BAR_WIDTH / 2,
+    y: bandBottom + (band - height) / 2,
+    width: COLLATION_BAR_WIDTH,
+    height,
+  };
+}
+
+/**
+ * True when this sheet's creep/gutter shift (see {@link computeSlotRects}) has
+ * pushed its content slot past the fold line at `sheetWidth / 2` — drawing the
+ * guide there would print the dashed line over imposed content instead of in
+ * the margin. Checked against the SLOT bound, not drawFitted's actual scaled
+ * edge, which is always <= the slot: that makes this the conservative
+ * direction, so it can suppress the guide where a differently proportioned
+ * page would in fact have left a sliver of clear margin, but never draws the
+ * guide over content it doesn't know is there.
+ */
+export function foldGuideCrossesContent(
+  sheetInSignature: number,
+  gutter: number,
+  creep: number,
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
+): boolean {
+  const { left } = computeSlotRects(sheetInSignature, gutter, creep, sheetWidth, sheetHeight);
+  return left.x + left.width > sheetWidth / 2;
+}
+
+/** Dashed guide down the fold line, drawn over the imposed content. */
+function drawFoldGuide(page: PDFPage, sheetWidth: number, sheetHeight: number): void {
+  page.drawLine({
+    start: { x: sheetWidth / 2, y: 0 },
+    end: { x: sheetWidth / 2, y: sheetHeight },
+    thickness: FOLD_GUIDE_THICKNESS,
+    color: rgb(FOLD_GUIDE_GREY, FOLD_GUIDE_GREY, FOLD_GUIDE_GREY),
+    dashArray: [FOLD_GUIDE_DASH, FOLD_GUIDE_DASH],
   });
 }
 
@@ -344,6 +446,33 @@ export function mirrorMapping(sheets: SheetMapping[]): SheetMapping[] {
   }));
 }
 
+/**
+ * One imposed sheet: its page mapping, its physical nesting depth inside its
+ * signature (0 = outermost fold, drives creep) and which signature it belongs
+ * to (drives the collation mark). All three are independent of EMISSION order,
+ * so `reverseSheetOrder` cannot disturb them.
+ *
+ * `sheetInSignature` and `signatureIndex` are only meaningful once blank-page
+ * padding and `insertBlankAfter` have already been folded into `blockOrder` —
+ * both must run before `N` and {@link computeSignatureMappings} are computed,
+ * so a page inserted mid-document shifts signature boundaries before this
+ * list is built rather than after. Nothing enforces that ordering beyond the
+ * makeBooklet function body doing it in this sequence.
+ */
+interface FlatSheet {
+  sheet: SheetMapping;
+  sheetInSignature: number;
+  signatureIndex: number;
+}
+
+/** Assembly marks to overlay, already resolved from the raw options. */
+interface SheetMarks {
+  foldGuides: boolean;
+  /** Already false when there is only one signature — nothing to gather. */
+  collation: boolean;
+  signaturesCount: number;
+}
+
 interface SheetLayout {
   sheetWidth: number;
   sheetHeight: number;
@@ -361,9 +490,10 @@ interface SheetLayout {
  */
 async function imposeFrontBack(
   srcDoc: PDFDocument,
-  flatSheets: Array<{ sheet: SheetMapping; sheetInSignature: number }>,
+  flatSheets: FlatSheet[],
   toSrcIndex: (localIndex: number) => number,
   layout: SheetLayout,
+  marks: SheetMarks,
 ): Promise<{ frontDoc: PDFDocument; backDoc: PDFDocument }> {
   const frontIndices: number[] = [];
   const backIndices: number[] = [];
@@ -394,6 +524,28 @@ async function imposeFrontBack(
     const backPage = backDoc.addPage([sheetWidth, sheetHeight]);
     drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack, sheetWidth, sheetHeight);
     drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack, sheetWidth, sheetHeight);
+
+    // Marks go on last so they sit above the imposed content. The fold line is
+    // the sheet's vertical centre and is its own point-reflection, so the back
+    // side needs no `rotateBack` handling. The collation bar is front-side only
+    // — that is the face left showing on the folded signature's spine, and it
+    // sidesteps the 180° back composition entirely.
+    if (
+      marks.foldGuides &&
+      !foldGuideCrossesContent(flatSheets[j].sheetInSignature, gutter, creep, sheetWidth, sheetHeight)
+    ) {
+      drawFoldGuide(frontPage, sheetWidth, sheetHeight);
+      drawFoldGuide(backPage, sheetWidth, sheetHeight);
+    }
+    if (marks.collation && flatSheets[j].sheetInSignature === 0) {
+      const bar = computeCollationMarkRect(
+        flatSheets[j].signatureIndex,
+        marks.signaturesCount,
+        sheetWidth,
+        sheetHeight,
+      );
+      frontPage.drawRectangle({ ...bar, color: rgb(0, 0, 0) });
+    }
   }
 
   return { frontDoc, backDoc };
@@ -432,6 +584,8 @@ export async function makeBooklet(
   const binding = options.binding ?? 'ltr';
   const separateCover = options.separateCover ?? false;
   const reverseSheetOrder = options.reverseSheetOrder ?? false;
+  const foldGuides = options.foldGuides ?? false;
+  const collationMarks = options.collationMarks ?? false;
 
   if (creepStep < 0) {
     throw new BookletError('BOOKLET_NEGATIVE_CREEP', undefined, 'Creep value cannot be negative.');
@@ -560,9 +714,10 @@ export async function makeBooklet(
     signatures = signatures.map((signature) => mirrorMapping(signature));
   }
   const signaturesCount = signatures.length;
-  const flatSheets: Array<{ sheet: SheetMapping; sheetInSignature: number }> = [];
+  const flatSheets: FlatSheet[] = [];
   let maxSheetsPerSignature = 0;
-  for (const signature of signatures) {
+  for (let signatureIndex = 0; signatureIndex < signatures.length; signatureIndex++) {
+    const signature = signatures[signatureIndex];
     maxSheetsPerSignature = Math.max(maxSheetsPerSignature, signature.length);
     // sheetInSignature is the sheet's physical nesting depth (0 = outermost
     // fold), which drives creep below — that stays tied to each sheet's
@@ -570,11 +725,32 @@ export async function makeBooklet(
     // reverses the EMISSION order within this signature (for auto-folding
     // printers that nest a signature backwards); signatures themselves stay
     // in their original order — see BookletOptions.reverseSheetOrder.
-    const entries = signature.map((sheet, sheetInSignature) => ({ sheet, sheetInSignature }));
+    const entries = signature.map((sheet, sheetInSignature) => ({
+      sheet,
+      sheetInSignature,
+      signatureIndex,
+    }));
     if (reverseSheetOrder) entries.reverse();
     flatSheets.push(...entries);
   }
   const S = flatSheets.length;
+
+  // A collation bar exists to catch a gathering mistake; with a single
+  // signature there is nothing to gather, so the request is dropped rather
+  // than printing a mark that can never be wrong.
+  const marks: SheetMarks = {
+    foldGuides,
+    collation: collationMarks && signaturesCount > 1,
+    signaturesCount,
+  };
+
+  // Same band formula as computeCollationMarkRect, evaluated once for the
+  // whole document rather than per signature — the band is identical for
+  // every signature, and only its magnitude (not the per-bar geometry)
+  // matters for the legibility note.
+  const collationBand =
+    Math.max(0, sheetHeight - 2 * COLLATION_SPINE_MARGIN) / Math.max(1, signaturesCount);
+  const collationLegibilityWarning = marks.collation && collationBand < COLLATION_BAR_LEGIBILITY_FLOOR;
 
   // Guard against excessive creep, evaluated per signature: since creep restarts
   // each signature, the worst-case inward shift is on the last sheet of the
@@ -598,6 +774,7 @@ export async function makeBooklet(
     flatSheets,
     (localIndex) => blockOrder[localIndex],
     layout,
+    marks,
   );
   const frontPdf = await frontDoc.save();
   const backPdf = await backDoc.save();
@@ -611,12 +788,19 @@ export async function makeBooklet(
     if (binding === 'rtl') {
       coverSheets = mirrorMapping(coverSheets);
     }
-    const coverFlat = coverSheets.map((sheet) => ({ sheet, sheetInSignature: 0 }));
+    const coverFlat = coverSheets.map((sheet) => ({
+      sheet,
+      sheetInSignature: 0,
+      signatureIndex: 0,
+    }));
+    // The cover is one wrap-around sheet, not a signature in the gathered
+    // stack, so it takes the fold guide but never a collation bar.
     const { frontDoc: coverFront, backDoc: coverBack } = await imposeFrontBack(
       srcDoc,
       coverFlat,
       (localIndex) => coverIndices![localIndex],
       { ...layout, creep: 0 },
+      { foldGuides, collation: false, signaturesCount: 1 },
     );
     coverPdf = await combineFrontBack(coverFront, coverBack);
   }
@@ -645,6 +829,11 @@ export async function makeBooklet(
       reverseSheetOrder,
       blanksInserted,
       paddingApplied,
+      foldGuides,
+      // The EFFECTIVE value, so the sheet never describes a bar that was
+      // suppressed for a single-signature booklet.
+      collationMarks: marks.collation,
+      collationLegibilityWarning,
     });
   }
 

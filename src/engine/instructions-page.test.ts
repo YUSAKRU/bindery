@@ -74,6 +74,9 @@ const baseData: InstructionsData = {
   reverseSheetOrder: false,
   blanksInserted: 0,
   paddingApplied: 0,
+  foldGuides: false,
+  collationMarks: false,
+  collationLegibilityWarning: false,
 };
 
 async function pageCountOf(bytes: Uint8Array): Promise<number> {

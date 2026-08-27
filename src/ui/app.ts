@@ -353,6 +353,7 @@ export function initApp(): void {
   const coverModeGroup = byId<HTMLDivElement>('coverModeGroup');
   const instructionsGroup = byId<HTMLDivElement>('instructionsGroup');
   const sheetOrderGroup = byId<HTMLDivElement>('sheetOrderGroup');
+  const marksGroup = byId<HTMLDivElement>('marksGroup');
   const coverHintText = byId<HTMLParagraphElement>('coverHintText');
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
@@ -435,6 +436,9 @@ export function initApp(): void {
   let bookletSeparateCover = false;
   let bookletIncludeInstructions = false;
   let bookletReverseSheetOrder = false;
+  // One control for two engine options: 'fold' = guides only, 'full' also adds
+  // the stepped spine bar (which the engine drops for a single signature).
+  let bookletMarks: 'none' | 'fold' | 'full' = 'none';
   // Original page count of the selected source (0 = none). Drives the live
   // config summary and the separate-cover availability check.
   let bookletOriginalPages = 0;
@@ -981,6 +985,8 @@ export function initApp(): void {
     setActiveSegment(instructionsGroup, 'instr', 'none');
     bookletReverseSheetOrder = false;
     setActiveSegment(sheetOrderGroup, 'order', 'default');
+    bookletMarks = 'none';
+    setActiveSegment(marksGroup, 'marks', 'none');
     insertBlankInput.value = '';
     insertBlankError.classList.add('hidden');
     bookletOriginalPages = 0;
@@ -1041,6 +1047,7 @@ export function initApp(): void {
       bookletSeparateCover ||
       bookletIncludeInstructions ||
       bookletReverseSheetOrder ||
+      bookletMarks !== 'none' ||
       insertBlankInput.value.trim() !== ''
     );
   }
@@ -1097,6 +1104,10 @@ export function initApp(): void {
     if (bookletSeparateCover) text += t('config.summaryCover');
     if (bookletIncludeInstructions) text += t('config.summaryInstructions');
     if (bookletReverseSheetOrder) text += t('config.summaryReverseOrder');
+    // 'full' collapses to the fold-guide label when there is only one signature,
+    // since the engine suppresses the spine bar in exactly that case.
+    if (bookletMarks === 'full' && sigs > 1) text += t('config.summarySpineMarks');
+    else if (bookletMarks !== 'none') text += t('config.summaryFoldGuides');
     configSummary.textContent = text;
     configSummary.classList.remove('hidden');
   }
@@ -1688,6 +1699,16 @@ export function initApp(): void {
     updateAdvancedBadge();
   });
 
+  marksGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const marks = btn?.dataset.marks;
+    if (marks !== 'none' && marks !== 'fold' && marks !== 'full') return;
+    bookletMarks = marks;
+    setActiveSegment(marksGroup, 'marks', marks);
+    refreshConfigSummary();
+    updateAdvancedBadge();
+  });
+
   insertBlankInput.addEventListener('input', () => {
     insertBlankError.classList.add('hidden');
     refreshConfigSummary();
@@ -1734,6 +1755,8 @@ export function initApp(): void {
         separateCover: bookletSeparateCover,
         includeInstructions: bookletIncludeInstructions,
         reverseSheetOrder: bookletReverseSheetOrder,
+        foldGuides: bookletMarks !== 'none',
+        collationMarks: bookletMarks === 'full',
         insertBlankAfter,
       });
 
@@ -2610,7 +2633,7 @@ export function initApp(): void {
     setActiveSegment(pageNumbersFormatGroup, 'format', 'number');
   }
 
-  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig' | 'binding' | 'cover' | 'instr' | 'order', value: string): void {
+  function setActiveSegment(group: HTMLElement, dataKey: 'position' | 'format' | 'mode' | 'rotate' | 'flip' | 'paper' | 'sig' | 'binding' | 'cover' | 'instr' | 'order' | 'marks', value: string): void {
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });
@@ -4935,7 +4958,9 @@ export function initApp(): void {
         if (fitWidth * aspect > screenHeight) {
           fitWidth = screenHeight / aspect;
         }
-      } catch (err) {
+      } catch {
+        // Best-effort fit: if the page's viewport can't be read we keep the
+        // width-based estimate rather than failing the open.
       }
     }
     

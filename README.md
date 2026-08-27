@@ -18,10 +18,12 @@ Every operation on your existing files — merging, page management, conversion,
 ### Features
 
 - **Booklet Maker** — Turns a PDF into a foldable booklet layout
-  - Multi-signature imposition for thick documents (8/16/32-page or auto signatures, per-signature creep)
+  - Multi-signature imposition for thick documents (8/16/32-page or auto signatures, per-signature creep, evenly balanced signatures)
   - Paper size selection (A4 / Letter / A5 / A3 / source size), duplex flip-edge (short/long) support
   - Right-to-left (RTL) binding, separate cover export for heavier stock
   - Blank page insertion at chosen positions, printed instructions sheet with a reading-order check
+  - Optional assembly marks — a dashed fold guide, plus stepped spine marks whose even spacing breaks when a signature is missing or out of order
+  - Reversed sheet order for printers with an automatic folding unit
   - Interactive "what is a signature?" explainer with a live 3D folding animation
 - **PDF Merge** — Combines multiple PDFs into a single file
 - **Page Management** — Add, delete, and reorder pages
@@ -74,10 +76,12 @@ Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düze
 ### Özellikler
 
 - **Kitapçık (Booklet) Oluşturucu** — PDF'i katlanabilir kitapçık düzenine getirir
-  - Kalın belgeler için çoklu imza dizgisi (8/16/32 sayfalık veya otomatik imzalar, imza başına creep)
+  - Kalın belgeler için çoklu imza dizgisi (8/16/32 sayfalık veya otomatik imzalar, imza başına creep, imzalara dengeli yaprak dağıtımı)
   - Kağıt boyutu seçimi (A4 / Letter / A5 / A3 / kaynak boyutu), duplex çevirme kenarı (kısa/uzun) desteği
   - Sağdan (RTL) ciltleme, kalın kağıt için ayrı kapak çıktısı
   - İstenen konuma boş sayfa ekleme, okuma sırası kontrolü içeren baskı talimat sayfası
+  - İsteğe bağlı montaj işaretleri — kesikli katlama kılavuzu ve eksik ya da sırası bozuk imzada düzenli basamak aralığı bozulan sırt işaretleri
+  - Otomatik katlama üniteli yazıcılar için ters yaprak sırası
   - Canlı 3B katlama animasyonuyla interaktif "imza nedir?" açıklaması
 - **PDF Birleştir** — Birden fazla PDF'i tek dosyada birleştirir
 - **Sayfa Yönetimi** — Sayfa ekleme, silme, yeniden sıralama

@@ -1355,7 +1355,6 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;
   /* Fixed chrome padding: content starts below top bar + subbar but scrolls
      behind the glass. Must NOT change during chrome auto-hide, or scroll
      offsets (readerListTopOffsetPx) would go stale. */
