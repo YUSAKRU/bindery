@@ -32,6 +32,10 @@ export interface InstructionsData {
   blanksInserted: number;
   /** Blank pages the engine auto-added to round the block up to a multiple of 4. */
   paddingApplied: number;
+  /** Whether a dashed fold guide is printed down the middle of every sheet. */
+  foldGuides: boolean;
+  /** Whether stepped spine bars are printed — already false for one signature. */
+  collationMarks: boolean;
 }
 
 // Cap on the per-signature reading-order lines before collapsing the tail into
@@ -150,6 +154,14 @@ export function buildInstructionsLines(data: InstructionsData): InstructionsLine
   }
   if (data.reverseSheetOrder) {
     push(t('instructions.step.reversedOrder', { n: stepNo }), 11);
+    stepNo += 1;
+  }
+  if (data.foldGuides) {
+    push(t('instructions.step.foldGuides', { n: stepNo }), 11);
+    stepNo += 1;
+  }
+  if (data.collationMarks) {
+    push(t('instructions.step.collationMarks', { n: stepNo }), 11);
     stepNo += 1;
   }
   out[out.length - 1].gapAfter = (out[out.length - 1].size ?? 11) * 1.5 + 10;

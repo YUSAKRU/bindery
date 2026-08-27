@@ -86,14 +86,29 @@ export interface BookletOptions {
    */
   insertBlankAfter?: number[];
   /**
-   * When true, emits sheets in the front/back/combined PDFs in reverse order
-   * (last sheet first) — for auto-folding duplex printers whose output
-   * stacking expects the opposite feed order from the default. Reverses the
-   * whole document's sheet sequence in one pass, independent of signature
-   * boundaries; per-sheet page content, creep, and slot geometry are
-   * unaffected. Default false (original order).
+   * When true, emits each signature's own sheets in reverse order (innermost
+   * sheet first) — for auto-folding duplex printers whose output stacking
+   * expects the opposite feed order from the default. Scoped to WITHIN each
+   * signature: the signatures themselves stay in reading order. Per-sheet page
+   * content, creep, and slot geometry are unaffected, since each sheet keeps
+   * its own nesting depth regardless of emission order.
+   * Default false (original order).
    */
   reverseSheetOrder?: boolean;
+  /**
+   * When true, prints a light dashed guide down the fold line of every imposed
+   * sheet (both sides, and the separate cover). Default false.
+   */
+  foldGuides?: boolean;
+  /**
+   * When true, prints a stepped collation (backstep) bar across the fold of
+   * each signature's OUTERMOST sheet, front side only, one step lower per
+   * signature. Gathered in order, the bars form an unbroken diagonal down the
+   * spine, so a missing, doubled or out-of-order signature is visible at a
+   * glance. Suppressed when the document is a single signature — there is
+   * nothing to gather. Default false.
+   */
+  collationMarks?: boolean;
 }
 
 export interface BookletResult {

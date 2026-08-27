@@ -874,6 +874,18 @@
 
             <div class="setting-card">
               <div class="setting-row">
+                <label data-i18n="config.marks">Assembly marks</label>
+              </div>
+              <div class="segmented-group" id="marksGroup">
+                <button type="button" class="segmented-btn is-active" data-marks="none" data-i18n="config.marks.none">None</button>
+                <button type="button" class="segmented-btn" data-marks="fold" data-i18n="config.marks.fold">Fold</button>
+                <button type="button" class="segmented-btn" data-marks="full" data-i18n="config.marks.full">Fold + spine</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also puts a stepped bar across the fold of each signature's outer sheet &mdash; gathered in order, the bars run as an unbroken diagonal down the spine, so a missing or misplaced signature shows up before you sew. The spine bar needs more than one signature.</p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-row">
                 <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
               </div>
               <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />

@@ -14,6 +14,7 @@ vi.mock('./instructions-page', async (importOriginal) => {
   return { ...actual, makeInstructionsPage: vi.fn(actual.makeInstructionsPage) };
 });
 import {
+  computeCollationMarkRect,
   computeSheetMapping,
   computeSignatureMappings,
   computeSlotRects,
@@ -737,6 +738,163 @@ describe('makeBooklet reverseSheetOrder', () => {
   });
 });
 
+/**
+ * Reads back an assembly mark from a sheet's raw content stream. Both marks are
+ * drawn after the imposed content, so they are the tail of the stream: the
+ * collation bar is the only black fill on the sheet, and the fold guide the only
+ * dashed stroke. Inspects OUTPUT bytes only, never the layout code.
+ */
+async function marksOn(
+  pdf: Uint8Array,
+  pageIndex: number,
+): Promise<{ bar: { x: number; y: number; width: number; height: number } | null; foldGuide: boolean }> {
+  const doc = await PDFDocument.load(pdf);
+  const text = pageStreamText(doc, pageIndex);
+  const num = '(-?\\d+(?:\\.\\d+)?)';
+  const barRx = new RegExp(
+    `0 0 0 rg\\n0 w\\n\\[\\] 0 d\\n1 0 0 1 ${num} ${num} cm(?:\\n1 0 0 1 0 0 cm){2}\\n0 0 m\\n0 ${num} l\\n${num} `,
+  );
+  const m = text.match(barRx);
+  return {
+    bar: m
+      ? { x: Number(m[1]), y: Number(m[2]), height: Number(m[3]), width: Number(m[4]) }
+      : null,
+    foldGuide: text.includes('[4 4] 0 d'),
+  };
+}
+
+describe('computeCollationMarkRect', () => {
+  // A4 landscape spine: 595pt tall, 24pt left free at head and tail -> 547pt of
+  // usable spine. Four signatures therefore band at 547 / 4 = 136.75pt each, and
+  // the bar is centred on the fold at 842 / 2 = 421, so x = 421 - 10 / 2 = 416.
+  it('bands the usable spine evenly, top signature first', () => {
+    const first = computeCollationMarkRect(0, 4, 842, 595);
+    expect(first).toEqual({ x: 416, y: 434.25, width: 10, height: 136.75 });
+
+    const last = computeCollationMarkRect(3, 4, 842, 595);
+    expect(last.y).toBeCloseTo(24, 6); // sits exactly on the tail margin
+    expect(last.height).toBeCloseTo(136.75, 6);
+  });
+
+  it('leaves no gap between consecutive signatures', () => {
+    // A gap would let a missing signature pass as a legitimate step, which is
+    // the whole failure the mark exists to catch.
+    const rects = [0, 1, 2, 3, 4].map((i) => computeCollationMarkRect(i, 5, 842, 595));
+    for (let i = 0; i + 1 < rects.length; i++) {
+      expect(rects[i].y).toBeCloseTo(rects[i + 1].y + rects[i + 1].height, 6);
+    }
+  });
+
+  it('fills the whole usable spine for a single signature', () => {
+    const only = computeCollationMarkRect(0, 1, 842, 595);
+    expect(only.y).toBeCloseTo(24, 6);
+    expect(only.height).toBeCloseTo(547, 6);
+  });
+});
+
+describe('makeBooklet assembly marks', () => {
+  // 32 pages at 8 per signature -> 4 signatures of 2 sheets each. Output sheets
+  // 0, 2, 4, 6 are the outermost sheet of signatures 1..4.
+  const OUTER_SHEETS = [0, 2, 4, 6];
+  const INNER_SHEETS = [1, 3, 5, 7];
+  const STEP_Y = [434.25, 297.5, 160.75, 24];
+
+  it('draws one stepped bar per signature, on its outermost sheet only', async () => {
+    const input = await buildTestPdf(32);
+    const result = await makeBooklet(input, { signatureSize: 8, collationMarks: true });
+    expect(result.signaturesCount).toBe(4);
+
+    for (let i = 0; i < OUTER_SHEETS.length; i++) {
+      const { bar } = await marksOn(result.frontPdf, OUTER_SHEETS[i]);
+      expect(bar).not.toBeNull();
+      expect(bar!.x).toBeCloseTo(416, 6);
+      expect(bar!.y).toBeCloseTo(STEP_Y[i], 6);
+    }
+    for (const sheet of INNER_SHEETS) {
+      expect((await marksOn(result.frontPdf, sheet)).bar).toBeNull();
+    }
+    // Front side only: the folded signature shows its outer face on the spine,
+    // and this keeps the bar clear of the long-edge 180° back composition.
+    expect((await marksOn(result.backPdf, 0)).bar).toBeNull();
+  });
+
+  it('keeps each bar with its own signature when sheets print in reverse order', async () => {
+    // reverseSheetOrder flips EMISSION order inside a signature, so the
+    // outermost sheet is emitted last. The mark must follow the physical sheet,
+    // not the print position — otherwise a reversed run would step the bars in
+    // the wrong direction and the diagonal check would fail on a correct stack.
+    const input = await buildTestPdf(32);
+    const result = await makeBooklet(input, {
+      signatureSize: 8,
+      collationMarks: true,
+      reverseSheetOrder: true,
+    });
+
+    for (let i = 0; i < INNER_SHEETS.length; i++) {
+      const { bar } = await marksOn(result.frontPdf, INNER_SHEETS[i]);
+      expect(bar).not.toBeNull();
+      expect(bar!.y).toBeCloseTo(STEP_Y[i], 6);
+    }
+    for (const sheet of OUTER_SHEETS) {
+      expect((await marksOn(result.frontPdf, sheet)).bar).toBeNull();
+    }
+  });
+
+  it('suppresses the bar when the document is a single signature', async () => {
+    // Nothing to gather, so a mark that can never be wrong is not printed.
+    const result = await makeBooklet(await buildTestPdf(16), { collationMarks: true });
+    expect(result.signaturesCount).toBe(1);
+    for (let i = 0; i < result.sheetsCount; i++) {
+      expect((await marksOn(result.frontPdf, i)).bar).toBeNull();
+    }
+  });
+
+  it('places the bar on the fold line regardless of gutter and creep', async () => {
+    // Gutter and creep shift the drawn CONTENT inward; the fold itself never
+    // moves, so neither does the mark.
+    const input = await buildTestPdf(32);
+    const plain = await makeBooklet(input, { signatureSize: 8, collationMarks: true });
+    const shifted = await makeBooklet(input, {
+      signatureSize: 8,
+      collationMarks: true,
+      gutter: 20,
+      creep: 3,
+    });
+    expect((await marksOn(shifted.frontPdf, 2)).bar).toEqual((await marksOn(plain.frontPdf, 2)).bar);
+  });
+
+  it('draws the fold guide on both sides of every sheet, and the cover', async () => {
+    const input = await buildTestPdf(32);
+    const result = await makeBooklet(input, {
+      signatureSize: 8,
+      foldGuides: true,
+      separateCover: true,
+    });
+    for (let i = 0; i < result.sheetsCount; i++) {
+      expect((await marksOn(result.frontPdf, i)).foldGuide).toBe(true);
+      expect((await marksOn(result.backPdf, i)).foldGuide).toBe(true);
+    }
+    expect((await marksOn(result.coverPdf!, 0)).foldGuide).toBe(true);
+  });
+
+  it('never bars the separate cover — it wraps the stack, it is not gathered in it', async () => {
+    const result = await makeBooklet(await buildTestPdf(32), {
+      signatureSize: 8,
+      collationMarks: true,
+      separateCover: true,
+    });
+    expect((await marksOn(result.coverPdf!, 0)).bar).toBeNull();
+    expect((await marksOn(result.coverPdf!, 1)).bar).toBeNull();
+  });
+
+  it('draws nothing by default', async () => {
+    const result = await makeBooklet(await buildTestPdf(32), { signatureSize: 8 });
+    const marks = await marksOn(result.frontPdf, 0);
+    expect(marks.bar).toBeNull();
+    expect(marks.foldGuide).toBe(false);
+  });
+});
+
 describe('mirrorMapping (RTL binding)', () => {
   it('swaps left<->right slots for the hand-derived 16-page sheet 0', () => {
     // LTR sheet 0 is {fL:15, fR:0, bL:1, bR:14}; RTL swaps both front and back.
@@ -903,6 +1061,38 @@ describe('makeBooklet includeInstructions', () => {
       await instructionsDataFor(input, { includeInstructions: true, reverseSheetOrder: true }),
     ).map((l) => l.text);
     expect(reversedCopy.some((l) => l.includes('innermost-first'))).toBe(true);
+  });
+
+  it('explains the assembly marks only when they are actually printed', async () => {
+    const input = await buildTestPdf(32);
+
+    const plain = buildInstructionsLines(
+      await instructionsDataFor(input, { includeInstructions: true, signatureSize: 8 }),
+    ).map((l) => l.text);
+    expect(plain.some((l) => l.includes('marks the fold'))).toBe(false);
+    expect(plain.some((l) => l.includes('step down evenly'))).toBe(false);
+
+    const marked = buildInstructionsLines(
+      await instructionsDataFor(input, {
+        includeInstructions: true,
+        signatureSize: 8,
+        foldGuides: true,
+        collationMarks: true,
+      }),
+    ).map((l) => l.text);
+    expect(marked.some((l) => l.includes('marks the fold'))).toBe(true);
+    expect(marked.some((l) => l.includes('step down evenly'))).toBe(true);
+  });
+
+  it('omits the spine-bar note when a single signature suppressed the bar', async () => {
+    // The sheet must describe what was printed, not what was asked for.
+    const copy = buildInstructionsLines(
+      await instructionsDataFor(await buildTestPdf(16), {
+        includeInstructions: true,
+        collationMarks: true,
+      }),
+    ).map((l) => l.text);
+    expect(copy.some((l) => l.includes('step down evenly'))).toBe(false);
   });
 
   it('reports blank pages inserted by the user and/or added as padding', async () => {
