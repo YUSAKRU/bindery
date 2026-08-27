@@ -26,8 +26,15 @@ const FOLD_GUIDE_THICKNESS = 0.5;
 const FOLD_GUIDE_DASH = 4;
 const FOLD_GUIDE_GREY = 0.65;
 // Total bar width, centred on the fold, so half lands on each folded half and
-// the folded spine shows a full-width bar.
-const COLLATION_BAR_WIDTH = 10;
+// the folded spine shows a full-width bar. 14pt = ~4.9mm: chosen to stay
+// legible on a folded spine without being obtrusive on the printed sheet.
+const COLLATION_BAR_WIDTH = 14;
+// Cap on the drawn bar height. Each signature owns a band of the spine, but the
+// bar only fills the middle COLLATION_BAR_MAX_HEIGHT of it: 36pt = ~12.7mm.
+// Without the cap a 2-signature booklet prints a 140mm solid black stripe on
+// every outer sheet, which is a lot of toner for a mark that is read as a
+// position, not as an area.
+const COLLATION_BAR_MAX_HEIGHT = 36;
 // Head and tail of the spine left free of marks, so the staircase never runs
 // into the sheet edge.
 const COLLATION_SPINE_MARGIN = 24;
@@ -185,12 +192,18 @@ export interface MarkRect {
  * Rectangle of the collation (backstep) bar for signature `signatureIndex`
  * (0-based) of `signaturesCount`, straddling the sheet's fold line.
  *
- * The spine is divided into one contiguous band per signature, top to bottom,
- * and each signature's bar fills its whole band — so a gathered stack shows an
- * unbroken diagonal, and a missing or doubled signature leaves a gap or a
- * repeat rather than a subtle misalignment. Independent of gutter and creep:
- * those shift the drawn CONTENT inward, never the fold line itself, which stays
- * at `sheetWidth / 2` on every sheet.
+ * The spine is divided into one band per signature, top to bottom, and the bar
+ * sits centred in its own band. Band assignment is what makes the mark work: a
+ * gathered stack shows the bars stepping down one band at a time, so a missing,
+ * doubled or out-of-order signature breaks the staircase. The bar itself is a
+ * fixed {@link COLLATION_BAR_MAX_HEIGHT} tall rather than the full band — it is
+ * read as a POSITION on the spine, not as an area, so filling the band buys no
+ * extra signal and costs a great deal of toner at low signature counts. When
+ * there are enough signatures that a band is shorter than the cap, the bar
+ * shrinks to its band and the steps stay flush.
+ *
+ * Independent of gutter and creep: those shift the drawn CONTENT inward, never
+ * the fold line itself, which stays at `sheetWidth / 2` on every sheet.
  */
 export function computeCollationMarkRect(
   signatureIndex: number,
@@ -201,12 +214,35 @@ export function computeCollationMarkRect(
   const bands = Math.max(1, signaturesCount);
   const usable = Math.max(0, sheetHeight - 2 * COLLATION_SPINE_MARGIN);
   const band = usable / bands;
+  const height = Math.min(band, COLLATION_BAR_MAX_HEIGHT);
+  const bandBottom = sheetHeight - COLLATION_SPINE_MARGIN - (signatureIndex + 1) * band;
   return {
     x: sheetWidth / 2 - COLLATION_BAR_WIDTH / 2,
-    y: sheetHeight - COLLATION_SPINE_MARGIN - (signatureIndex + 1) * band,
+    y: bandBottom + (band - height) / 2,
     width: COLLATION_BAR_WIDTH,
-    height: band,
+    height,
   };
+}
+
+/**
+ * True when this sheet's creep/gutter shift (see {@link computeSlotRects}) has
+ * pushed its content slot past the fold line at `sheetWidth / 2` — drawing the
+ * guide there would print the dashed line over imposed content instead of in
+ * the margin. Checked against the SLOT bound, not drawFitted's actual scaled
+ * edge, which is always <= the slot: that makes this the conservative
+ * direction, so it can suppress the guide where a differently proportioned
+ * page would in fact have left a sliver of clear margin, but never draws the
+ * guide over content it doesn't know is there.
+ */
+export function foldGuideCrossesContent(
+  sheetInSignature: number,
+  gutter: number,
+  creep: number,
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
+): boolean {
+  const { left } = computeSlotRects(sheetInSignature, gutter, creep, sheetWidth, sheetHeight);
+  return left.x + left.width > sheetWidth / 2;
 }
 
 /** Dashed guide down the fold line, drawn over the imposed content. */
@@ -479,7 +515,10 @@ async function imposeFrontBack(
     // side needs no `rotateBack` handling. The collation bar is front-side only
     // — that is the face left showing on the folded signature's spine, and it
     // sidesteps the 180° back composition entirely.
-    if (marks.foldGuides) {
+    if (
+      marks.foldGuides &&
+      !foldGuideCrossesContent(flatSheets[j].sheetInSignature, gutter, creep, sheetWidth, sheetHeight)
+    ) {
       drawFoldGuide(frontPage, sheetWidth, sheetHeight);
       drawFoldGuide(backPage, sheetWidth, sheetHeight);
     }

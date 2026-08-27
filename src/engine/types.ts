@@ -103,10 +103,10 @@ export interface BookletOptions {
   /**
    * When true, prints a stepped collation (backstep) bar across the fold of
    * each signature's OUTERMOST sheet, front side only, one step lower per
-   * signature. Gathered in order, the bars form an unbroken diagonal down the
-   * spine, so a missing, doubled or out-of-order signature is visible at a
-   * glance. Suppressed when the document is a single signature — there is
-   * nothing to gather. Default false.
+   * signature. Gathered in order, the bars step evenly down the spine, so a
+   * missing, doubled or out-of-order signature breaks the spacing and is
+   * visible at a glance. Suppressed when the document is a single signature —
+   * there is nothing to gather. Default false.
    */
   collationMarks?: boolean;
 }

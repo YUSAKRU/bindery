@@ -56,7 +56,7 @@
             <h3 class="tool-category-title" data-i18n="nav.tools">Tools</h3>
             <button type="button" class="hub-recents-viewall" id="toolsViewAllBtn" data-i18n="hub.tools.viewAll">View All</button>
           </div>
-          <div class="hub-carousel" id="hubCarousel" aria-label="Quick access">
+          <div class="hub-carousel" id="hubCarousel" role="group" aria-label="Quick access">
             <button type="button" class="tool-row tool-row--carousel tool-row--featured" data-tool="booklet" data-enabled="true">
               <span class="tool-row-icon" aria-hidden="true"><svg class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
               <span class="tool-row-meta">
@@ -729,7 +729,7 @@
           </div>
 
           <div class="crop-container" id="cropContainer">
-            <img id="cropSourceImg" class="crop-source-img" alt="Image to crop" />
+            <img id="cropSourceImg" class="crop-source-img" alt="Page to crop" />
             <svg id="cropSvg" class="crop-svg">
               <polygon id="cropPolygon" class="crop-polygon" points="" />
               <line id="line01" class="crop-line" />
@@ -881,7 +881,7 @@
                 <button type="button" class="segmented-btn" data-marks="fold" data-i18n="config.marks.fold">Fold</button>
                 <button type="button" class="segmented-btn" data-marks="full" data-i18n="config.marks.full">Fold + spine</button>
               </div>
-              <p class="setting-hint" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also puts a stepped bar across the fold of each signature's outer sheet &mdash; gathered in order, the bars run as an unbroken diagonal down the spine, so a missing or misplaced signature shows up before you sew. The spine bar needs more than one signature.</p>
+              <p class="setting-hint" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also steps a bar across the fold of each signature's outer sheet, one signature lower each time, so a missing or misplaced signature breaks the spacing while you gather &mdash; it needs more than one signature. Both marks sit on the fold line, so with no binding gutter they can print over content close to the fold.</p>
             </div>
 
             <div class="setting-card">

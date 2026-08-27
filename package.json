@@ -8,10 +8,13 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "lint": "biome lint ."
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
     "@capacitor/cli": "^8.5.0",
+    "fast-check": "^4.9.0",
     "patch-package": "^8.0.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",

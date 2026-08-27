@@ -4958,7 +4958,9 @@ export function initApp(): void {
         if (fitWidth * aspect > screenHeight) {
           fitWidth = screenHeight / aspect;
         }
-      } catch (err) {
+      } catch {
+        // Best-effort fit: if the page's viewport can't be read we keep the
+        // width-based estimate rather than failing the open.
       }
     }
     

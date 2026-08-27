@@ -765,30 +765,52 @@ async function marksOn(
 
 describe('computeCollationMarkRect', () => {
   // A4 landscape spine: 595pt tall, 24pt left free at head and tail -> 547pt of
-  // usable spine. Four signatures therefore band at 547 / 4 = 136.75pt each, and
-  // the bar is centred on the fold at 842 / 2 = 421, so x = 421 - 10 / 2 = 416.
+  // usable spine. Four signatures therefore band at 547 / 4 = 136.75pt each; the
+  // bar is capped at 36pt and centred in its band, so it starts 50.375pt above
+  // the band floor. Centred on the fold at 842 / 2 = 421, x = 421 - 14 / 2 = 414.
   it('bands the usable spine evenly, top signature first', () => {
     const first = computeCollationMarkRect(0, 4, 842, 595);
-    expect(first).toEqual({ x: 416, y: 434.25, width: 10, height: 136.75 });
+    expect(first).toEqual({ x: 414, y: 484.625, width: 14, height: 36 });
 
     const last = computeCollationMarkRect(3, 4, 842, 595);
-    expect(last.y).toBeCloseTo(24, 6); // sits exactly on the tail margin
-    expect(last.height).toBeCloseTo(136.75, 6);
+    expect(last.y).toBeCloseTo(74.375, 6); // centred in the bottom band, above the tail margin
+    expect(last.height).toBeCloseTo(36, 6);
   });
 
-  it('leaves no gap between consecutive signatures', () => {
-    // A gap would let a missing signature pass as a legitimate step, which is
-    // the whole failure the mark exists to catch.
+  it('steps down exactly one band per signature', () => {
+    // The mark is read as a POSITION on the spine: consecutive bars must be one
+    // whole band apart, or a missing signature would not visibly break the
+    // staircase — which is the failure the mark exists to catch.
+    const band = (595 - 2 * 24) / 5;
     const rects = [0, 1, 2, 3, 4].map((i) => computeCollationMarkRect(i, 5, 842, 595));
     for (let i = 0; i + 1 < rects.length; i++) {
-      expect(rects[i].y).toBeCloseTo(rects[i + 1].y + rects[i + 1].height, 6);
+      expect(rects[i].y - rects[i + 1].y).toBeCloseTo(band, 6);
     }
   });
 
-  it('fills the whole usable spine for a single signature', () => {
+  it('keeps every bar inside the usable spine', () => {
+    for (const count of [1, 2, 4, 9]) {
+      for (let i = 0; i < count; i++) {
+        const r = computeCollationMarkRect(i, count, 842, 595);
+        expect(r.y).toBeGreaterThanOrEqual(24 - 1e-9);
+        expect(r.y + r.height).toBeLessThanOrEqual(595 - 24 + 1e-9);
+      }
+    }
+  });
+
+  it('shrinks the bar to its band once the band is thinner than the cap', () => {
+    // 20 signatures band at 547 / 20 = 27.35pt, below the 36pt cap, so the bars
+    // fill their bands and the steps stay flush instead of overlapping.
+    const band = 547 / 20;
+    const rects = [0, 1, 2].map((i) => computeCollationMarkRect(i, 20, 842, 595));
+    for (const r of rects) expect(r.height).toBeCloseTo(band, 6);
+    expect(rects[0].y).toBeCloseTo(rects[1].y + band, 6);
+  });
+
+  it('centres a single signature\'s bar on the usable spine', () => {
     const only = computeCollationMarkRect(0, 1, 842, 595);
-    expect(only.y).toBeCloseTo(24, 6);
-    expect(only.height).toBeCloseTo(547, 6);
+    expect(only.height).toBeCloseTo(36, 6);
+    expect(only.y + only.height / 2).toBeCloseTo(24 + 547 / 2, 6);
   });
 });
 
@@ -797,7 +819,8 @@ describe('makeBooklet assembly marks', () => {
   // 0, 2, 4, 6 are the outermost sheet of signatures 1..4.
   const OUTER_SHEETS = [0, 2, 4, 6];
   const INNER_SHEETS = [1, 3, 5, 7];
-  const STEP_Y = [434.25, 297.5, 160.75, 24];
+  // Bars capped at 36pt, centred in their 136.75pt bands (see computeCollationMarkRect).
+  const STEP_Y = [484.625, 347.875, 211.125, 74.375];
 
   it('draws one stepped bar per signature, on its outermost sheet only', async () => {
     const input = await buildTestPdf(32);
@@ -807,7 +830,7 @@ describe('makeBooklet assembly marks', () => {
     for (let i = 0; i < OUTER_SHEETS.length; i++) {
       const { bar } = await marksOn(result.frontPdf, OUTER_SHEETS[i]);
       expect(bar).not.toBeNull();
-      expect(bar!.x).toBeCloseTo(416, 6);
+      expect(bar!.x).toBeCloseTo(414, 6);
       expect(bar!.y).toBeCloseTo(STEP_Y[i], 6);
     }
     for (const sheet of INNER_SHEETS) {
