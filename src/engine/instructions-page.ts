@@ -36,6 +36,8 @@ export interface InstructionsData {
   foldGuides: boolean;
   /** Whether stepped spine bars are printed — already false for one signature. */
   collationMarks: boolean;
+  /** Whether the collation-bar band is thin enough to warn about print legibility. Always false when collationMarks is false. */
+  collationLegibilityWarning: boolean;
 }
 
 // Cap on the per-signature reading-order lines before collapsing the tail into
@@ -163,6 +165,10 @@ export function buildInstructionsLines(data: InstructionsData): InstructionsLine
   if (data.collationMarks) {
     push(t('instructions.step.collationMarks', { n: stepNo }), 11);
     stepNo += 1;
+    if (data.collationLegibilityWarning) {
+      push(t('instructions.step.collationLegibility', { n: stepNo, count: data.signaturesCount }), 11);
+      stepNo += 1;
+    }
   }
   out[out.length - 1].gapAfter = (out[out.length - 1].size ?? 11) * 1.5 + 10;
 

@@ -38,6 +38,14 @@ const COLLATION_BAR_MAX_HEIGHT = 36;
 // Head and tail of the spine left free of marks, so the staircase never runs
 // into the sheet edge.
 const COLLATION_SPINE_MARGIN = 24;
+// Below this per-signature band height (pt), the collation bar's steps are
+// hard to read at printed size even though the geometry is still valid —
+// review measurements: 20 signatures band at 547 / 20 = 27.35pt on A4
+// (flush, still clearly legible); the band falls under 3pt by roughly 200
+// signatures, a count signatureSize 8 reaches on a real 1600+ page document
+// (theses, scanned archives). 4pt sits below the legible reference and fires
+// well before the sub-3pt range, without tripping on ordinary signature counts.
+const COLLATION_BAR_LEGIBILITY_FLOOR = 4;
 
 /**
  * Resolves a {@link PaperSize} into a concrete `[width, height]` sheet size in
@@ -443,6 +451,13 @@ export function mirrorMapping(sheets: SheetMapping[]): SheetMapping[] {
  * signature (0 = outermost fold, drives creep) and which signature it belongs
  * to (drives the collation mark). All three are independent of EMISSION order,
  * so `reverseSheetOrder` cannot disturb them.
+ *
+ * `sheetInSignature` and `signatureIndex` are only meaningful once blank-page
+ * padding and `insertBlankAfter` have already been folded into `blockOrder` —
+ * both must run before `N` and {@link computeSignatureMappings} are computed,
+ * so a page inserted mid-document shifts signature boundaries before this
+ * list is built rather than after. Nothing enforces that ordering beyond the
+ * makeBooklet function body doing it in this sequence.
  */
 interface FlatSheet {
   sheet: SheetMapping;
@@ -729,6 +744,14 @@ export async function makeBooklet(
     signaturesCount,
   };
 
+  // Same band formula as computeCollationMarkRect, evaluated once for the
+  // whole document rather than per signature — the band is identical for
+  // every signature, and only its magnitude (not the per-bar geometry)
+  // matters for the legibility note.
+  const collationBand =
+    Math.max(0, sheetHeight - 2 * COLLATION_SPINE_MARGIN) / Math.max(1, signaturesCount);
+  const collationLegibilityWarning = marks.collation && collationBand < COLLATION_BAR_LEGIBILITY_FLOOR;
+
   // Guard against excessive creep, evaluated per signature: since creep restarts
   // each signature, the worst-case inward shift is on the last sheet of the
   // LARGEST signature — not the last sheet overall.
@@ -810,6 +833,7 @@ export async function makeBooklet(
       // The EFFECTIVE value, so the sheet never describes a bar that was
       // suppressed for a single-signature booklet.
       collationMarks: marks.collation,
+      collationLegibilityWarning,
     });
   }
 

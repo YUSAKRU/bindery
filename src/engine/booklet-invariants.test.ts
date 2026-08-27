@@ -99,11 +99,18 @@ describe('collation mark invariants', () => {
   // The engine accepts sheets from MIN_SHEET_PT to MAX_SHEET_PT, and 'source'
   // sizing routinely yields fractional points (595.276 and friends), so the
   // generator is fractional and spans the real range rather than a tidy subset.
+  //
+  // count goes up to 300 (not just 120): signatureSize 8 on a 1600+ page
+  // document — theses, scanned archives — really does reach 200 signatures,
+  // where the A4 band (547 / 200 = 2.735pt) is well past the cap (36pt) and
+  // deep into the near-flush-collapse regime the 0.4.6-polish legibility
+  // warning exists for (see COLLATION_BAR_LEGIBILITY_FLOOR in
+  // booklet-engine.ts). The range below still covers band > cap (few, large
+  // signatures) at the low end.
   const spine = fc.record({
     sheetWidth: fc.double({ min: 72, max: 14400, noNaN: true }),
     sheetHeight: fc.double({ min: 72, max: 14400, noNaN: true }),
-    // N = 400 at signatureSize 4 really does produce 100 signatures.
-    count: fc.integer({ min: 1, max: 120 }),
+    count: fc.integer({ min: 1, max: 300 }),
   });
 
   // A bar that runs past the head or tail margin would be cut off by the trim,
@@ -166,6 +173,111 @@ describe('collation mark invariants', () => {
           expect(r.width).toBeGreaterThan(0);
           expect(r.x).toBeLessThan(fold);
           expect(r.x + r.width).toBeGreaterThan(fold);
+        }
+      }),
+    );
+  });
+
+  // Crossing the fold (above) says the bar straddles both halves; this says
+  // WHERE exactly — dead centre, not merely somewhere that overlaps both
+  // sides. A bar shifted a point off-centre would still satisfy the crossing
+  // property above but would print an uneven mark on the folded spine.
+  it('centres the bar exactly on the fold line', () => {
+    fc.assert(
+      fc.property(spine, ({ sheetWidth, sheetHeight, count }) => {
+        for (let i = 0; i < count; i++) {
+          const r = computeCollationMarkRect(i, count, sheetWidth, sheetHeight);
+          expect(near(r.x + r.width / 2, sheetWidth / 2)).toBe(true);
+        }
+      }),
+    );
+  });
+
+  // The neighbour-clearance property above only says a bar does not overlap
+  // the NEXT bar; it would still pass if a bar drifted into a band two steps
+  // away while staying clear of its immediate neighbour. This pins the bar to
+  // its OWN band's y-range directly.
+  it('keeps the bar within its own band, not just clear of its neighbours', () => {
+    fc.assert(
+      fc.property(spine, ({ sheetWidth, sheetHeight, count }) => {
+        const band = (sheetHeight - 2 * MARGIN) / count;
+        for (let i = 0; i < count; i++) {
+          const r = computeCollationMarkRect(i, count, sheetWidth, sheetHeight);
+          const bandBottom = sheetHeight - MARGIN - (i + 1) * band;
+          const bandTop = bandBottom + band;
+          expect(r.y >= bandBottom || near(r.y, bandBottom)).toBe(true);
+          const top = r.y + r.height;
+          expect(top <= bandTop || near(top, bandTop)).toBe(true);
+        }
+      }),
+    );
+  });
+
+  // signaturesCount <= 0 is not a value the UI can produce, but the function
+  // clamps it (`Math.max(1, signaturesCount)`) rather than rejecting it —
+  // guard that the clamp actually lands on the single-signature case instead
+  // of leaking a zero/negative band count into NaN or negative geometry.
+  it('clamps signaturesCount <= 0 to behave exactly like a single signature', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -50, max: 0 }),
+        fc.double({ min: 72, max: 14400, noNaN: true }),
+        fc.double({ min: 72, max: 14400, noNaN: true }),
+        (nonPositiveCount, sheetWidth, sheetHeight) => {
+          const clamped = computeCollationMarkRect(0, nonPositiveCount, sheetWidth, sheetHeight);
+          const single = computeCollationMarkRect(0, 1, sheetWidth, sheetHeight);
+          expect(clamped).toEqual(single);
+        },
+      ),
+    );
+  });
+
+  // Cheap, but guards against an accidental source of non-determinism (e.g. a
+  // Date.now() or Math.random() creeping into the geometry) going unnoticed.
+  it('is deterministic: identical inputs produce identical rects', () => {
+    fc.assert(
+      fc.property(spine, ({ sheetWidth, sheetHeight, count }) => {
+        for (let i = 0; i < count; i++) {
+          const a = computeCollationMarkRect(i, count, sheetWidth, sheetHeight);
+          const b = computeCollationMarkRect(i, count, sheetWidth, sheetHeight);
+          expect(a).toEqual(b);
+        }
+      }),
+    );
+  });
+
+  // "shrinks the bar to its band once the band is thinner than the cap"
+  // (computeCollationMarkRect describe block, above) shows this happens at
+  // one hand-picked count. This pins the transition BY NAME across the whole
+  // domain: once the band no longer exceeds the cap, the bar fills the band
+  // completely, so consecutive bars sit exactly flush — zero gap. The
+  // generator below derives count from a target band <= CAP rather than
+  // filtering `spine` with fc.pre, so every generated case actually lands in
+  // the flush regime instead of being discarded.
+  it('sits consecutive bars exactly flush once the band no longer exceeds the cap', () => {
+    const CAP = 36; // mirrors COLLATION_BAR_MAX_HEIGHT (booklet-engine.ts); not exported
+    const flushSpine = fc
+      .record({
+        sheetWidth: fc.double({ min: 72, max: 14400, noNaN: true }),
+        sheetHeight: fc.double({ min: 72, max: 14400, noNaN: true }),
+        extra: fc.integer({ min: 0, max: 50 }),
+      })
+      .map(({ sheetWidth, sheetHeight, extra }) => {
+        const usable = sheetHeight - 2 * MARGIN;
+        // The smallest count that already puts the band at or under the cap,
+        // plus a few more so the flush case is exercised at various depths.
+        const minCount = Math.max(1, Math.ceil(usable / CAP));
+        return { sheetWidth, sheetHeight, count: minCount + extra };
+      });
+
+    fc.assert(
+      fc.property(flushSpine, ({ sheetWidth, sheetHeight, count }) => {
+        const rects = Array.from({ length: count }, (_, i) =>
+          computeCollationMarkRect(i, count, sheetWidth, sheetHeight),
+        );
+        for (let i = 0; i + 1 < rects.length; i++) {
+          const floor = rects[i + 1].y + rects[i + 1].height;
+          expect(near(rects[i].y, floor)).toBe(true);
         }
       }),
     );
