@@ -33,8 +33,10 @@ export class FileTooLargeError extends Error {
 // tsconfig's lib is ES2023 and these are only typed in lib.esnext.typedarrays,
 // so describe just the shape we call. Both are checked per call rather than
 // cached: a typeof on the prototype is free next to encoding 1.5 MiB, and it
-// keeps both paths reachable from tests (Node 24, which the suite runs on, does
-// not have them, so the fallback is what CI exercises by default).
+// keeps both paths reachable from tests: the suite installs and deletes the two
+// methods around each leg rather than relying on what the host runtime happens
+// to ship. It used to assume the host lacked them, which stopped being true once
+// Node started shipping them natively (26.x does).
 type NativeBase64Bytes = Uint8Array & { toBase64?: () => string };
 type NativeBase64Ctor = { fromBase64?: (base64: string) => Uint8Array };
 

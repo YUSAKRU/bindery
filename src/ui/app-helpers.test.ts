@@ -5,8 +5,10 @@ import {
   generateDefaultMergeName,
   paperSummaryLabel,
   parseInsertBlankList,
+  describeSignatureSplit,
   readerPageAtScrollTop,
   readerScrollTopForPage,
+  resolveMarksLabels,
   sortFileEntries,
   type SortableEntry,
 } from './app-helpers';
@@ -236,5 +238,105 @@ describe('parseInsertBlankList', () => {
     expect(parseInsertBlankList('1e3')).toBeNull();
     expect(parseInsertBlankList('0x10')).toBeNull();
     expect(parseInsertBlankList('2, 0x10')).toBeNull();
+  });
+});
+
+describe('resolveMarksLabels', () => {
+  // The regression this whole helper exists for: 0.4.6 showed the plain
+  // fold-guide summary here, which reads as "your choice was ignored" rather
+  // than "this document cannot carry the mark". Both strings must name the
+  // single-signature reason, and they must DIFFER from the ordinary fold-guide
+  // and default-hint strings — otherwise the collapse is silent again.
+  it('explains, rather than hides, a spine bar suppressed by a single signature', () => {
+    const { summaryKey, hintKey } = resolveMarksLabels('full', 1);
+    expect(summaryKey).toBe('config.summarySpineMarksSuppressed');
+    expect(hintKey).toBe('config.marksHintSingleSignature');
+    expect(summaryKey).not.toBe('config.summaryFoldGuides');
+    expect(hintKey).not.toBe('config.marksHint');
+  });
+
+  it('promises the spine bar only when there is more than one signature', () => {
+    for (const sigs of [2, 3, 17]) {
+      expect(resolveMarksLabels('full', sigs)).toEqual({
+        summaryKey: 'config.summarySpineMarks',
+        hintKey: 'config.marksHint',
+      });
+    }
+  });
+
+  it('leaves the other two modes alone', () => {
+    expect(resolveMarksLabels('none', 1)).toEqual({ summaryKey: null, hintKey: 'config.marksHint' });
+    expect(resolveMarksLabels('none', 4)).toEqual({ summaryKey: null, hintKey: 'config.marksHint' });
+    // 'fold' prints on every sheet regardless of how the document is split.
+    for (const sigs of [1, 4, null]) {
+      expect(resolveMarksLabels('fold', sigs)).toEqual({
+        summaryKey: 'config.summaryFoldGuides',
+        hintKey: 'config.marksHint',
+      });
+    }
+  });
+
+  // null = signature count not known yet. The caller hides or replaces the
+  // summary then, so the hint must not accuse a document that may well end up
+  // with several signatures once a file is chosen.
+  it('does not claim suppression before the signature count is known', () => {
+    expect(resolveMarksLabels('full', null)).toEqual({
+      summaryKey: 'config.summarySpineMarks',
+      hintKey: 'config.marksHint',
+    });
+  });
+
+  // Every key this helper can return has to exist in the active language, or
+  // the UI prints the raw key at the user.
+  it('returns keys that actually resolve to text', () => {
+    const cases: Array<['none' | 'fold' | 'full', number | null]> = [
+      ['none', 1], ['fold', 1], ['full', 1], ['full', 4], ['full', null],
+    ];
+    for (const [marks, sigs] of cases) {
+      const { summaryKey, hintKey } = resolveMarksLabels(marks, sigs);
+      if (summaryKey) expect(t(summaryKey)).not.toBe(summaryKey);
+      expect(t(hintKey)).not.toBe(hintKey);
+    }
+  });
+});
+
+describe('describeSignatureSplit', () => {
+  // The confusion this exists to kill: "32" on a 32-page document is 32 PAGES
+  // per signature, which is one signature — not thirty-two. Both numbers have
+  // to come out, and the sigs figure is the one the spine-mark rule reads.
+  it('reports pages per signature and the signature count separately', () => {
+    // 32 pages at size 32 -> one signature of 8 sheets.
+    expect(describeSignatureSplit([8])).toEqual({ pages: '32', sigs: 1 });
+    // 32 pages at size 8 -> four signatures of 2 sheets.
+    expect(describeSignatureSplit([2, 2, 2, 2])).toEqual({ pages: '8', sigs: 4 });
+    // 32 pages at size 16 -> two signatures of 4 sheets.
+    expect(describeSignatureSplit([4, 4])).toEqual({ pages: '16', sigs: 2 });
+  });
+
+  // Signatures are balanced, not naively chunked, so an uneven split is normal
+  // and a single pages figure would be a lie for it.
+  it('gives a range when the signatures are not all the same size', () => {
+    expect(describeSignatureSplit([3, 2, 2])).toEqual({ pages: '8–12', sigs: 3 });
+    expect(describeSignatureSplit([2, 3])).toEqual({ pages: '8–12', sigs: 2 });
+  });
+
+  it('counts four pages to a sheet', () => {
+    expect(describeSignatureSplit([1]).pages).toBe('4');
+    expect(describeSignatureSplit([5]).pages).toBe('20');
+  });
+
+  // Partial guard, and only that: it pins the key and its two placeholders, so
+  // renaming either in the i18n table without following through to the call
+  // site shows up here instead of on the user's screen. It cannot see WHICH key
+  // app.ts dispatched, so a call site pointed at a different existing key still
+  // passes — that half needs the wiring itself to become testable.
+  it('keeps the resolved-hint key and its placeholders alive', () => {
+    const { pages, sigs } = describeSignatureSplit([2, 2]);
+    const resolved = t('config.signatureHintResolved', { pages, sigs });
+    expect(resolved).not.toBe('config.signatureHintResolved');
+    expect(resolved).not.toContain('{pages}');
+    expect(resolved).not.toContain('{sigs}');
+    expect(resolved).toContain('8');
+    expect(resolved).toContain('2');
   });
 });

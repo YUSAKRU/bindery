@@ -1,2 +1,7 @@
 /build/*
 !/build/.npmkeep
+*.jks
+*.keystore
+keystore.properties
+release-key.jks
+

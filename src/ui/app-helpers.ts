@@ -131,3 +131,77 @@ export function parseInsertBlankList(rawValue: string): number[] | null {
   }
   return positions;
 }
+
+// ── Assembly marks ──────────────────────────────────────────────────────────
+
+export type MarksMode = 'none' | 'fold' | 'full';
+
+/** The two i18n keys the assembly-marks controls display for a given state. */
+export interface MarksLabels {
+  /** Appended to the config summary line; `null` when no mark prints at all. */
+  summaryKey: string | null;
+  /** Shown under the segmented control. */
+  hintKey: string;
+}
+
+/**
+ * Picks the summary and hint wording for the assembly-marks control.
+ *
+ * The point of this function is the 'full' + single-signature case. The engine
+ * refuses to print a collation bar when there is only one signature (nothing to
+ * gather, so the mark could never be wrong), and before 0.4.7 the UI answered
+ * that by quietly showing the plain fold-guide summary — the user picked
+ * "Fold + spine", saw the button stay active, and got a line that read as if
+ * the choice had been ignored. Both strings now name the reason instead.
+ *
+ * `sigs` is `null` when the signature count is not known yet (no file chosen,
+ * or the separate-cover guard fired); the caller hides or replaces the summary
+ * in that case, so only `hintKey` is meaningful.
+ */
+export function resolveMarksLabels(marks: MarksMode, sigs: number | null): MarksLabels {
+  if (marks === 'none') return { summaryKey: null, hintKey: 'config.marksHint' };
+  if (marks === 'fold') {
+    return { summaryKey: 'config.summaryFoldGuides', hintKey: 'config.marksHint' };
+  }
+  if (sigs !== null && sigs < 2) {
+    return {
+      summaryKey: 'config.summarySpineMarksSuppressed',
+      hintKey: 'config.marksHintSingleSignature',
+    };
+  }
+  return { summaryKey: 'config.summarySpineMarks', hintKey: 'config.marksHint' };
+}
+
+// ── Signature size ──────────────────────────────────────────────────────────
+
+/** What the current signature-size choice actually produces for a document. */
+export interface SignatureSplit {
+  /** Pages per signature — one number, or "min–max" when the split is uneven. */
+  pages: string;
+  /** How many signatures the document ends up in. */
+  sigs: number;
+}
+
+/**
+ * Turns the engine's per-signature sheet counts into the two numbers a reader
+ * needs to check their choice: pages per signature, and how many signatures.
+ *
+ * The control is labelled "Signature size" and offers 8 / 16 / 32, which are
+ * PAGES PER signature — but a bare number in a segmented row reads just as
+ * easily as a count of signatures, and picking "32" for a 32-page document then
+ * produces one signature rather than the thirty-two the reader expected. Naming
+ * both numbers under the control is what separates the two readings; the
+ * signature count is the one the spine-mark rule turns on.
+ *
+ * Signatures are balanced rather than naively chunked, so the last one is not
+ * necessarily the short one and the pages figure can be a range.
+ */
+export function describeSignatureSplit(sheetsPerSignature: number[]): SignatureSplit {
+  const pageCounts = sheetsPerSignature.map((sheets) => sheets * 4);
+  const min = Math.min(...pageCounts);
+  const max = Math.max(...pageCounts);
+  return {
+    pages: min === max ? String(min) : `${min}–${max}`,
+    sigs: sheetsPerSignature.length,
+  };
+}

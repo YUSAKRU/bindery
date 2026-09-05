@@ -134,9 +134,10 @@ function mockNativeChunkedRead(content: Uint8Array): void {
 
 /**
  * The base64 helpers take the platform methods (Chrome/WebView 140+) when they
- * exist and the hand-rolled loops otherwise. Node 24 — what this suite runs on —
- * has neither, so without this block CI would only ever exercise the fallback
- * and the fast path could rot untested.
+ * exist and the hand-rolled loops otherwise. Which of the two a bare Node run
+ * exercises depends on the Node version — 24 shipped neither, 26 has both — so
+ * this block installs and removes them explicitly rather than trusting the host,
+ * and each test states which path it is on.
  *
  * Polyfilling with Buffer proves the *dispatch* is right and that both paths
  * agree byte for byte. It deliberately does not try to prove V8's own encoder
@@ -146,14 +147,25 @@ function mockNativeChunkedRead(content: Uint8Array): void {
 describe('base64 helpers: platform path and fallback agree', () => {
   const sizes = [0, 1, 2, 3, 100, 32766, 32767, 65533, 250_000];
 
+  // Spies, not plain functions: agreeing byte for byte proves nothing if the
+  // "platform" leg quietly ran the fallback too. Rename the probe in
+  // file-bridge.ts and the encoders still agree — only a call count can see
+  // that the fast path was never entered.
+  const nativeToBase64 = vi.fn(function (this: Uint8Array): string {
+    return Buffer.from(this).toString('base64');
+  });
+  const nativeFromBase64 = vi.fn((s: string): Uint8Array => new Uint8Array(Buffer.from(s, 'base64')));
+
   function installNativeBase64(): void {
+    nativeToBase64.mockClear();
+    nativeFromBase64.mockClear();
     Object.defineProperty(Uint8Array.prototype, 'toBase64', {
-      value(this: Uint8Array) { return Buffer.from(this).toString('base64'); },
+      value: nativeToBase64,
       configurable: true,
       writable: true,
     });
     Object.defineProperty(Uint8Array, 'fromBase64', {
-      value(s: string) { return new Uint8Array(Buffer.from(s, 'base64')); },
+      value: nativeFromBase64,
       configurable: true,
       writable: true,
     });
@@ -168,7 +180,19 @@ describe('base64 helpers: platform path and fallback agree', () => {
     removeNativeBase64();
   });
 
-  it('the host runtime really lacks these, so the fallback is what runs by default', () => {
+  // This one guards the two suites below rather than the shipped code. Both of
+  // them compare a "fallback" run against a "platform" run, and that comparison
+  // is only worth anything if removeNativeBase64() actually clears the methods:
+  // if it silently failed, the fallback leg would be running the platform path
+  // too and the tests would compare a code path against itself, passing forever.
+  // Asserting the HOST lacks them (which is what this test did before) stopped
+  // being a statement about the code the day Node started shipping them.
+  it('removeNativeBase64 clears the methods whatever the host runtime ships', () => {
+    installNativeBase64();
+    expect(typeof (Uint8Array.prototype as { toBase64?: unknown }).toBase64).toBe('function');
+    expect(typeof (Uint8Array as { fromBase64?: unknown }).fromBase64).toBe('function');
+
+    removeNativeBase64();
     expect(typeof (Uint8Array.prototype as { toBase64?: unknown }).toBase64).toBe('undefined');
     expect(typeof (Uint8Array as { fromBase64?: unknown }).fromBase64).toBe('undefined');
   });
@@ -190,6 +214,10 @@ describe('base64 helpers: platform path and fallback agree', () => {
 
     expect(viaNative).toBe(viaFallback);
     expect(viaNative).toBe(Buffer.from(original).toString('base64'));
+    // The comparison above is only meaningful if the platform leg really used
+    // the platform encoder. Zero bytes never reach it — the encoder short-
+    // circuits on an empty payload — so only non-empty sizes can assert this.
+    if (size > 0) expect(nativeToBase64).toHaveBeenCalled();
   });
 
   it.each(sizes)('decodes %i bytes identically on both paths', async (size) => {
@@ -208,6 +236,7 @@ describe('base64 helpers: platform path and fallback agree', () => {
     mockNativeChunkedRead(original);
     const viaNative = await readPdfFromUri('content://fake/test.pdf');
     expectBytesEqual(viaNative.bytes, original);
+    if (size > 0) expect(nativeFromBase64).toHaveBeenCalled();
   });
 
   it('falls back to the loop when the platform decoder rejects the input', async () => {

@@ -70,8 +70,11 @@ import {
   parseInsertBlankList,
   readerPageAtScrollTop as pageAtScrollTop,
   readerScrollTopForPage as scrollTopForPage,
+  describeSignatureSplit,
+  resolveMarksLabels,
   sortFileEntries,
   type FileSortMode,
+  type MarksLabels,
 } from './app-helpers';
 
 type ScreenId =
@@ -354,6 +357,8 @@ export function initApp(): void {
   const instructionsGroup = byId<HTMLDivElement>('instructionsGroup');
   const sheetOrderGroup = byId<HTMLDivElement>('sheetOrderGroup');
   const marksGroup = byId<HTMLDivElement>('marksGroup');
+  const marksHintText = byId<HTMLParagraphElement>('marksHintText');
+  const signatureHintText = byId<HTMLParagraphElement>('signatureHintText');
   const coverHintText = byId<HTMLParagraphElement>('coverHintText');
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
@@ -1068,6 +1073,8 @@ export function initApp(): void {
   // the sheet count then rounds up naturally (e.g. 52 pages -> 12 sheets + cover).
   function refreshConfigSummary(): void {
     if (!selectedFile || bookletOriginalPages <= 0) {
+      refreshMarksHint(null);
+      refreshSignatureHint(null);
       configSummary.classList.add('hidden');
       return;
     }
@@ -1077,6 +1084,8 @@ export function initApp(): void {
     // Defensive: separate cover on a too-short doc (button is disabled, so this
     // is only a guard) shows the cover warning instead of a summary.
     if (bookletSeparateCover && bookletOriginalPages < 8) {
+      refreshMarksHint(null);
+      refreshSignatureHint(null);
       configSummary.textContent = t('config.coverDisabledHint');
       configSummary.classList.remove('hidden');
       return;
@@ -1104,12 +1113,44 @@ export function initApp(): void {
     if (bookletSeparateCover) text += t('config.summaryCover');
     if (bookletIncludeInstructions) text += t('config.summaryInstructions');
     if (bookletReverseSheetOrder) text += t('config.summaryReverseOrder');
-    // 'full' collapses to the fold-guide label when there is only one signature,
-    // since the engine suppresses the spine bar in exactly that case.
-    if (bookletMarks === 'full' && sigs > 1) text += t('config.summarySpineMarks');
-    else if (bookletMarks !== 'none') text += t('config.summaryFoldGuides');
+    refreshSignatureHint(sigMappings.map((signature) => signature.length));
+    const marksLabels = refreshMarksHint(sigs);
+    if (marksLabels.summaryKey) text += t(marksLabels.summaryKey);
     configSummary.textContent = text;
     configSummary.classList.remove('hidden');
+  }
+
+  /**
+   * Spells out what the selected signature size produces for THIS document.
+   * The static hint says the number counts pages, but a bare 8/16/32 in a
+   * segmented row still reads as a signature count — see describeSignatureSplit.
+   * Pass `null` when no document is loaded, which restores the static hint.
+   */
+  function refreshSignatureHint(sheetsPerSignature: number[] | null): void {
+    if (sheetsPerSignature === null || sheetsPerSignature.length === 0) {
+      signatureHintText.textContent = t('config.signatureHint');
+      return;
+    }
+    const { pages, sigs } = describeSignatureSplit(sheetsPerSignature);
+    signatureHintText.textContent = t('config.signatureHintResolved', { pages, sigs });
+  }
+
+  /**
+   * Swaps the assembly-marks hint for one that explains the suppression while
+   * 'Fold + spine' is selected on a single-signature document. Pass `null` when
+   * the signature count is not known yet (no file, or the cover guard fired).
+   *
+   * Deliberately does NOT disable the 'Fold + spine' button the way
+   * `updateCoverAvailability` disables the separate-cover option: cover
+   * availability is fixed by the document, but signature count is driven by the
+   * Signature size control on this same screen, so the choice can become valid
+   * again without picking a new file. Disabling it would force a silent reset of
+   * the user's stated intent — trading one silent behaviour for another.
+   */
+  function refreshMarksHint(sigs: number | null): MarksLabels {
+    const labels = resolveMarksLabels(bookletMarks, sigs);
+    marksHintText.textContent = t(labels.hintKey);
+    return labels;
   }
 
   /** Reads the "insert blank after" field; see `parseInsertBlankList`. */

@@ -5,7 +5,6 @@
   --color-on-primary-container: #1e1b4b;
   --color-primary-rgb: 79, 70, 229;
   --color-surface: #fafafb;
-  --color-surface-rgb: 250, 250, 251;
   --color-surface-variant: #eeeff1;
   --color-on-surface: #1c1c1e;
   --color-on-surface-variant: #54565c;
@@ -47,7 +46,6 @@
     --color-on-primary-container: #e0e7ff;
     --color-primary-rgb: 165, 180, 252;
     --color-surface: #131314;
-    --color-surface-rgb: 19, 19, 20;
     --color-surface-variant: #1f2023;
     --color-on-surface: #e3e3e6;
     --color-on-surface-variant: #c5c6cc;
@@ -76,7 +74,6 @@
   --color-on-primary-container: #e0e7ff;
   --color-primary-rgb: 165, 180, 252;
   --color-surface: #131314;
-  --color-surface-rgb: 19, 19, 20;
   --color-surface-variant: #1f2023;
   --color-on-surface: #e3e3e6;
   --color-on-surface-variant: #c5c6cc;
@@ -100,7 +97,6 @@
   --color-on-primary-container: #1e1b4b;
   --color-primary-rgb: 79, 70, 229;
   --color-surface: #fafafb;
-  --color-surface-rgb: 250, 250, 251;
   --color-surface-variant: #eeeff1;
   --color-on-surface: #1c1c1e;
   --color-on-surface-variant: #54565c;
@@ -148,9 +144,10 @@ body {
   margin: 0 auto;
 }
 
-/* Glass shell bars: absolutely positioned inside `.app` (which is
-   position:relative) rather than position:fixed, so they track the .app
-   480px column instead of the full viewport on wide screens. */
+/* Shell bars: absolutely positioned inside `.app` (which is position:relative)
+   rather than position:fixed, so they track the .app 480px column instead of
+   the full viewport on wide screens. Glass until 0.4.7 — see .top-bar's
+   background for why they are opaque now. */
 .top-bar {
   position: absolute;
   top: 0;
@@ -161,14 +158,19 @@ body {
   align-items: center;
   gap: 8px;
   padding: max(env(safe-area-inset-top), 20px) 20px 16px;
-  background: rgba(var(--color-surface-rgb), 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Opaque, not the rgba(…, 0.8) + blur(20px) glass this was until 0.4.7:
+     Android WebView reports backdrop-filter as supported but does not composite
+     it for a bar layered over a scrolling container, so the blur never landed
+     and all that was left was 20% transparency — high-contrast card text read
+     straight through the bar (seen on WebView, Xiaomi rodin). With the
+     background opaque, backdrop-filter would have nothing to show anyway, so it
+     is gone rather than paying for a compositing layer that does nothing. */
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-surface-variant);
   transition: transform 0.25s ease;
 }
 
-/* Reader chrome auto-hide: both glass bars slide up together. The subbar
+/* Reader chrome auto-hide: both bars slide up together. The subbar
    sits below the top bar, so it has to travel the top bar's height too. */
 .app.reader-chrome-hidden .top-bar {
   transform: translateY(-110%);
@@ -204,7 +206,7 @@ body {
 .screen-container {
   flex: 1;
   min-height: 0;
-  /* Top/bottom padding reserves the space under the absolute glass bars.
+  /* Top/bottom padding reserves the space under the absolute shell bars.
      Top: bar padding-top + 16px bar padding-bottom + 40px bar content + 8px gap. */
   padding: calc(max(env(safe-area-inset-top), 20px) + 64px) 20px
     max(env(safe-area-inset-bottom), 24px);
@@ -849,9 +851,8 @@ body {
   display: flex;
   border-top: 1px solid var(--color-surface-variant);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  background: rgba(var(--color-surface-rgb), 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Opaque for the reason given on .top-bar. */
+  background: var(--color-surface);
   padding: 8px 8px max(env(safe-area-inset-bottom), 8px);
 }
 
@@ -1309,9 +1310,9 @@ body {
 
 .reader-screen {
   position: relative;
-  /* Pull the screen up under the absolute glass top bar (the container
+  /* Pull the screen up under the absolute top bar (the container
      reserves top-bar height + 8px); readerScroll pads the content back
-     down so pages scroll behind the glass. */
+     down so pages scroll behind the bar. */
   margin: calc(-1 * (var(--reader-topbar-h) + 8px)) -20px
     max(calc(-1 * env(safe-area-inset-bottom)), -24px);
   gap: 0;
@@ -1330,9 +1331,8 @@ body {
   align-items: center;
   gap: 10px;
   padding: 0 16px;
-  background: rgba(var(--color-surface-rgb), 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Opaque for the reason given on .top-bar. */
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-surface-variant);
   transition: transform 0.25s ease;
 }
@@ -1356,7 +1356,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   /* Fixed chrome padding: content starts below top bar + subbar but scrolls
-     behind the glass. Must NOT change during chrome auto-hide, or scroll
+     behind them. Must NOT change during chrome auto-hide, or scroll
      offsets (readerListTopOffsetPx) would go stale. */
   padding-top: calc(var(--reader-topbar-h) + var(--reader-subbar-h));
   overflow-x: auto;
