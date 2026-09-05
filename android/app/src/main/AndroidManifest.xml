@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -44,6 +45,16 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Upstream @capacitor/camera pulls io.ionic.libs:ioncamera-android:1.0.1,
+             which declares IONCAMRImageEditorActivity. That activity calls deprecated
+             Window.getStatusBarColor / getNavigationBarColor, triggering a Play Console
+             Edge-to-Edge warning. Bindery sets allowEditing: false on all camera calls,
+             so image editing is completely unused. Stripping it removes the activity from
+             the merged manifest and allows R8 to discard it from classes.dex. -->
+        <activity
+            android:name="io.ionic.libs.ioncameralib.view.IONCAMRImageEditorActivity"
+            tools:node="remove" />
     </application>
 
     <!-- Permissions -->

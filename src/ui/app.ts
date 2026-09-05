@@ -1417,6 +1417,10 @@ export function initApp(): void {
 
   function loadBookletFile(bytes: Uint8Array, name: string): void {
     selectedFile = { name, bytes };
+    // Clear the previous document's page count immediately so the summary/hints
+    // don't flash stale values while validatePdf() resolves for the new file.
+    bookletOriginalPages = 0;
+    refreshConfigSummary();
     fileNameLabel.textContent = name;
     fileSizeLabel.textContent = formatBytes(bytes.length);
     fileCard.classList.remove('hidden');
