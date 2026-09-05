@@ -22,9 +22,6 @@
 			"preset": "recommended",
 			"a11y": {
 				"useButtonType": "off",
-				"noSvgWithoutTitle": "off",
-				"noLabelWithoutControl": "off",
-				"useSemanticElements": "off",
 				"useHeadingContent": "off"
 			},
 			"style": {

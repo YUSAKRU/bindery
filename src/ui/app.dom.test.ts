@@ -80,3 +80,71 @@ describe('refreshConfigSummary guard (mechanism the fix relies on)', () => {
     expect(body).toContain('refreshSignatureHint(null)');
   });
 });
+
+// F1 (0.4.9 Package B backlog): app-helpers.test.ts covers describeSignatureSplit
+// and resolveMarksLabels as pure functions, but the "wiring" that writes their
+// output into the DOM — refreshSignatureHint and refreshMarksHint — was untested.
+// Same source-level approach as above: no jsdom, and initApp() is one large
+// function by convention, so these are closures we can't call directly. We
+// extract each function body and assert the exact calls/assignments it makes.
+describe('refreshSignatureHint (wiring: describeSignatureSplit result -> DOM text)', () => {
+  const body = extractFunctionBody('function refreshSignatureHint(');
+
+  it('writes the static hint when there is no per-signature data, without calling describeSignatureSplit', () => {
+    expect(body).toContain('sheetsPerSignature === null || sheetsPerSignature.length === 0');
+    expect(body).toContain("signatureHintText.textContent = t('config.signatureHint')");
+
+    const guardIndex = body.indexOf('sheetsPerSignature === null || sheetsPerSignature.length === 0');
+    const staticWriteIndex = body.indexOf("signatureHintText.textContent = t('config.signatureHint')");
+    const splitCallIndex = body.indexOf('describeSignatureSplit(');
+    // The static-hint write must be inside the null/empty guard, i.e. before
+    // the describeSignatureSplit call that only runs in the resolved case.
+    expect(guardIndex).toBeLessThan(staticWriteIndex);
+    expect(staticWriteIndex).toBeLessThan(splitCallIndex);
+  });
+
+  it('otherwise derives {pages, sigs} from describeSignatureSplit and writes the resolved hint from them', () => {
+    const destructureIndex = body.indexOf('const { pages, sigs } = describeSignatureSplit(sheetsPerSignature);');
+    const resolvedWriteIndex = body.indexOf(
+      "signatureHintText.textContent = t('config.signatureHintResolved', { pages, sigs });",
+    );
+
+    expect(destructureIndex, 'expected describeSignatureSplit(sheetsPerSignature) to be destructured into {pages, sigs}').toBeGreaterThanOrEqual(0);
+    expect(resolvedWriteIndex, 'expected signatureHintText to be written from {pages, sigs} via config.signatureHintResolved').toBeGreaterThanOrEqual(0);
+    expect(destructureIndex).toBeLessThan(resolvedWriteIndex);
+  });
+});
+
+describe('refreshMarksHint (wiring: resolveMarksLabels result -> DOM text)', () => {
+  const body = extractFunctionBody('function refreshMarksHint(');
+
+  it('derives labels from resolveMarksLabels(bookletMarks, sigs) and writes labels.hintKey to the DOM', () => {
+    const resolveCallIndex = body.indexOf('const labels = resolveMarksLabels(bookletMarks, sigs);');
+    const writeIndex = body.indexOf('marksHintText.textContent = t(labels.hintKey);');
+
+    expect(resolveCallIndex, 'expected resolveMarksLabels(bookletMarks, sigs) to be called and assigned to `labels`').toBeGreaterThanOrEqual(0);
+    expect(writeIndex, 'expected marksHintText to be written from labels.hintKey').toBeGreaterThanOrEqual(0);
+    expect(resolveCallIndex).toBeLessThan(writeIndex);
+  });
+
+  it('returns the resolved labels to the caller', () => {
+    const writeIndex = body.indexOf('marksHintText.textContent = t(labels.hintKey);');
+    const returnIndex = body.indexOf('return labels;');
+
+    expect(returnIndex, 'expected refreshMarksHint to return labels').toBeGreaterThanOrEqual(0);
+    expect(writeIndex).toBeLessThan(returnIndex);
+  });
+});
+
+describe('refreshConfigSummary sheets-per-signature breakdown (bonus)', () => {
+  const body = extractFunctionBody('function refreshConfigSummary(');
+
+  it('only appends the config.summarySheetsPerSignature breakdown when there is more than one signature', () => {
+    const guardIndex = body.indexOf('if (sigs > 1)');
+    const keyIndex = body.indexOf('config.summarySheetsPerSignature');
+
+    expect(guardIndex, 'expected an `if (sigs > 1)` guard around the breakdown').toBeGreaterThanOrEqual(0);
+    expect(keyIndex, 'expected config.summarySheetsPerSignature to be used for the breakdown').toBeGreaterThanOrEqual(0);
+    expect(guardIndex).toBeLessThan(keyIndex);
+  });
+});
