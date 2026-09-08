@@ -27,7 +27,8 @@ export type SavedStatusKey =
   | 'status.organize.saved'
   | 'status.rotate.saved'
   | 'status.pageNumbers.saved'
-  | 'status.watermark.saved';
+  | 'status.watermark.saved'
+  | 'status.cover.saved';
 
 /** The slice of `DOMTokenList` this flow uses. */
 interface ClassListLike {

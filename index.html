@@ -63,6 +63,18 @@
                 <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
               </span>
             </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="cover" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.cover.title">Cover Studio</span>
+              </span>
+            </button>
+            <button type="button" class="tool-row tool-row--carousel" data-tool="md-to-pdf" data-enabled="true">
+              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+              <span class="tool-row-meta">
+                <span class="tool-row-title" data-i18n="tool.mdToPdf.title">Markdown to Booklet</span>
+              </span>
+            </button>
             <button type="button" class="tool-row tool-row--carousel" data-tool="rotate" data-enabled="true">
               <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
               <span class="tool-row-meta">
@@ -161,6 +173,14 @@
                 </span>
                 <span class="tool-row-chevron" aria-hidden="true">›</span>
               </button>
+              <button type="button" class="tool-row" data-tool="cover" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.cover.title">Cover Studio</span>
+                  <span class="tool-row-desc" data-i18n="tool.cover.desc">Design full wrap-around covers with spine calculation</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
             </div>
           </div>
 
@@ -180,6 +200,14 @@
                 <span class="tool-row-meta">
                   <span class="tool-row-title" data-i18n="tool.imageToPdf.title">Image to PDF</span>
                   <span class="tool-row-desc" data-i18n="tool.imageToPdf.desc">Convert photos into PDF format</span>
+                </span>
+                <span class="tool-row-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="tool-row" data-tool="md-to-pdf" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.mdToPdf.title">Markdown to Booklet</span>
+                  <span class="tool-row-desc" data-i18n="tool.mdToPdf.desc">Turn multi-file docs into ready-to-print A5 booklets</span>
                 </span>
                 <span class="tool-row-chevron" aria-hidden="true">›</span>
               </button>
@@ -721,6 +749,52 @@
           </button>
         </section>
 
+        <section class="screen hidden" id="screen-md-to-pdf">
+          <div class="hero" id="mdToPdfHero">
+            <div class="hero-icon" aria-hidden="true">📝</div>
+            <h2 data-i18n="tool.mdToPdf.title">Markdown to Booklet</h2>
+            <p class="hero-subtitle" data-i18n="tool.mdToPdf.desc">Turn multi-file docs into ready-to-print A5 booklets</p>
+          </div>
+
+          <div class="image-actions">
+            <label class="btn btn-primary" id="mdPickLabel">
+              <span data-i18n="mdToPdf.pickFiles">Select .md Files</span>
+              <input type="file" id="mdFileInput" accept=".md,.markdown,text/markdown" multiple style="display: none;" />
+            </label>
+            <button type="button" class="btn btn-tonal hidden" id="mdClearBtn" data-i18n="common.clear">Clear</button>
+          </div>
+
+          <div class="md-options-panel hidden" id="mdOptionsPanel" style="margin: 14px 0; display: flex; flex-direction: column; gap: 12px;">
+            <div class="config-section" style="margin: 0;">
+              <span class="config-label" data-i18n="mdToPdf.typography" style="margin-bottom: 6px; display: block;">Type Size</span>
+              <div class="segmented-group" id="mdTypographyGroup">
+                <button type="button" class="segmented-btn" data-type-preset="compact" data-i18n="mdToPdf.typography.compact">Compact (8 pt)</button>
+                <button type="button" class="segmented-btn is-active" data-type-preset="standard" data-i18n="mdToPdf.typography.standard">Standard (9.5 pt)</button>
+                <button type="button" class="segmented-btn" data-type-preset="large" data-i18n="mdToPdf.typography.large">Comfortable (11 pt)</button>
+              </div>
+            </div>
+            <label class="checkbox-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer;">
+              <input type="checkbox" id="mdPadEvenCheck" checked />
+              <span data-i18n="mdToPdf.padEven">Start each chapter on odd page (recto)</span>
+            </label>
+          </div>
+
+          <p class="merge-empty-hint" id="mdListEmptyHint" data-i18n="mdToPdf.emptyHint">No Markdown files added yet. Select one or more .md files to begin.</p>
+
+          <div class="merge-list" id="mdFileList"></div>
+
+          <div class="md-actions-panel hidden" id="mdActionsPanel" style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+            <button type="button" class="btn btn-primary btn-large" id="mdGenerateBookletBtn">
+              <span id="mdGenerateBookletLabel" data-i18n="mdToPdf.generateBooklet">Create Booklet (A5)</span>
+              <span class="spinner hidden" id="mdGenerateBookletSpinner"></span>
+            </button>
+            <button type="button" class="btn btn-tonal" id="mdGeneratePdfBtn">
+              <span id="mdGeneratePdfLabel" data-i18n="mdToPdf.generatePdf">Create PDF Only</span>
+              <span class="spinner hidden" id="mdGeneratePdfSpinner"></span>
+            </button>
+          </div>
+        </section>
+
         <section class="screen hidden" id="screen-crop">
           <div class="crop-header-actions">
             <button class="btn btn-text" id="cropCancelBtn" data-i18n="common.cancel">Cancel</button>
@@ -750,6 +824,301 @@
           <p class="crop-hint" data-i18n="crop.hint">Drag the points to mark the page corners.</p>
 
           <button class="btn btn-primary btn-large" id="cropApplyBtn" data-i18n="crop.applyAndFlatten">Apply and Flatten</button>
+        </section>
+
+        <section class="screen hidden" id="screen-cover">
+          <div class="hero" id="coverHero">
+            <div class="hero-icon" aria-hidden="true">🎨</div>
+            <h2 data-i18n="cover.heroTitle">Cover Studio</h2>
+            <p class="hero-subtitle" data-i18n="cover.heroSubtitle">Create wrap-around book covers with exact spine calculation.</p>
+          </div>
+
+          <div class="settings-panel" id="coverSettingsPanel">
+            <!-- Source Selection -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span data-i18n="cover.sourceMode">Source Mode</span>
+              </div>
+              <div class="segmented-group" id="coverSourceModeGroup">
+                <button type="button" class="segmented-btn is-active" data-mode="pdf" data-i18n="cover.sourcePdf">From PDF</button>
+                <button type="button" class="segmented-btn" data-mode="manual" data-i18n="cover.sourceManual">Manual Specs</button>
+              </div>
+            </div>
+
+            <!-- PDF Source Card -->
+            <div class="setting-card" id="coverPdfSourceCard">
+              <button type="button" class="btn btn-tonal btn-large" id="coverPickPdfBtn" data-i18n="cover.pickPdf">Select Booklet or PDF</button>
+              <div class="cover-file-badge hidden" id="coverPdfBadge">
+                <div class="cover-file-badge-text">
+                  <span class="cover-file-name" id="coverPdfName">sample.pdf</span>
+                  <span class="cover-file-info" id="coverPdfInfo">32 pages · 8 sheets</span>
+                </div>
+                <button type="button" class="btn-icon-clear" id="coverClearPdfBtn" aria-label="Remove" data-i18n-aria-label="common.remove">✕</button>
+              </div>
+            </div>
+
+            <!-- Manual Counts Card -->
+            <div class="setting-card hidden" id="coverManualCountsCard">
+              <div class="setting-row">
+                <label for="coverSheetCountInput" data-i18n="cover.sheetCount">Total Sheets</label>
+                <input type="number" id="coverSheetCountInput" class="number-input" min="1" max="2000" value="20" />
+              </div>
+              <div class="setting-row" id="coverSigCountRow">
+                <label for="coverSigCountInput" data-i18n="cover.sigCount">Signatures</label>
+                <input type="number" id="coverSigCountInput" class="number-input" min="1" max="500" value="5" />
+              </div>
+            </div>
+
+            <!-- Sheet Format: 2x A4 split (home) vs 1x A3 single wrap -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span data-i18n="cover.formatTitle">Sheet Format</span>
+              </div>
+              <div class="segmented-group" id="coverFormatGroup">
+                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">2 × A4 (Home)</button>
+                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">1 × A3 (Wide)</button>
+              </div>
+              <p class="setting-hint" id="coverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets that overlap at the spine.</p>
+            </div>
+
+            <!-- Live Reactive Spine Summary Card -->
+            <div class="setting-card cover-summary-card" id="coverSummaryCard">
+              <div class="cover-summary-head">
+                <span class="cover-summary-title" data-i18n="cover.spineCalcTitle">Live Spine Calculation</span>
+                <span class="cover-spine-value" id="coverSpineWidthLabel">0.00 mm</span>
+              </div>
+              <div class="cover-breakdown-badges">
+                <span class="cover-badge" id="coverPaperBulkBadge">Paper: 2.0 mm</span>
+                <span class="cover-badge" id="coverThreadSwellBadge">Swell: +0.75 mm</span>
+                <span class="cover-badge" id="coverHingeBadge">Hinge: +1.0 mm</span>
+              </div>
+              <div class="cover-fit-status">
+                <span class="cover-fit-badge cover-fit-badge--ok" id="coverSpineFitBadge" data-i18n="cover.spineTextFit">✓ Spine text fits (≥ 3.5 mm)</span>
+              </div>
+              <div class="cover-total-dim" id="coverTotalDimensionsLabel">
+                Total Sheet: 304.5 × 210.0 mm
+              </div>
+            </div>
+
+            <!-- Live Wrap Layout Visual Preview -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span id="coverPreviewHeading" data-i18n="cover.previewTitle">Wrap-Around Cover Layout</span>
+              </div>
+              <div class="cover-preview-wrapper" id="coverPreviewContainer">
+                <div class="cover-layout-preview" id="coverLayoutPreview">
+                  <div class="cover-panel cover-panel--back" id="coverBackPreview">
+                    <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
+                    <p class="cover-panel-synopsis" id="coverPreviewSynopsisText"></p>
+                  </div>
+                  <div class="cover-crease cover-crease--left" aria-hidden="true"></div>
+                  <div class="cover-panel cover-panel--spine" id="coverSpinePreview">
+                    <span class="cover-spine-text" id="coverPreviewSpineText"></span>
+                  </div>
+                  <div class="cover-crease cover-crease--right" aria-hidden="true"></div>
+                  <div class="cover-panel cover-panel--front" id="coverFrontPreview">
+                    <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
+                    <img class="cover-preview-image hidden" id="coverPreviewThumbImg" alt="Cover preview" />
+                    <h4 class="cover-preview-title" id="coverPreviewTitleText">Book Title</h4>
+                    <p class="cover-preview-author" id="coverPreviewAuthorText">Author</p>
+                  </div>
+                </div>
+
+                <!-- Two-sheet split layout: the same wrap cut across two A4 sheets.
+                     Reuses the single-wrap panel classes; only the stacking is inline. -->
+                <div class="cover-split-preview hidden" id="coverSplitPreview" style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px;">
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <span class="cover-panel-label" data-i18n="cover.previewSheet1">Sheet 1</span>
+                    <div class="cover-layout-preview" id="coverSplitSheet1Preview" style="height: 120px;">
+                      <div class="cover-panel cover-panel--back">
+                        <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
+                        <p class="cover-panel-synopsis" id="coverSplitSynopsisText"></p>
+                      </div>
+                      <div class="cover-crease" aria-hidden="true"></div>
+                      <div class="cover-panel cover-panel--spine" id="coverSplitSpinePreview">
+                        <span class="cover-spine-text" id="coverSplitSpineText"></span>
+                      </div>
+                      <div class="cover-crease" aria-hidden="true"></div>
+                      <div class="cover-panel cover-panel--flap" id="coverSplitFlapPreview" style="flex: 0 0 46px; align-items: center; justify-content: center; text-align: center;">
+                        <span class="cover-panel-label" data-i18n="cover.previewFlap">Flap 20 mm</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <span class="cover-panel-label" data-i18n="cover.previewSheet2">Sheet 2</span>
+                    <div class="cover-layout-preview" id="coverSplitSheet2Preview" style="height: 120px;">
+                      <div class="cover-panel cover-panel--tab" id="coverSplitTabPreview" style="flex: 0 0 26px; align-items: center; justify-content: center; text-align: center;">
+                        <span class="cover-panel-label" data-i18n="cover.previewTab">Tab 10 mm</span>
+                      </div>
+                      <div class="cover-crease" aria-hidden="true"></div>
+                      <div class="cover-panel cover-panel--front">
+                        <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
+                        <img class="cover-preview-image hidden" id="coverSplitThumbImg" alt="Cover preview" />
+                        <h4 class="cover-preview-title" id="coverSplitTitleText">Book Title</h4>
+                        <p class="cover-preview-author" id="coverSplitAuthorText">Author</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content Inputs -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span class="setting-section-title" data-i18n="cover.contentTitle">Cover Content</span>
+              </div>
+              <div class="cover-input-group">
+                <label for="coverTitleInput" class="setting-label" data-i18n="cover.bookTitle">Book Title</label>
+                <input type="text" id="coverTitleInput" class="modal-input" placeholder="e.g. The Odyssey" data-i18n-placeholder="cover.bookTitlePlaceholder" maxlength="80" />
+              </div>
+              <div class="cover-input-group">
+                <label for="coverAuthorInput" class="setting-label" data-i18n="cover.author">Author / Subtitle</label>
+                <input type="text" id="coverAuthorInput" class="modal-input" placeholder="e.g. Homer" data-i18n-placeholder="cover.authorPlaceholder" maxlength="60" />
+              </div>
+              <div class="cover-input-group">
+                <label for="coverSynopsisInput" class="setting-label" data-i18n="cover.synopsis">Back Cover Synopsis</label>
+                <textarea id="coverSynopsisInput" class="modal-input cover-textarea" rows="3" placeholder="Add a short summary or blurb for the back cover..." data-i18n-placeholder="cover.synopsisPlaceholder" maxlength="600"></textarea>
+              </div>
+            </div>
+
+            <!-- Cover Art & Theme -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span class="setting-section-title" data-i18n="cover.artTitle">Cover Art & Colors</span>
+              </div>
+              <div class="cover-image-row">
+                <button type="button" class="btn btn-tonal" id="coverPickImageBtn" data-i18n="cover.pickImage">Select Front Image</button>
+                <button type="button" class="btn btn-text hidden" id="coverRemoveImageBtn" data-i18n="cover.removeImage">Remove</button>
+              </div>
+              <p class="setting-hint" id="coverImageStatus" data-i18n="cover.noImage">No front illustration selected.</p>
+
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.colorTheme">Color Palette</span>
+              </div>
+              <div class="cover-palette-group" id="coverPaletteGroup">
+                <button type="button" class="cover-swatch is-active" data-theme="cream" title="Warm Cream" style="background:#fbf8f2; color:#292524; border:1px solid #dcd6c8;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="white" title="Classic White" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="navy" title="Midnight Navy" style="background:#0f172a; color:#f8fafc;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="burgundy" title="Burgundy" style="background:#450a0a; color:#fef2f2;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="charcoal" title="Charcoal" style="background:#1e293b; color:#f8fafc;">Aa</button>
+              </div>
+            </div>
+
+            <!-- Paper & Binding Physical Specs -->
+            <div class="setting-card">
+              <div class="setting-row">
+                <span class="setting-section-title" data-i18n="cover.specsTitle">Paper & Binding Specs</span>
+              </div>
+
+              <!-- Paper GSM -->
+              <div class="setting-row">
+                <span data-i18n="cover.paperGsm">Paper Weight</span>
+              </div>
+              <div class="segmented-group" id="coverGsmGroup">
+                <button type="button" class="segmented-btn" data-gsm="70">70g</button>
+                <button type="button" class="segmented-btn is-active" data-gsm="80">80g</button>
+                <button type="button" class="segmented-btn" data-gsm="90">90g</button>
+                <button type="button" class="segmented-btn" data-gsm="100">100g</button>
+                <button type="button" class="segmented-btn" data-gsm="120">120g</button>
+              </div>
+
+              <!-- Binding Style -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.bindingStyle">Binding Type</span>
+              </div>
+              <div class="segmented-group" id="coverBindingGroup">
+                <button type="button" class="segmented-btn is-active" data-binding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
+                <button type="button" class="segmented-btn" data-binding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
+                <button type="button" class="segmented-btn" data-binding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
+              </div>
+
+              <!-- Cover Style: Softcover vs Hardcover -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.coverType">Cover Style</span>
+              </div>
+              <div class="segmented-group" id="coverStyleGroup">
+                <button type="button" class="segmented-btn is-active" data-style="softcover" data-i18n="cover.softcover">Softcover</button>
+                <button type="button" class="segmented-btn" data-style="hardcover" data-i18n="cover.hardcover">Hardcover</button>
+              </div>
+
+              <!-- Hardcover Board Thickness -->
+              <div class="setting-card-nested hidden" id="coverBoardThicknessBlock">
+                <div class="setting-row">
+                  <span data-i18n="cover.boardThickness">Board Thickness</span>
+                </div>
+                <div class="segmented-group" id="coverBoardGroup">
+                  <button type="button" class="segmented-btn" data-board="1.5">1.5mm</button>
+                  <button type="button" class="segmented-btn is-active" data-board="2.0">2.0mm</button>
+                  <button type="button" class="segmented-btn" data-board="2.5">2.5mm</button>
+                  <button type="button" class="segmented-btn" data-board="3.0">3.0mm</button>
+                </div>
+              </div>
+
+              <!-- Page Trim Size -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.pageTrim">Page Size</span>
+              </div>
+              <div class="segmented-group" id="coverPageTrimGroup">
+                <button type="button" class="segmented-btn is-active" data-trim="A5">A5</button>
+                <button type="button" class="segmented-btn" data-trim="A4">A4</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="coverGenerateBtn">
+            <span id="coverGenerateBtnLabel" data-i18n="cover.generateBtn">Generate Cover PDF</span>
+            <span class="spinner hidden" id="coverGenerateSpinner"></span>
+          </button>
+        </section>
+
+        <section class="screen hidden" id="screen-cover-result">
+          <div class="result-banner">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <h2 data-i18n="screenTitle.coverResult">Cover Sheet Ready</h2>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="coverResultSpineStat">0.00 mm</span>
+              <span class="stat-label" data-i18n="cover.calculatedSpine">Spine Width</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="coverResultDimStat">0 × 0 mm</span>
+              <span class="stat-label" data-i18n="cover.totalDimensions">Total Dimensions</span>
+            </div>
+          </div>
+
+          <div class="setting-card hidden" id="coverResultBreakdownCard">
+            <div class="setting-row">
+              <span class="setting-section-title" data-i18n="cover.sheetBreakdown">Sheet Breakdown</span>
+            </div>
+            <p class="setting-hint" id="coverResultSheet1Line" data-i18n="cover.splitSheet1Desc">Page 1: Back + Spine + Flap (20 mm)</p>
+            <p class="setting-hint" id="coverResultSheet2Line" data-i18n="cover.splitSheet2Desc">Page 2: Front Cover + Glue Tab (10 mm)</p>
+          </div>
+
+          <div class="watermark-filename-field">
+            <label for="coverFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
+            <input type="text" id="coverFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+          </div>
+
+          <div class="action-list">
+            <div class="action-row">
+              <span class="action-label" data-i18n="cover.coverPdf">Cover Sheet PDF</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" id="coverSaveBtn">
+                  <span id="coverSaveBtnLabel" data-i18n="common.save">Save</span>
+                  <span class="spinner hidden" id="coverSaveSpinner"></span>
+                </button>
+                <button class="btn btn-tonal" id="coverShareBtn" data-i18n="common.share">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="action-status" id="coverActionStatus" aria-live="polite"></p>
+
+          <button class="btn btn-tonal btn-large hidden" id="coverGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-text btn-large" id="coverNewBtn" data-i18n="common.newFile">New Cover</button>
         </section>
 
         <section class="screen hidden" id="screen-config">
@@ -787,6 +1156,123 @@
               <button type="button" class="segmented-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
             </div>
             <p class="setting-hint" id="signatureHintText" data-i18n="config.signatureHint">Group of sheets folded together. Smaller signatures fold and stitch more easily for thick documents.</p>
+          </div>
+
+          <!-- Wrap-around cover, designed inline from this booklet's own numbers -->
+          <div class="setting-card">
+            <div class="setting-row">
+              <span data-i18n="config.wrapCover">Add wrap-around cover</span>
+            </div>
+            <div class="segmented-group" id="wrapCoverToggleGroup">
+              <button type="button" class="segmented-btn is-active" data-wrapcover="off" data-i18n="config.wrapCoverOff">Off</button>
+              <button type="button" class="segmented-btn" data-wrapcover="on" data-i18n="config.wrapCoverOn">Add cover</button>
+            </div>
+            <p class="setting-hint" id="wrapCoverHintText" data-i18n="config.wrapCoverHint">Designs a printable outer cover for this booklet.</p>
+
+            <div class="setting-card-nested hidden" id="wrapCoverOptions">
+              <!-- Sheet format -->
+              <div class="setting-row">
+                <span data-i18n="cover.formatTitle">Sheet Format</span>
+              </div>
+              <div class="segmented-group" id="wrapCoverFormatGroup">
+                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">2 × A4 (Home)</button>
+                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">1 × A3 (Wide)</button>
+              </div>
+              <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets that overlap at the spine.</p>
+
+              <!-- Binding -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.bindingStyle">Binding Type</span>
+              </div>
+              <div class="segmented-group" id="wrapCoverBindingGroup">
+                <button type="button" class="segmented-btn" data-wrapbinding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
+                <button type="button" class="segmented-btn is-active" data-wrapbinding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
+                <button type="button" class="segmented-btn" data-wrapbinding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
+                <button type="button" class="segmented-btn" data-wrapbinding="hardcover" data-i18n="config.wrapCoverBindingHardcover">Hardcover</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.wrapCoverBindingHint">How the book block is held together.</p>
+
+              <!-- Paper weight: the spine cannot be measured without it -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.paperGsm">Paper Weight</span>
+              </div>
+              <div class="segmented-group" id="wrapCoverGsmGroup">
+                <button type="button" class="segmented-btn" data-gsm="70">70g</button>
+                <button type="button" class="segmented-btn is-active" data-gsm="80">80g</button>
+                <button type="button" class="segmented-btn" data-gsm="90">90g</button>
+                <button type="button" class="segmented-btn" data-gsm="100">100g</button>
+                <button type="button" class="segmented-btn" data-gsm="120">120g</button>
+              </div>
+
+              <!-- Palette -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.colorTheme">Color Palette</span>
+              </div>
+              <div class="cover-palette-group" id="wrapCoverPaletteGroup">
+                <button type="button" class="cover-swatch is-active" data-theme="cream" title="Warm Cream" style="background:#fbf8f2; color:#292524; border:1px solid #dcd6c8;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="white" title="Classic White" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="navy" title="Midnight Navy" style="background:#0f172a; color:#f8fafc;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="burgundy" title="Burgundy" style="background:#450a0a; color:#fef2f2;">Aa</button>
+                <button type="button" class="cover-swatch" data-theme="charcoal" title="Charcoal" style="background:#1e293b; color:#f8fafc;">Aa</button>
+              </div>
+
+              <!-- Content -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span class="setting-section-title" data-i18n="config.wrapCoverContent">Cover content</span>
+              </div>
+              <div class="cover-input-group">
+                <label for="wrapCoverTitleInput" class="setting-label" data-i18n="cover.bookTitle">Book Title</label>
+                <input type="text" id="wrapCoverTitleInput" class="modal-input" placeholder="e.g. The Odyssey" data-i18n-placeholder="cover.bookTitlePlaceholder" maxlength="80" />
+              </div>
+              <div class="cover-input-group">
+                <label for="wrapCoverAuthorInput" class="setting-label" data-i18n="cover.author">Author / Subtitle</label>
+                <input type="text" id="wrapCoverAuthorInput" class="modal-input" placeholder="e.g. Homer" data-i18n-placeholder="cover.authorPlaceholder" maxlength="60" />
+              </div>
+              <div class="cover-input-group">
+                <label for="wrapCoverSynopsisInput" class="setting-label" data-i18n="cover.synopsis">Back Cover Synopsis</label>
+                <textarea id="wrapCoverSynopsisInput" class="modal-input cover-textarea" rows="3" placeholder="Add a short summary or blurb for the back cover..." data-i18n-placeholder="cover.synopsisPlaceholder" maxlength="600"></textarea>
+              </div>
+
+              <!-- Live spine calculation, driven by the booklet's own numbers -->
+              <div class="setting-card cover-summary-card" id="wrapCoverSummaryCard">
+                <div class="cover-summary-head">
+                  <span class="cover-summary-title" data-i18n="cover.spineCalcTitle">Live Spine Calculation</span>
+                  <span class="cover-spine-value" id="wrapCoverSpineLabel">0.00 mm</span>
+                </div>
+                <div class="cover-breakdown-badges">
+                  <span class="cover-badge" id="wrapCoverPaperBulkBadge">Paper: 0.00 mm</span>
+                  <span class="cover-badge" id="wrapCoverThreadSwellBadge">Swell: +0.00 mm</span>
+                  <span class="cover-badge" id="wrapCoverHingeBadge">Hinge: +0.00 mm</span>
+                </div>
+                <div class="cover-fit-status">
+                  <span class="cover-fit-badge cover-fit-badge--ok" id="wrapCoverFitBadge" data-i18n="cover.spineTextFit">✓ Spine text fits (≥ 3.5 mm)</span>
+                </div>
+                <div class="cover-total-dim" id="wrapCoverDimsLabel"></div>
+              </div>
+
+              <!-- Mini preview -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="config.wrapCoverPreview">Cover preview</span>
+              </div>
+              <div class="cover-preview-wrapper">
+                <div class="cover-layout-preview" id="wrapCoverMiniPreview" style="height: 110px;">
+                  <div class="cover-panel cover-panel--back">
+                    <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
+                    <p class="cover-panel-synopsis" id="wrapCoverMiniSynopsis"></p>
+                  </div>
+                  <div class="cover-crease" aria-hidden="true"></div>
+                  <div class="cover-panel cover-panel--spine" id="wrapCoverMiniSpine">
+                    <span class="cover-spine-text" id="wrapCoverMiniSpineText"></span>
+                  </div>
+                  <div class="cover-crease" aria-hidden="true"></div>
+                  <div class="cover-panel cover-panel--front">
+                    <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
+                    <h4 class="cover-preview-title" id="wrapCoverMiniTitle">Book Title</h4>
+                    <p class="cover-preview-author" id="wrapCoverMiniAuthor">Author</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Advanced: collapsed accordion -->
@@ -932,6 +1418,20 @@
           </div>
 
           <div class="booklet-preview-strip">
+            <div class="booklet-preview-cell hidden" id="wrapCoverSheet1PreviewCell">
+              <div class="booklet-preview-spinner" id="wrapCoverSheet1PreviewSpinner" aria-hidden="true"></div>
+              <img id="wrapCoverSheet1PreviewImg" class="booklet-preview-img hidden" alt="">
+              <p class="booklet-preview-error hidden" id="wrapCoverSheet1PreviewError"
+                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+              <p class="booklet-preview-label" id="wrapCoverSheet1PreviewLabel" data-i18n="booklet.previewWrapCoverSheet1">Cover · sheet 1</p>
+            </div>
+            <div class="booklet-preview-cell hidden" id="wrapCoverSheet2PreviewCell">
+              <div class="booklet-preview-spinner" id="wrapCoverSheet2PreviewSpinner" aria-hidden="true"></div>
+              <img id="wrapCoverSheet2PreviewImg" class="booklet-preview-img hidden" alt="">
+              <p class="booklet-preview-error hidden" id="wrapCoverSheet2PreviewError"
+                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+              <p class="booklet-preview-label" data-i18n="booklet.previewWrapCoverSheet2">Cover · sheet 2</p>
+            </div>
             <div class="booklet-preview-cell hidden" id="coverPreviewCell">
               <div class="booklet-preview-spinner" id="coverPreviewSpinner" aria-hidden="true"></div>
               <img id="coverPreviewImg" class="booklet-preview-img hidden" alt="">
@@ -993,6 +1493,20 @@
                 <button class="btn btn-tonal" data-target="combined" data-action="print" data-i18n="common.print">Print</button>
               </div>
             </div>
+            <div class="action-row hidden" id="wrapCoverSheet1ActionRow">
+              <span class="action-label" id="wrapCoverSheet1Label" data-i18n="booklet.wrapCoverSheet1Pdf">Cover: Sheet 1 (Back + Spine + Flap)</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="wrapCover1" data-action="share" data-i18n="common.share">Share</button>
+                <button class="btn btn-tonal" data-target="wrapCover1" data-action="print" data-i18n="common.print">Print</button>
+              </div>
+            </div>
+            <div class="action-row hidden" id="wrapCoverSheet2ActionRow">
+              <span class="action-label" data-i18n="booklet.wrapCoverSheet2Pdf">Cover: Sheet 2 (Front + Tab)</span>
+              <div class="action-buttons">
+                <button class="btn btn-tonal" data-target="wrapCover2" data-action="share" data-i18n="common.share">Share</button>
+                <button class="btn btn-tonal" data-target="wrapCover2" data-action="print" data-i18n="common.print">Print</button>
+              </div>
+            </div>
             <div class="action-row hidden" id="coverActionRow">
               <span class="action-label" data-i18n="booklet.coverPdfLabel">Cover PDF</span>
               <div class="action-buttons">
@@ -1018,6 +1532,7 @@
 
           <button class="btn btn-tonal btn-large hidden" id="bookletGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
 
+          <button class="btn btn-tonal btn-large" id="resultOpenCoverStudioBtn" data-i18n="booklet.openCoverStudio">🎨 Design Wrap-around Cover</button>
           <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
         </section>
 

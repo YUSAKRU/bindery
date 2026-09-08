@@ -1,3 +1,5 @@
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
@@ -5,7 +7,9 @@ import {
   computeSignatureMappings,
   computeSlotRects,
   foldGuideCrossesContent,
+  makeBooklet,
 } from './booklet-engine';
+import type { BookletOptions } from './types';
 
 // Property-based tests for the booklet engine's structural invariants.
 //
@@ -344,4 +348,106 @@ describe('fold guide invariant', () => {
   it('flags the reported case: creep=1pt, sheetInSignature=1, default sheet size', () => {
     expect(foldGuideCrossesContent(1, 0, 1)).toBe(true);
   });
+});
+
+describe('makeBooklet content-flow invariant', () => {
+  // computeSignatureMappings, above, is only the innermost step. makeBooklet
+  // layers three more transformations on top of it — blank insertion
+  // (insertBlankAfter), cover splitting (separateCover pulls the logical
+  // order's first/last 2 pages into a separate sheet), and mod-4 blank
+  // padding — none of which are exercised by the invariants above. Rather
+  // than trust the engine's own page-index bookkeeping (which is exactly what
+  // could be wrong), this stamps each source page with a unique text marker
+  // and reads back the ACTUAL rendered text of the produced PDF with pdf.js —
+  // a library entirely independent of pdf-lib, which the engine itself uses
+  // to build the PDF. A page genuinely dropped or duplicated in the output
+  // shows up here even if every internal counter still adds up.
+
+  /** A pageCount-page PDF where page i (0-based) carries the unique marker `MARK_<i>`. */
+  async function buildMarkedTestPdf(pageCount: number): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    for (let i = 0; i < pageCount; i++) {
+      const page = doc.addPage([200, 280]);
+      page.drawText(`MARK_${i}`, { x: 20, y: 140, size: 14, font });
+    }
+    return doc.save();
+  }
+
+  /** All `MARK_<n>` markers found in the PDF's rendered text, across every page. */
+  async function extractMarks(pdfBytes: Uint8Array): Promise<number[]> {
+    const loadingTask = getDocument({ data: pdfBytes });
+    const marks: number[] = [];
+    try {
+      const pdfDoc = await loadingTask.promise;
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const text = textContent.items.map((item) => ('str' in item ? item.str : '')).join('');
+        for (const match of text.matchAll(/MARK_(\d+)/g)) {
+          marks.push(Number(match[1]));
+        }
+      }
+    } finally {
+      await loadingTask.destroy();
+    }
+    return marks;
+  }
+
+  // originalPageCount is deliberately NOT constrained to a multiple of 4 here
+  // (unlike `pageCount` above) — makeBooklet's own mod-4 padding is one of the
+  // transformations under test, so the input must be free to land on either
+  // side of that boundary. separateCover needs >=8 original pages (the engine
+  // throws BOOKLET_COVER_MIN_PAGES otherwise), so a `true` draw bumps a
+  // too-small count up to 8 rather than being discarded.
+  const scenario = fc.integer({ min: 4, max: 40 }).chain((rawPageCount) =>
+    fc.boolean().chain((separateCover) => {
+      const originalPageCount = separateCover && rawPageCount < 8 ? 8 : rawPageCount;
+      return fc.record({
+        originalPageCount: fc.constant(originalPageCount),
+        separateCover: fc.constant(separateCover),
+        insertBlankAfter: fc.array(fc.integer({ min: 0, max: originalPageCount }), { maxLength: 6 }),
+        signatureSize,
+      });
+    }),
+  );
+
+  it(
+    'renders every original page exactly once, however it pads, covers, or inserts blanks',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          scenario,
+          async ({ originalPageCount, separateCover, insertBlankAfter, signatureSize }) => {
+            const inputBytes = await buildMarkedTestPdf(originalPageCount);
+            const options: BookletOptions = { separateCover, insertBlankAfter, signatureSize };
+            const result = await makeBooklet(inputBytes, options);
+
+            // combinedPdf carries every book-block page (front+back interleaved);
+            // coverPdf, when present, carries the 4 pages split off from it. Together
+            // they are the entirety of what makeBooklet produced from the source.
+            const producedPdfs = [result.combinedPdf, result.coverPdf].filter(
+              (pdf): pdf is Uint8Array => pdf !== undefined,
+            );
+            const allMarks: number[] = [];
+            for (const pdf of producedPdfs) {
+              allMarks.push(...(await extractMarks(pdf)));
+            }
+
+            const counts = new Map<number, number>();
+            for (const mark of allMarks) counts.set(mark, (counts.get(mark) ?? 0) + 1);
+
+            for (let n = 0; n < originalPageCount; n++) {
+              expect(counts.get(n)).toBe(1);
+            }
+            // No marker beyond the source range, and no ghost duplicates counted
+            // under a foreign key - the exact-count checks above only look inward.
+            expect(counts.size).toBe(originalPageCount);
+          },
+        ),
+        { numRuns: 15 },
+      );
+    },
+    60_000,
+  );
 });

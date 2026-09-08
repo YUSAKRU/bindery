@@ -13,6 +13,7 @@ export default defineConfig({
           // ~1.1MB for a font embedder only the text watermark needs.
           if (id.includes('@pdf-lib/fontkit')) return 'fontkit';
           if (id.includes('pdf-lib')) return 'pdf-lib';
+          if (id.includes('marked')) return 'marked';
         },
       },
     },

@@ -48,3 +48,28 @@ pyftsubset /usr/share/fonts/noto/NotoSans-Regular.ttf \
 
 After regenerating, re-run the coverage check before committing — a subset that silently
 drops `ı`/`ş`/`ğ` reintroduces C1 without failing any build.
+
+## `NotoSansMono-Regular.ttf`
+
+A subset of **Noto Sans Mono Regular**, bundled so code blocks and ASCII/Unicode box diagrams
+can render cleanly in markdown booklets.
+
+| | |
+|---|---|
+| Source | `/usr/share/fonts/noto/NotoSansMono-Regular.ttf` |
+| Subset size | **58 KB** |
+| Glyphs | 884 |
+| License | SIL Open Font License 1.1 |
+
+### Coverage
+- Latin-1 + Latin Extended-A/B (Turkish + Western/Eastern Europe)
+- Punctuation, currency, misc symbols
+- **Box Drawing** (`U+2500–257F`) and **Block Elements** (`U+2580–259F`) for architecture flow diagrams
+
+### Regenerating
+```bash
+uv run --with fonttools pyftsubset /usr/share/fonts/noto/NotoSansMono-Regular.ttf \
+  --output-file=src/assets/fonts/NotoSansMono-Regular.ttf \
+  --unicodes="U+0000-00FF,U+0100-017F,U+0180-024F,U+2000-206F,U+20A0-20BF,U+2122,U+2190-2193,U+2500-257F,U+2580-259F,U+25A0-25CF" \
+  --layout-features="" --no-hinting --desubroutinize
+```
