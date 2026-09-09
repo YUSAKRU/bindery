@@ -132,11 +132,54 @@ function spanRole(span: InlineSpan, forceBold: boolean): FontRole {
   return span.bold || forceBold ? 'bold' : 'body';
 }
 
+/**
+ * Splits a span so a character its own face cannot draw, but the monospace face
+ * can, is handed to the monospace face instead of being replaced.
+ *
+ * The proportional subsets carry no arrows at all and one of the forty-eight
+ * geometric shapes, while the monospace subset carries both (see
+ * `src/assets/fonts/README.md`). Without this, `Markdown → Booklet` printed as
+ * `Markdown ? Booklet` even though the glyph was already embedded in the same
+ * document.
+ *
+ * Splitting here rather than at draw time is what keeps it honest: each run is
+ * measured with the face that draws it, and `markdown-layout.ts` already mixes
+ * faces inside one line for code spans, so it needs no change.
+ */
+function promoteToMono(span: InlineSpan, coverage: FontCoverage, forceBold: boolean): InlineSpan[] {
+  // A span already drawn in mono is measured against mono, so the loop below
+  // could never promote anything in it. This is a short circuit, not a guard —
+  // removing it changes no output, which is why no test asserts it.
+  if (span.mono) return [span];
+  const own = coverage[spanRole(span, forceBold)];
+  const parts: InlineSpan[] = [];
+  let run = '';
+  let runIsMono = false;
+  const flush = () => {
+    if (run.length === 0) return;
+    parts.push(runIsMono ? { ...span, text: run, mono: true } : { ...span, text: run });
+    run = '';
+  };
+  for (const ch of span.text) {
+    const cp = ch.codePointAt(0) as number;
+    const needsMono = !own.has(cp) && coverage.mono.has(cp);
+    if (needsMono !== runIsMono) {
+      flush();
+      runIsMono = needsMono;
+    }
+    run += ch;
+  }
+  flush();
+  return parts.length > 0 ? parts : [span];
+}
+
 function sanitizeSpans(spans: InlineSpan[], coverage: FontCoverage, forceBold: boolean): InlineSpan[] {
-  return spans.map((span) => ({
-    ...span,
-    text: sanitizeText(span.text, coverage[spanRole(span, forceBold)]),
-  }));
+  return spans.flatMap((span) =>
+    promoteToMono(span, coverage, forceBold).map((part) => ({
+      ...part,
+      text: sanitizeText(part.text, coverage[spanRole(part, forceBold)]),
+    })),
+  );
 }
 
 /**
