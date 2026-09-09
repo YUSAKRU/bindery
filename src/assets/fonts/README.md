@@ -2,7 +2,9 @@
 
 Two weights of the same subset. `NotoSans-Latin.ttf` is used by the watermark tool
 (`src/engine/watermark-engine.ts`); the printed booklet instructions sheet
-(`src/engine/instructions-page.ts`) uses both, since its headings are bold.
+(`src/engine/instructions-page.ts`), the cover studio (`src/engine/cover-engine.ts`) and
+the markdown booklet renderer (`src/engine/markdown-render.ts`) use both, since their
+headings are bold.
 
 Both are produced by the same `pyftsubset` command below — only the source face differs
 (`NotoSans-Regular.ttf` / `NotoSans-Bold.ttf`). Keep them in sync: if you widen the unicode
@@ -22,14 +24,34 @@ the watermark tool for any Turkish user who typed Turkish into it.
 | Glyphs | 674 each |
 | License | SIL Open Font License 1.1 — redistribution in an application is permitted |
 
-### Coverage (verified, not assumed)
+### Coverage (read back from the built subset's `cmap`, 2026-09-10)
 
-- **Latin-1 + Latin Extended-A/B** — full Turkish (`ı ş ğ İ Ş Ğ ç ö ü â î û`), Western
-  European (`á é í ó ú à è ñ ä ö ü ß å ø æ`) and Eastern European (`ą ć ę ł ń ś ź ż č ď ě
-  ř š ů ž`)
-- **General punctuation** — `— – … « » “ ” ‘ ’`
-- **Currency** — `€ ₺` and the rest of U+20A0–20BF
-- **Misc** — `™`, arrows U+2190–2193, geometric shapes U+25A0–25CF
+| Range | In these faces |
+|---|---|
+| Latin-1 Supplement U+00A0–00FF | all 96 |
+| Latin Extended-A U+0100–017F | all 128 |
+| Latin Extended-B U+0180–024F | all 208 |
+| General punctuation U+2000–206F | 111 of 112 (only U+2065, an unassigned invisible, is absent) |
+| Currency U+20A0–20BF | all 32 |
+| Trademark U+2122 | yes |
+| **Arrows U+2190–2193** | **none** |
+| **Geometric shapes U+25A0–25CF** | **1 of 48** (only U+25CC) |
+
+So: full Turkish (`ı ş ğ İ Ş Ğ ç ö ü â î û`), Western European (`á é í ó ú à è ñ ä ö ü ß å ø
+æ`), Eastern European (`ą ć ę ł ń ś ź ż č ď ě ř š ů ž`), `— – … « » “ ” ‘ ’`, `€ ₺`, `™` — but
+**no `← ↑ → ↓`, and none of `■ ▲ ► ▼ ● ◆`**.
+
+> **The last two rows used to read "arrows U+2190–2193, geometric shapes U+25A0–25CF" under a
+> heading that said "verified, not assumed".** They were neither. The `--unicodes` list below
+> asks for those ranges, but `pyftsubset` keeps only what the source face actually has, and
+> `NotoSans-Regular.ttf` has none of the arrows and only U+25CC of the geometric block — the
+> full system face was parsed to confirm this is the source, not the subsetting. The list had
+> been copied from the request, not read back from the result. **When you widen the ranges,
+> re-read the built file's `cmap`; do not trust the command line.**
+
+`NotoSansMono-Regular.ttf` (below) *does* carry all four arrows and all 48 geometric shapes,
+because Noto Sans Mono ships them. That is why box-drawing diagrams survive in code blocks
+while the same characters in body text do not.
 
 Scripts **not** covered: Greek, Cyrillic, Arabic, Hebrew, CJK. Text in those scripts will
 still fail to encode. If that becomes a requirement, regenerate with wider `--unicodes`
