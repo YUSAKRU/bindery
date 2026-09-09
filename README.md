@@ -11,6 +11,10 @@
 
 Bindery is a privacy-focused PDF toolkit for Android. Every core tool — booklet making, merging, page management, watermarking — runs entirely on your device.
 
+### Get it
+
+**[Bindery on Google Play](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery)** — or build it from this repository yourself, see [Development & Build](#development--build).
+
 ### Why Privacy-Focused?
 
 Every operation on your existing files — merging, page management, conversion, booklet making — happens **entirely locally, on your device's CPU**. Your files never leave your device; nothing is uploaded to a server, and nothing is shared with any analytics or tracking service. The one feature that touches the network is optional: importing a PDF from a URL you provide. Everything else stays local — and since Bindery is open source, you can verify that yourself.
@@ -25,6 +29,8 @@ Every operation on your existing files — merging, page management, conversion,
   - Optional assembly marks — a dashed fold guide, plus stepped spine marks whose even spacing breaks when a signature is missing or out of order
   - Reversed sheet order for printers with an automatic folding unit
   - Interactive "what is a signature?" explainer with a live 3D folding animation
+- **Booklet Cover Studio** — Front and back covers with the spine width computed from the sheet count, fold marks, theme palettes, and a two-sheet split cover for home A4 printers that cannot print a full wrap
+- **Markdown to Booklet** — Turns one or more `.md` files into a print-ready A5 booklet: headings, tables, code blocks and box-drawing diagrams, three calibrated type sizes (Compact 8pt / Standard 9.5pt / Comfortable 11pt), and optional recto chapter starts
 - **PDF Merge** — Combines multiple PDFs into a single file
 - **Page Management** — Add, delete, and reorder pages
 - **Page Rotation**
@@ -69,6 +75,10 @@ This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the ful
 
 Bindery, Android için gizlilik odaklı bir PDF araç setidir. Kitapçık oluşturma, birleştirme, sayfa düzenleme, filigran gibi tüm çekirdek araçlar tamamen cihazınızda çalışır.
 
+### Nereden indirilir
+
+**[Google Play'de Bindery](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery)** — ya da bu depodan kendiniz derleyebilirsiniz, bkz. [Geliştirme & Derleme](#geliştirme--derleme).
+
 ### Neden Gizlilik Odaklı?
 
 Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düzenleme, dönüştürme, kitapçık oluşturma — **cihazınızın CPU'sunda, tamamen yerel olarak** gerçekleşir. Dosyalarınız hiçbir zaman cihazınızdan çıkmaz; hiçbir sunucuya yüklenmez, hiçbir analitik/izleme servisiyle paylaşılmaz. Ağa dokunan tek özellik opsiyoneldir: verdiğiniz bir URL'den PDF içe aktarma. Geri kalan her şey yerelde kalır — ve Bindery açık kaynak olduğu için bunu kendiniz doğrulayabilirsiniz.
@@ -83,6 +93,8 @@ Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düze
   - İsteğe bağlı montaj işaretleri — kesikli katlama kılavuzu ve eksik ya da sırası bozuk imzada düzenli basamak aralığı bozulan sırt işaretleri
   - Otomatik katlama üniteli yazıcılar için ters yaprak sırası
   - Canlı 3B katlama animasyonuyla interaktif "imza nedir?" açıklaması
+- **Kitapçık Kapak Stüdyosu** — Ön ve arka kapak, yaprak sayısından sırt kalınlığının otomatik hesabı, katlama işaretleri, tema paletleri ve tam sarma kapak basamayan ev tipi A4 yazıcılar için iki yapraklı bölünmüş kapak
+- **Markdown'dan Kitapçık** — Bir ya da daha fazla `.md` dosyasını basıma hazır A5 kitapçığa dönüştürür: başlıklar, tablolar, kod blokları ve kutu çizgili şemalar; üç kalibre edilmiş punto (Kompakt 8pt / Standart 9,5pt / Rahat 11pt) ve istenirse bölümleri tek sayfadan başlatma
 - **PDF Birleştir** — Birden fazla PDF'i tek dosyada birleştirir
 - **Sayfa Yönetimi** — Sayfa ekleme, silme, yeniden sıralama
 - **Sayfa Döndürme**
