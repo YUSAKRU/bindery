@@ -47,6 +47,13 @@ export interface InlineSpan {
   italic?: boolean;
   /** `code spans`, and Phase 1's raw LaTeX, draw in the monospace face. */
   mono?: boolean;
+  /**
+   * Set on a run the renderer moved to the monospace face because the
+   * proportional face cannot draw it (`promoteToMono` in
+   * `markdown-render.ts`). It is not a code span: the layout engine sizes it to
+   * sit in running text rather than to line up with a code block.
+   */
+  fallback?: boolean;
 }
 
 export type TableAlign = 'left' | 'center' | 'right';

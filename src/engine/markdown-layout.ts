@@ -207,16 +207,55 @@ function fontOf(span: InlineSpan): FontRole {
   return 'body';
 }
 
+/**
+ * Noto Sans Mono draws the two horizontal arrows small and low: U+2192's ink is
+ * 234/1000 em tall and sits between y=49 and y=283, against an x-height of 536
+ * and a cap height of 714. Dropped into running text at text size it reads as a
+ * subscript. Every other glyph the fallback promotes measures 429-604 tall and
+ * needs no help — the vertical arrows are 592 — so this is the exact set that
+ * measured short, not a category.
+ */
+export const SMALL_MONO_FALLBACK = new Set([0x2190, 0x2192]);
+
+/**
+ * Scaling a short fallback run by this much puts U+2192's ink between y=93 and
+ * y=538: starting just above the baseline and topping out at x-height, which is
+ * where an arrow belongs. Runs are drawn on the line's baseline and carry no
+ * vertical offset, so the size is the only lever — and at 1.9x the glyph still
+ * stops below cap height, so it cannot collide with the line above.
+ */
+export const SMALL_MONO_FALLBACK_SCALE = 1.9;
+
+/**
+ * The point size a span is drawn at. Only a fallback run made entirely of the
+ * short glyphs is scaled; a real code span keeps text size so it stays aligned
+ * with the code blocks around it.
+ */
+function sizeOf(span: InlineSpan, size: number): number {
+  if (!span.fallback) return size;
+  for (const ch of span.text) {
+    if (!SMALL_MONO_FALLBACK.has(ch.codePointAt(0) as number)) return size;
+  }
+  return size * SMALL_MONO_FALLBACK_SCALE;
+}
+
 function tokenize(spans: InlineSpan[], size: number, metrics: FontMetrics): Array<Token | null> {
   // `null` marks a collapsible inter-word space.
   const out: Array<Token | null> = [];
   for (const span of spans) {
     const font = fontOf(span);
+    const spanSize = sizeOf(span, size);
     const parts = span.text.split(/(\s+)/);
     for (const part of parts) {
       if (part.length === 0) continue;
       if (/^\s+$/.test(part)) out.push(null);
-      else out.push({ text: part, font, size, width: metrics.widthOfText(part, size, font) });
+      else
+        out.push({
+          text: part,
+          font,
+          size: spanSize,
+          width: metrics.widthOfText(part, spanSize, font),
+        });
     }
   }
   return out;

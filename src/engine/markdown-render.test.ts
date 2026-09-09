@@ -159,6 +159,27 @@ describe('sanitizeBlocks', () => {
     expect(out.spans[1]).toMatchObject({ text: '→←', mono: true });
   });
 
+  it('marks a promoted run as a fallback, not as a code span', () => {
+    // The layout engine sizes a fallback run to sit in running text and leaves
+    // real code spans at text size; without the flag it cannot tell them apart.
+    const cov = coverage('ab', 'ab', 'ab→');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans[1]).toMatchObject({ mono: true, fallback: true });
+    expect(out.spans[0].fallback).toBeUndefined();
+  });
+
+  it('splits a promoted run where the glyphs need different sizes', () => {
+    // '→' is one of the short glyphs the layout enlarges and '▲' is not, so
+    // they cannot share a run — a mixed run is left at text size for all of it.
+    const cov = coverage('ab', 'ab', 'ab→▲');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→▲b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans.map((s) => s.text)).toEqual(['a', '→', '▲', 'b']);
+  });
+
   it('still replaces a glyph no bundled face can draw', () => {
     const cov = coverage('ab', 'ab', 'ab');
     const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b' }] }];

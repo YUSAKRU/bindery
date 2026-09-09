@@ -14,6 +14,7 @@ import {
   scaleTypography,
   layoutDocuments,
   wrapCodeLine,
+  SMALL_MONO_FALLBACK_SCALE,
   wrapSpans,
 } from './markdown-layout';
 import type { FontMetrics, LayoutLine, LayoutPage, MdBlock } from './markdown-types';
@@ -154,6 +155,33 @@ describe('wrapSpans', () => {
   it('offsets runs from the given left edge', () => {
     const [runs] = wrapSpans([{ text: 'hi' }], 200, 9.5, metrics, 36);
     expect(runs[0].x).toBe(36);
+  });
+
+  it('enlarges a fallback run of the short mono glyphs so it sits in running text', () => {
+    // Noto Sans Mono draws U+2192 234/1000 em tall against an x-height of 536,
+    // so a fallback run left at text size reads as a subscript.
+    const [runs] = wrapSpans([{ text: '→', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBeCloseTo(9.5 * SMALL_MONO_FALLBACK_SCALE, 6);
+  });
+
+  it('leaves a fallback run of normally-sized glyphs at text size', () => {
+    // U+25B2 measures 585 tall in the same face and needs no help.
+    const [runs] = wrapSpans([{ text: '▲', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
+  });
+
+  it('leaves a real code span at text size even when it holds an arrow', () => {
+    // A code span must stay aligned with the code blocks around it, so the
+    // enlargement is keyed on `fallback`, not on the character or the face.
+    const [runs] = wrapSpans([{ text: '→', mono: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
+  });
+
+  it('does not enlarge a fallback run that mixes short and normal glyphs', () => {
+    // The renderer splits these apart, but the sizing rule has to be safe on
+    // its own: enlarging a run because of one character would blow up the rest.
+    const [runs] = wrapSpans([{ text: '→▲', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
   });
 });
 

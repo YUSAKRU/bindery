@@ -3,7 +3,7 @@ import type { PDFFont } from 'pdf-lib';
 import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
 import notoSansBoldUrl from '../assets/fonts/NotoSans-Latin-Bold.ttf?url';
 import notoSansMonoUrl from '../assets/fonts/NotoSansMono-Regular.ttf?url';
-import { A5_PAGE, DEFAULT_MARGIN, layoutDocuments } from './markdown-layout';
+import { A5_PAGE, DEFAULT_MARGIN, layoutDocuments, SMALL_MONO_FALLBACK } from './markdown-layout';
 import { parseMarkdown } from './markdown-parse';
 import { BookletError } from './types';
 import type {
@@ -154,18 +154,24 @@ function promoteToMono(span: InlineSpan, coverage: FontCoverage, forceBold: bool
   const own = coverage[spanRole(span, forceBold)];
   const parts: InlineSpan[] = [];
   let run = '';
-  let runIsMono = false;
+  // 'own' keeps the span's face; the two mono kinds differ only in the size the
+  // layout engine gives them, so they are kept apart here rather than letting a
+  // mixed run fall back to text size for all of it.
+  let kind: 'own' | 'mono' | 'monoSmall' = 'own';
   const flush = () => {
     if (run.length === 0) return;
-    parts.push(runIsMono ? { ...span, text: run, mono: true } : { ...span, text: run });
+    parts.push(
+      kind === 'own' ? { ...span, text: run } : { ...span, text: run, mono: true, fallback: true },
+    );
     run = '';
   };
   for (const ch of span.text) {
     const cp = ch.codePointAt(0) as number;
     const needsMono = !own.has(cp) && coverage.mono.has(cp);
-    if (needsMono !== runIsMono) {
+    const chKind = !needsMono ? 'own' : SMALL_MONO_FALLBACK.has(cp) ? 'monoSmall' : 'mono';
+    if (chKind !== kind) {
       flush();
-      runIsMono = needsMono;
+      kind = chKind;
     }
     run += ch;
   }
