@@ -320,19 +320,57 @@ describe('wrapCodeLine', () => {
     expect(RUST_112).toHaveLength(112);
   });
 
-  it('wraps that line into two rows, the second indented', () => {
+  it('wraps that line into two rows, continued under its own indent', () => {
     const inner = PRINTABLE_WIDTH - DEFAULT_TYPOGRAPHY.codePadding * 2;
     const rows = wrapCodeLine(RUST_112, inner, DEFAULT_TYPOGRAPHY.codeSize, metrics);
+    // The line's own four spaces, then the continuation marker: a wrapped row
+    // flush against the box edge breaks the shape of the code around it.
+    const prefix = `    ${CODE_WRAP_INDENT}`;
 
     expect(rows).toHaveLength(2);
     expect(CODE_WRAP_INDENT).toBe('  ');
-    expect(rows[1].startsWith('  ')).toBe(true);
-    expect(rows[1]).not.toBe(rows[1].trimStart());
+    expect(rows[1].startsWith(prefix)).toBe(true);
     // Nothing is lost or duplicated by the break.
-    expect(rows[0] + rows[1].slice(CODE_WRAP_INDENT.length)).toBe(RUST_112);
+    expect(rows[0] + rows[1].slice(prefix.length)).toBe(RUST_112);
     for (const row of rows) {
       expect(metrics.widthOfText(row, DEFAULT_TYPOGRAPHY.codeSize, 'mono')).toBeLessThanOrEqual(inner);
     }
+  });
+
+  it('breaks at a space so an identifier is never cut in half', () => {
+    // The corpus printed "fps i" / "n arb_frame_rate()" and "denomina" /
+    // "tor: 1 })" — code a reader cannot retype.
+    const line = '    fn prop_frame_snapping_idempotent(us in 0u64..360u64, fps in arb_frame_rate()) {';
+    const rows = wrapCodeLine(line, 50 * 8 * RATIOS.mono, 8, metrics);
+    const prefix = `    ${CODE_WRAP_INDENT}`;
+    expect(rows.length).toBeGreaterThan(1);
+
+    // Every continuation starts right after a space, so no row begins with the
+    // tail of an identifier — that is the whole point of the change.
+    for (const row of rows.slice(1)) {
+      expect(row.startsWith(prefix)).toBe(true);
+      expect(row.slice(prefix.length).startsWith(' ')).toBe(false);
+    }
+    for (const row of rows) expect(row.endsWith(' ') || row === rows[rows.length - 1]).toBe(true);
+
+    // Nothing lost or duplicated.
+    expect(rows[0] + rows.slice(1).map((row) => row.slice(prefix.length)).join('')).toBe(line);
+  });
+
+  it('does not treat a space inside the indent as a word boundary', () => {
+    // A deeply indented unbroken token: the only spaces in reach are the
+    // indent itself. Breaking there would spend a whole row on whitespace.
+    const line = `${' '.repeat(8)}${'a'.repeat(80)}`;
+    const rows = wrapCodeLine(line, 40 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.trim().length).toBeGreaterThan(0);
+  });
+
+  it('still cuts a diagram row by character, having no space to break at', () => {
+    const diagram = `├${'─'.repeat(40)}►`;
+    const rows = wrapCodeLine(diagram, 20 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(diagram);
   });
 
   it('leaves a line that already fits untouched, and keeps blank lines', () => {

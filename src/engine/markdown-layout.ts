@@ -183,15 +183,44 @@ export function wrapCodeLine(
   // Constant advance width, so one division gives the exact character budget.
   const perChar = full / line.length;
   const firstBudget = Math.max(1, Math.floor(maxWidth / perChar));
-  const contBudget = Math.max(1, firstBudget - CODE_WRAP_INDENT.length);
+  // The continuation sits under the line's own indent, not under the box's
+  // left edge: a wrapped row flush against the margin breaks the shape of the
+  // code around it, which on a printed page is the only structure a reader has.
+  const ownIndent = /^[ \t]*/.exec(line)?.[0] ?? '';
+  const contPrefix = ownIndent + CODE_WRAP_INDENT;
+  const contBudget = Math.max(1, firstBudget - contPrefix.length);
 
-  const out: string[] = [line.slice(0, firstBudget)];
-  let rest = line.slice(firstBudget);
-  while (rest.length > 0) {
-    out.push(CODE_WRAP_INDENT + rest.slice(0, contBudget));
-    rest = rest.slice(contBudget);
+  const out: string[] = [];
+  let rest = line;
+  let prefix = '';
+  let budget = firstBudget;
+  while (rest.length > budget) {
+    const cut = breakPoint(rest, budget, ownIndent.length);
+    out.push(prefix + rest.slice(0, cut));
+    rest = rest.slice(cut);
+    prefix = contPrefix;
+    budget = contBudget;
   }
+  out.push(prefix + rest);
   return out;
+}
+
+/**
+ * Where to cut a code row that is too long.
+ *
+ * A break at the last space that still fits keeps identifiers whole: the corpus
+ * printed `fps i` / `n arb_frame_rate()` and `denomina` / `tor: 1 })` before
+ * this, which a reader cannot retype. When the run holds no space to break at —
+ * a box-drawing diagram row is the case that matters — it falls back to cutting
+ * at the budget, which is what this function always used to do. The space stays
+ * on the first row so the rows still rejoin into the original line.
+ */
+function breakPoint(rest: string, budget: number, indentLength: number): number {
+  const space = rest.lastIndexOf(' ', budget - 1);
+  // A space inside the leading indent is not a word boundary, and cutting there
+  // would make no progress.
+  if (space > indentLength) return space + 1;
+  return budget;
 }
 
 interface Token {
