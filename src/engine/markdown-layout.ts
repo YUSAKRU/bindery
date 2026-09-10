@@ -199,6 +199,7 @@ interface Token {
   font: FontRole;
   size: number;
   width: number;
+  strike?: boolean;
 }
 
 function fontOf(span: InlineSpan): FontRole {
@@ -255,6 +256,7 @@ function tokenize(spans: InlineSpan[], size: number, metrics: FontMetrics): Arra
           font,
           size: spanSize,
           width: metrics.widthOfText(part, spanSize, font),
+          strike: span.strike,
         });
     }
   }
@@ -280,16 +282,22 @@ function breakToken(token: Token, maxWidth: number, metrics: FontMetrics): Token
   return out;
 }
 
-/** Merges neighbouring tokens sharing a face and size into single draw runs. */
+/**
+ * Merges neighbouring tokens sharing a face, size and strike state into single
+ * draw runs, and records each run's measured width — the strike rule is drawn
+ * from it, and only a run that was actually measured can carry one.
+ */
 function toRuns(tokens: Token[], startX: number): LayoutRun[] {
   const runs: LayoutRun[] = [];
   let x = startX;
   for (const token of tokens) {
     const last = runs[runs.length - 1];
-    if (last && last.font === token.font && last.size === token.size) {
+    const strike = token.strike === true;
+    if (last && last.font === token.font && last.size === token.size && last.strike === strike) {
       last.text += token.text;
+      last.width = (last.width ?? 0) + token.width;
     } else {
-      runs.push({ text: token.text, font: token.font, size: token.size, x });
+      runs.push({ text: token.text, font: token.font, size: token.size, x, width: token.width, strike });
     }
     x += token.width;
   }
@@ -445,9 +453,31 @@ function reserve(cursor: Cursor, leading: number, ascent: number): number {
   return baseline;
 }
 
+/**
+ * Height of the strike rule above the baseline, and its thickness, both as a
+ * fraction of the type size. 0.28 em sits just under the middle of the
+ * x-height (0.536 em in the bundled faces), which is where a strike belongs —
+ * high enough to read as struck, low enough not to be mistaken for an overline.
+ */
+const STRIKE_OFFSET = 0.28;
+const STRIKE_THICKNESS = 0.055;
+/** Below this the rule stops being visible when the page is rasterised. */
+const MIN_STRIKE_THICKNESS = 0.4;
+
 function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: number): LayoutLine {
   const line: LayoutLine = { kind: 'line', y: reserve(cursor, leading, ascent), runs };
   cursor.items.push(line);
+  for (const run of runs) {
+    if (run.strike !== true || run.width === undefined || run.width <= 0) continue;
+    cursor.items.push({
+      kind: 'rect',
+      x: run.x,
+      y: line.y + run.size * STRIKE_OFFSET,
+      width: run.width,
+      height: Math.max(MIN_STRIKE_THICKNESS, run.size * STRIKE_THICKNESS),
+      role: 'strike',
+    });
+  }
   return line;
 }
 

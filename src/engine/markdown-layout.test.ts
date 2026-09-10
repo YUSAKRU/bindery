@@ -71,6 +71,15 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  it('marks struck text so it does not read as ordinary prose', () => {
+    const blocks = parseMarkdown('Bu ~~yanlış~~ doğru.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    const struck = paragraph.spans.filter((span) => span.strike);
+    expect(struck.map((span) => span.text)).toEqual(['yanlış']);
+    expect(paragraph.spans.filter((span) => span.strike !== true).length).toBeGreaterThan(0);
+  });
+
   it('keeps a task list item\'s state in its marker', () => {
     // `marked` strips the "[x]" from the text and reports the state separately.
     // Dropping it printed a finished task and a pending one identically.
@@ -236,6 +245,51 @@ describe('wrapSpans', () => {
   it('offsets runs from the given left edge', () => {
     const [runs] = wrapSpans([{ text: 'hi' }], 200, 9.5, metrics, 36);
     expect(runs[0].x).toBe(36);
+  });
+
+  it('draws a rule over struck text, above the baseline and no wider than the run', () => {
+    const pages = layoutDocument(parseMarkdown('Bu ~~yanlış~~ doğru.\n'), metrics);
+    const rects = pages
+      .flatMap((page) => page.items)
+      .filter((item): item is Extract<typeof item, { kind: 'rect' }> => item.kind === 'rect');
+    const strikes = rects.filter((rect) => rect.role === 'strike');
+    expect(strikes).toHaveLength(1);
+
+    const line = pages
+      .flatMap((page) => page.items)
+      .find((item): item is LayoutLine => item.kind === 'line');
+    if (!line) throw new Error('expected a line');
+    const run = line.runs.find((r) => r.strike);
+    if (!run) throw new Error('expected a struck run');
+
+    // Over the text, not through the descenders and not floating above it.
+    expect(strikes[0].y).toBeGreaterThan(line.y);
+    expect(strikes[0].y).toBeLessThan(line.y + run.size * 0.536);
+    expect(strikes[0].x).toBeCloseTo(run.x, 6);
+    expect(strikes[0].width).toBeCloseTo(run.width as number, 6);
+    expect(strikes[0].height).toBeGreaterThan(0);
+  });
+
+  it('leaves prose that was never struck without a rule', () => {
+    const pages = layoutDocument(parseMarkdown('Bu doğru.\n'), metrics);
+    const strikes = pages
+      .flatMap((page) => page.items)
+      .filter((item) => item.kind === 'rect' && item.role === 'strike');
+    expect(strikes).toEqual([]);
+  });
+
+  it('keeps a struck run apart from its neighbours and measures it', () => {
+    const [runs] = wrapSpans(
+      [{ text: 'bu ' }, { text: 'yanlış', strike: true }, { text: ' doğru' }],
+      400,
+      9.5,
+      metrics,
+    );
+    const struck = runs.filter((run) => run.strike);
+    expect(struck).toHaveLength(1);
+    expect(struck[0].text).toBe('yanlış');
+    expect(struck[0].width).toBeCloseTo(metrics.widthOfText('yanlış', 9.5, 'body'), 6);
+    expect(runs.filter((run) => run.strike !== true).length).toBeGreaterThan(0);
   });
 
   it('enlarges a fallback run of the short mono glyphs so it sits in running text', () => {

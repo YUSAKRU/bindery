@@ -48,6 +48,12 @@ export interface InlineSpan {
   /** `code spans`, and Phase 1's raw LaTeX, draw in the monospace face. */
   mono?: boolean;
   /**
+   * `~~struck~~` text. No face carries a struck variant, so the layout engine
+   * emits a rule over the run instead — without it the text reads as ordinary
+   * prose and a passage marked wrong looks correct.
+   */
+  strike?: boolean;
+  /**
    * Set on a run the renderer moved to the monospace face because the
    * proportional face cannot draw it (`promoteToMono` in
    * `markdown-render.ts`). It is not a code span: the layout engine sizes it to
@@ -87,6 +93,10 @@ export interface LayoutRun {
   size: number;
   /** Left edge of the run, in points from the page's left edge. */
   x: number;
+  /** Set by `wrapSpans`; the strike rule needs a measured run. */
+  width?: number;
+  /** Draw a rule through this run — see {@link InlineSpan.strike}. */
+  strike?: boolean;
 }
 
 /**
@@ -109,7 +119,7 @@ export interface LayoutRect {
   width: number;
   height: number;
   /** Semantic role; the renderer owns the actual colours. */
-  role: 'codeBackground' | 'tableRule' | 'quoteBar';
+  role: 'codeBackground' | 'tableRule' | 'quoteBar' | 'strike';
 }
 
 export type LayoutItem = LayoutLine | LayoutRect;

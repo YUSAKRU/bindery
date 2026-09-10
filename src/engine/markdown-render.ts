@@ -36,6 +36,8 @@ const RECT_COLORS: Record<LayoutRect['role'], ReturnType<typeof rgb>> = {
   codeBackground: rgb(0.955, 0.957, 0.965),
   tableRule: rgb(0.62, 0.62, 0.65),
   quoteBar: rgb(0.74, 0.74, 0.77),
+  // Same ink as the text it crosses: a lighter rule reads as a printing fault.
+  strike: INK,
 };
 
 /**

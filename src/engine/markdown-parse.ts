@@ -76,7 +76,7 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
         out.push(...inlineSpans((token as Tokens.Em).tokens, { ...base, italic: true }));
         break;
       case 'del':
-        out.push(...inlineSpans((token as Tokens.Del).tokens, base));
+        out.push(...inlineSpans((token as Tokens.Del).tokens, { ...base, strike: true }));
         break;
       case 'link':
         // The URL is dropped: a printed booklet cannot be clicked, and the
