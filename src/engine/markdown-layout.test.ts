@@ -71,6 +71,68 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  describe('inline LaTeX', () => {
+    const flat = (src: string) => {
+      const block = parseMarkdown(`${src}\n`)[0];
+      if (block?.kind !== 'paragraph') throw new Error('expected a paragraph');
+      return block.spans;
+    };
+    const text = (src: string) =>
+      flat(src)
+        .map((s) => s.text)
+        .join('');
+
+    it('prints the commands it can draw as real characters', () => {
+      // Every target was checked against the bundled subsets: × · ± µ are in
+      // all three faces, → ← in the monospace face via the fallback.
+      expect(text('Hattı $\\rightarrow$ DMA-BUF')).toBe('Hattı → DMA-BUF');
+      expect(text('Oran $2 \\times 3$ kadar')).toBe('Oran 2 ×3 kadar');
+    });
+
+    it('writes the relations no bundled face carries as ASCII, spaced', () => {
+      // ≤ ≥ ≠ are absent from Noto Sans Regular itself, so they cannot be
+      // subset in — they would cost another font family.
+      expect(text('Başlangıç $\\le \\mathbf{500\\ ms}$')).toBe('Başlangıç <= 500 ms');
+      expect(text('En az $\\ge 10$ kere')).toBe('En az >= 10 kere');
+    });
+
+    it('keeps the micro sign glued to its unit', () => {
+      // "\mu s" means microseconds. The terminating space is LaTeX syntax, not
+      // a space the author wants printed.
+      expect(text('Gecikme $\\mathbf{0\\ \\mu s}$ olmalı')).toBe('Gecikme 0 µs olmalı');
+    });
+
+    it('carries \\mathbf through as real bold, not as literal source', () => {
+      const spans = flat('Kayıp $\\mathbf{0%}$ hedefi');
+      expect(spans.find((s) => s.bold)?.text).toBe('0%');
+      expect(spans.some((s) => s.mono)).toBe(false);
+    });
+
+    it('leaves a formula it cannot print faithfully as source', () => {
+      // Half-converting real notation would read as different maths, which is
+      // worse than showing the source — so superscripts and unknown commands
+      // keep the delimiters and the monospace face.
+      const sup = flat('Gerçek $E = mc^2$ korunur');
+      expect(sup.find((s) => s.mono)?.text).toBe('$E = mc^2$');
+      const frac = flat('Karmaşık $\\frac{a}{b}$ korunur');
+      expect(frac.find((s) => s.mono)?.text).toBe('$\\frac{a}{b}$');
+    });
+
+    it('never drops a command it does not know', () => {
+      // The safety valve, and the one that has to be tested without braces:
+      // "\frac{a}{b}" would bail on the brace anyway, so it cannot tell a
+      // deliberate bail from a silent skip. "\oplus" can. Dropping it would
+      // print "a b" — a formula quietly turned into different maths.
+      const spans = flat('Toplam $a \\oplus b$ olur');
+      expect(spans.find((s) => s.mono)?.text).toBe('$a \\oplus b$');
+      expect(spans.map((s) => s.text).join('')).toContain('\\oplus');
+    });
+
+    it('still leaves a lone dollar amount alone', () => {
+      expect(text('Fiyat $50 tek dolar')).toBe('Fiyat $50 tek dolar');
+    });
+  });
+
   it('strips inline HTML tags instead of printing them', () => {
     const blocks = parseMarkdown('Su H<sub>2</sub>O olur.\n');
     const paragraph = blocks[0];

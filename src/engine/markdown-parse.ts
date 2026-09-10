@@ -21,11 +21,152 @@ const BLOCK_MATH = '$$';
 const INLINE_MATH = /\$([^$\n]+)\$/g;
 
 /**
- * Splits a plain-text run on inline `$…$`, marking the maths as monospace and
- * leaving the surrounding prose alone. The `$` delimiters are kept: the reader
- * is looking at LaTeX source in Phase 1, and stripping them would make
- * `$O(n)$` read as ordinary prose that happens to be in a different face.
+ * LaTeX commands that have a faithful printed form, and what to print.
+ *
+ * Every target was checked against the bundled subsets before it was put here.
+ * `× · ± µ` are in all three faces. `→ ←` are in the monospace face only and
+ * reach the page through the fallback in `markdown-render.ts`.
+ *
+ * `≤ ≥ ≠` are in **no** bundled face, and widening the `pyftsubset` ranges
+ * cannot add them: they are absent from Noto Sans Regular itself, so they would
+ * cost a whole extra font family. They are written as ASCII instead, which is
+ * legible in a technical booklet and needs nothing new. Anything not listed
+ * here is left as LaTeX source rather than guessed at.
  */
+const LATEX_TEXT: Readonly<Record<string, string>> = {
+  rightarrow: '→',
+  to: '→',
+  leftarrow: '←',
+  gets: '←',
+  times: '×',
+  cdot: '·',
+  pm: '±',
+  // The micro sign, not Greek mu: U+00B5 is in the subsets, U+03BC is not, and
+  // in "\mu s" the author means microseconds.
+  mu: 'µ',
+  le: '<=',
+  leq: '<=',
+  ge: '>=',
+  geq: '>=',
+  ne: '!=',
+  neq: '!=',
+  ll: '<<',
+  gg: '>>',
+};
+
+/** `\mathbf{…}` and friends: a command that styles the group it wraps. */
+const LATEX_BOLD = new Set(['mathbf', 'bm', 'textbf', 'mathrm', 'text', 'mathit', 'textit']);
+
+/** Thrown internally when a formula uses something with no faithful printed form. */
+class UnprintableLatex extends Error {}
+
+/**
+ * Renders the inside of a `$…$` into spans.
+ *
+ * Bails by throwing the moment it meets a command it cannot print faithfully,
+ * so a real formula is never half-converted into something that reads as
+ * different maths — the caller then keeps the LaTeX source verbatim, which is
+ * the behaviour this pipeline shipped with.
+ */
+function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
+  const out: InlineSpan[] = [];
+  const push = (text: string, bold: boolean) => {
+    if (text.length === 0) return;
+    const last = out[out.length - 1];
+    if (last && (last.bold === true) === bold) last.text += text;
+    else out.push(bold ? { ...base, text, bold: true } : { ...base, text });
+  };
+
+  const walk = (input: string, bold: boolean): void => {
+    let i = 0;
+    let plain = '';
+    const flush = () => {
+      push(plain, bold);
+      plain = '';
+    };
+    while (i < input.length) {
+      const ch = input[i];
+      if (ch !== '\\') {
+        if (ch === '{' || ch === '}') throw new UnprintableLatex(input);
+        // '^' and '_' change the meaning of what follows and cannot be shown
+        // on one line; a formula using them stays as source.
+        if (ch === '^' || ch === '_') throw new UnprintableLatex(input);
+        plain += ch;
+        i += 1;
+        continue;
+      }
+      const rest = input.slice(i + 1);
+      const nameMatch = /^[a-zA-Z]+/.exec(rest);
+      if (!nameMatch) {
+        // "\ " is an explicit space; "\%" and friends are escaped literals.
+        const escaped = rest[0];
+        if (escaped === undefined) throw new UnprintableLatex(input);
+        plain += escaped === ' ' ? ' ' : escaped;
+        i += 2;
+        continue;
+      }
+      const name = nameMatch[0];
+      let after = i + 1 + name.length;
+      if (LATEX_BOLD.has(name)) {
+        if (input[after] !== '{') throw new UnprintableLatex(input);
+        let depth = 1;
+        let j = after + 1;
+        while (j < input.length && depth > 0) {
+          if (input[j] === '{') depth += 1;
+          else if (input[j] === '}') depth -= 1;
+          j += 1;
+        }
+        if (depth !== 0) throw new UnprintableLatex(input);
+        flush();
+        walk(input.slice(after + 1, j - 1), name === 'mathbf' || name === 'bm' || name === 'textbf');
+        i = j;
+        continue;
+      }
+      const replacement = LATEX_TEXT[name];
+      if (replacement === undefined) throw new UnprintableLatex(input);
+      plain += replacement;
+      if (input[after] === ' ') {
+        after += 1;
+        // LaTeX drops the space that terminates a command name, and for a
+        // single character that is what the author means: "\mu s" is "µs", not
+        // "µ s". The multi-character replacements are all relations written as
+        // ASCII, and "<=500 ms" reads as one token — keep their space so
+        // "\le \mathbf{500\ ms}" prints "<= 500 ms".
+        if (replacement.length > 1) plain += ' ';
+      }
+      i = after;
+    }
+    flush();
+  };
+
+  walk(source, false);
+  return out;
+}
+
+/**
+ * Splits a plain-text run on inline `$…$`.
+ *
+ * A formula whose every command has a faithful printed form is set as ordinary
+ * text — `$\le \mathbf{500\ ms}$` prints as `<= **500 ms**`, which is what the
+ * author meant and what a reader on paper can use. These documents' "maths" is
+ * mostly units, comparisons and bold, not real notation.
+ *
+ * Anything else keeps the LaTeX source in the monospace face, delimiters and
+ * all. That was the original Phase 1 behaviour and it stays the fallback: a
+ * half-converted formula would read as different maths, which is worse than
+ * showing the source. Stripping the `$` there would also make `$O(n)$` look
+ * like prose that happens to be in another face.
+ */
+function renderFormula(inner: string, raw: string, base: InlineSpan): InlineSpan[] {
+  try {
+    const spans = latexSpans(inner, base);
+    if (spans.length > 0) return spans;
+  } catch (error) {
+    if (!(error instanceof UnprintableLatex)) throw error;
+  }
+  return [{ ...base, text: raw, mono: true }];
+}
+
 export function splitInlineMath(text: string, base: InlineSpan): InlineSpan[] {
   const out: InlineSpan[] = [];
   let last = 0;
@@ -35,7 +176,7 @@ export function splitInlineMath(text: string, base: InlineSpan): InlineSpan[] {
     if (match.index > last) {
       out.push({ ...base, text: text.slice(last, match.index) });
     }
-    out.push({ ...base, text: match[0], mono: true });
+    out.push(...renderFormula(match[1], match[0], base));
     last = match.index + match[0].length;
     match = INLINE_MATH.exec(text);
   }
