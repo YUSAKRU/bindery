@@ -118,6 +118,25 @@ describe('parseMarkdown', () => {
       expect(frac.find((s) => s.mono)?.text).toBe('$\\frac{a}{b}$');
     });
 
+    it('prints a function name and spells the infinity it cannot draw', () => {
+      expect(text('tanjant ($\\tanh$) yumuşatması')).toBe('tanjant (tanh) yumuşatması');
+      expect(text('Aralık $\\pm\\infty$ olur')).toBe('Aralık ±inf olur');
+    });
+
+    it('treats a bare brace group as grouping, not as a formula it cannot read', () => {
+      // "R=96{,}000" is a number whose comma is punctuation; the braces are
+      // LaTeX grouping and print nothing of their own.
+      expect(text('Örnekleme $R=96{,}000$ Hz')).toBe('Örnekleme R=96,000 Hz');
+    });
+
+    it('sees a formula that a markdown escape cut into pieces', () => {
+      // `marked` makes "\%" its own escape token, so "$\mathbf{0\%}$" arrives
+      // as three tokens; splitting each one alone never finds the formula.
+      const spans = flat('sırasında $\\mathbf{0\\%}$ kare düşüşü');
+      expect(spans.find((s) => s.bold)?.text).toBe('0%');
+      expect(spans.some((s) => s.mono)).toBe(false);
+    });
+
     it('never drops a command it does not know', () => {
       // The safety valve, and the one that has to be tested without braces:
       // "\frac{a}{b}" would bail on the brace anyway, so it cannot tell a
@@ -138,6 +157,22 @@ describe('parseMarkdown', () => {
     const paragraph = blocks[0];
     if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
     expect(paragraph.spans.map((s) => s.text).join('')).toBe('Su H2O olur.');
+  });
+
+  it('keeps generics and placeholders that only look like tags', () => {
+    // `marked` calls anything tag-shaped inline HTML. These documents are full
+    // of Rust generics and shell placeholders that are not markup, and deleting
+    // them loses the reader's content — worse than the tags the strip removes.
+    const cases: Array<[string, string]> = [
+      ['Tampon Vec<u8> olarak tutulur.', 'Tampon Vec<u8> olarak tutulur.'],
+      ['Paylaşım Arc<Mutex<T>> ile yapılır.', 'Paylaşım Arc<Mutex<T>> ile yapılır.'],
+      ['Yol: pipe kurgu_<USERNAME> olur.', 'Yol: pipe kurgu_<USERNAME> olur.'],
+    ];
+    for (const [source, expected] of cases) {
+      const block = parseMarkdown(`${source}\n`)[0];
+      if (block?.kind !== 'paragraph') throw new Error('expected a paragraph');
+      expect(block.spans.map((s) => s.text).join('')).toBe(expected);
+    }
   });
 
   it('turns an inline line-break tag into a space, not into nothing', () => {

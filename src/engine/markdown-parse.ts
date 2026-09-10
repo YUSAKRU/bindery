@@ -44,6 +44,20 @@ const LATEX_TEXT: Readonly<Record<string, string>> = {
   // The micro sign, not Greek mu: U+00B5 is in the subsets, U+03BC is not, and
   // in "\mu s" the author means microseconds.
   mu: 'µ',
+  // Function names print as themselves; LaTeX only sets them upright.
+  sin: 'sin',
+  cos: 'cos',
+  tan: 'tan',
+  sinh: 'sinh',
+  cosh: 'cosh',
+  tanh: 'tanh',
+  log: 'log',
+  ln: 'ln',
+  exp: 'exp',
+  max: 'max',
+  min: 'min',
+  // No bundled face has ∞ and neither does Noto Sans Regular, so it is spelt.
+  infty: 'inf',
   le: '<=',
   leq: '<=',
   ge: '>=',
@@ -86,8 +100,24 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
     };
     while (i < input.length) {
       const ch = input[i];
+      if (ch === '{') {
+        // A bare group is only grouping in LaTeX — "R=96{,}000" is a number
+        // whose comma is punctuation, not a decimal point. Its content prints.
+        let depth = 1;
+        let j = i + 1;
+        while (j < input.length && depth > 0) {
+          if (input[j] === '{') depth += 1;
+          else if (input[j] === '}') depth -= 1;
+          j += 1;
+        }
+        if (depth !== 0) throw new UnprintableLatex(input);
+        flush();
+        walk(input.slice(i + 1, j - 1), bold);
+        i = j;
+        continue;
+      }
       if (ch !== '\\') {
-        if (ch === '{' || ch === '}') throw new UnprintableLatex(input);
+        if (ch === '}') throw new UnprintableLatex(input);
         // '^' and '_' change the meaning of what follows and cannot be shown
         // on one line; a formula using them stays as source.
         if (ch === '^' || ch === '_') throw new UnprintableLatex(input);
@@ -208,6 +238,26 @@ function collapseInlineWhitespace(text: string): string {
 const HTML_TAG = /<\/?([a-zA-Z][\w-]*)(?:\s[^>]*)?\/?>/g;
 
 /**
+ * The element names that may be deleted as markup.
+ *
+ * `marked` calls anything shaped like a tag inline HTML, and these documents
+ * are full of things that are shaped like one but are not: `Vec<u8>`,
+ * `Arc<Mutex<T>>`, `Result<T, E>`, `\\.\pipe\kurgu_<USERNAME>`. Deleting those
+ * loses the reader's content, which is worse than the tags this strip exists to
+ * remove. So the rule is inverted: a name has to be a real HTML element before
+ * it is dropped, and everything else is prose and stays.
+ */
+const HTML_ELEMENTS = new Set(
+  ('a abbr address area article aside audio b base bdi bdo blockquote body br button canvas ' +
+   'caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed ' +
+   'fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe ' +
+   'img input ins kbd label legend li link main map mark menu meta meter nav noscript object ol ' +
+   'optgroup option output p param picture pre progress q rp rt ruby s samp script section select ' +
+   'slot small source span strong style sub summary sup table tbody td template textarea tfoot th ' +
+   'thead time title tr track u ul var video wbr').split(' '),
+);
+
+/**
  * Reduces HTML to the text a printed page can carry.
  *
  * `marked` is used as a lexer, never as an HTML renderer, so a tag arrives as
@@ -222,14 +272,24 @@ const HTML_TAG = /<\/?([a-zA-Z][\w-]*)(?:\s[^>]*)?\/?>/g;
  * visible.
  */
 export function stripHtmlTags(raw: string): string {
-  return raw.replace(HTML_TAG, (_tag, name: string) => (/^(br|hr)$/i.test(name) ? ' ' : ''));
+  return raw.replace(HTML_TAG, (tag: string, name: string) => {
+    if (!HTML_ELEMENTS.has(name.toLowerCase())) return tag;
+    return /^(br|hr)$/i.test(name) ? ' ' : '';
+  });
 }
 
 /** Flattens marked's inline tokens into styled spans. */
 export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { text: '' }): InlineSpan[] {
   if (!tokens) return [];
   const out: InlineSpan[] = [];
+  let pending = '';
+  const flushPending = () => {
+    if (pending.length === 0) return;
+    out.push(...splitInlineMath(pending, base));
+    pending = '';
+  };
   for (const token of tokens) {
+    if (token.type !== 'text' && token.type !== 'escape') flushPending();
     switch (token.type) {
       case 'strong':
         out.push(...inlineSpans((token as Tokens.Strong).tokens, { ...base, bold: true }));
@@ -266,10 +326,16 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
         break;
       case 'escape':
       case 'text': {
-        const raw = (token as Tokens.Text).text ?? '';
         const nested = (token as Tokens.Text).tokens;
-        if (nested && nested.length > 0) out.push(...inlineSpans(nested, base));
-        else out.push(...splitInlineMath(raw, base));
+        if (nested && nested.length > 0) {
+          flushPending();
+          out.push(...inlineSpans(nested, base));
+        } else {
+          // Buffered rather than split on the spot: `marked` cuts a markdown
+          // escape into its own token, so "$\mathbf{0\%}$" arrives as three
+          // pieces and a formula split across them would never be recognised.
+          pending += (token as Tokens.Text).text ?? '';
+        }
         break;
       }
       default: {
@@ -280,6 +346,7 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
       }
     }
   }
+  flushPending();
   return out
     .map((span) => ({ ...span, text: collapseInlineWhitespace(span.text) }))
     .filter((span) => span.text.length > 0);
