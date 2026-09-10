@@ -71,6 +71,39 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  it('strips inline HTML tags instead of printing them', () => {
+    const blocks = parseMarkdown('Su H<sub>2</sub>O olur.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Su H2O olur.');
+  });
+
+  it('turns an inline line-break tag into a space, not into nothing', () => {
+    const blocks = parseMarkdown('Satır<br>sonu.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Satır sonu.');
+  });
+
+  it('keeps the text of an HTML block and drops its tags', () => {
+    const blocks = parseMarkdown('<div class="x">içerik</div>\n');
+    expect(blocks).toEqual([{ kind: 'paragraph', spans: [{ text: 'içerik' }] }]);
+  });
+
+  it('brackets an image so its alt text does not read as prose', () => {
+    const blocks = parseMarkdown('Şema: ![Mimari şeması](diagram.png) burada.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Şema: [Mimari şeması] burada.');
+  });
+
+  it('prints nothing for an image with no alt text', () => {
+    const blocks = parseMarkdown('Şema: ![](diagram.png) burada.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).not.toContain('[');
+  });
+
   it('marks struck text so it does not read as ordinary prose', () => {
     const blocks = parseMarkdown('Bu ~~yanlış~~ doğru.\n');
     const paragraph = blocks[0];

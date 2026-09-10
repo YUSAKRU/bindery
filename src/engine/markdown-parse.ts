@@ -63,6 +63,27 @@ function collapseInlineWhitespace(text: string): string {
   return text.replace(/[\n\t]+/g, ' ');
 }
 
+/** A single tag, which is how `marked` hands inline HTML over: one token each. */
+const HTML_TAG = /<\/?([a-zA-Z][\w-]*)(?:\s[^>]*)?\/?>/g;
+
+/**
+ * Reduces HTML to the text a printed page can carry.
+ *
+ * `marked` is used as a lexer, never as an HTML renderer, so a tag arrives as
+ * its own token and used to be printed literally — `H<sub>2</sub>O` reached the
+ * page with the tags showing. A booklet cannot render markup, and the tag tells
+ * the reader nothing, so the tags go and their text content stays. A line break
+ * becomes a space rather than nothing, or the words on either side would run
+ * together.
+ *
+ * Entities (`&amp;`, `&nbsp;`) are left as written; decoding them is a separate
+ * job and inventing a half-decoder here would be worse than leaving them
+ * visible.
+ */
+export function stripHtmlTags(raw: string): string {
+  return raw.replace(HTML_TAG, (_tag, name: string) => (/^(br|hr)$/i.test(name) ? ' ' : ''));
+}
+
 /** Flattens marked's inline tokens into styled spans. */
 export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { text: '' }): InlineSpan[] {
   if (!tokens) return [];
@@ -86,6 +107,19 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
       case 'codespan':
         out.push({ ...base, text: (token as Tokens.Codespan).text, mono: true });
         break;
+      case 'html':
+        out.push({ ...base, text: stripHtmlTags((token as Tokens.HTML).raw ?? '') });
+        break;
+      case 'image': {
+        // The file cannot travel into the booklet, so the alt text stands in
+        // for it — bracketed, because dropped straight into the sentence it
+        // reads as prose the author never wrote. Language-neutral on purpose:
+        // this module stays free of i18n. An image with no alt text says
+        // nothing a reader could use, so nothing is printed for it.
+        const alt = ((token as Tokens.Image).text ?? '').trim();
+        if (alt) out.push({ ...base, text: `[${alt}]` });
+        break;
+      }
       case 'br':
         out.push({ ...base, text: ' ' });
         break;
@@ -98,8 +132,8 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
         break;
       }
       default: {
-        // html, image and anything a future marked version adds: keep the
-        // literal text rather than silently dropping content off the page.
+        // Anything a future marked version adds: keep the literal text rather
+        // than silently dropping content off the page.
         const raw = (token as { text?: string; raw?: string }).text ?? (token as { raw?: string }).raw;
         if (raw) out.push({ ...base, text: raw });
       }
@@ -217,6 +251,14 @@ function pushBlock(token: Token, out: MdBlock[]): void {
       break;
     case 'space':
       break;
+    case 'html': {
+      // A block of HTML: same reasoning as the inline case, but the whole block
+      // arrives as one token, so the tags are stripped and whatever text they
+      // wrapped is kept as a paragraph.
+      const text = stripHtmlTags((token as Tokens.HTML).raw ?? '').trim();
+      if (text) out.push({ kind: 'paragraph', spans: [{ text }] });
+      break;
+    }
     default: {
       const raw = (token as { text?: string }).text;
       if (raw?.trim()) out.push({ kind: 'paragraph', spans: [{ text: raw.trim() }] });
