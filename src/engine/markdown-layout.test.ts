@@ -196,6 +196,26 @@ describe('parseMarkdown', () => {
     it('still leaves a lone dollar amount alone', () => {
       expect(text('Fiyat $50 tek dolar')).toBe('Fiyat $50 tek dolar');
     });
+
+    it('leaves two dollar amounts in one sentence as prose', () => {
+      // The pair of '$' matches, and the prose between them "converts"
+      // perfectly — as the prose it already was — so both delimiters were eaten
+      // and the sentence lost its currency. A run has to carry a command or a
+      // brace before it is read as maths.
+      expect(text('Tutar $50 ve $100 arası')).toBe('Tutar $50 ve $100 arası');
+      expect(text('A $1 B $2 C $3 D')).toBe('A $1 B $2 C $3 D');
+      expect(text('Yol $HOME ve $PATH ayarlı')).toBe('Yol $HOME ve $PATH ayarlı');
+    });
+
+    it('reads a display block written inside a paragraph, delimiters and all', () => {
+      // Two "$$…$$" blocks side by side on one line: asDisplayMath only fires
+      // for a paragraph that is nothing but one block, so these fall to the
+      // inline path. Without the display alternative the single-'$' rule
+      // matched between the doubled delimiters and left a '$' on each side.
+      expect(text('formül: $$\\text{a_b}(S) = \\frac{S}{R}$$ $$\\text{c_d}(U) = U \\times 2$$')).toBe(
+        'formül: a_b(S) = (S) / (R) c_d(U) = U × 2',
+      );
+    });
   });
 
   it('strips inline HTML tags instead of printing them', () => {

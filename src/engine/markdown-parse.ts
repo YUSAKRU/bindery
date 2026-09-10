@@ -15,10 +15,18 @@ import type { InlineSpan, MdBlock, TableAlign } from './markdown-types';
 /** Display-math delimiter. Phase 1 prints the source; see MdBlock's 'math'. */
 const BLOCK_MATH = '$$';
 
-// Inline math: a $…$ pair that stays on one line. Deliberately strict — an
-// unpaired '$' in prose (a price, a shell variable quoted outside a code span)
-// must not swallow the rest of the paragraph.
-const INLINE_MATH = /\$([^$\n]+)\$/g;
+// Maths inside a run of text. The display form is tried FIRST, and that order
+// is the whole point: a paragraph can carry a "$$…$$" block inline, or two of
+// them side by side, and `asDisplayMath` only fires when the paragraph is
+// nothing but one block. Without the display alternative the single-'$' rule
+// matched between the doubled delimiters and converted the content while
+// leaving a '$' standing on each side.
+//
+// The single form stays deliberately strict — it may not cross a line, so an
+// unpaired '$' in prose (a price, a shell variable outside a code span) cannot
+// swallow the rest of the paragraph. The display form may, because two
+// delimiters either side are not something prose produces by accident.
+const INLINE_MATH = /\$\$([^$]+)\$\$|\$([^$\n]+)\$/g;
 
 /**
  * LaTeX commands that have a faithful printed form, and what to print.
@@ -231,6 +239,21 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
  * showing the source. Stripping the `$` there would also make `$O(n)$` look
  * like prose that happens to be in another face.
  */
+/**
+ * Whether a single-'$' run is maths at all, rather than two currency amounts in
+ * one sentence.
+ *
+ * "Tutar $50 ve $100 arası" pairs the two dollar signs and the content between
+ * them converts perfectly — as the prose it already was — so the delimiters were
+ * silently eaten. A command, a brace, or a sub/superscript marker has to be
+ * present: that keeps "$R=96{,}000$" and "$t_f$" working while leaving prices
+ * and shell variables alone. The display form needs no such test — two
+ * delimiters either side is not something prose produces by accident.
+ */
+function looksLikeMaths(inner: string): boolean {
+  return /[\\{_^]/.test(inner);
+}
+
 function renderFormula(inner: string, raw: string, base: InlineSpan): InlineSpan[] {
   try {
     const spans = latexSpans(inner, base);
@@ -263,10 +286,19 @@ export function splitInlineMath(text: string, base: InlineSpan): InlineSpan[] {
   INLINE_MATH.lastIndex = 0;
   let match = INLINE_MATH.exec(text);
   while (match !== null) {
+    const display = match[1] !== undefined;
+    const inner = match[1] ?? match[2];
+    // Not maths: leave the region alone entirely. `last` is not advanced, so
+    // the text is picked up by the next slice and stays ordinary prose,
+    // dollar signs and all.
+    if (!display && !looksLikeMaths(inner)) {
+      match = INLINE_MATH.exec(text);
+      continue;
+    }
     if (match.index > last) {
       out.push({ ...base, text: text.slice(last, match.index) });
     }
-    out.push(...renderFormula(match[1], match[0], base));
+    out.push(...renderFormula(inner, match[0], base));
     last = match.index + match[0].length;
     match = INLINE_MATH.exec(text);
   }
