@@ -71,6 +71,44 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  describe('display LaTeX', () => {
+    const mathLines = (src: string) => {
+      const block = parseMarkdown(src)[0];
+      if (block?.kind !== 'math') throw new Error('expected a math block');
+      return block.lines;
+    };
+
+    it('renders a display block that can be printed faithfully', () => {
+      expect(
+        mathLines(
+          '$$\\text{snap}(\\text{snap}(T, \\text{FPS}), \\text{FPS}) \\equiv \\text{snap}(T, \\text{FPS})$$\n',
+        ),
+      ).toEqual(['snap(snap(T, FPS), FPS) == snap(T, FPS)']);
+    });
+
+    it('reads an underscore inside \\text as part of a name, not a subscript', () => {
+      // Deliberately a bare underscore, not "\\_": an escaped one is handled by
+      // the escape path and would not exercise the rule at all.
+      expect(mathLines('$$\\text{samples_to_us}(S, R) \\equiv S$$\n')).toEqual([
+        'samples_to_us(S, R) == S',
+      ]);
+    });
+
+    it('turns floor delimiters into the call they stand for', () => {
+      expect(mathLines('$$\\left\\lfloor \\frac{S + 1}{R} \\right\\rfloor$$\n')).toEqual([
+        'floor( (S + 1) / (R) )',
+      ]);
+    });
+
+    it('leaves the whole block as source when one line cannot be printed', () => {
+      // All or nothing per block, and it takes TWO lines to show it: with one
+      // line there is nothing to be inconsistent with. One converted line
+      // beside one raw line reads as two notations for the same statement.
+      const lines = mathLines('$$\\text{snap}(T) \\equiv T\n\\sum_{i=0}^{n} x_i$$\n');
+      expect(lines).toEqual(['\\text{snap}(T) \\equiv T', '\\sum_{i=0}^{n} x_i']);
+    });
+  });
+
   describe('inline LaTeX', () => {
     const flat = (src: string) => {
       const block = parseMarkdown(`${src}\n`)[0];
@@ -86,7 +124,9 @@ describe('parseMarkdown', () => {
       // Every target was checked against the bundled subsets: × · ± µ are in
       // all three faces, → ← in the monospace face via the fallback.
       expect(text('Hattı $\\rightarrow$ DMA-BUF')).toBe('Hattı → DMA-BUF');
-      expect(text('Oran $2 \\times 3$ kadar')).toBe('Oran 2 ×3 kadar');
+      // A binary operator keeps the space that terminates its name; only a
+      // unit prefix like \mu attaches to what follows.
+      expect(text('Oran $2 \\times 3$ kadar')).toBe('Oran 2 × 3 kadar');
     });
 
     it('writes the relations no bundled face carries as ASCII, spaced', () => {
@@ -114,8 +154,8 @@ describe('parseMarkdown', () => {
       // keep the delimiters and the monospace face.
       const sup = flat('Gerçek $E = mc^2$ korunur');
       expect(sup.find((s) => s.mono)?.text).toBe('$E = mc^2$');
-      const frac = flat('Karmaşık $\\frac{a}{b}$ korunur');
-      expect(frac.find((s) => s.mono)?.text).toBe('$\\frac{a}{b}$');
+      const unknown = flat('Toplam $\\sum_{i=0}^{n} x$ korunur');
+      expect(unknown.find((s) => s.mono)?.text).toBe('$\\sum_{i=0}^{n} x$');
     });
 
     it('prints a function name and spells the infinity it cannot draw', () => {
@@ -145,6 +185,12 @@ describe('parseMarkdown', () => {
       const spans = flat('Toplam $a \\oplus b$ olur');
       expect(spans.find((s) => s.mono)?.text).toBe('$a \\oplus b$');
       expect(spans.map((s) => s.text).join('')).toContain('\\oplus');
+    });
+
+    it('writes a fraction as a bracketed division rather than giving up', () => {
+      // "(a) / (b)" is the whole fraction, not half of one — the brackets keep
+      // precedence exact. A stacked fraction is what one line cannot show.
+      expect(text('Süre $\\frac{S + 1}{R}$ olur')).toBe('Süre (S + 1) / (R) olur');
     });
 
     it('still leaves a lone dollar amount alone', () => {

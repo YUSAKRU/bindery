@@ -56,8 +56,25 @@ const LATEX_TEXT: Readonly<Record<string, string>> = {
   exp: 'exp',
   max: 'max',
   min: 'min',
-  // No bundled face has ∞ and neither does Noto Sans Regular, so it is spelt.
+  // None of these is in any bundled face, and none is in Noto Sans Regular
+  // either, so each is written the way a technical reader already writes it in
+  // plain text. Floor and ceiling become function calls, which is exactly what
+  // the pair of delimiters means and survives being read linearly.
   infty: 'inf',
+  equiv: '==',
+  approx: '~=',
+  lfloor: 'floor(',
+  rfloor: ')',
+  lceil: 'ceil(',
+  rceil: ')',
+  ldots: '...',
+  dots: '...',
+  cdots: '...',
+  quad: '  ',
+  qquad: '    ',
+  // Delimiter sizing only; the delimiter itself follows and carries the meaning.
+  left: '',
+  right: '',
   le: '<=',
   leq: '<=',
   ge: '>=',
@@ -67,6 +84,15 @@ const LATEX_TEXT: Readonly<Record<string, string>> = {
   ll: '<<',
   gg: '>>',
 };
+
+/**
+ * Commands whose replacement attaches to whatever follows, so the space that
+ * terminates the command name is dropped as LaTeX drops it: "\mu s" is "µs",
+ * not "µ s". Everything else is an operator, a relation or a function name
+ * sitting between operands, and there the space is what makes it readable —
+ * "\times 1{,}000" has to print "× 1,000", not "×1,000".
+ */
+const LATEX_ATTACHING = new Set(['mu']);
 
 /** `\mathbf{…}` and friends: a command that styles the group it wraps. */
 const LATEX_BOLD = new Set(['mathbf', 'bm', 'textbf', 'mathrm', 'text', 'mathit', 'textit']);
@@ -82,6 +108,19 @@ class UnprintableLatex extends Error {}
  * different maths — the caller then keeps the LaTeX source verbatim, which is
  * the behaviour this pipeline shipped with.
  */
+function readGroup(input: string, at: number): { inner: string; next: number } | null {
+  if (input[at] !== '{') return null;
+  let depth = 1;
+  let j = at + 1;
+  while (j < input.length && depth > 0) {
+    if (input[j] === '{') depth += 1;
+    else if (input[j] === '}') depth -= 1;
+    j += 1;
+  }
+  if (depth !== 0) return null;
+  return { inner: input.slice(at + 1, j - 1), next: j };
+}
+
 function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
   const out: InlineSpan[] = [];
   const push = (text: string, bold: boolean) => {
@@ -91,7 +130,7 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
     else out.push(bold ? { ...base, text, bold: true } : { ...base, text });
   };
 
-  const walk = (input: string, bold: boolean): void => {
+  const walk = (input: string, bold: boolean, literal = false): void => {
     let i = 0;
     let plain = '';
     const flush = () => {
@@ -112,15 +151,16 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
         }
         if (depth !== 0) throw new UnprintableLatex(input);
         flush();
-        walk(input.slice(i + 1, j - 1), bold);
+        walk(input.slice(i + 1, j - 1), bold, literal);
         i = j;
         continue;
       }
       if (ch !== '\\') {
         if (ch === '}') throw new UnprintableLatex(input);
         // '^' and '_' change the meaning of what follows and cannot be shown
-        // on one line; a formula using them stays as source.
-        if (ch === '^' || ch === '_') throw new UnprintableLatex(input);
+        // on one line; a formula using them stays as source. Inside \text{…}
+        // they are ordinary characters — "\text{samples_to_us}" is a name.
+        if (!literal && (ch === '^' || ch === '_')) throw new UnprintableLatex(input);
         plain += ch;
         i += 1;
         continue;
@@ -138,18 +178,27 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
       const name = nameMatch[0];
       let after = i + 1 + name.length;
       if (LATEX_BOLD.has(name)) {
-        if (input[after] !== '{') throw new UnprintableLatex(input);
-        let depth = 1;
-        let j = after + 1;
-        while (j < input.length && depth > 0) {
-          if (input[j] === '{') depth += 1;
-          else if (input[j] === '}') depth -= 1;
-          j += 1;
-        }
-        if (depth !== 0) throw new UnprintableLatex(input);
+        const group = readGroup(input, after);
+        if (!group) throw new UnprintableLatex(input);
         flush();
-        walk(input.slice(after + 1, j - 1), name === 'mathbf' || name === 'bm' || name === 'textbf');
-        i = j;
+        walk(group.inner, name === 'mathbf' || name === 'bm' || name === 'textbf', true);
+        i = group.next;
+        continue;
+      }
+      if (name === 'frac' || name === 'dfrac' || name === 'tfrac') {
+        // "(a) / (b)" is the whole fraction, not half of one: the brackets keep
+        // precedence exact, so nothing about the value is left to the reader to
+        // guess. A stacked fraction is the one thing a single line cannot show.
+        const numerator = readGroup(input, after);
+        const denominator = numerator ? readGroup(input, numerator.next) : null;
+        if (!numerator || !denominator) throw new UnprintableLatex(input);
+        flush();
+        push('(', bold);
+        walk(numerator.inner, bold, literal);
+        push(') / (', bold);
+        walk(denominator.inner, bold, literal);
+        push(')', bold);
+        i = denominator.next;
         continue;
       }
       const replacement = LATEX_TEXT[name];
@@ -157,12 +206,7 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
       plain += replacement;
       if (input[after] === ' ') {
         after += 1;
-        // LaTeX drops the space that terminates a command name, and for a
-        // single character that is what the author means: "\mu s" is "µs", not
-        // "µ s". The multi-character replacements are all relations written as
-        // ASCII, and "<=500 ms" reads as one token — keep their space so
-        // "\le \mathbf{500\ ms}" prints "<= 500 ms".
-        if (replacement.length > 1) plain += ' ';
+        if (replacement.length > 0 && !LATEX_ATTACHING.has(name)) plain += ' ';
       }
       i = after;
     }
@@ -195,6 +239,22 @@ function renderFormula(inner: string, raw: string, base: InlineSpan): InlineSpan
     if (!(error instanceof UnprintableLatex)) throw error;
   }
   return [{ ...base, text: raw, mono: true }];
+}
+
+/**
+ * A display `$$ … $$` line as plain text, or null when it cannot be printed
+ * faithfully. Bold is dropped rather than lost silently: no monospace bold face
+ * is bundled, so a display block could not show it either way.
+ */
+export function latexToPlainText(source: string): string | null {
+  try {
+    return latexSpans(source, { text: '' })
+      .map((span) => span.text)
+      .join('');
+  } catch (error) {
+    if (error instanceof UnprintableLatex) return null;
+    throw error;
+  }
 }
 
 export function splitInlineMath(text: string, base: InlineSpan): InlineSpan[] {
@@ -352,6 +412,18 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
     .filter((span) => span.text.length > 0);
 }
 
+/**
+ * Renders a display block's lines when every one of them can be printed
+ * faithfully, and otherwise leaves the whole block as source.
+ *
+ * All or nothing per block on purpose: a formula with one converted line and
+ * one raw line reads as two different notations for the same statement.
+ */
+function renderMathLines(lines: string[]): string[] {
+  const rendered = lines.map(latexToPlainText);
+  return rendered.every((line): line is string => line !== null) ? rendered : lines;
+}
+
 /** True when a paragraph is really a `$$ … $$` display-math block. */
 function asDisplayMath(text: string): string[] | null {
   const trimmed = text.trim();
@@ -413,7 +485,7 @@ function pushBlock(token: Token, out: MdBlock[]): void {
     case 'paragraph': {
       const paragraph = token as Tokens.Paragraph;
       const math = asDisplayMath(paragraph.text ?? paragraph.raw ?? '');
-      if (math) out.push({ kind: 'math', lines: math });
+      if (math) out.push({ kind: 'math', lines: renderMathLines(math) });
       else out.push({ kind: 'paragraph', spans: inlineSpans(paragraph.tokens) });
       break;
     }
