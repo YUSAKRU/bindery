@@ -210,6 +210,24 @@ describe('sanitizeBlocks', () => {
     expect(out.spans[2]).toMatchObject({ text: 'b', bold: true });
   });
 
+  it('does not print a soft line break as an unsupported glyph', () => {
+    // Found on the device: every bullet of a real document came out as
+    // "01_PRD_AND_VISION.md?Ürün kimliği …". The '?' was the newline the
+    // parser left inside the span — no font maps U+000A, so sanitising
+    // replaced it. A soft break is a space in Markdown and must reach the page
+    // as one, whichever layer normalises it.
+    const source = '- **file.md**\n  description here\n';
+    const blocks = parseMarkdown(source);
+    const alphabet = 'filedscrptonhw.*-*Üünkmiğ ';
+    const cov = coverage(alphabet, alphabet, alphabet);
+    const out = sanitizeBlocks(blocks, cov);
+    const text = out
+      .flatMap((block) => ('spans' in block ? block.spans.map((span) => span.text) : []))
+      .join('');
+    expect(text).not.toContain(UNSUPPORTED_GLYPH);
+    expect(text).toContain('file.md description here');
+  });
+
   it('walks table header and body cells', () => {
     const cov = coverage('ab', 'ab', 'ab');
     const blocks: MdBlock[] = [

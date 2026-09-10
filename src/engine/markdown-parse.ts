@@ -43,6 +43,26 @@ export function splitInlineMath(text: string, base: InlineSpan): InlineSpan[] {
   return out.length > 0 ? out : [{ ...base, text }];
 }
 
+/**
+ * Turns the whitespace Markdown reads as a word separator into a real space.
+ *
+ * A soft line break inside a paragraph, a list item's continuation line and a
+ * tab between words are all separators in the source, not glyphs. Left in the
+ * span they reach the renderer, which finds no `U+000A` or `U+0009` in any
+ * bundled face and prints `?` — every bullet of a real document came out as
+ * `01_PRD_AND_VISION.md?Ürün kimliği …` before this. `\r` needs no handling:
+ * `marked` has already folded CRLF to `\n` by the time tokens arrive.
+ *
+ * This runs AFTER `splitInlineMath`, and the order is not cosmetic. The inline
+ * maths pattern deliberately refuses to cross a line (`[^$\n]+`) so that two
+ * prices on consecutive lines are not read as one formula. Collapsing the
+ * break first would hand it `Tutar $50. Sonraki ürün $100.` on one line, and
+ * `$50. Sonraki ürün $` would be swallowed as maths and set in monospace.
+ */
+function collapseInlineWhitespace(text: string): string {
+  return text.replace(/[\n\t]+/g, ' ');
+}
+
 /** Flattens marked's inline tokens into styled spans. */
 export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { text: '' }): InlineSpan[] {
   if (!tokens) return [];
@@ -85,7 +105,9 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
       }
     }
   }
-  return out.filter((span) => span.text.length > 0);
+  return out
+    .map((span) => ({ ...span, text: collapseInlineWhitespace(span.text) }))
+    .filter((span) => span.text.length > 0);
 }
 
 /** True when a paragraph is really a `$$ … $$` display-math block. */
@@ -185,6 +207,8 @@ function pushBlock(token: Token, out: MdBlock[]): void {
 /** Parses one Markdown source file into blocks, in document order. */
 export function parseMarkdown(source: string): MdBlock[] {
   const out: MdBlock[] = [];
-  for (const token of marked.lexer(source)) pushBlock(token, out);
+  // A byte-order mark is not text. `marked` keeps it, no bundled face draws it,
+  // and it would print as `?` before the document's first word.
+  for (const token of marked.lexer(source.replace(/^\uFEFF/, ''))) pushBlock(token, out);
   return out;
 }

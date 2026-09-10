@@ -71,6 +71,59 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  it('collapses a soft line break into a space instead of leaving it in the span', () => {
+    // No bundled face maps U+000A, so a newline that survives into a span is
+    // printed as '?'. Found on the device: "01_PRD_AND_VISION.md?Ürün kimliği".
+    const blocks = parseMarkdown('Birinci satır\nikinci satır\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Birinci satır ikinci satır');
+  });
+
+  it('collapses the continuation line of a list item too', () => {
+    const blocks = parseMarkdown('- 01_PRD.md\n  Ürün kimliği burada\n');
+    const item = blocks[0];
+    if (item?.kind !== 'listItem') throw new Error('expected a list item');
+    expect(item.spans.map((s) => s.text).join('')).toBe('01_PRD.md Ürün kimliği burada');
+  });
+
+  it('collapses a tab between words', () => {
+    // `marked` leaves a tab in the span and no bundled face maps U+0009 either.
+    const blocks = parseMarkdown('kelime1\tkelime2\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('kelime1 kelime2');
+  });
+
+  it('does not let the collapse turn two prices into one formula', () => {
+    // The regression the ordering guards. `$…$` deliberately refuses to cross a
+    // line, so collapsing the break BEFORE the split would hand the pattern
+    // "Tutar $50. Sonraki $100." and "$50. Sonraki $" would be set as maths.
+    const blocks = parseMarkdown('Tutar $50.\nSonraki $100.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.some((s) => s.mono)).toBe(false);
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Tutar $50. Sonraki $100.');
+  });
+
+  it('leaves the newlines inside a fenced code block alone', () => {
+    // Code blocks reach the layout engine as `lines`, never through
+    // `inlineSpans` — a collapse that reached them would flatten the listing.
+    const blocks = parseMarkdown('```rust\nfn main() {\n    let a = 1;\n}\n```\n');
+    expect(blocks[0]).toEqual({
+      kind: 'code',
+      lang: 'rust',
+      lines: ['fn main() {', '    let a = 1;', '}'],
+    });
+  });
+
+  it('drops a byte-order mark instead of printing it', () => {
+    const blocks = parseMarkdown('﻿Başlangıç\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Başlangıç');
+  });
+
   it('does not treat a lone dollar sign as maths', () => {
     expect(splitInlineMath('costs $5 and rises', { text: '' })).toEqual([
       { text: 'costs $5 and rises' },
