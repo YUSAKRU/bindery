@@ -123,9 +123,29 @@ function tableCells(cells: Tokens.TableCell[] | undefined): InlineSpan[][] {
   return (cells ?? []).map((cell) => inlineSpans(cell.tokens));
 }
 
+/**
+ * The bullet a list item is printed with.
+ *
+ * A task item carries its state in the marker, because `marked` strips the
+ * `[x]` from the item's text and hands the state over separately — ignoring it
+ * printed a finished task and a pending one identically, which is the one thing
+ * a checklist exists to tell apart.
+ *
+ * The state is written as ASCII rather than `☑`/`☐` on purpose. The marker is
+ * drawn straight from the body face in `markdown-layout.ts` and never passes
+ * through `sanitizeBlocks`, so a glyph that face lacks would not degrade to
+ * `?` — it would abort the whole conversion inside pdf-lib. Neither box
+ * character, nor `✓`, nor `□` is in the bundled subset; `[x]` is, and it is
+ * what the author typed.
+ */
+function listMarker(token: Tokens.List, item: Tokens.ListItem, index: number): string {
+  if (item.task) return item.checked ? '[x]' : '[ ]';
+  return token.ordered ? `${(token.start || 1) + index}.` : '•';
+}
+
 function pushList(token: Tokens.List, depth: number, out: MdBlock[]): void {
   token.items.forEach((item, index) => {
-    const marker = token.ordered ? `${(token.start || 1) + index}.` : '•';
+    const marker = listMarker(token, item, index);
     const own: Token[] = [];
     const nested: MdBlock[] = [];
     for (const child of item.tokens ?? []) {

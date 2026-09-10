@@ -71,6 +71,34 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  it('keeps a task list item\'s state in its marker', () => {
+    // `marked` strips the "[x]" from the text and reports the state separately.
+    // Dropping it printed a finished task and a pending one identically.
+    const blocks = parseMarkdown('- [x] biten iş\n- [ ] bekleyen iş\n');
+    expect(blocks.map((b) => (b.kind === 'listItem' ? [b.marker, b.spans[0].text] : b.kind))).toEqual([
+      ['[x]', 'biten iş'],
+      ['[ ]', 'bekleyen iş'],
+    ]);
+  });
+
+  it('writes the task marker with glyphs the body face actually has', () => {
+    // The marker is drawn straight from the body face and skips sanitising, so
+    // an absent glyph aborts the conversion rather than degrading. Nothing in
+    // the ☐/☑/✓/□ family is in the bundled subset.
+    const blocks = parseMarkdown('- [x] a\n- [ ] b\n');
+    for (const block of blocks) {
+      if (block.kind !== 'listItem') continue;
+      for (const ch of block.marker) expect(ch.codePointAt(0)).toBeLessThan(0x80);
+    }
+  });
+
+  it('leaves an ordinary bullet and an ordered number alone', () => {
+    const bullets = parseMarkdown('- düz madde\n');
+    expect(bullets[0]).toMatchObject({ kind: 'listItem', marker: '•' });
+    const ordered = parseMarkdown('3. üçüncü\n4. dördüncü\n');
+    expect(ordered.map((b) => (b.kind === 'listItem' ? b.marker : b.kind))).toEqual(['3.', '4.']);
+  });
+
   it('collapses a soft line break into a space instead of leaving it in the span', () => {
     // No bundled face maps U+000A, so a newline that survives into a span is
     // printed as '?'. Found on the device: "01_PRD_AND_VISION.md?Ürün kimliği".
