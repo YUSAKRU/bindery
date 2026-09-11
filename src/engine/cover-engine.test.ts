@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import fc from 'fast-check';
 import {
   A4_LONG_EDGE_MM,
+  A4_SHORT_EDGE_MM,
   computeCoverDimensions,
   computeSpineWidth,
   computeSplitCoverDimensions,
@@ -16,6 +17,7 @@ import {
   GLUE_TAB_WIDTH_MM,
   LAP_FLAP_WIDTH_MM,
   MM_TO_PT,
+  placeSheetOnPrinterPaper,
 } from './cover-engine';
 import type { BindingType, CoverTheme, PaperGsm, SpineCalculationResult } from './cover-engine';
 import { BookletError } from './types';
@@ -638,7 +640,7 @@ describe('generateCoverPdf — split format', () => {
     }
   }
 
-  it('produces a 2-page PDF whose pages are exactly the two computed sheets', async () => {
+  it('produces a 2-page PDF on real A4 sheets, not on the artwork\'s own box', async () => {
     stubFontFetch();
     const dimensions = computeSplitCoverDimensions(A5_SPLIT);
     const pdfBytes = await generateCoverPdf({
@@ -647,12 +649,71 @@ describe('generateCoverPdf — split format', () => {
       spineResult,
     });
 
+    // This used to assert the pages WERE the artwork boxes. That is exactly the
+    // bug: a 176.60 x 216.00 mm page box made every driver fit-to-page the sheet
+    // onto A4, enlarging the spine by 18.9% so the cover missed its book block.
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
     const doc = await PDFDocument.load(pdfBytes);
     expect(doc.getPageCount()).toBe(2);
-    expect(doc.getPage(0).getWidth()).toBeCloseTo(dimensions.sheet1.widthPt, 6);
-    expect(doc.getPage(0).getHeight()).toBeCloseTo(dimensions.totalHeightPt, 6);
-    expect(doc.getPage(1).getWidth()).toBeCloseTo(dimensions.sheet2.widthPt, 6);
-    expect(doc.getPage(1).getHeight()).toBeCloseTo(dimensions.totalHeightPt, 6);
+    for (const page of [doc.getPage(0), doc.getPage(1)]) {
+      expect(page.getWidth()).toBeCloseTo(a4WidthPt, 6);
+      expect(page.getHeight()).toBeCloseTo(a4HeightPt, 6);
+    }
+    // The artwork still has to fit inside that sheet, or the page box would be
+    // lying in the other direction.
+    expect(dimensions.sheet1.widthPt).toBeLessThanOrEqual(a4WidthPt);
+    expect(dimensions.totalHeightPt).toBeLessThanOrEqual(a4HeightPt);
+  });
+
+  it('butts each split sheet against its own mating edge and centres it vertically', () => {
+    const dimensions = computeSplitCoverDimensions(A5_SPLIT);
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
+
+    const place1 = placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.totalHeightPt, 'right');
+    const place2 = placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.totalHeightPt, 'left');
+
+    expect(place1.fitsPrinterSheet).toBe(true);
+    expect(place2.fitsPrinterSheet).toBe(true);
+
+    // Sheet 1's lap flap is its right edge and sheet 2's glue tab its left, so
+    // each of those lands on the paper's own edge and needs no cut at all.
+    expect(place1.offsetXPt).toBeCloseTo(a4WidthPt - dimensions.sheet1.widthPt, 6);
+    expect(place2.offsetXPt).toBeCloseTo(0, 6);
+
+    // Vertically there is no mating edge, so the artwork is centred: equal
+    // margin at head and tail.
+    const expectedY = (a4HeightPt - dimensions.totalHeightPt) / 2;
+    expect(place1.offsetYPt).toBeCloseTo(expectedY, 6);
+    expect(place2.offsetYPt).toBeCloseTo(expectedY, 6);
+
+    // The mating edges must end up at the same distance from their sheets'
+    // opposite paper edges, or the two halves cannot meet flush.
+    expect(place1.offsetXPt + dimensions.sheet1.widthPt).toBeCloseTo(a4WidthPt, 6);
+    expect(place2.offsetXPt).toBeCloseTo(0, 6);
+  });
+
+  it('leaves artwork too large for A4 at its own size rather than shrinking it', () => {
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
+
+    // The single A5 wrap: 302 mm + spine wide, so it clears neither A4 edge and
+    // is a legitimate A3 / copy-shop job that must not regress.
+    const single = computeCoverDimensions(A5_SPLIT);
+    const tooWide = placeSheetOnPrinterPaper(single.totalWidthPt, single.totalHeightPt, 'right');
+    expect(single.totalWidthPt).toBeGreaterThan(a4WidthPt);
+    expect(tooWide.fitsPrinterSheet).toBe(false);
+    expect(tooWide.pageWidthPt).toBeCloseTo(single.totalWidthPt, 6);
+    expect(tooWide.pageHeightPt).toBeCloseTo(single.totalHeightPt, 6);
+    expect(tooWide.offsetXPt).toBe(0);
+    expect(tooWide.offsetYPt).toBe(0);
+
+    // Too tall counts just as much as too wide: an A4-trim book's cover is
+    // 303 mm high and must keep its own box too.
+    const tooTall = placeSheetOnPrinterPaper(a4WidthPt - 1, a4HeightPt + 1, 'left');
+    expect(tooTall.fitsPrinterSheet).toBe(false);
+    expect(tooTall.pageHeightPt).toBeCloseTo(a4HeightPt + 1, 6);
   });
 
   it('the single format still produces exactly 1 page from the same book', async () => {

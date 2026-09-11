@@ -62,6 +62,8 @@ export const LAP_FLAP_WIDTH_MM = 20;
 export const GLUE_TAB_WIDTH_MM = 10;
 /** Long edge of A4 (mm) — the widest sheet a home printer can feed, landscape. */
 export const A4_LONG_EDGE_MM = 297;
+/** Short edge of A4 (mm). With A4_LONG_EDGE_MM, the portrait sheet a home printer actually feeds. */
+export const A4_SHORT_EDGE_MM = 210;
 
 export interface CoverRect { x: number; y: number; width: number; height: number }
 
@@ -258,6 +260,74 @@ export function computeSplitCoverDimensions(input: SplitCoverDimensionsInput): S
   };
 }
 
+/** Which edge of a split sheet meets the other one: sheet 1's lap flap is on its right, sheet 2's glue tab on its left. */
+export type MatingEdge = 'left' | 'right';
+
+export interface SheetPlacement {
+  /** The page box to open: the printer's own sheet when the artwork fits it, otherwise the artwork itself. */
+  pageWidthPt: number;
+  pageHeightPt: number;
+  offsetXPt: number;
+  offsetYPt: number;
+  /** False when the artwork is larger than A4 and is therefore emitted at its own size. */
+  fitsPrinterSheet: boolean;
+}
+
+/**
+ * Where a split sheet's artwork sits on the paper that is actually fed.
+ *
+ * Until this existed the cover PDF opened its page at the ARTWORK's size — a
+ * 176.60 x 216.00 mm box for an A5 split — and every print driver then fitted
+ * that to the paper, scaling it up by 210 / 176.60 = 1.189. A 5.10 mm spine
+ * printed 6.06 mm wide and the cover no longer sat on its own book block. The
+ * geometry was never wrong; the page box lied about what paper it was for.
+ *
+ * The artwork is centred vertically but butted HORIZONTALLY against the mating
+ * edge rather than centred. Centring would leave white on all four sides, so
+ * the binder would cut four edges instead of two — and the two extra cuts would
+ * land exactly on the lap flap and the glue tab, the pair of edges whose
+ * alignment decides whether the two sheets meet cleanly.
+ *
+ * Artwork too big for A4 (the single wrap, or an A4-trim book) keeps its own
+ * page box: those already print correctly on A3 and must not regress.
+ */
+export function placeSheetOnPrinterPaper(
+  artworkWidthPt: number,
+  artworkHeightPt: number,
+  matingEdge: MatingEdge,
+): SheetPlacement {
+  const paperWidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+  const paperHeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
+
+  if (artworkWidthPt > paperWidthPt || artworkHeightPt > paperHeightPt) {
+    return {
+      pageWidthPt: artworkWidthPt,
+      pageHeightPt: artworkHeightPt,
+      offsetXPt: 0,
+      offsetYPt: 0,
+      fitsPrinterSheet: false,
+    };
+  }
+
+  return {
+    pageWidthPt: paperWidthPt,
+    pageHeightPt: paperHeightPt,
+    offsetXPt: matingEdge === 'right' ? paperWidthPt - artworkWidthPt : 0,
+    offsetYPt: (paperHeightPt - artworkHeightPt) / 2,
+    fitsPrinterSheet: true,
+  };
+}
+
+/** Moves a panel rect out of artwork space and onto the printed page. */
+function onPaper(rect: CoverRect, placement: SheetPlacement): CoverRect {
+  return {
+    x: rect.x + placement.offsetXPt,
+    y: rect.y + placement.offsetYPt,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 /** Sniffs the PNG signature; anything else is treated as JPEG (mirrors image-to-pdf-engine's explicit format field, but this contract carries raw bytes only). */
 function detectImageFormat(bytes: Uint8Array): 'png' | 'jpg' {
   const isPng = bytes.length >= 8
@@ -327,16 +397,16 @@ const FOLD_GUIDE_DASH: [number, number] = [4, 4];
 interface CoverFonts { font: PDFFont; boldFont: PDFFont }
 
 /**
- * A dashed floor-to-ceiling crease guide at `x`.
+ * A dashed crease guide at `x`, spanning the artwork from `yBottom` upwards.
  *
  * Drawn in the theme's own text color rather than a fixed grey so it stays
  * visible on the dark themes (navy/burgundy/charcoal), where a grey hairline
  * would vanish into the background.
  */
-function drawFoldGuide(page: PDFPage, x: number, heightPt: number, color: RGB): void {
+function drawFoldGuide(page: PDFPage, x: number, yBottom: number, heightPt: number, color: RGB): void {
   page.drawLine({
-    start: { x, y: 0 },
-    end: { x, y: heightPt },
+    start: { x, y: yBottom },
+    end: { x, y: yBottom + heightPt },
     thickness: FOLD_GUIDE_THICKNESS,
     color,
     opacity: FOLD_GUIDE_OPACITY,
@@ -445,10 +515,11 @@ function drawBackCoverPanel(
  * `dimensions.format === 'single'` produces the classic one-page wraparound
  * (back + spine + front, left to right) sized to totalWidthPt x totalHeightPt.
  *
- * `dimensions.format === 'split'` produces a two-page PDF, each page an
- * A4-feedable sheet: page 1 is back + spine + lap flap, page 2 is glue tab +
- * front cover, with dashed crease guides where the sheet must be folded and
- * where the two sheets overlap.
+ * `dimensions.format === 'split'` produces a two-page PDF, each page an actual
+ * A4 sheet: page 1 is back + spine + lap flap, page 2 is glue tab + front
+ * cover, with dashed crease guides where the sheet must be folded and where the
+ * two sheets overlap. The artwork is positioned on that sheet by
+ * placeSheetOnPrinterPaper; a split too wide for A4 keeps its own page box.
  *
  * `options.format`, when given, must agree with the dimensions it was handed —
  * the two carry different panel sets, so a disagreement is a caller bug, not
@@ -490,19 +561,25 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     const { sheet1, sheet2 } = dimensions;
 
     // --- SHEET 1: back cover | spine | lap flap ---
-    const page1 = doc.addPage([sheet1.widthPt, sheet1.heightPt]);
-    page1.drawRectangle({ x: 0, y: 0, width: sheet1.widthPt, height: sheet1.heightPt, color: backgroundColor });
-    drawSpinePanel(page1, sheet1.spineRect, content, fonts, textColor, spineResult);
-    drawBackCoverPanel(page1, sheet1.backCoverRect, content, fonts, textColor);
+    // The lap flap is this sheet's right-hand edge, so that is the edge butted
+    // against the paper — see placeSheetOnPrinterPaper for why.
+    const place1 = placeSheetOnPrinterPaper(sheet1.widthPt, sheet1.heightPt, 'right');
+    const page1 = doc.addPage([place1.pageWidthPt, place1.pageHeightPt]);
+    page1.drawRectangle({ x: place1.offsetXPt, y: place1.offsetYPt, width: sheet1.widthPt, height: sheet1.heightPt, color: backgroundColor });
+    drawSpinePanel(page1, onPaper(sheet1.spineRect, place1), content, fonts, textColor, spineResult);
+    drawBackCoverPanel(page1, onPaper(sheet1.backCoverRect, place1), content, fonts, textColor);
     // The lap flap itself is deliberately left blank: it ends up bonded under
     // sheet 2's glue tab, so anything printed on it would be buried.
-    for (const x of sheet1.foldLinesX) drawFoldGuide(page1, x, sheet1.heightPt, textColor);
+    for (const x of sheet1.foldLinesX) drawFoldGuide(page1, x + place1.offsetXPt, place1.offsetYPt, sheet1.heightPt, textColor);
 
     // --- SHEET 2: glue tab | front cover ---
-    const page2 = doc.addPage([sheet2.widthPt, sheet2.heightPt]);
-    page2.drawRectangle({ x: 0, y: 0, width: sheet2.widthPt, height: sheet2.heightPt, color: backgroundColor });
-    await drawFrontCoverPanel(doc, page2, sheet2.frontCoverRect, content, fonts, textColor);
-    for (const x of sheet2.foldLinesX) drawFoldGuide(page2, x, sheet2.heightPt, textColor);
+    // Sheet 2 meets sheet 1 on its left, so it is butted the other way; the two
+    // mating edges then sit on the two sheets' own paper edges, uncut.
+    const place2 = placeSheetOnPrinterPaper(sheet2.widthPt, sheet2.heightPt, 'left');
+    const page2 = doc.addPage([place2.pageWidthPt, place2.pageHeightPt]);
+    page2.drawRectangle({ x: place2.offsetXPt, y: place2.offsetYPt, width: sheet2.widthPt, height: sheet2.heightPt, color: backgroundColor });
+    await drawFrontCoverPanel(doc, page2, onPaper(sheet2.frontCoverRect, place2), content, fonts, textColor);
+    for (const x of sheet2.foldLinesX) drawFoldGuide(page2, x + place2.offsetXPt, place2.offsetYPt, sheet2.heightPt, textColor);
 
     return doc.save();
   }
