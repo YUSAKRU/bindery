@@ -387,6 +387,17 @@ describe('describeSignatureSplit', () => {
     expect(tooSmall).toContain('2');
     expect(tooSmall).toContain('32');
   });
+
+  it('replaces all occurrences of repeated placeholders in a template', () => {
+    // cover.totalDimensionsSplit contains {h} twice: 'Tabaka 1: {w1} × {h} mm · Tabaka 2: {w2} × {h} mm'
+    const text = t('cover.totalDimensionsSplit', { w1: '161.0', w2: '161.0', h: '210.0' });
+    expect(text).not.toContain('{h}');
+    expect(text).not.toContain('{w1}');
+    expect(text).not.toContain('{w2}');
+    // Both occurrences of {h} must be replaced with 210.0
+    const matches = text.match(/210\.0/g);
+    expect(matches?.length).toBe(2);
+  });
 });
 
 describe('resolveSignatureHintData', () => {

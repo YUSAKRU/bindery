@@ -1350,7 +1350,7 @@ export function t(key: string, params?: Record<string, string | number>): string
   let str = STRINGS[currentLang][key] ?? STRINGS.en[key] ?? key;
   if (params) {
     for (const [name, value] of Object.entries(params)) {
-      str = str.replace(`{${name}}`, String(value));
+      str = str.replaceAll(`{${name}}`, String(value));
     }
   }
   return str;
