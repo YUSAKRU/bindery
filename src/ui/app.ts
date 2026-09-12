@@ -730,6 +730,7 @@ export function initApp(): void {
   const coverBoardThicknessBlock = byId<HTMLDivElement>('coverBoardThicknessBlock');
   const coverBoardGroup = byId<HTMLDivElement>('coverBoardGroup');
   const coverPageTrimGroup = byId<HTMLDivElement>('coverPageTrimGroup');
+  const coverPageTrimHint = byId<HTMLParagraphElement>('coverPageTrimHint');
   const coverGenerateBtn = byId<HTMLButtonElement>('coverGenerateBtn');
   const coverGenerateBtnLabel = byId<HTMLSpanElement>('coverGenerateBtnLabel');
   const coverGenerateSpinner = byId<HTMLSpanElement>('coverGenerateSpinner');
@@ -4423,6 +4424,10 @@ export function initApp(): void {
     coverBoardThicknessBlock.classList.add('hidden');
     setActiveSegment(coverBoardGroup, 'board', '2.0');
     setActiveSegment(coverPageTrimGroup, 'trim', 'A5');
+    if (coverPageTrimHint) {
+      coverPageTrimHint.dataset.i18n = 'cover.pageTrimA5Hint';
+      coverPageTrimHint.textContent = t('cover.pageTrimA5Hint');
+    }
     applyCoverFormatToUi();
 
     coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
@@ -4630,6 +4635,11 @@ export function initApp(): void {
     if (!trim) return;
     coverPageTrim = trim;
     setActiveSegment(coverPageTrimGroup, 'trim', trim);
+    if (coverPageTrimHint) {
+      const hintKey = trim === 'A5' ? 'cover.pageTrimA5Hint' : 'cover.pageTrimA4Hint';
+      coverPageTrimHint.dataset.i18n = hintKey;
+      coverPageTrimHint.textContent = t(hintKey);
+    }
     updateCoverLiveCalculations();
   });
 
