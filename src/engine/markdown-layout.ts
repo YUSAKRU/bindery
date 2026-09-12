@@ -194,12 +194,14 @@ export function wrapCodeLine(
   let rest = line;
   let prefix = '';
   let budget = firstBudget;
+  let currentIndentLen = ownIndent.length;
   while (rest.length > budget) {
-    const cut = breakPoint(rest, budget, ownIndent.length);
+    const cut = breakPoint(rest, budget, currentIndentLen);
     out.push(prefix + rest.slice(0, cut));
     rest = rest.slice(cut);
     prefix = contPrefix;
     budget = contBudget;
+    currentIndentLen = 0;
   }
   out.push(prefix + rest);
   return out;
@@ -493,8 +495,8 @@ const STRIKE_THICKNESS = 0.055;
 /** Below this the rule stops being visible when the page is rasterised. */
 const MIN_STRIKE_THICKNESS = 0.4;
 
-function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: number): LayoutLine {
-  const line: LayoutLine = { kind: 'line', y: reserve(cursor, leading, ascent), runs };
+function emitLineAt(cursor: Cursor, runs: LayoutRun[], y: number): LayoutLine {
+  const line: LayoutLine = { kind: 'line', y, runs };
   cursor.items.push(line);
   for (const run of runs) {
     if (run.strike !== true || run.width === undefined || run.width <= 0) continue;
@@ -508,6 +510,10 @@ function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: nu
     });
   }
   return line;
+}
+
+function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: number): LayoutLine {
+  return emitLineAt(cursor, runs, reserve(cursor, leading, ascent));
 }
 
 interface Geometry {
@@ -631,11 +637,7 @@ function layoutTable(
             widths[c] - TABLE_CELL_PADDING * 2,
             runsWidth(runs, metrics),
           );
-        cursor.items.push({
-          kind: 'line',
-          y: top - r * bodyLeading - ascent,
-          runs: shiftRuns(runs, dx),
-        });
+        emitLineAt(cursor, shiftRuns(runs, dx), top - r * bodyLeading - ascent);
       });
     });
     cursor.top = top - rows * bodyLeading;

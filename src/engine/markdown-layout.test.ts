@@ -450,6 +450,14 @@ describe('wrapCodeLine', () => {
     expect(rows.length).toBeGreaterThan(1);
     expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(diagram);
   });
+
+  it('breaks continuation line at word space even when indent of first line was wider than space offset', () => {
+    const indent = ' '.repeat(10);
+    const line = `${indent}first_chunk_that_fills_budget next a_very_long_third_chunk_that_exceeds_budget`;
+    const budgetWidth = 35 * 8 * RATIOS.mono;
+    const rows = wrapCodeLine(line, budgetWidth, 8, metrics);
+    expect(rows[1]).toBe(`${indent}${CODE_WRAP_INDENT}dget next `);
+  });
 });
 
 describe('wrapSpans', () => {
@@ -928,6 +936,21 @@ describe('table rows carried onto a new page', () => {
     for (const preset of Object.values(TYPOGRAPHY_PRESETS)) {
       expect(overprintingPairs(layoutDocument(blocks, metrics, { typography: preset }))).toBe(0);
     }
+  });
+
+  it('draws strike-through rects for struck text inside table cells', () => {
+    const tableWithStrike: MdBlock = {
+      kind: 'table',
+      align: ['left', 'left'],
+      header: [[{ text: 'Col 1' }], [{ text: 'Col 2' }]],
+      rows: [
+        [[{ text: 'Normal' }], [{ text: 'Struck', strike: true }]],
+      ],
+    };
+    const pages = layoutDocument([tableWithStrike], metrics);
+    expect(pages.length).toBe(1);
+    const strikeRects = pages[0].items.filter((item) => item.kind === 'rect' && item.role === 'strike');
+    expect(strikeRects.length).toBeGreaterThan(0);
   });
 });
 

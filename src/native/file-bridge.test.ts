@@ -429,6 +429,40 @@ describe('printPdf', () => {
     });
   });
 
+  it('resolves print media attributes from caller-supplied dimensions without parsing the PDF', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/booklet.pdf' });
+    const loadSpy = vi.spyOn(PDFDocument, 'load');
+    const bytes = pseudoRandomBytes(2048);
+
+    await printPdf(bytes, 'booklet.pdf', 'Booklet Job', { widthPt: 595.28, heightPt: 841.89 });
+
+    expect(loadSpy).not.toHaveBeenCalled();
+    expect(printPdfUri).toHaveBeenCalledWith('file:///cache/booklet.pdf', 'Booklet Job', {
+      orientation: 'portrait',
+      mediaSize: 'ISO_A4',
+    });
+
+    loadSpy.mockRestore();
+  });
+
+  it('falls back to parsing the document when no dimensions are supplied', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/booklet.pdf' });
+    const loadSpy = vi.spyOn(PDFDocument, 'load');
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.addPage([842, 595]); // A4 landscape
+    const pdfBytes = await pdfDoc.save();
+
+    await printPdf(pdfBytes, 'booklet.pdf', 'Booklet Job');
+
+    expect(loadSpy).toHaveBeenCalledWith(pdfBytes, { ignoreEncryption: true });
+    expect(printPdfUri).toHaveBeenCalledWith('file:///cache/booklet.pdf', 'Booklet Job', {
+      orientation: 'landscape',
+      mediaSize: 'ISO_A4',
+    });
+
+    loadSpy.mockRestore();
+  });
+
   it('refuses before writing anything when the platform cannot print', async () => {
     canPrint.mockReturnValueOnce(false);
 

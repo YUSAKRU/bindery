@@ -669,4 +669,23 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(fn).toContain("t('cover.bookTitle')");
     expect(fn).toContain("t('cover.author')");
   });
+
+  it('disables coverGenerateBtn when a4-direct exceeds sheet dimensions', () => {
+    const fn = functionSource('function updateCoverLiveCalculations(');
+    expect(fn).toContain("const isA4DirectBlocked = coverFormat === 'a4-direct' && singleDims !== null && 'fitsSheet' in singleDims && !singleDims.fitsSheet;");
+    expect(fn).toContain('coverGenerateBtn.disabled = Boolean(isA4DirectBlocked);');
+  });
+
+  it('enforces mutual exclusion between hardcover and a4-direct in wrap cover and studio entry', () => {
+    const formatHandler = sourceBetween("wrapCoverFormatGroup.addEventListener('click'", "wrapCoverBindingGroup.addEventListener('click'");
+    expect(formatHandler).toContain("if (format === 'a4-direct' && wrapCoverBinding === 'hardcover')");
+    expect(formatHandler).toContain("wrapCoverBinding = 'sewn'");
+
+    const bindingHandler = sourceBetween("wrapCoverBindingGroup.addEventListener('click'", "wrapCoverGsmGroup.addEventListener('click'");
+    expect(bindingHandler).toContain("if (binding === 'hardcover' && wrapCoverFormat === 'a4-direct')");
+    expect(bindingHandler).toContain("wrapCoverFormat = 'split'");
+
+    const openStudioHandler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "let readerResizeTimer");
+    expect(openStudioHandler).toContain("if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct')");
+  });
 });

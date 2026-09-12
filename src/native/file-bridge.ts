@@ -478,22 +478,33 @@ export async function shareText(text: string, title: string): Promise<ShareOutco
  * base64-ing a 50 MB PDF through the bridge is the memory problem fixed in
  * 0.3.5, and printing is exactly the feature people reach for with big files.
  */
-export async function printPdf(bytes: Uint8Array, filename: string, jobName: string): Promise<void> {
+export async function printPdf(
+  bytes: Uint8Array,
+  filename: string,
+  jobName: string,
+  pageDimensions?: { widthPt: number; heightPt: number },
+): Promise<void> {
   if (!canPrint()) {
     throw new PrintUnavailableError();
   }
   const uri = await writePdfToCache(bytes, filename);
 
   let attributes: ReturnType<typeof resolvePrintMediaAttributes> | undefined;
-  try {
-    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    if (doc.getPageCount() > 0) {
-      const page = doc.getPage(0);
-      const { width, height } = page.getSize();
-      attributes = resolvePrintMediaAttributes(width, height);
+  if (pageDimensions) {
+    // Caller already knows the page size (e.g. booklet imposition already
+    // computed it) — skip parsing the whole PDF just to read it back off page 0.
+    attributes = resolvePrintMediaAttributes(pageDimensions.widthPt, pageDimensions.heightPt);
+  } else {
+    try {
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      if (doc.getPageCount() > 0) {
+        const page = doc.getPage(0);
+        const { width, height } = page.getSize();
+        attributes = resolvePrintMediaAttributes(width, height);
+      }
+    } catch {
+      // If the PDF cannot be parsed (e.g. invalid bytes), proceed without attributes.
     }
-  } catch {
-    // If the PDF cannot be parsed (e.g. invalid bytes), proceed without attributes.
   }
 
   if (attributes) {

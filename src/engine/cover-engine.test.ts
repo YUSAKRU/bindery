@@ -1204,6 +1204,30 @@ describe('generateCoverPdf — a4-direct format', () => {
     expect((await PDFDocument.load(pdfBytes)).getPageCount()).toBe(1);
   });
 
+  it('throws COVER_TOO_LARGE when cover exceeds single A4 sheet', async () => {
+    stubFontFetch();
+    const overflowing = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    });
+    expect(overflowing.fitsSheet).toBe(false);
+
+    try {
+      await generateCoverPdf({
+        dimensions: overflowing,
+        content: { title: 'Too Large' },
+        spineResult,
+        format: 'a4-direct',
+      });
+      expect.unreachable('Should have thrown');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(BookletError);
+      expect(err.code).toBe('COVER_TOO_LARGE');
+    }
+  });
+
   it('rejects options.format that disagrees with dimensions', async () => {
     stubFontFetch();
     await expect(

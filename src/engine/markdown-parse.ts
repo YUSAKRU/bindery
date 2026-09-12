@@ -138,7 +138,8 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
     else out.push(bold ? { ...base, text, bold: true } : { ...base, text });
   };
 
-  const walk = (input: string, bold: boolean, literal = false): void => {
+  const walk = (input: string, bold: boolean, literal = false, depth = 0): void => {
+    if (depth > 32) throw new UnprintableLatex(input);
     let i = 0;
     let plain = '';
     const flush = () => {
@@ -150,16 +151,16 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
       if (ch === '{') {
         // A bare group is only grouping in LaTeX — "R=96{,}000" is a number
         // whose comma is punctuation, not a decimal point. Its content prints.
-        let depth = 1;
+        let braceDepth = 1;
         let j = i + 1;
-        while (j < input.length && depth > 0) {
-          if (input[j] === '{') depth += 1;
-          else if (input[j] === '}') depth -= 1;
+        while (j < input.length && braceDepth > 0) {
+          if (input[j] === '{') braceDepth += 1;
+          else if (input[j] === '}') braceDepth -= 1;
           j += 1;
         }
-        if (depth !== 0) throw new UnprintableLatex(input);
+        if (braceDepth !== 0) throw new UnprintableLatex(input);
         flush();
-        walk(input.slice(i + 1, j - 1), bold, literal);
+        walk(input.slice(i + 1, j - 1), bold, literal, depth + 1);
         i = j;
         continue;
       }
@@ -189,7 +190,7 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
         const group = readGroup(input, after);
         if (!group) throw new UnprintableLatex(input);
         flush();
-        walk(group.inner, name === 'mathbf' || name === 'bm' || name === 'textbf', true);
+        walk(group.inner, name === 'mathbf' || name === 'bm' || name === 'textbf', true, depth + 1);
         i = group.next;
         continue;
       }
@@ -202,9 +203,9 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
         if (!numerator || !denominator) throw new UnprintableLatex(input);
         flush();
         push('(', bold);
-        walk(numerator.inner, bold, literal);
+        walk(numerator.inner, bold, literal, depth + 1);
         push(') / (', bold);
-        walk(denominator.inner, bold, literal);
+        walk(denominator.inner, bold, literal, depth + 1);
         push(')', bold);
         i = denominator.next;
         continue;
@@ -259,7 +260,7 @@ function renderFormula(inner: string, raw: string, base: InlineSpan): InlineSpan
     const spans = latexSpans(inner, base);
     if (spans.length > 0) return spans;
   } catch (error) {
-    if (!(error instanceof UnprintableLatex)) throw error;
+    if (!(error instanceof UnprintableLatex) && !(error instanceof RangeError)) throw error;
   }
   return [{ ...base, text: raw, mono: true }];
 }
@@ -275,7 +276,7 @@ export function latexToPlainText(source: string): string | null {
       .map((span) => span.text)
       .join('');
   } catch (error) {
-    if (error instanceof UnprintableLatex) return null;
+    if (error instanceof UnprintableLatex || error instanceof RangeError) return null;
     throw error;
   }
 }

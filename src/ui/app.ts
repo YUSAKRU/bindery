@@ -2264,6 +2264,10 @@ export function initApp(): void {
     const format = btn?.dataset.format as CoverFormat | undefined;
     if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
     wrapCoverFormat = format;
+    if (format === 'a4-direct' && wrapCoverBinding === 'hardcover') {
+      wrapCoverBinding = 'sewn';
+      setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', 'sewn');
+    }
     applyWrapCoverToUi();
     updateWrapCoverCalculations();
   });
@@ -2273,6 +2277,10 @@ export function initApp(): void {
     const binding = btn?.dataset.wrapbinding as BindingType | 'hardcover' | undefined;
     if (!binding) return;
     wrapCoverBinding = binding;
+    if (binding === 'hardcover' && wrapCoverFormat === 'a4-direct') {
+      wrapCoverFormat = 'split';
+      applyWrapCoverToUi();
+    }
     setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', binding);
     updateWrapCoverCalculations();
   });
@@ -2531,10 +2539,18 @@ export function initApp(): void {
         wrapCover2: 'booklet.wrapCoverSheet2Lower',
       };
       const label = t(labelKeyByTarget[target]);
+      // front/back/combined are the imposed booklet sheets, so their page size
+      // is exactly the sheet size already resolved for the current paper
+      // selection — no need to re-derive it from the PDF bytes.
+      const dimsByTarget: Partial<Record<typeof target, { widthPt: number; heightPt: number }>> = {};
+      if (target === 'front' || target === 'back' || target === 'combined') {
+        const [widthPt, heightPt] = wrapCoverSheetSize();
+        dimsByTarget[target] = { widthPt, heightPt };
+      }
 
       try {
         if (action === 'print') {
-          await printPdf(bytes, filename, `${label} PDF`);
+          await withBusyOverlay(() => printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]));
           actionStatus.textContent = t('status.printed');
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
@@ -4264,13 +4280,13 @@ export function initApp(): void {
       coverSpineFitBadge.textContent = t('cover.spineTextTooNarrow');
     }
 
-    // Says so when the sheet cannot be fed through an A4 printer; it never
-    // stops the job, and an oversize cover is still produced unchanged on its
-    // own page box (see placeSheetOnPrinterPaper).
     coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!));
     const coverPaperFitWarnKey = coverFormat === 'a4-direct' ? 'cover.needsA4Direct' : 'cover.needsA3';
     coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
     coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
+
+    const isA4DirectBlocked = coverFormat === 'a4-direct' && singleDims !== null && 'fitsSheet' in singleDims && !singleDims.fitsSheet;
+    coverGenerateBtn.disabled = Boolean(isA4DirectBlocked);
 
     coverTotalDimensionsLabel.textContent = splitDims
       ? t('cover.totalDimensionsSplit', {
@@ -4828,6 +4844,9 @@ export function initApp(): void {
         coverPaperGsm = wrapCoverGsm;
         coverTheme = wrapCoverTheme;
         coverFormat = wrapCoverFormat;
+        if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct') {
+          coverFormat = 'split';
+        }
         coverAuthorInput.value = wrapCoverAuthorInput.value;
         coverSynopsisInput.value = wrapCoverSynopsisInput.value;
 
@@ -4852,6 +4871,9 @@ export function initApp(): void {
         coverCoverStyle = 'softcover';
         coverFormat = 'a4-direct';
         coverBoardThicknessBlock.classList.add('hidden');
+      }
+      if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct') {
+        coverFormat = 'split';
       }
       applyCoverFormatToUi();
 

@@ -750,6 +750,13 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
 
   if (dimensions.format === 'a4-direct') {
     const { sheetWidthPt, sheetHeightPt, frontCoverRect, spineRect, backCoverRect, totalWidthPt, totalHeightPt } = dimensions;
+    if (!dimensions.fitsSheet) {
+      throw new BookletError(
+        'COVER_TOO_LARGE',
+        { totalWidthPt, totalHeightPt, sheetWidthPt, sheetHeightPt },
+        `Cover dimensions (${(totalWidthPt * 25.4 / 72).toFixed(1)} × ${(totalHeightPt * 25.4 / 72).toFixed(1)} mm) exceed a single A4 sheet (${(sheetWidthPt * 25.4 / 72).toFixed(1)} × ${(sheetHeightPt * 25.4 / 72).toFixed(1)} mm). Use 2 × A4 split or 1 × A3 format instead.`,
+      );
+    }
     const page = doc.addPage([sheetWidthPt, sheetHeightPt]);
     page.drawRectangle({
       x: backCoverRect.x,
