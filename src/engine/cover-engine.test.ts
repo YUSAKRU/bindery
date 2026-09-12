@@ -18,6 +18,7 @@ import {
   LAP_FLAP_WIDTH_MM,
   MM_TO_PT,
   placeSheetOnPrinterPaper,
+  coverFitsPrinterSheet,
 } from './cover-engine';
 import type { BindingType, CoverTheme, PaperGsm, SpineCalculationResult } from './cover-engine';
 import { BookletError } from './types';
@@ -862,5 +863,45 @@ describe('generateCoverPdf — split format', () => {
 
     const [sheet1Text] = await extractTextPerPage(pdfBytes);
     expect(sheet1Text.join(' ')).not.toContain('Unprintable');
+  });
+});
+
+describe('coverFitsPrinterSheet', () => {
+  const A5_BOOK = {
+    pageWidthPt: 148 * MM_TO_PT,
+    pageHeightPt: 210 * MM_TO_PT,
+    spineWidthPt: 8 * MM_TO_PT,
+    bleedPt: 3 * MM_TO_PT,
+    wrapMarginPt: 0,
+  };
+  const A4_BOOK = { ...A5_BOOK, pageWidthPt: 210 * MM_TO_PT, pageHeightPt: 297 * MM_TO_PT };
+
+  it('clears A4 for an A5 split pair and fails for the same book as one wide wrap', () => {
+    // Split sheet 1: 148 + 3 bleed + 8 spine + 20 flap = 179 mm, under 210.
+    expect(computeSplitCoverDimensions(A5_BOOK).sheet1.widthPt / MM_TO_PT).toBeCloseTo(179, 6);
+    expect(coverFitsPrinterSheet(computeSplitCoverDimensions(A5_BOOK))).toBe(true);
+
+    // The same book in one piece: 2 x 151 + 8 = 310 mm, an A3 job.
+    expect(computeCoverDimensions(A5_BOOK).totalWidthPt / MM_TO_PT).toBeCloseTo(310, 6);
+    expect(coverFitsPrinterSheet(computeCoverDimensions(A5_BOOK))).toBe(false);
+  });
+
+  it('fails an A4-trim book, whose split sheets are 241 x 303 mm', () => {
+    const dimensions = computeSplitCoverDimensions(A4_BOOK);
+    expect(dimensions.sheet1.widthPt / MM_TO_PT).toBeCloseTo(241, 6);
+    expect(dimensions.totalHeightPt / MM_TO_PT).toBeCloseTo(303, 6);
+    expect(coverFitsPrinterSheet(dimensions)).toBe(false);
+  });
+
+  it('answers for BOTH split sheets, not just the wider one', () => {
+    // computeSplitCoverDimensions always makes sheet 1 the wider of the two, so
+    // only a hand-built pair can prove sheet 2 is really being asked about.
+    const dimensions = computeSplitCoverDimensions(A5_BOOK);
+    const sheet2TooWide = {
+      ...dimensions,
+      sheet2: { ...dimensions.sheet2, widthPt: 250 * MM_TO_PT },
+    };
+    expect(coverFitsPrinterSheet(dimensions)).toBe(true);
+    expect(coverFitsPrinterSheet(sheet2TooWide)).toBe(false);
   });
 });

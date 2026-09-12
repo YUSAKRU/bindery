@@ -318,6 +318,25 @@ export function placeSheetOnPrinterPaper(
   };
 }
 
+/**
+ * Whether every sheet of this cover clears an A4 printer.
+ *
+ * Asks placeSheetOnPrinterPaper the same question it answers when it lays the
+ * artwork down, so a warning shown next to the geometry and the page box the
+ * PDF actually gets can never disagree. A split cover is printable only when
+ * BOTH of its sheets fit; the single wrap is one piece and stands on its own.
+ *
+ * Pure: it decides nothing and changes nothing about the emitted PDF. An
+ * oversize cover is still produced exactly as before, on its own page box.
+ */
+export function coverFitsPrinterSheet(dimensions: AnyCoverDimensions): boolean {
+  if (dimensions.format === 'split') {
+    return placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.sheet1.heightPt, 'right').fitsPrinterSheet
+      && placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.sheet2.heightPt, 'left').fitsPrinterSheet;
+  }
+  return placeSheetOnPrinterPaper(dimensions.totalWidthPt, dimensions.totalHeightPt, 'right').fitsPrinterSheet;
+}
+
 /** Moves a panel rect out of artwork space and onto the printed page. */
 function onPaper(rect: CoverRect, placement: SheetPlacement): CoverRect {
   return {

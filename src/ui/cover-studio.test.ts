@@ -570,3 +570,52 @@ describe('Cover Studio - Turkish Dictionary Entries', () => {
     }
   });
 });
+
+describe('Cover Studio - A4 fit warning', () => {
+  /**
+   * Source of one function, signature to the next sibling function. Sliced this
+   * way rather than by brace depth because updateCoverLiveCalculations declares
+   * an inline object return type, whose braces close before the body opens.
+   */
+  function functionSource(fnSignature: string): string {
+    const start = appSource.indexOf(fnSignature);
+    expect(start, `expected to find "${fnSignature}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const next = appSource.indexOf('\n  function ', start + fnSignature.length);
+    return appSource.slice(start, next === -1 ? undefined : next);
+  }
+
+  /** The markup of one badge span, looked up by its id. */
+  function badgeTag(id: string): string {
+    const at = htmlSource.indexOf(`id="${id}"`);
+    expect(at, `expected #${id} to exist in index.html`).toBeGreaterThan(0);
+    return htmlSource.slice(htmlSource.lastIndexOf('<span', at), htmlSource.indexOf('</span>', at));
+  }
+
+  it('carries a warning badge on both cover flows, hidden until a calculation says otherwise', () => {
+    for (const id of ['coverPaperFitBadge', 'wrapCoverPaperFitBadge']) {
+      const tag = badgeTag(id);
+      expect(tag, `#${id} should start hidden`).toContain('hidden');
+      expect(tag, `#${id} should carry the shared warning text`).toContain('data-i18n="cover.needsA3"');
+    }
+  });
+
+  it('toggles that badge from the engine predicate in both flows', () => {
+    expect(functionSource('function updateCoverLiveCalculations('))
+      .toContain("coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!))");
+    expect(functionSource('function updateWrapCoverCalculations('))
+      .toContain("wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions))");
+  });
+
+  it('uses the predicate for nothing but those two badges, so an oversize cover is still produced', () => {
+    // Two call sites and no more: the warning tells the binder which paper to
+    // feed, it never gates generateCoverPdf or trims anything down to A4.
+    expect(appSource.match(/coverFitsPrinterSheet\(/g) ?? []).toHaveLength(2);
+  });
+
+  it('gives the A4 warning its own entry in both dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).toContain("'cover.needsA3':");
+    expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsA3':");
+  });
+});

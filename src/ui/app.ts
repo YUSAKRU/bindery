@@ -19,6 +19,7 @@ import {
   computeSpineWidth,
   computeCoverDimensions,
   computeSplitCoverDimensions,
+  coverFitsPrinterSheet,
   generateCoverPdf,
   type BindingType,
   type CoverFormat,
@@ -407,6 +408,7 @@ export function initApp(): void {
   const wrapCoverThreadSwellBadge = byId<HTMLSpanElement>('wrapCoverThreadSwellBadge');
   const wrapCoverHingeBadge = byId<HTMLSpanElement>('wrapCoverHingeBadge');
   const wrapCoverFitBadge = byId<HTMLSpanElement>('wrapCoverFitBadge');
+  const wrapCoverPaperFitBadge = byId<HTMLSpanElement>('wrapCoverPaperFitBadge');
   const wrapCoverDimsLabel = byId<HTMLDivElement>('wrapCoverDimsLabel');
   const wrapCoverMiniPreview = byId<HTMLDivElement>('wrapCoverMiniPreview');
   const wrapCoverMiniSynopsis = byId<HTMLParagraphElement>('wrapCoverMiniSynopsis');
@@ -689,6 +691,7 @@ export function initApp(): void {
   const coverThreadSwellBadge = byId<HTMLSpanElement>('coverThreadSwellBadge');
   const coverHingeBadge = byId<HTMLSpanElement>('coverHingeBadge');
   const coverSpineFitBadge = byId<HTMLSpanElement>('coverSpineFitBadge');
+  const coverPaperFitBadge = byId<HTMLSpanElement>('coverPaperFitBadge');
   const coverTotalDimensionsLabel = byId<HTMLDivElement>('coverTotalDimensionsLabel');
   const coverFormatGroup = byId<HTMLDivElement>('coverFormatGroup');
   const coverFormatHint = byId<HTMLParagraphElement>('coverFormatHint');
@@ -1433,6 +1436,7 @@ export function initApp(): void {
     if (!metrics) {
       wrapCoverSpineLabel.textContent = '—';
       wrapCoverDimsLabel.textContent = t('config.wrapCoverNeedsFile');
+      wrapCoverPaperFitBadge.classList.add('hidden');
       return;
     }
 
@@ -1448,6 +1452,8 @@ export function initApp(): void {
       ? 'cover-fit-badge cover-fit-badge--ok'
       : 'cover-fit-badge cover-fit-badge--warn';
     wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
+
+    wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions));
 
     const heightMm = dimensions.totalHeightPt * mmPerPt;
     wrapCoverDimsLabel.textContent = dimensions.format === 'split'
@@ -4233,6 +4239,11 @@ export function initApp(): void {
       coverSpineFitBadge.className = 'cover-fit-badge cover-fit-badge--warn';
       coverSpineFitBadge.textContent = t('cover.spineTextTooNarrow');
     }
+
+    // Says so when the sheet cannot be fed through an A4 printer; it never
+    // stops the job, and an oversize cover is still produced unchanged on its
+    // own page box (see placeSheetOnPrinterPaper).
+    coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!));
 
     coverTotalDimensionsLabel.textContent = splitDims
       ? t('cover.totalDimensionsSplit', {
