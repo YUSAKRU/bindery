@@ -9,6 +9,7 @@ import {
   readerPageAtScrollTop,
   readerScrollTopForPage,
   resolveMarksLabels,
+  resolveSignatureHintData,
   sortFileEntries,
   type SortableEntry,
 } from './app-helpers';
@@ -304,39 +305,150 @@ describe('describeSignatureSplit', () => {
   // The confusion this exists to kill: "32" on a 32-page document is 32 PAGES
   // per signature, which is one signature — not thirty-two. Both numbers have
   // to come out, and the sigs figure is the one the spine-mark rule reads.
-  it('reports pages per signature and the signature count separately', () => {
+  it('reports pages per signature, sheets per signature, and the signature count separately', () => {
     // 32 pages at size 32 -> one signature of 8 sheets.
-    expect(describeSignatureSplit([8])).toEqual({ pages: '32', sigs: 1 });
+    expect(describeSignatureSplit([8])).toEqual({
+      pages: '32',
+      sheets: '8',
+      sigs: 1,
+      totalSheets: 8,
+      totalPages: 32,
+    });
     // 32 pages at size 8 -> four signatures of 2 sheets.
-    expect(describeSignatureSplit([2, 2, 2, 2])).toEqual({ pages: '8', sigs: 4 });
+    expect(describeSignatureSplit([2, 2, 2, 2])).toEqual({
+      pages: '8',
+      sheets: '2',
+      sigs: 4,
+      totalSheets: 8,
+      totalPages: 32,
+    });
     // 32 pages at size 16 -> two signatures of 4 sheets.
-    expect(describeSignatureSplit([4, 4])).toEqual({ pages: '16', sigs: 2 });
+    expect(describeSignatureSplit([4, 4])).toEqual({
+      pages: '16',
+      sheets: '4',
+      sigs: 2,
+      totalSheets: 8,
+      totalPages: 32,
+    });
   });
 
   // Signatures are balanced, not naively chunked, so an uneven split is normal
   // and a single pages figure would be a lie for it.
   it('gives a range when the signatures are not all the same size', () => {
-    expect(describeSignatureSplit([3, 2, 2])).toEqual({ pages: '8–12', sigs: 3 });
-    expect(describeSignatureSplit([2, 3])).toEqual({ pages: '8–12', sigs: 2 });
+    expect(describeSignatureSplit([3, 2, 2])).toEqual({
+      pages: '8–12',
+      sheets: '2–3',
+      sigs: 3,
+      totalSheets: 7,
+      totalPages: 28,
+    });
+    expect(describeSignatureSplit([2, 3])).toEqual({
+      pages: '8–12',
+      sheets: '2–3',
+      sigs: 2,
+      totalSheets: 5,
+      totalPages: 20,
+    });
   });
 
   it('counts four pages to a sheet', () => {
     expect(describeSignatureSplit([1]).pages).toBe('4');
+    expect(describeSignatureSplit([1]).sheets).toBe('1');
     expect(describeSignatureSplit([5]).pages).toBe('20');
+    expect(describeSignatureSplit([5]).sheets).toBe('5');
   });
 
-  // Partial guard, and only that: it pins the key and its two placeholders, so
+  // Partial guard, and only that: it pins the key and its placeholders, so
   // renaming either in the i18n table without following through to the call
-  // site shows up here instead of on the user's screen. It cannot see WHICH key
-  // app.ts dispatched, so a call site pointed at a different existing key still
-  // passes — that half needs the wiring itself to become testable.
-  it('keeps the resolved-hint key and its placeholders alive', () => {
-    const { pages, sigs } = describeSignatureSplit([2, 2]);
-    const resolved = t('config.signatureHintResolved', { pages, sigs });
+  // site shows up here instead of on the user's screen.
+  it('keeps the resolved-hint keys and their placeholders alive', () => {
+    const { pages, sigs, sheets } = describeSignatureSplit([2, 2]);
+    const resolved = t('config.signatureHintResolved', { pages, sigs, sheets });
     expect(resolved).not.toBe('config.signatureHintResolved');
     expect(resolved).not.toContain('{pages}');
     expect(resolved).not.toContain('{sigs}');
+    expect(resolved).not.toContain('{sheets}');
     expect(resolved).toContain('8');
     expect(resolved).toContain('2');
+
+    const single = t('config.signatureHintSingle', { pages: '8', sheets: '2', sigs: 1 });
+    expect(single).not.toBe('config.signatureHintSingle');
+    expect(single).not.toContain('{pages}');
+    expect(single).not.toContain('{sheets}');
+    expect(single).toContain('8');
+    expect(single).toContain('2');
+
+    const tooSmall = t('config.signatureHintTooSmall', { pages: '8', sheets: '2', selected: 32 });
+    expect(tooSmall).not.toBe('config.signatureHintTooSmall');
+    expect(tooSmall).not.toContain('{pages}');
+    expect(tooSmall).not.toContain('{sheets}');
+    expect(tooSmall).not.toContain('{selected}');
+    expect(tooSmall).toContain('8');
+    expect(tooSmall).toContain('2');
+    expect(tooSmall).toContain('32');
   });
 });
+
+describe('resolveSignatureHintData', () => {
+  it('detects when chosen numeric size exceeds document size (cannot split, stays 1 signature)', () => {
+    // 8-page doc (2 sheets), user picked 32
+    const split = describeSignatureSplit([2]);
+    const data = resolveSignatureHintData(split, '32');
+    expect(data).toEqual({
+      key: 'config.signatureHintTooSmall',
+      params: { pages: '8', sheets: '2', selected: 32 },
+    });
+    const text = t(data.key, data.params);
+    expect(text).toContain('8');
+    expect(text).toContain('2');
+    expect(text).toContain('32');
+  });
+
+  it('detects when chosen numeric size 16 exceeds an 8-page document', () => {
+    const split = describeSignatureSplit([2]);
+    const data = resolveSignatureHintData(split, '16');
+    expect(data).toEqual({
+      key: 'config.signatureHintTooSmall',
+      params: { pages: '8', sheets: '2', selected: 16 },
+    });
+  });
+
+  it('uses single-signature key when doc fits in 1 signature and size does not exceed it', () => {
+    // 8-page doc, user picked '8'
+    const split = describeSignatureSplit([2]);
+    const data8 = resolveSignatureHintData(split, '8');
+    expect(data8).toEqual({
+      key: 'config.signatureHintSingle',
+      params: { pages: '8', sheets: '2', sigs: 1 },
+    });
+
+    // user picked 'single'
+    const dataSingle = resolveSignatureHintData(split, 'single');
+    expect(dataSingle).toEqual({
+      key: 'config.signatureHintSingle',
+      params: { pages: '8', sheets: '2', sigs: 1 },
+    });
+
+    // user picked 'auto'
+    const dataAuto = resolveSignatureHintData(split, 'auto');
+    expect(dataAuto).toEqual({
+      key: 'config.signatureHintSingle',
+      params: { pages: '8', sheets: '2', sigs: 1 },
+    });
+  });
+
+  it('uses multi-signature key when split results in multiple signatures', () => {
+    // 8-page doc, user picked '4' (2 signatures of 1 sheet = 4 pages each)
+    const split = describeSignatureSplit([1, 1]);
+    const data = resolveSignatureHintData(split, '4');
+    expect(data).toEqual({
+      key: 'config.signatureHintResolved',
+      params: { pages: '4', sheets: '1', sigs: 2 },
+    });
+    const text = t(data.key, data.params);
+    expect(text).toContain('4');
+    expect(text).toContain('1');
+    expect(text).toContain('2');
+  });
+});
+

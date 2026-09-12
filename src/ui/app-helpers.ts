@@ -178,15 +178,22 @@ export function resolveMarksLabels(marks: MarksMode, sigs: number | null): Marks
 export interface SignatureSplit {
   /** Pages per signature — one number, or "min–max" when the split is uneven. */
   pages: string;
+  /** Sheets per signature — one number, or "min–max" when the split is uneven. */
+  sheets: string;
   /** How many signatures the document ends up in. */
   sigs: number;
+  /** Total sheets across all signatures. */
+  totalSheets: number;
+  /** Total pages across all signatures. */
+  totalPages: number;
 }
 
 /**
- * Turns the engine's per-signature sheet counts into the two numbers a reader
- * needs to check their choice: pages per signature, and how many signatures.
+ * Turns the engine's per-signature sheet counts into the numbers a reader
+ * needs to check their choice: pages per signature, sheets per signature,
+ * how many signatures, and document totals.
  *
- * The control is labelled "Signature size" and offers 8 / 16 / 32, which are
+ * The control is labelled "Signature size" and offers 4 / 8 / 16 / 32, which are
  * PAGES PER signature — but a bare number in a segmented row reads just as
  * easily as a count of signatures, and picking "32" for a 32-page document then
  * produces one signature rather than the thirty-two the reader expected. Naming
@@ -194,14 +201,66 @@ export interface SignatureSplit {
  * signature count is the one the spine-mark rule turns on.
  *
  * Signatures are balanced rather than naively chunked, so the last one is not
- * necessarily the short one and the pages figure can be a range.
+ * necessarily the short one and the pages/sheets figures can be ranges.
  */
 export function describeSignatureSplit(sheetsPerSignature: number[]): SignatureSplit {
   const pageCounts = sheetsPerSignature.map((sheets) => sheets * 4);
   const min = Math.min(...pageCounts);
   const max = Math.max(...pageCounts);
+  const minSheets = Math.min(...sheetsPerSignature);
+  const maxSheets = Math.max(...sheetsPerSignature);
   return {
     pages: min === max ? String(min) : `${min}–${max}`,
+    sheets: minSheets === maxSheets ? String(minSheets) : `${minSheets}–${maxSheets}`,
     sigs: sheetsPerSignature.length,
+    totalSheets: sheetsPerSignature.reduce((a, b) => a + b, 0),
+    totalPages: pageCounts.reduce((a, b) => a + b, 0),
   };
 }
+
+export interface SignatureHintData {
+  key: string;
+  params: Record<string, string | number>;
+}
+
+/**
+ * Resolves the i18n key and interpolation parameters for the signature hint
+ * under the Signature Size segmented control.
+ *
+ * Distinguishes three cases:
+ * 1. The document is smaller than the selected signature size (e.g. 8-page doc, size 16/32 picked).
+ *    Explains why the choice collapses to a single signature instead of leaving the UI looking frozen.
+ * 2. The document is a single signature (either picked 'single' or fits into 1 signature naturally).
+ * 3. The document splits into multiple signatures (> 1).
+ */
+export function resolveSignatureHintData(
+  split: SignatureSplit,
+  selectedSig: string,
+): SignatureHintData {
+  const { pages, sheets, sigs, totalPages } = split;
+  const numSelected = Number(selectedSig);
+
+  // User picked a numeric size (e.g. 16, 32), but the document has fewer pages than that size,
+  // so it cannot be split into that size and remains a single signature.
+  if (!Number.isNaN(numSelected) && sigs === 1 && numSelected > totalPages) {
+    return {
+      key: 'config.signatureHintTooSmall',
+      params: { pages, sheets, selected: numSelected },
+    };
+  }
+
+  // Single signature: either 'single' selected, or auto/exact size yielded 1 signature.
+  if (sigs === 1) {
+    return {
+      key: 'config.signatureHintSingle',
+      params: { pages, sheets, sigs },
+    };
+  }
+
+  // Multi-signature document:
+  return {
+    key: 'config.signatureHintResolved',
+    params: { pages, sheets, sigs },
+  };
+}
+

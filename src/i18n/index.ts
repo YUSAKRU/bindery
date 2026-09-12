@@ -250,7 +250,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'cover.formatTitle': 'Sheet Format',
     'cover.formatSplit': '2 × A4 (Home)',
     'cover.formatSingle': '1 × A3 (Wide)',
-    'cover.formatSplitHint': 'Two A4 sheets that overlap at the spine. The 20 mm flap folds over the front sheet\u2019s 10 mm glue tab, doubling the material across the spine. Prints on any home printer.',
+    'cover.formatSplitHint': "Two A4 sheets that meet at the spine: sheet 1's flap folds over sheet 2's glue tab. Prints on any home printer.",
     'cover.formatSingleHint': 'One wide sheet: back, spine and front in a single piece. Needs an A3 printer or a copy shop.',
     'cover.previewTitle': 'Wrap-Around Cover Layout',
     'cover.previewTitleSplit': 'Two-Sheet Cover Layout',
@@ -280,7 +280,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'crop.applyAndFlatten': 'Apply and Flatten',
 
     'config.gutter': 'Gutter',
-    'config.gutterHint': 'Space left between pages along the fold line.',
+    'config.gutterHint':
+      'Space left between pages along the fold line, for stitching or glue. At 0, the fold and spine marks can print over content sitting close to the fold.',
     'config.creep': 'Creep',
     'config.creepHint': 'Amount inner pages shift inward to compensate for paper thickness.',
     'config.paperSize': 'Paper size',
@@ -293,9 +294,13 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.signatureSize': 'Signature size',
     'config.signature.single': 'Single',
     'config.signature.auto': 'Auto',
-    'config.signatureHint': 'How many pages fold together in one signature. Tap (i) for the details.',
+    'config.signatureHint': 'Splits thick documents into smaller folded groups for easier binding. Standard: 16 pages (4 sheets).',
+    'config.signatureHintSingle':
+      'Entire document in a single signature: {sheets} sheets ({pages} pages).',
+    'config.signatureHintTooSmall':
+      'Document is {pages} pages ({sheets} sheets) — cannot split into {selected}-page signatures, produced as 1 signature.',
     'config.signatureHintResolved':
-      "Signature size counts PAGES, not signatures. This document: {pages} printed pages per signature → {sigs} in total. Blank padding and a separately printed cover move that page figure away from the document's own page count. Tap (i) for the details.",
+      'Produces {sigs} signatures. Each signature folds {sheets} sheets ({pages} pages) together.',
     'stat.signatures': 'Signatures',
     // — "What is a signature?" info sheet —
     'signatureInfo.open': 'What is a signature? Learn more',
@@ -306,6 +311,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'signatureInfo.pickHint': 'Tap a size — the animation updates live',
     'signatureInfo.pickerLabel': 'Signature size (pages) — select and watch',
     'signatureInfo.sub.single': '1 signature',
+    'signatureInfo.sub.4': '1 sheet',
     'signatureInfo.sub.8': '2 sheets',
     'signatureInfo.sub.16': '4 sheets',
     'signatureInfo.sub.32': '8 sheets',
@@ -345,7 +351,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.marks.none': 'None',
     'config.marks.fold': 'Fold',
     'config.marks.full': 'Fold + spine',
-    'config.marksHint': "Prints a light dashed fold line down every sheet. “Fold + spine” also steps a bar across the fold of each section's outer sheet, one section lower each time, so a missing or misplaced section breaks the spacing while you stack them — it needs more than one section. The spine bar only prints on the front side, so with short-edge duplex check you're looking at the right face. Both marks sit on the fold line, so with no binding gutter they can print over content close to the fold.",
+    'config.marksHint':
+      'Prints a light dashed fold line down every sheet. “Fold + spine” also steps a bar down the spine, one step per section, so a missing or misordered section shows up as you stack them — the bar prints on the front side only.',
     'config.marksHintSingleSignature': 'This document folds into a single section, so there is nothing to gather and the spine bar is not printed — the dashed fold line still is. For the stepped spine bar, pick a smaller Signature size (or add pages) so the document splits into more than one section.',
     'config.insertBlank': 'Insert blank pages',
     'config.insertBlankPlaceholder': 'e.g. 0, 4, 4',
@@ -363,7 +370,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.wrapCoverHint': 'Designs a printable outer cover for this booklet — spine width is measured from the sheet count, signatures and paper weight below, so there is nothing to work out by hand.',
     'config.wrapCoverContent': 'Cover content',
     'config.wrapCoverBindingHardcover': 'Hardcover (board)',
-    'config.wrapCoverBindingHint': 'How the book block is held together. It sets the spine allowance: sewn adds thread swell, hardcover adds board and groove.',
+    'config.wrapCoverBindingHint': 'Pick the method you will bind with — the spine is measured to match it.',
     'config.wrapCoverPreview': 'Cover preview',
     'config.wrapCoverNeedsFile': 'Pick a document first — the spine is measured from it.',
     'config.summaryInstructions': ' · +instructions',
@@ -911,7 +918,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'cover.formatTitle': 'Tabaka Formatı',
     'cover.formatSplit': '2 × A4 (Ev Tipi)',
     'cover.formatSingle': '1 × A3 (Geniş Format)',
-    'cover.formatSplitHint': 'Sırtta üst üste binen iki A4 tabaka. 20 mm kulakçık, ön tabakanın 10 mm yapıştırma payının üzerine katlanır; böylece sırt boyunca malzeme iki katına çıkar. Her ev yazıcısında basılır.',
+    'cover.formatSplitHint':
+      'Sırtta buluşan iki A4 tabaka: 1. tabakanın kulakçığı 2. tabakanın yapıştırma payının üzerine katlanır. Her ev yazıcısında basılır.',
     'cover.formatSingleHint': 'Tek geniş tabaka: arka, sırt ve ön tek parça. A3 yazıcı veya matbaa gerektirir.',
     'cover.previewTitle': 'Düz Açılım Önizlemesi',
     'cover.previewTitleSplit': 'İki Tabakalı Kapak Düzeni',
@@ -941,7 +949,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'crop.applyAndFlatten': 'Uygula ve Düzleştir',
 
     'config.gutter': 'Orta Boşluk (Gutter)',
-    'config.gutterHint': 'Katlama çizgisinde sayfalar arasında bırakılacak boşluk.',
+    'config.gutterHint':
+      'Katlama çizgisinde sayfalar arasında bırakılan boşluk; dikiş ya da yapıştırma için. 0 olduğunda katlama ve sırt işaretleri, katlamaya yakın içeriğin üzerine basabilir.',
     'config.creep': 'Kağıt Taşma Payı (Creep)',
     'config.creepHint': 'Kağıt kalınlığını telafi etmek için iç sayfaların içe kaydırılma miktarı.',
     'config.paperSize': 'Kağıt boyutu',
@@ -954,9 +963,13 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.signatureSize': 'Forma boyutu',
     'config.signature.single': 'Tek forma',
     'config.signature.auto': 'Otomatik',
-    'config.signatureHint': 'Bir formada kaç sayfa bir arada katlansın. Ayrıntı için (i).',
+    'config.signatureHint': 'Kalın belgeleri dikim için küçük katlama gruplarına (formalara) böler. Standart: 16 sayfa (4 yaprak).',
+    'config.signatureHintSingle':
+      'Tüm belge tek bir formada toplanır: {sheets} yaprak ({pages} sayfa).',
+    'config.signatureHintTooSmall':
+      'Belge {pages} sayfa ({sheets} yaprak) olduğu için {selected} sayfaya bölünemez; tek bir forma olarak üretilir.',
     'config.signatureHintResolved':
-      'Forma boyutu kaç forma çıkacağını değil, bir formaya kaç SAYFA gireceğini belirler. Bu belge: forma başına {pages} basılan sayfa → toplam {sigs} forma. Tamamlama boş sayfaları ve ayrı basılan kapak, bu sayfa sayısını belgenin kendi sayfa sayısından ayırabilir. Ayrıntı için (i).',
+      'Toplam {sigs} forma üretilir. Forma başına {sheets} yaprak ({pages} sayfa) birlikte katlanır.',
     'stat.signatures': 'Forma',
     // — "Forma nedir?" bilgi sheet'i —
     'signatureInfo.open': 'Forma nedir? Açıkla',
@@ -967,6 +980,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'signatureInfo.pickHint': 'Boyuta dokun — animasyon canlı değişir',
     'signatureInfo.pickerLabel': 'Forma boyutu (sayfa) — seç ve izle',
     'signatureInfo.sub.single': '1 forma',
+    'signatureInfo.sub.4': '1 yaprak',
     'signatureInfo.sub.8': '2 yaprak',
     'signatureInfo.sub.16': '4 yaprak',
     'signatureInfo.sub.32': '8 yaprak',
@@ -1005,8 +1019,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.marks': 'Montaj işaretleri',
     'config.marks.none': 'Yok',
     'config.marks.fold': 'Katlama',
-    'config.marks.full': 'Katlama + sırt',
-    'config.marksHint': 'Her yaprağa açık renkli kesikli bir katlama çizgisi basar. “Katlama + sırt” ayrıca her formanın dış yaprağının katlama hattına, her formada bir basamak aşağı inen bir bar ekler; formaları üst üste koyarken eksik ya da yanlış yerdeki forma bu düzeni bozar ve fark edilir — birden fazla forma gerektirir. Sırt barı yalnızca ön yüze basılır; kısa kenardan çift taraflı baskıda doğru yüze baktığınızdan emin olun. İki işaret de katlama hattının üzerinde durur; cilt payı sıfırsa katlama yakınındaki içeriğin üstüne basabilir.',
+    'config.marksHint':
+      'Her yaprağa açık renkli kesikli bir katlama çizgisi basar. “Katlama + sırt” ayrıca sırta her formada bir basamak inen bir bar ekler; formaları üst üste dizerken eksik ya da yanlış sıradaki forma hemen belli olur — bar yalnızca ön yüze basılır.',
     'config.marksHintSingleSignature': 'Bu belge tek formaya katlanıyor; harmanlanacak ikinci bir forma olmadığı için sırt barı basılmaz — kesikli katlama çizgisi yine basılır. Basamaklı sırt barı için “Forma boyutu”ndan daha küçük bir değer seçin (ya da sayfa ekleyin) ki belge birden fazla formaya bölünsün.',
     'config.insertBlank': 'Boş sayfa ekle',
     'config.insertBlankPlaceholder': 'örn. 0, 4, 4',
@@ -1024,7 +1038,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.wrapCoverHint': 'Bu kitapçık için basıma hazır bir dış kapak hazırlar — sırt kalınlığı aşağıdaki yaprak sayısı, forma ve kâğıt gramajından ölçülür, elle hesap gerekmez.',
     'config.wrapCoverContent': 'Kapak içeriği',
     'config.wrapCoverBindingHardcover': 'Sert kapak (mukavva)',
-    'config.wrapCoverBindingHint': 'Kitap bloğunun nasıl tutturulduğu. Sırt payını belirler: iplik dikiş kabarma, sert kapak mukavva ve oluk ekler.',
+    'config.wrapCoverBindingHint': 'Hangi yöntemle ciltleyeceğinizi seçin — sırt ona göre ölçülür.',
     'config.wrapCoverPreview': 'Kapak önizlemesi',
     'config.wrapCoverNeedsFile': 'Önce bir belge seçin — sırt ondan ölçülüyor.',
     'config.summaryReverseOrder': ' · ters sıra',

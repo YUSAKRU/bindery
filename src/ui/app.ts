@@ -86,6 +86,7 @@ import {
   readerScrollTopForPage as scrollTopForPage,
   describeSignatureSplit,
   resolveMarksLabels,
+  resolveSignatureHintData,
   sortFileEntries,
   type FileSortMode,
   type MarksLabels,
@@ -1587,8 +1588,9 @@ export function initApp(): void {
       signatureHintText.textContent = t('config.signatureHint');
       return;
     }
-    const { pages, sigs } = describeSignatureSplit(sheetsPerSignature);
-    signatureHintText.textContent = t('config.signatureHintResolved', { pages, sigs });
+    const split = describeSignatureSplit(sheetsPerSignature);
+    const { key, params } = resolveSignatureHintData(split, bookletSignature);
+    signatureHintText.textContent = t(key, params);
   }
 
   /**
@@ -2018,6 +2020,7 @@ export function initApp(): void {
     // Each selected size → an honest, readable example (sheetsPerSig = size ÷ 4).
     const SCEN: Record<string, Scenario> = {
       single: mk('single', 6, 1, { single: true }),
+      '4': mk('4', 1, 4),
       '8': mk('8', 2, 3),
       '16': mk('16', 4, 3),
       '32': mk('32', 8, 2),

@@ -103,15 +103,16 @@ describe('refreshSignatureHint (wiring: describeSignatureSplit result -> DOM tex
     expect(staticWriteIndex).toBeLessThan(splitCallIndex);
   });
 
-  it('otherwise derives {pages, sigs} from describeSignatureSplit and writes the resolved hint from them', () => {
-    const destructureIndex = body.indexOf('const { pages, sigs } = describeSignatureSplit(sheetsPerSignature);');
-    const resolvedWriteIndex = body.indexOf(
-      "signatureHintText.textContent = t('config.signatureHintResolved', { pages, sigs });",
-    );
+  it('otherwise derives split from describeSignatureSplit, resolves hint data, and writes to DOM', () => {
+    const splitIndex = body.indexOf('const split = describeSignatureSplit(sheetsPerSignature);');
+    const resolveIndex = body.indexOf('const { key, params } = resolveSignatureHintData(split, bookletSignature);');
+    const writeIndex = body.indexOf('signatureHintText.textContent = t(key, params);');
 
-    expect(destructureIndex, 'expected describeSignatureSplit(sheetsPerSignature) to be destructured into {pages, sigs}').toBeGreaterThanOrEqual(0);
-    expect(resolvedWriteIndex, 'expected signatureHintText to be written from {pages, sigs} via config.signatureHintResolved').toBeGreaterThanOrEqual(0);
-    expect(destructureIndex).toBeLessThan(resolvedWriteIndex);
+    expect(splitIndex, 'expected describeSignatureSplit(sheetsPerSignature) to be called').toBeGreaterThanOrEqual(0);
+    expect(resolveIndex, 'expected resolveSignatureHintData(split, bookletSignature) to be called').toBeGreaterThanOrEqual(0);
+    expect(writeIndex, 'expected signatureHintText.textContent = t(key, params)').toBeGreaterThanOrEqual(0);
+    expect(splitIndex).toBeLessThan(resolveIndex);
+    expect(resolveIndex).toBeLessThan(writeIndex);
   });
 });
 
