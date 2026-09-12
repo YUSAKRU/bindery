@@ -726,6 +726,7 @@ export function initApp(): void {
   const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
   const coverStyleRow = byId<HTMLDivElement>('coverStyleRow');
   const coverStyleGroup = byId<HTMLDivElement>('coverStyleGroup');
+  const coverStyleHint = byId<HTMLParagraphElement>('coverStyleHint');
   const coverBoardThicknessBlock = byId<HTMLDivElement>('coverBoardThicknessBlock');
   const coverBoardGroup = byId<HTMLDivElement>('coverBoardGroup');
   const coverPageTrimGroup = byId<HTMLDivElement>('coverPageTrimGroup');
@@ -3324,6 +3325,13 @@ export function initApp(): void {
       | 'trim',
     value: string,
   ): void {
+    if (dataKey === 'style' && value === 'softcover') {
+      const target = coverFormat;
+      group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.style === target);
+      });
+      return;
+    }
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });
@@ -4342,12 +4350,27 @@ export function initApp(): void {
     const isSplit = coverFormat === 'split';
 
     setActiveSegment(coverFormatGroup, 'format', coverFormat);
+    if (coverCoverStyle === 'hardcover') {
+      setActiveSegment(coverStyleGroup, 'style', 'hardcover');
+    } else {
+      setActiveSegment(coverStyleGroup, 'style', coverFormat);
+    }
 
     const formatKey = coverFormat === 'a4-direct'
       ? 'cover.formatA4DirectHint'
       : (isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint');
     coverFormatHint.dataset.i18n = formatKey;
     coverFormatHint.textContent = t(coverFormatHint.dataset.i18n);
+
+    const styleKey = coverCoverStyle === 'hardcover'
+      ? 'cover.styleHardcoverHint'
+      : (coverFormat === 'a4-direct'
+          ? 'cover.styleA4DirectHint'
+          : (coverFormat === 'split' ? 'cover.styleSplitHint' : 'cover.styleSingleHint'));
+    if (coverStyleHint) {
+      coverStyleHint.dataset.i18n = styleKey;
+      coverStyleHint.textContent = t(styleKey);
+    }
 
     coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle';
     coverPreviewHeading.textContent = t(coverPreviewHeading.dataset.i18n);
@@ -4395,6 +4418,8 @@ export function initApp(): void {
     setActiveSegment(coverStyleGroup, 'style', 'softcover');
     coverStyleRow.classList.remove('hidden');
     coverStyleGroup.classList.remove('hidden');
+    const hardcoverBtn = coverStyleGroup.querySelector<HTMLButtonElement>('[data-style="hardcover"]');
+    if (hardcoverBtn) hardcoverBtn.classList.remove('hidden');
     coverBoardThicknessBlock.classList.add('hidden');
     setActiveSegment(coverBoardGroup, 'board', '2.0');
     setActiveSegment(coverPageTrimGroup, 'trim', 'A5');
@@ -4558,23 +4583,35 @@ export function initApp(): void {
     setActiveSegment(coverBindingGroup, 'binding', binding);
     const isSaddle = binding === 'saddle';
     coverSigCountRow.classList.toggle('hidden', isSaddle);
-    coverStyleRow.classList.toggle('hidden', isSaddle);
-    coverStyleGroup.classList.toggle('hidden', isSaddle);
+    const hardcoverBtn = coverStyleGroup.querySelector<HTMLButtonElement>('[data-style="hardcover"]');
+    if (hardcoverBtn) {
+      hardcoverBtn.classList.toggle('hidden', isSaddle);
+    }
     if (isSaddle && coverCoverStyle === 'hardcover') {
       coverCoverStyle = 'softcover';
-      setActiveSegment(coverStyleGroup, 'style', 'softcover');
+      coverFormat = 'a4-direct';
       coverBoardThicknessBlock.classList.add('hidden');
     }
+    applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
 
   coverStyleGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const style = btn?.dataset.style as 'softcover' | 'hardcover' | undefined;
+    const style = btn?.dataset.style as CoverFormat | 'hardcover' | undefined;
     if (!style) return;
-    coverCoverStyle = style;
-    setActiveSegment(coverStyleGroup, 'style', style);
-    coverBoardThicknessBlock.classList.toggle('hidden', style !== 'hardcover');
+    if (style === 'hardcover') {
+      coverCoverStyle = 'hardcover';
+      if (coverFormat === 'a4-direct') {
+        coverFormat = 'split';
+      }
+      coverBoardThicknessBlock.classList.remove('hidden');
+    } else {
+      coverCoverStyle = 'softcover';
+      coverFormat = style;
+      coverBoardThicknessBlock.classList.add('hidden');
+    }
+    applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
 
@@ -4601,6 +4638,10 @@ export function initApp(): void {
     const format = btn?.dataset.format as CoverFormat | undefined;
     if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
     coverFormat = format;
+    if (format === 'a4-direct' && coverCoverStyle === 'hardcover') {
+      coverCoverStyle = 'softcover';
+      coverBoardThicknessBlock.classList.add('hidden');
+    }
     applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
@@ -4795,8 +4836,14 @@ export function initApp(): void {
       setActiveSegment(coverBindingGroup, 'binding', coverBindingType);
       const isSaddle = coverBindingType === 'saddle';
       coverSigCountRow.classList.toggle('hidden', isSaddle);
-      coverStyleRow.classList.toggle('hidden', isSaddle);
-      coverStyleGroup.classList.toggle('hidden', isSaddle);
+      const hardcoverBtn = coverStyleGroup.querySelector<HTMLButtonElement>('[data-style="hardcover"]');
+      if (hardcoverBtn) hardcoverBtn.classList.toggle('hidden', isSaddle);
+      if (isSaddle && coverCoverStyle === 'hardcover') {
+        coverCoverStyle = 'softcover';
+        coverFormat = 'a4-direct';
+        coverBoardThicknessBlock.classList.add('hidden');
+      }
+      applyCoverFormatToUi();
 
       // The cover's own title wins over the file name the user typed on the
       // result screen — it is the one they actually wrote onto the cover.

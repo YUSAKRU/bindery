@@ -636,11 +636,21 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(group).toContain('data-i18n="cover.formatA4Direct"');
   });
 
-  it('hides cover style and board controls when saddle-stitched binding is selected', () => {
+  it('hides hardcover option and board controls when saddle-stitched binding is selected', () => {
     const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverStyleGroup.addEventListener('click'");
-    expect(bindingHandler).toContain("coverStyleRow.classList.toggle('hidden', isSaddle)");
-    expect(bindingHandler).toContain("coverStyleGroup.classList.toggle('hidden', isSaddle)");
+    expect(bindingHandler).toContain("hardcoverBtn.classList.toggle('hidden', isSaddle)");
     expect(bindingHandler).toContain("coverCoverStyle = 'softcover'");
+  });
+
+  it('provides direct A4, split A4, single A3, and hardcover in coverStyleGroup', () => {
+    const styleGroup = htmlSource.slice(
+      htmlSource.indexOf('id="coverStyleGroup"'),
+      htmlSource.indexOf('id="coverStyleHint"'),
+    );
+    expect(styleGroup).toContain('data-style="a4-direct"');
+    expect(styleGroup).toContain('data-style="split"');
+    expect(styleGroup).toContain('data-style="single"');
+    expect(styleGroup).toContain('data-style="hardcover"');
   });
 
   it('defines a4-direct keys and warning in both dictionaries', () => {

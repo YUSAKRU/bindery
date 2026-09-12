@@ -870,7 +870,7 @@
             </div>
 
             <!-- Sheet Format: 2x A4 split (home) vs 1x A3 single wrap -->
-            <div class="setting-card">
+            <div class="setting-card hidden" id="coverFormatCard">
               <div class="setting-row">
                 <span data-i18n="cover.formatTitle">Sheet Format</span>
               </div>
@@ -1035,14 +1035,17 @@
                 <button type="button" class="segmented-btn" data-binding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
               </div>
 
-              <!-- Cover Style: Softcover vs Hardcover -->
+              <!-- Cover Style: Direct A4 vs Split A4 vs Single A3 vs Hardcover -->
               <div class="setting-row" style="margin-top: 12px;" id="coverStyleRow">
                 <span data-i18n="cover.coverType">Cover Style</span>
               </div>
               <div class="segmented-group" id="coverStyleGroup">
-                <button type="button" class="segmented-btn is-active" data-style="softcover" data-i18n="cover.softcover">Softcover</button>
+                <button type="button" class="segmented-btn" data-style="a4-direct" data-i18n="cover.styleA4Direct">1 × A4 (Direct)</button>
+                <button type="button" class="segmented-btn is-active" data-style="split" data-i18n="cover.styleSplit">2 × A4 (Home)</button>
+                <button type="button" class="segmented-btn" data-style="single" data-i18n="cover.styleSingle">1 × A3 (Wide)</button>
                 <button type="button" class="segmented-btn" data-style="hardcover" data-i18n="cover.hardcover">Hardcover</button>
               </div>
+              <p class="setting-hint" id="coverStyleHint" data-i18n="cover.styleSplitHint">Two A4 sheets that meet at the spine: sheet 1's flap folds over sheet 2's glue tab. Standard for home printing.</p>
 
               <!-- Hardcover Board Thickness -->
               <div class="setting-card-nested hidden" id="coverBoardThicknessBlock">
