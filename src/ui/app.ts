@@ -7031,9 +7031,22 @@ export function initApp(): void {
   });
 
   printPdfBtn.addEventListener('click', async () => {
-    if (!readerBytes) return;
+    const bytes = readerBytes;
+    if (!bytes) return;
     try {
-      await printPdf(readerBytes, readerName, readerName);
+      await withBusyOverlay(async () => {
+        let pageDimensions: { widthPt: number; heightPt: number } | undefined;
+        if (readerDoc && readerDoc.proxy.numPages > 0) {
+          try {
+            const page = await readerDoc.proxy.getPage(1);
+            const vp = page.getViewport({ scale: 1 });
+            pageDimensions = { widthPt: vp.width, heightPt: vp.height };
+          } catch {
+            // If fetching page 1 fails, let printPdf fall back to internal loader
+          }
+        }
+        await printPdf(bytes, readerName, readerName, pageDimensions);
+      });
       showToast(t('status.printed'));
     } catch (error) {
       showToast(t('status.printFailed', { message: errorText(error) }), { type: 'error' });
