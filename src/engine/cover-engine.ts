@@ -413,6 +413,11 @@ const FOLD_GUIDE_OPACITY = 0.35;
 const FOLD_GUIDE_THICKNESS = 0.5;
 const FOLD_GUIDE_DASH: [number, number] = [4, 4];
 
+/** Hairline crop/trim marks indicating where to cut the margins on a split cover sheet. */
+const CROP_MARK_LENGTH_PT = 14;
+const CROP_MARK_THICKNESS = 0.5;
+const CROP_MARK_OPACITY = 0.6;
+
 interface CoverFonts { font: PDFFont; boldFont: PDFFont }
 
 /**
@@ -431,6 +436,63 @@ function drawFoldGuide(page: PDFPage, x: number, yBottom: number, heightPt: numb
     opacity: FOLD_GUIDE_OPACITY,
     dashArray: [...FOLD_GUIDE_DASH],
   });
+}
+
+/**
+ * Hairline crop marks drawn in the waste margin outside the artwork box.
+ *
+ * For split sheets on A4, waste paper is left on 3 sides (top, bottom, and
+ * the non-mating outer edge). Crop marks extend outward into the waste margin
+ * so that cuts leave no marks on the finished cover.
+ *
+ * - Sheet 1 (matingEdge === 'right'): marks at top-left and bottom-left (both
+ *   horizontal and vertical), and vertical boundary marks at top-right and
+ *   bottom-right.
+ * - Sheet 2 (matingEdge === 'left'): marks at top-right and bottom-right (both
+ *   horizontal and vertical), and vertical boundary marks at top-left and
+ *   bottom-left.
+ */
+export function drawCropMarks(
+  page: PDFPage,
+  place: SheetPlacement,
+  artworkWidthPt: number,
+  artworkHeightPt: number,
+  matingEdge: MatingEdge,
+  color: RGB,
+): void {
+  if (!place.fitsPrinterSheet) return;
+
+  const x0 = place.offsetXPt;
+  const x1 = place.offsetXPt + artworkWidthPt;
+  const y0 = place.offsetYPt;
+  const y1 = place.offsetYPt + artworkHeightPt;
+
+  const drawLine = (start: { x: number; y: number }, end: { x: number; y: number }) => {
+    page.drawLine({
+      start,
+      end,
+      thickness: CROP_MARK_THICKNESS,
+      color,
+      opacity: CROP_MARK_OPACITY,
+    });
+  };
+
+  // Vertical boundary marks at both x0 and x1 (extending outward into top and bottom margins)
+  drawLine({ x: x0, y: y1 }, { x: x0, y: y1 + CROP_MARK_LENGTH_PT });
+  drawLine({ x: x1, y: y1 }, { x: x1, y: y1 + CROP_MARK_LENGTH_PT });
+  drawLine({ x: x0, y: y0 - CROP_MARK_LENGTH_PT }, { x: x0, y: y0 });
+  drawLine({ x: x1, y: y0 - CROP_MARK_LENGTH_PT }, { x: x1, y: y0 });
+
+  // Horizontal marks extending outward into the non-mating outer margin
+  if (matingEdge === 'right') {
+    // Sheet 1: left edge has waste margin
+    drawLine({ x: x0 - CROP_MARK_LENGTH_PT, y: y1 }, { x: x0, y: y1 });
+    drawLine({ x: x0 - CROP_MARK_LENGTH_PT, y: y0 }, { x: x0, y: y0 });
+  } else {
+    // Sheet 2: right edge has waste margin
+    drawLine({ x: x1, y: y1 }, { x: x1 + CROP_MARK_LENGTH_PT, y: y1 });
+    drawLine({ x: x1, y: y0 }, { x: x1 + CROP_MARK_LENGTH_PT, y: y0 });
+  }
 }
 
 /** Title, author and (optional) artwork, centred in `rect`. Shared by both cover formats. */
@@ -590,6 +652,7 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     // The lap flap itself is deliberately left blank: it ends up bonded under
     // sheet 2's glue tab, so anything printed on it would be buried.
     for (const x of sheet1.foldLinesX) drawFoldGuide(page1, x + place1.offsetXPt, place1.offsetYPt, sheet1.heightPt, textColor);
+    if (place1.fitsPrinterSheet) drawCropMarks(page1, place1, sheet1.widthPt, sheet1.heightPt, 'right', textColor);
 
     // --- SHEET 2: glue tab | front cover ---
     // Sheet 2 meets sheet 1 on its left, so it is butted the other way; the two
@@ -599,6 +662,7 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     page2.drawRectangle({ x: place2.offsetXPt, y: place2.offsetYPt, width: sheet2.widthPt, height: sheet2.heightPt, color: backgroundColor });
     await drawFrontCoverPanel(doc, page2, onPaper(sheet2.frontCoverRect, place2), content, fonts, textColor);
     for (const x of sheet2.foldLinesX) drawFoldGuide(page2, x + place2.offsetXPt, place2.offsetYPt, sheet2.heightPt, textColor);
+    if (place2.fitsPrinterSheet) drawCropMarks(page2, place2, sheet2.widthPt, sheet2.heightPt, 'left', textColor);
 
     return doc.save();
   }
