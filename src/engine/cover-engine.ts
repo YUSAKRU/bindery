@@ -54,7 +54,7 @@ export interface SpineCalculationResult {
  * compromise — it doubles the material over the spine, which is exactly where a
  * home-bound book fails first.
  */
-export type CoverFormat = 'single' | 'split';
+export type CoverFormat = 'single' | 'split' | 'a4-direct';
 
 /** Width of sheet 1's lap flap: the tongue that reaches past the spine and over sheet 2's glue tab. */
 export const LAP_FLAP_WIDTH_MM = 20;
@@ -70,6 +70,7 @@ export interface CoverRect { x: number; y: number; width: number; height: number
 export interface CoverDimensionsInput {
   pageWidthPt: number; pageHeightPt: number; spineWidthPt: number;
   bleedPt?: number; wrapMarginPt?: number;
+  format?: CoverFormat;
 }
 export interface CoverDimensionsResult {
   format: 'single';
@@ -77,6 +78,18 @@ export interface CoverDimensionsResult {
   backCoverRect: CoverRect;
   spineRect: CoverRect;
   frontCoverRect: CoverRect;
+}
+
+export interface A4DirectCoverDimensionsResult {
+  format: 'a4-direct';
+  totalWidthPt: number;
+  totalHeightPt: number;
+  backCoverRect: CoverRect;
+  spineRect: CoverRect;
+  frontCoverRect: CoverRect;
+  sheetWidthPt: number;  // 297 mm in points
+  sheetHeightPt: number; // 210 mm in points
+  fitsSheet: boolean;
 }
 
 export interface SplitCoverDimensionsInput extends CoverDimensionsInput {
@@ -105,7 +118,10 @@ export interface SplitCoverDimensionsResult {
   sheet1: SplitCoverSheet1;
   sheet2: SplitCoverSheet2;
 }
-export type AnyCoverDimensions = CoverDimensionsResult | SplitCoverDimensionsResult;
+export type AnyCoverDimensions =
+  | CoverDimensionsResult
+  | SplitCoverDimensionsResult
+  | A4DirectCoverDimensionsResult;
 export type CoverTheme = 'cream' | 'white' | 'navy' | 'burgundy' | 'charcoal';
 
 export interface ThemeColors {
@@ -183,7 +199,69 @@ export function computeSpineWidth(input: SpineCalculationInput): SpineCalculatio
   return { textBlockThicknessMm, threadSwellMm, hingeAllowanceMm, totalSpineWidthMm, totalSpineWidthPt, canPrintSpineText };
 }
 
-export function computeCoverDimensions(input: CoverDimensionsInput): CoverDimensionsResult {
+/**
+ * Geometry for a one-sheet wrap printed directly on a single A4 landscape sheet (297 x 210 mm).
+ *
+ * For smaller books (e.g. saddle-stitched A5 or trimmed booklets), the full wrap
+ * (back + spine + front) fits across 297 mm without needing A3 paper or a split overlap.
+ * The artwork is centered on the A4 sheet when it fits.
+ */
+export function computeA4DirectCoverDimensions(input: CoverDimensionsInput): A4DirectCoverDimensionsResult {
+  const { pageWidthPt, pageHeightPt, spineWidthPt } = input;
+  const bleedPt = input.bleedPt ?? DEFAULT_BLEED_PT;
+  const wrapMarginPt = input.wrapMarginPt ?? DEFAULT_WRAP_MARGIN_PT;
+
+  const sheetWidthPt = A4_LONG_EDGE_MM * MM_TO_PT;
+  const sheetHeightPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+
+  const outerPanelWidthPt = pageWidthPt + bleedPt + wrapMarginPt;
+  const totalWidthPt = 2 * pageWidthPt + spineWidthPt + 2 * bleedPt + 2 * wrapMarginPt;
+  const totalHeightPt = pageHeightPt + 2 * bleedPt;
+
+  const fitsSheet = totalWidthPt <= sheetWidthPt + 1e-6 && totalHeightPt <= sheetHeightPt + 1e-6;
+
+  const offsetXPt = fitsSheet ? (sheetWidthPt - totalWidthPt) / 2 : 0;
+  const offsetYPt = fitsSheet ? (sheetHeightPt - totalHeightPt) / 2 : 0;
+
+  const backCoverRect: CoverRect = {
+    x: offsetXPt,
+    y: offsetYPt,
+    width: outerPanelWidthPt,
+    height: totalHeightPt,
+  };
+  const spineRect: CoverRect = {
+    x: backCoverRect.x + backCoverRect.width,
+    y: offsetYPt,
+    width: spineWidthPt,
+    height: totalHeightPt,
+  };
+  const frontCoverRect: CoverRect = {
+    x: spineRect.x + spineRect.width,
+    y: offsetYPt,
+    width: outerPanelWidthPt,
+    height: totalHeightPt,
+  };
+
+  return {
+    format: 'a4-direct',
+    totalWidthPt,
+    totalHeightPt,
+    backCoverRect,
+    spineRect,
+    frontCoverRect,
+    sheetWidthPt,
+    sheetHeightPt,
+    fitsSheet,
+  };
+}
+
+export function computeCoverDimensions(input: CoverDimensionsInput & { format: 'a4-direct' }): A4DirectCoverDimensionsResult;
+export function computeCoverDimensions(input: CoverDimensionsInput & { format?: 'single' }): CoverDimensionsResult;
+export function computeCoverDimensions(input: CoverDimensionsInput): AnyCoverDimensions;
+export function computeCoverDimensions(input: CoverDimensionsInput): AnyCoverDimensions {
+  if (input.format === 'a4-direct') {
+    return computeA4DirectCoverDimensions(input);
+  }
   const { pageWidthPt, pageHeightPt, spineWidthPt } = input;
   const bleedPt = input.bleedPt ?? DEFAULT_BLEED_PT;
   const wrapMarginPt = input.wrapMarginPt ?? DEFAULT_WRAP_MARGIN_PT;
@@ -333,6 +411,9 @@ export function coverFitsPrinterSheet(dimensions: AnyCoverDimensions): boolean {
   if (dimensions.format === 'split') {
     return placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.sheet1.heightPt, 'right').fitsPrinterSheet
       && placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.sheet2.heightPt, 'left').fitsPrinterSheet;
+  }
+  if (dimensions.format === 'a4-direct') {
+    return dimensions.fitsSheet;
   }
   return placeSheetOnPrinterPaper(dimensions.totalWidthPt, dimensions.totalHeightPt, 'right').fitsPrinterSheet;
 }
@@ -663,6 +744,24 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     await drawFrontCoverPanel(doc, page2, onPaper(sheet2.frontCoverRect, place2), content, fonts, textColor);
     for (const x of sheet2.foldLinesX) drawFoldGuide(page2, x + place2.offsetXPt, place2.offsetYPt, sheet2.heightPt, textColor);
     if (place2.fitsPrinterSheet) drawCropMarks(page2, place2, sheet2.widthPt, sheet2.heightPt, 'left', textColor);
+
+    return doc.save();
+  }
+
+  if (dimensions.format === 'a4-direct') {
+    const { sheetWidthPt, sheetHeightPt, frontCoverRect, spineRect, backCoverRect, totalWidthPt, totalHeightPt } = dimensions;
+    const page = doc.addPage([sheetWidthPt, sheetHeightPt]);
+    page.drawRectangle({
+      x: backCoverRect.x,
+      y: backCoverRect.y,
+      width: totalWidthPt,
+      height: totalHeightPt,
+      color: backgroundColor,
+    });
+
+    await drawFrontCoverPanel(doc, page, frontCoverRect, content, fonts, textColor);
+    drawSpinePanel(page, spineRect, content, fonts, textColor, spineResult);
+    drawBackCoverPanel(page, backCoverRect, content, fonts, textColor);
 
     return doc.save();
   }

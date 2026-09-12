@@ -12,6 +12,7 @@ import {
   computeCoverDimensions,
   computeSpineWidth,
   computeSplitCoverDimensions,
+  computeA4DirectCoverDimensions,
   COVER_THEMES,
   generateCoverPdf,
   GLUE_TAB_WIDTH_MM,
@@ -956,6 +957,284 @@ describe('generateCoverPdf — split format', () => {
   });
 });
 
+describe('computeA4DirectCoverDimensions', () => {
+  const SADDLE_A5_BOOK = {
+    pageWidthPt: 140 * MM_TO_PT,
+    pageHeightPt: 200 * MM_TO_PT,
+    spineWidthPt: 1 * MM_TO_PT,
+    bleedPt: 0,
+    wrapMarginPt: 0,
+  };
+
+  it('tags its result "a4-direct" with standard A4 landscape sheet dimensions', () => {
+    const result = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(result.format).toBe('a4-direct');
+    expect(result.sheetWidthPt).toBeCloseTo(A4_LONG_EDGE_MM * MM_TO_PT, 6);
+    expect(result.sheetHeightPt).toBeCloseTo(A4_SHORT_EDGE_MM * MM_TO_PT, 6);
+  });
+
+  it('fits a typical saddle-stitched A5 booklet (spine 1mm, page width 140-145mm) on A4 landscape', () => {
+    // 140 mm page width: 2 * 140 + 1 = 281 mm <= 297 mm
+    const res140 = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(res140.fitsSheet).toBe(true);
+    expect(res140.totalWidthPt / MM_TO_PT).toBeCloseTo(281, 6);
+    expect(res140.totalHeightPt / MM_TO_PT).toBeCloseTo(200, 6);
+
+    // Centered on the sheet:
+    const expectedOffsetX = (res140.sheetWidthPt - res140.totalWidthPt) / 2;
+    const expectedOffsetY = (res140.sheetHeightPt - res140.totalHeightPt) / 2;
+    expect(res140.backCoverRect.x).toBeCloseTo(expectedOffsetX, 6);
+    expect(res140.backCoverRect.y).toBeCloseTo(expectedOffsetY, 6);
+
+    // 145 mm page width: 2 * 145 + 1 = 291 mm <= 297 mm
+    const res145 = computeA4DirectCoverDimensions({ ...SADDLE_A5_BOOK, pageWidthPt: 145 * MM_TO_PT });
+    expect(res145.fitsSheet).toBe(true);
+    expect(res145.totalWidthPt / MM_TO_PT).toBeCloseTo(291, 6);
+  });
+
+  it('sets fitsSheet = false for a thick book (>297mm total wrap)', () => {
+    // 2 * (148 + 3) + 10 = 312 mm, exceeds 297 mm
+    const thickBook = {
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    };
+    const result = computeA4DirectCoverDimensions(thickBook);
+    expect(result.fitsSheet).toBe(false);
+    expect(result.totalWidthPt / MM_TO_PT).toBeCloseTo(312, 6);
+    expect(result.backCoverRect.x).toBe(0);
+    expect(result.backCoverRect.y).toBe(0);
+  });
+
+  it('sets fitsSheet = false for a book whose height exceeds 210mm', () => {
+    const tallBook = {
+      pageWidthPt: 100 * MM_TO_PT,
+      pageHeightPt: 215 * MM_TO_PT,
+      spineWidthPt: 2 * MM_TO_PT,
+      bleedPt: 0,
+    };
+    const result = computeA4DirectCoverDimensions(tallBook);
+    expect(result.fitsSheet).toBe(false);
+  });
+
+  it('applies default bleed (9pt) and wrapMargin (0pt) when omitted', () => {
+    const input = { pageWidthPt: 300, pageHeightPt: 400, spineWidthPt: 20 };
+    const result = computeA4DirectCoverDimensions(input);
+    expect(result.totalWidthPt).toBe(2 * 300 + 20 + 2 * 9);
+    expect(result.totalHeightPt).toBe(400 + 2 * 9);
+  });
+
+  it('panels tile left-to-right with no gap or overlap and share full height', () => {
+    const result = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(result.backCoverRect.width + result.spineRect.width + result.frontCoverRect.width).toBeCloseTo(result.totalWidthPt, 6);
+    expect(result.spineRect.x).toBeCloseTo(result.backCoverRect.x + result.backCoverRect.width, 6);
+    expect(result.frontCoverRect.x).toBeCloseTo(result.spineRect.x + result.spineRect.width, 6);
+    expect(result.backCoverRect.height).toBe(result.totalHeightPt);
+    expect(result.spineRect.height).toBe(result.totalHeightPt);
+    expect(result.frontCoverRect.height).toBe(result.totalHeightPt);
+  });
+
+  it('can be invoked via computeCoverDimensions with format: "a4-direct"', () => {
+    const dims = computeCoverDimensions({ ...SADDLE_A5_BOOK, format: 'a4-direct' });
+    expect(dims.format).toBe('a4-direct');
+    expect(dims.totalWidthPt).toBeCloseTo(computeA4DirectCoverDimensions(SADDLE_A5_BOOK).totalWidthPt, 6);
+  });
+});
+
+describe('generateCoverPdf — a4-direct format', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const A5_DIRECT = {
+    pageWidthPt: 140 * MM_TO_PT,
+    pageHeightPt: 200 * MM_TO_PT,
+    spineWidthPt: 5 * MM_TO_PT,
+    bleedPt: 0,
+    wrapMarginPt: 0,
+  };
+
+  const spineResult: SpineCalculationResult = {
+    textBlockThicknessMm: 4,
+    threadSwellMm: 0,
+    hingeAllowanceMm: 1,
+    totalSpineWidthMm: 5,
+    totalSpineWidthPt: 5 * MM_TO_PT,
+    canPrintSpineText: true,
+  };
+
+  async function extractTextPerPage(pdfBytes: Uint8Array): Promise<string[][]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    const pages: string[][] = [];
+    try {
+      const pdfDoc = await loadingTask.promise;
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const items = textContent.items
+          .filter((it): it is typeof it & { str: string } => 'str' in it)
+          .map((it) => it.str.trim())
+          .filter(Boolean);
+        pages.push(items);
+      }
+      return pages;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  it('produces exactly a 1-page PDF on an A4 landscape sheet', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'A4 Direct Book', author: 'Direct Author', synopsis: 'A direct synopsis.' },
+      spineResult,
+    });
+
+    const doc = await PDFDocument.load(pdfBytes);
+    expect(doc.getPageCount()).toBe(1);
+    const page = doc.getPage(0);
+    expect(page.getWidth()).toBeCloseTo(A4_LONG_EDGE_MM * MM_TO_PT, 1);
+    expect(page.getHeight()).toBeCloseTo(A4_SHORT_EDGE_MM * MM_TO_PT, 1);
+  });
+
+  it('fills the artwork rectangle with the theme background color', async () => {
+    stubFontFetch();
+    const loadColors = async (pdfBytes: Uint8Array): Promise<string[]> => {
+      const loadingTask = getDocument({ data: pdfBytes.slice() });
+      try {
+        const pdfDoc = await loadingTask.promise;
+        const page = await pdfDoc.getPage(1);
+        const opList = await page.getOperatorList();
+        const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        const colors: string[] = [];
+        for (let i = 0; i < opList.fnArray.length; i++) {
+          if (opList.fnArray[i] === OPS.setFillRGBColor) colors.push(opList.argsArray[i][0] as string);
+        }
+        return colors;
+      } finally {
+        await loadingTask.destroy();
+      }
+    };
+    const channel = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
+    const expected = `#${COVER_THEMES.navy.backgroundRgb.map(channel).join('')}`;
+
+    const pdfBytes = await generateCoverPdf({
+      dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+      content: { title: 'Navy Direct', synopsis: 'Back content.', theme: 'navy' },
+      spineResult,
+    });
+
+    const colors = await loadColors(pdfBytes);
+    expect(colors[0]).toBe(expected);
+  });
+
+  it('renders front cover title/author, back cover synopsis, and spine title', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Direct Wrap', author: 'Cover Author', synopsis: 'This is the synopsis text.' },
+      spineResult,
+    });
+
+    const [pageText] = await extractTextPerPage(pdfBytes);
+    const textJoined = pageText.join(' ');
+    expect(textJoined).toContain('Direct Wrap');
+    expect(textJoined).toContain('Cover Author');
+    expect(textJoined).toContain('This is the synopsis text.');
+  });
+
+  async function extractTextInXRange(pdfBytes: Uint8Array, xMin: number, xMax: number): Promise<string[]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    const items: string[] = [];
+    try {
+      const pdfDoc = await loadingTask.promise;
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        for (const item of textContent.items) {
+          if (!('str' in item) || !item.str.trim()) continue;
+          const x = item.transform[4];
+          if (x >= xMin - 0.01 && x <= xMax + 0.01) {
+            items.push(item.str);
+          }
+        }
+      }
+    } finally {
+      await loadingTask.destroy();
+    }
+    return items;
+  }
+
+  it('leaves the spine blank when spine is below legibility floor', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Unprintable Direct Spine' },
+      spineResult: { ...spineResult, canPrintSpineText: false },
+    });
+
+    const spineText = await extractTextInXRange(pdfBytes, dimensions.spineRect.x, dimensions.spineRect.x + dimensions.spineRect.width);
+    expect(spineText).toHaveLength(0);
+  });
+
+  it('prints the (rotated) title on the spine when canPrintSpineText is true', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Printable Direct Spine' },
+      spineResult: { ...spineResult, canPrintSpineText: true },
+    });
+
+    const spineText = await extractTextInXRange(pdfBytes, dimensions.spineRect.x, dimensions.spineRect.x + dimensions.spineRect.width);
+    expect(spineText.length).toBeGreaterThan(0);
+  });
+
+  it('accepts options.format: "a4-direct" when dimensions agree', async () => {
+    stubFontFetch();
+    const pdfBytes = await generateCoverPdf({
+      dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+      content: { title: 'Agrees Direct' },
+      spineResult,
+      format: 'a4-direct',
+    });
+    expect((await PDFDocument.load(pdfBytes)).getPageCount()).toBe(1);
+  });
+
+  it('rejects options.format that disagrees with dimensions', async () => {
+    stubFontFetch();
+    await expect(
+      generateCoverPdf({
+        dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'single',
+      }),
+    ).rejects.toThrow(BookletError);
+
+    await expect(
+      generateCoverPdf({
+        dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'split',
+      }),
+    ).rejects.toThrow(BookletError);
+
+    await expect(
+      generateCoverPdf({
+        dimensions: computeCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'a4-direct',
+      }),
+    ).rejects.toThrow(BookletError);
+  });
+});
+
 describe('coverFitsPrinterSheet', () => {
   const A5_BOOK = {
     pageWidthPt: 148 * MM_TO_PT,
@@ -993,6 +1272,24 @@ describe('coverFitsPrinterSheet', () => {
     };
     expect(coverFitsPrinterSheet(dimensions)).toBe(true);
     expect(coverFitsPrinterSheet(sheet2TooWide)).toBe(false);
+  });
+
+  it('clears A4 for an a4-direct booklet that fits and fails when it overflows', () => {
+    const fitting = computeA4DirectCoverDimensions({
+      pageWidthPt: 140 * MM_TO_PT,
+      pageHeightPt: 200 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 0,
+    });
+    expect(coverFitsPrinterSheet(fitting)).toBe(true);
+
+    const overflowing = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    });
+    expect(coverFitsPrinterSheet(overflowing)).toBe(false);
   });
 });
 
