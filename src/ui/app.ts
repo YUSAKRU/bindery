@@ -724,6 +724,7 @@ export function initApp(): void {
   const coverPaletteGroup = byId<HTMLDivElement>('coverPaletteGroup');
   const coverGsmGroup = byId<HTMLDivElement>('coverGsmGroup');
   const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
+  const coverStyleRow = byId<HTMLDivElement>('coverStyleRow');
   const coverStyleGroup = byId<HTMLDivElement>('coverStyleGroup');
   const coverBoardThicknessBlock = byId<HTMLDivElement>('coverBoardThicknessBlock');
   const coverBoardGroup = byId<HTMLDivElement>('coverBoardGroup');
@@ -1383,6 +1384,7 @@ export function initApp(): void {
       spineWidthPt: spine.totalSpineWidthPt,
       bleedPt: (isHardcover ? 0 : 3) * MM_TO_PT,
       wrapMarginPt: (isHardcover ? 15 : 0) * MM_TO_PT,
+      format: wrapCoverFormat,
     };
 
     return {
@@ -1414,7 +1416,11 @@ export function initApp(): void {
     setActiveSegment(wrapCoverToggleGroup, 'wrapcover', bookletWrapCover ? 'on' : 'off');
     wrapCoverOptions.classList.toggle('hidden', !bookletWrapCover);
 
-    const splitKey = wrapCoverFormat === 'split' ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
+    const splitKey = wrapCoverFormat === 'a4-direct'
+      ? 'cover.formatA4DirectHint'
+      : wrapCoverFormat === 'split'
+        ? 'cover.formatSplitHint'
+        : 'cover.formatSingleHint';
     wrapCoverFormatHint.dataset.i18n = splitKey;
     wrapCoverFormatHint.textContent = t(splitKey);
     setActiveSegment(wrapCoverFormatGroup, 'format', wrapCoverFormat);
@@ -1455,6 +1461,9 @@ export function initApp(): void {
     wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
 
     wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions));
+    const wrapPaperFitWarnKey = wrapCoverFormat === 'a4-direct' ? 'cover.needsA4Direct' : 'cover.needsA3';
+    wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
+    wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
 
     const heightMm = dimensions.totalHeightPt * mmPerPt;
     wrapCoverDimsLabel.textContent = dimensions.format === 'split'
@@ -1517,7 +1526,7 @@ export function initApp(): void {
       format: wrapCoverFormat,
     });
 
-    if (dimensions.format === 'single') return { wrapCoverPdf: pdfBytes };
+    if (dimensions.format === 'single' || dimensions.format === 'a4-direct') return { wrapCoverPdf: pdfBytes };
 
     const [sheet1, sheet2] = await Promise.all([
       organizePages(pdfBytes, [0]),
@@ -2251,7 +2260,7 @@ export function initApp(): void {
   wrapCoverFormatGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single') return;
+    if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
     wrapCoverFormat = format;
     applyWrapCoverToUi();
     updateWrapCoverCalculations();
@@ -4217,6 +4226,7 @@ export function initApp(): void {
       spineWidthPt: spineResult.totalSpineWidthPt,
       bleedPt: specs.bleedMm * MM_TO_PT,
       wrapMarginPt: specs.wrapAllowanceMm * MM_TO_PT,
+      format: coverFormat,
     };
 
     const mmPerPt = 25.4 / 72;
@@ -4226,8 +4236,10 @@ export function initApp(): void {
     const singleDims = splitDims ? null : computeCoverDimensions(dimInput);
     const sheet1WidthMm = splitDims ? splitDims.sheet1.widthPt * mmPerPt : 0;
     const sheet2WidthMm = splitDims ? splitDims.sheet2.widthPt * mmPerPt : 0;
-    const totalWidthMm = splitDims ? sheet1WidthMm : singleDims!.totalWidthPt * mmPerPt;
-    const totalHeightMm = (splitDims ? splitDims.totalHeightPt : singleDims!.totalHeightPt) * mmPerPt;
+    const singleWrapWidthPt = singleDims && 'totalWidthPt' in singleDims ? singleDims.totalWidthPt : 0;
+    const singleWrapHeightPt = singleDims && 'totalHeightPt' in singleDims ? singleDims.totalHeightPt : 0;
+    const totalWidthMm = splitDims ? sheet1WidthMm : singleWrapWidthPt * mmPerPt;
+    const totalHeightMm = (splitDims ? splitDims.totalHeightPt : singleWrapHeightPt) * mmPerPt;
 
     // UI Badges & Labels
     coverSpineWidthLabel.textContent = `${spineResult.totalSpineWidthMm.toFixed(2)} mm`;
@@ -4247,6 +4259,9 @@ export function initApp(): void {
     // stops the job, and an oversize cover is still produced unchanged on its
     // own page box (see placeSheetOnPrinterPaper).
     coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!));
+    const coverPaperFitWarnKey = coverFormat === 'a4-direct' ? 'cover.needsA4Direct' : 'cover.needsA3';
+    coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
+    coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
 
     coverTotalDimensionsLabel.textContent = splitDims
       ? t('cover.totalDimensionsSplit', {
@@ -4282,24 +4297,27 @@ export function initApp(): void {
     coverPreviewTitleText.textContent = title;
     coverPreviewAuthorText.textContent = author;
     coverPreviewSynopsisText.textContent = synopsis;
+
     coverSplitTitleText.textContent = title;
     coverSplitAuthorText.textContent = author;
     coverSplitSynopsisText.textContent = synopsis;
 
-    const visualSpineWidth = Math.max(18, Math.min(80, Math.round(spineWidthMm * 3.5)));
-    for (const spine of [coverSpinePreview, coverSplitSpinePreview]) {
-      spine.style.width = `${visualSpineWidth}px`;
-      spine.style.flexBasis = `${visualSpineWidth}px`;
-    }
+    const visualSpineWidth = Math.max(14, Math.min(80, Math.round(spineWidthMm * 4)));
+    coverSpinePreview.style.width = `${visualSpineWidth}px`;
+    coverSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
+    coverSplitSpinePreview.style.width = `${visualSpineWidth}px`;
+    coverSplitSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
 
-    for (const spineText of [coverPreviewSpineText, coverSplitSpineText]) {
-      if (canPrintSpineText) {
-        spineText.textContent = title;
-        spineText.style.display = 'block';
-      } else {
-        spineText.textContent = '';
-        spineText.style.display = 'none';
-      }
+    if (canPrintSpineText) {
+      coverPreviewSpineText.textContent = title;
+      coverPreviewSpineText.style.display = 'block';
+      coverSplitSpineText.textContent = title;
+      coverSplitSpineText.style.display = 'block';
+    } else {
+      coverPreviewSpineText.textContent = '';
+      coverPreviewSpineText.style.display = 'none';
+      coverSplitSpineText.textContent = '';
+      coverSplitSpineText.style.display = 'none';
     }
 
     const theme = coverPreviewTheme(coverTheme);
@@ -4325,7 +4343,10 @@ export function initApp(): void {
 
     setActiveSegment(coverFormatGroup, 'format', coverFormat);
 
-    coverFormatHint.dataset.i18n = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
+    const formatKey = coverFormat === 'a4-direct'
+      ? 'cover.formatA4DirectHint'
+      : (isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint');
+    coverFormatHint.dataset.i18n = formatKey;
     coverFormatHint.textContent = t(coverFormatHint.dataset.i18n);
 
     coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle';
@@ -4372,6 +4393,8 @@ export function initApp(): void {
     setActiveSegment(coverGsmGroup, 'gsm', '80');
     setActiveSegment(coverBindingGroup, 'binding', 'sewn');
     setActiveSegment(coverStyleGroup, 'style', 'softcover');
+    coverStyleRow.classList.remove('hidden');
+    coverStyleGroup.classList.remove('hidden');
     coverBoardThicknessBlock.classList.add('hidden');
     setActiveSegment(coverBoardGroup, 'board', '2.0');
     setActiveSegment(coverPageTrimGroup, 'trim', 'A5');
@@ -4533,7 +4556,15 @@ export function initApp(): void {
     if (!binding) return;
     coverBindingType = binding;
     setActiveSegment(coverBindingGroup, 'binding', binding);
-    coverSigCountRow.classList.toggle('hidden', binding === 'saddle');
+    const isSaddle = binding === 'saddle';
+    coverSigCountRow.classList.toggle('hidden', isSaddle);
+    coverStyleRow.classList.toggle('hidden', isSaddle);
+    coverStyleGroup.classList.toggle('hidden', isSaddle);
+    if (isSaddle && coverCoverStyle === 'hardcover') {
+      coverCoverStyle = 'softcover';
+      setActiveSegment(coverStyleGroup, 'style', 'softcover');
+      coverBoardThicknessBlock.classList.add('hidden');
+    }
     updateCoverLiveCalculations();
   });
 
@@ -4568,7 +4599,7 @@ export function initApp(): void {
   coverFormatGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single') return;
+    if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
     coverFormat = format;
     applyCoverFormatToUi();
     updateCoverLiveCalculations();
@@ -4597,6 +4628,7 @@ export function initApp(): void {
         spineWidthPt: spineCalc.totalSpineWidthPt,
         bleedPt: specs.bleedMm * MM_TO_PT,
         wrapMarginPt: specs.wrapAllowanceMm * MM_TO_PT,
+        format: coverFormat,
       };
       const dimensions = coverFormat === 'split'
         ? computeSplitCoverDimensions(dimInput)
@@ -4709,10 +4741,6 @@ export function initApp(): void {
   resultOpenCoverStudioBtn.addEventListener('click', () => {
     resetCoverScreen();
     if (booklet && selectedFile) {
-      setActiveSegment(coverSourceModeGroup, 'mode', 'manual');
-      coverPdfSourceCard.classList.add('hidden');
-      coverManualCountsCard.classList.remove('hidden');
-
       const sheets = parseInt(statSheets.textContent || '20', 10) || 20;
       coverSheetCount = sheets;
       coverSheetCountInput.value = String(sheets);
@@ -4725,6 +4753,19 @@ export function initApp(): void {
         coverSigCount = Math.max(1, computeSignatureMappings(sheets * 4, 'auto').length);
         coverSigCountInput.value = String(coverSigCount);
       }
+
+      coverPickedPdfName = selectedFile.name.replace(/\.pdf$/i, '');
+      coverPdfName.textContent = selectedFile.name;
+      coverPdfInfo.textContent = t('cover.pdfDetected', {
+        name: '',
+        pages: bookletOriginalPages,
+        sheets,
+      });
+      coverPdfBadge.classList.remove('hidden');
+      coverPickPdfBtn.classList.add('hidden');
+      coverPdfSourceCard.classList.remove('hidden');
+      coverManualCountsCard.classList.add('hidden');
+      setActiveSegment(coverSourceModeGroup, 'mode', 'pdf');
 
       // With the inline cover section on, Cover Studio opens on exactly what was
       // already produced — otherwise the binding is inferred from the imposition
@@ -4752,7 +4793,10 @@ export function initApp(): void {
         coverBindingType = isSingle ? 'saddle' : 'sewn';
       }
       setActiveSegment(coverBindingGroup, 'binding', coverBindingType);
-      coverSigCountRow.classList.toggle('hidden', coverBindingType === 'saddle');
+      const isSaddle = coverBindingType === 'saddle';
+      coverSigCountRow.classList.toggle('hidden', isSaddle);
+      coverStyleRow.classList.toggle('hidden', isSaddle);
+      coverStyleGroup.classList.toggle('hidden', isSaddle);
 
       // The cover's own title wins over the file name the user typed on the
       // result screen — it is the one they actually wrote onto the cover.

@@ -435,7 +435,7 @@ describe('Cover Studio - Two-Sheet Split Format Wiring', () => {
 
   it('swaps the data-i18n key alongside the text when the format changes, so a later language switch keeps the right wording', () => {
     const body = extractFunctionBody('function applyCoverFormatToUi(');
-    expect(body).toContain("coverFormatHint.dataset.i18n = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint'");
+    expect(body).toContain('coverFormatHint.dataset.i18n = formatKey');
     expect(body).toContain("coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle'");
     expect(body).toContain('coverFormatHint.textContent = t(coverFormatHint.dataset.i18n)');
     expect(body).toContain('coverPreviewHeading.textContent = t(coverPreviewHeading.dataset.i18n)');
@@ -584,6 +584,14 @@ describe('Cover Studio - A4 fit warning', () => {
     return appSource.slice(start, next === -1 ? undefined : next);
   }
 
+  function sourceBetween(from: string, to: string): string {
+    const start = appSource.indexOf(from);
+    expect(start, `expected to find "${from}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const end = appSource.indexOf(to, start + from.length);
+    expect(end, `expected to find "${to}" in app.ts`).toBeGreaterThanOrEqual(0);
+    return appSource.slice(start, end);
+  }
+
   /** The markup of one badge span, looked up by its id. */
   function badgeTag(id: string): string {
     const at = htmlSource.indexOf(`id="${id}"`);
@@ -617,5 +625,38 @@ describe('Cover Studio - A4 fit warning', () => {
     const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
     expect(enDictionary).toContain("'cover.needsA3':");
     expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsA3':");
+  });
+
+  it('supports the 1 × A4 direct format in Cover Studio', () => {
+    const group = htmlSource.slice(
+      htmlSource.indexOf('id="coverFormatGroup"'),
+      htmlSource.indexOf('id="coverFormatHint"'),
+    );
+    expect(group).toContain('data-format="a4-direct"');
+    expect(group).toContain('data-i18n="cover.formatA4Direct"');
+  });
+
+  it('hides cover style and board controls when saddle-stitched binding is selected', () => {
+    const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverStyleGroup.addEventListener('click'");
+    expect(bindingHandler).toContain("coverStyleRow.classList.toggle('hidden', isSaddle)");
+    expect(bindingHandler).toContain("coverStyleGroup.classList.toggle('hidden', isSaddle)");
+    expect(bindingHandler).toContain("coverCoverStyle = 'softcover'");
+  });
+
+  it('defines a4-direct keys and warning in both dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).toContain("'cover.formatA4Direct':");
+    expect(enDictionary).toContain("'cover.formatA4DirectHint':");
+    expect(enDictionary).toContain("'cover.needsA4Direct':");
+    expect(trDictionary).toContain("'cover.formatA4Direct':");
+    expect(trDictionary).toContain("'cover.formatA4DirectHint':");
+    expect(trDictionary).toContain("'cover.needsA4Direct':");
+  });
+
+  it('falls back to localized title and author in updateCoverPreviewVisuals when empty', () => {
+    const fn = functionSource('function updateCoverPreviewVisuals(');
+    expect(fn).toContain("t('cover.bookTitle')");
+    expect(fn).toContain("t('cover.author')");
   });
 });

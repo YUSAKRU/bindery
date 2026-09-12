@@ -223,7 +223,7 @@ describe('Booklet pipeline - Wiring', () => {
     expect(body).toContain('organizePages(pdfBytes, [0])');
     expect(body).toContain('organizePages(pdfBytes, [1])');
     // A single wrap is already one sheet; splitting it would be wrong.
-    expect(body).toContain("if (dimensions.format === 'single') return { wrapCoverPdf: pdfBytes }");
+    expect(body).toContain("if (dimensions.format === 'single' || dimensions.format === 'a4-direct') return { wrapCoverPdf: pdfBytes }");
     expect(body).toContain('format: wrapCoverFormat');
   });
 
@@ -286,7 +286,6 @@ describe('Booklet pipeline - Wiring', () => {
 
   it('swaps the format hint data-i18n key with its text so a language change keeps the right wording', () => {
     const body = extractFunctionBody('function applyWrapCoverToUi(');
-    expect(body).toContain("wrapCoverFormat === 'split' ? 'cover.formatSplitHint' : 'cover.formatSingleHint'");
     expect(body).toContain('wrapCoverFormatHint.dataset.i18n = splitKey');
     expect(body).toContain('wrapCoverFormatHint.textContent = t(splitKey)');
   });
@@ -699,5 +698,22 @@ describe('Booklet pipeline - Wrap cover vs separate cover', () => {
     expect(t('config.coverWrapConflictHint')).not.toBe('config.coverWrapConflictHint');
     const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
     expect(trDictionary).toContain("'config.coverWrapConflictHint':");
+  });
+
+  it('supports 1 x A4 direct format in booklet wrap cover options', () => {
+    const options = htmlSource.slice(
+      htmlSource.indexOf('id="wrapCoverFormatGroup"'),
+      htmlSource.indexOf('id="wrapCoverFormatHint"'),
+    );
+    expect(options).toContain('data-format="a4-direct"');
+    expect(options).toContain('data-i18n="cover.formatA4Direct"');
+  });
+
+  it('populates Cover Studio from booklet file when opening from result screen', () => {
+    const handler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "window.addEventListener('resize'");
+    expect(handler).toContain("coverPickedPdfName = selectedFile.name.replace(/\\.pdf$/i, '')");
+    expect(handler).toContain("setActiveSegment(coverSourceModeGroup, 'mode', 'pdf')");
+    expect(handler).toContain('coverPdfBadge.classList.remove');
+    expect(handler).toContain('coverManualCountsCard.classList.add');
   });
 });
