@@ -38,6 +38,8 @@ public class PrintPlugin extends Plugin {
     public void printPdf(PluginCall call) {
         String uriString = call.getString("uri");
         String jobName = call.getString("jobName", "Document");
+        String mediaSizeName = call.getString("mediaSize");
+        String orientation = call.getString("orientation");
         if (uriString == null || uriString.isEmpty()) {
             call.reject("No file was supplied to print.", "PRINT_MISSING_URI");
             return;
@@ -51,11 +53,36 @@ public class PrintPlugin extends Plugin {
             return;
         }
 
+        final PrintAttributes printAttributes;
+        if (mediaSizeName != null || orientation != null) {
+            PrintAttributes.MediaSize mediaSize;
+            if ("ISO_A3".equals(mediaSizeName)) {
+                mediaSize = PrintAttributes.MediaSize.ISO_A3;
+            } else if ("ISO_A5".equals(mediaSizeName)) {
+                mediaSize = PrintAttributes.MediaSize.ISO_A5;
+            } else if ("NA_LETTER".equals(mediaSizeName)) {
+                mediaSize = PrintAttributes.MediaSize.NA_LETTER;
+            } else {
+                mediaSize = PrintAttributes.MediaSize.ISO_A4;
+            }
+
+            PrintAttributes.MediaSize orientedMediaSize = "landscape".equalsIgnoreCase(orientation)
+                ? mediaSize.asLandscape()
+                : mediaSize.asPortrait();
+
+            printAttributes = new PrintAttributes.Builder()
+                .setMediaSize(orientedMediaSize)
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                .build();
+        } else {
+            printAttributes = null;
+        }
+
         // print() must run on the UI thread; the dialog is an activity.
         getActivity()
             .runOnUiThread(() -> {
                 try {
-                    printManager.print(jobName, new PdfDocumentAdapter(context, uri, jobName), null);
+                    printManager.print(jobName, new PdfDocumentAdapter(context, uri, jobName), printAttributes);
                     call.resolve();
                 } catch (Exception e) {
                     call.reject("Could not open the print dialog.", "PRINT_FAILED", e);

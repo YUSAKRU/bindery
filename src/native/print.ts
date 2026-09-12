@@ -1,8 +1,14 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { PrintMediaSize, PrintOrientation } from './print-attributes';
 
 interface PrintPlugin {
   /** `uri` is a location on disk, never the bytes — see `printPdf` in file-bridge.ts. */
-  printPdf(options: { uri: string; jobName: string }): Promise<void>;
+  printPdf(options: {
+    uri: string;
+    jobName: string;
+    orientation?: PrintOrientation;
+    mediaSize?: PrintMediaSize;
+  }): Promise<void>;
 }
 
 const Print = registerPlugin<PrintPlugin>('Print');
@@ -23,6 +29,18 @@ export function canPrint(): boolean {
  * Callers should check {@link canPrint} first; off Android this rejects rather
  * than silently doing nothing, so a mis-wired UI is visible instead of dead.
  */
-export async function printPdfUri(uri: string, jobName: string): Promise<void> {
-  await Print.printPdf({ uri, jobName });
+export async function printPdfUri(
+  uri: string,
+  jobName: string,
+  attributes?: {
+    orientation?: PrintOrientation;
+    mediaSize?: PrintMediaSize;
+  },
+): Promise<void> {
+  await Print.printPdf({
+    uri,
+    jobName,
+    orientation: attributes?.orientation,
+    mediaSize: attributes?.mediaSize,
+  });
 }

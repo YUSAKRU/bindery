@@ -2,7 +2,9 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { FilePicker, type PickedFile } from '@capawesome/capacitor-file-picker';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { PDFDocument } from 'pdf-lib';
 import { canPrint, printPdfUri } from './print';
+import { resolvePrintMediaAttributes } from './print-attributes';
 
 export interface PickedPdf {
   name: string;
@@ -481,7 +483,24 @@ export async function printPdf(bytes: Uint8Array, filename: string, jobName: str
     throw new PrintUnavailableError();
   }
   const uri = await writePdfToCache(bytes, filename);
-  await printPdfUri(uri, jobName);
+
+  let attributes: ReturnType<typeof resolvePrintMediaAttributes> | undefined;
+  try {
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    if (doc.getPageCount() > 0) {
+      const page = doc.getPage(0);
+      const { width, height } = page.getSize();
+      attributes = resolvePrintMediaAttributes(width, height);
+    }
+  } catch {
+    // If the PDF cannot be parsed (e.g. invalid bytes), proceed without attributes.
+  }
+
+  if (attributes) {
+    await printPdfUri(uri, jobName, attributes);
+  } else {
+    await printPdfUri(uri, jobName);
+  }
 }
 
 /** Raised when printing is requested on a platform with no system print dialog. */

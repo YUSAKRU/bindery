@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PDFDocument } from 'pdf-lib';
 
 // vi.mock factories are hoisted above module-scope variable declarations, so the
 // mock fns themselves must be created via vi.hoisted() to be visible inside them.
@@ -412,6 +413,20 @@ describe('printPdf', () => {
     expect(typeof uriArg).toBe('string');
     expect(typeof jobArg).toBe('string');
     expect(printPdfUri.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('resolves and passes print media attributes when printing a valid PDF', async () => {
+    writeFile.mockResolvedValue({ uri: 'file:///cache/booklet.pdf' });
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.addPage([842, 595]); // A4 landscape
+    const pdfBytes = await pdfDoc.save();
+
+    await printPdf(pdfBytes, 'booklet.pdf', 'Booklet Job');
+
+    expect(printPdfUri).toHaveBeenCalledWith('file:///cache/booklet.pdf', 'Booklet Job', {
+      orientation: 'landscape',
+      mediaSize: 'ISO_A4',
+    });
   });
 
   it('refuses before writing anything when the platform cannot print', async () => {
