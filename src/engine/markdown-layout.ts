@@ -187,8 +187,15 @@ export function wrapCodeLine(
   // left edge: a wrapped row flush against the margin breaks the shape of the
   // code around it, which on a printed page is the only structure a reader has.
   const ownIndent = /^[ \t]*/.exec(line)?.[0] ?? '';
-  const contPrefix = ownIndent + CODE_WRAP_INDENT;
-  const contBudget = Math.max(1, firstBudget - contPrefix.length);
+  // Ensure continuation has enough room for code rather than collapsing to 1 char/line
+  // when ownIndent takes up nearly the entire line budget.
+  const minContBudget = Math.min(20, Math.floor(firstBudget / 2));
+  const maxContIndent = Math.max(0, firstBudget - minContBudget);
+  const fullContPrefix = ownIndent + CODE_WRAP_INDENT;
+  const contPrefix = fullContPrefix.length <= maxContIndent
+    ? fullContPrefix
+    : ownIndent.slice(0, Math.max(0, maxContIndent - CODE_WRAP_INDENT.length)) + CODE_WRAP_INDENT;
+  const contBudget = Math.max(minContBudget, firstBudget - contPrefix.length);
 
   const out: string[] = [];
   let rest = line;
@@ -220,8 +227,11 @@ export function wrapCodeLine(
 function breakPoint(rest: string, budget: number, indentLength: number): number {
   const space = rest.lastIndexOf(' ', budget - 1);
   // A space inside the leading indent is not a word boundary, and cutting there
-  // would make no progress.
-  if (space > indentLength) return space + 1;
+  // would make no progress. A continuation can start with spaces of its own
+  // when the previous cut fell inside a run of them, so those count too.
+  const restIndent = /^[ \t]*/.exec(rest)?.[0]?.length ?? 0;
+  const minCut = Math.max(indentLength, restIndent);
+  if (space > minCut) return space + 1;
   return budget;
 }
 

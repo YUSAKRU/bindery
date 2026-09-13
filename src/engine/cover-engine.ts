@@ -498,6 +498,12 @@ const FOLD_GUIDE_DASH: [number, number] = [4, 4];
 const CROP_MARK_LENGTH_PT = 14;
 const CROP_MARK_THICKNESS = 0.5;
 const CROP_MARK_OPACITY = 0.6;
+/**
+ * Crop marks sit in the WASTE margin, on bare paper outside the artwork, so they
+ * are drawn in a fixed near-black rather than the theme's text color: on the
+ * dark themes that text color is near-white and the marks would vanish.
+ */
+const CROP_MARK_COLOR = rgb(0.1, 0.1, 0.1);
 
 interface CoverFonts { font: PDFFont; boldFont: PDFFont }
 
@@ -527,11 +533,13 @@ function drawFoldGuide(page: PDFPage, x: number, yBottom: number, heightPt: numb
  * so that cuts leave no marks on the finished cover.
  *
  * - Sheet 1 (matingEdge === 'right'): marks at top-left and bottom-left (both
- *   horizontal and vertical), and vertical boundary marks at top-right and
- *   bottom-right.
+ *   horizontal and vertical).
  * - Sheet 2 (matingEdge === 'left'): marks at top-right and bottom-right (both
- *   horizontal and vertical), and vertical boundary marks at top-left and
- *   bottom-left.
+ *   horizontal and vertical).
+ *
+ * The mating edge itself gets no marks: placeSheetOnPrinterPaper butts it
+ * against the paper edge, so it is never cut and a mark there would land on
+ * the clipped, unprintable edge of the sheet.
  */
 export function drawCropMarks(
   page: PDFPage,
@@ -539,7 +547,6 @@ export function drawCropMarks(
   artworkWidthPt: number,
   artworkHeightPt: number,
   matingEdge: MatingEdge,
-  color: RGB,
 ): void {
   if (!place.fitsPrinterSheet) return;
 
@@ -553,24 +560,21 @@ export function drawCropMarks(
       start,
       end,
       thickness: CROP_MARK_THICKNESS,
-      color,
+      color: CROP_MARK_COLOR,
       opacity: CROP_MARK_OPACITY,
     });
   };
 
-  // Vertical boundary marks at both x0 and x1 (extending outward into top and bottom margins)
-  drawLine({ x: x0, y: y1 }, { x: x0, y: y1 + CROP_MARK_LENGTH_PT });
-  drawLine({ x: x1, y: y1 }, { x: x1, y: y1 + CROP_MARK_LENGTH_PT });
-  drawLine({ x: x0, y: y0 - CROP_MARK_LENGTH_PT }, { x: x0, y: y0 });
-  drawLine({ x: x1, y: y0 - CROP_MARK_LENGTH_PT }, { x: x1, y: y0 });
-
-  // Horizontal marks extending outward into the non-mating outer margin
   if (matingEdge === 'right') {
-    // Sheet 1: left edge has waste margin
+    // Sheet 1: the left edge is the cut edge; x1 is the paper's own right edge.
+    drawLine({ x: x0, y: y1 }, { x: x0, y: y1 + CROP_MARK_LENGTH_PT });
+    drawLine({ x: x0, y: y0 - CROP_MARK_LENGTH_PT }, { x: x0, y: y0 });
     drawLine({ x: x0 - CROP_MARK_LENGTH_PT, y: y1 }, { x: x0, y: y1 });
     drawLine({ x: x0 - CROP_MARK_LENGTH_PT, y: y0 }, { x: x0, y: y0 });
   } else {
-    // Sheet 2: right edge has waste margin
+    // Sheet 2: the right edge is the cut edge; x0 is the paper's own left edge.
+    drawLine({ x: x1, y: y1 }, { x: x1, y: y1 + CROP_MARK_LENGTH_PT });
+    drawLine({ x: x1, y: y0 - CROP_MARK_LENGTH_PT }, { x: x1, y: y0 });
     drawLine({ x: x1, y: y1 }, { x: x1 + CROP_MARK_LENGTH_PT, y: y1 });
     drawLine({ x: x1, y: y0 }, { x: x1 + CROP_MARK_LENGTH_PT, y: y0 });
   }
@@ -733,7 +737,7 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     // The lap flap itself is deliberately left blank: it ends up bonded under
     // sheet 2's glue tab, so anything printed on it would be buried.
     for (const x of sheet1.foldLinesX) drawFoldGuide(page1, x + place1.offsetXPt, place1.offsetYPt, sheet1.heightPt, textColor);
-    if (place1.fitsPrinterSheet) drawCropMarks(page1, place1, sheet1.widthPt, sheet1.heightPt, 'right', textColor);
+    if (place1.fitsPrinterSheet) drawCropMarks(page1, place1, sheet1.widthPt, sheet1.heightPt, 'right');
 
     // --- SHEET 2: glue tab | front cover ---
     // Sheet 2 meets sheet 1 on its left, so it is butted the other way; the two
@@ -743,7 +747,7 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
     page2.drawRectangle({ x: place2.offsetXPt, y: place2.offsetYPt, width: sheet2.widthPt, height: sheet2.heightPt, color: backgroundColor });
     await drawFrontCoverPanel(doc, page2, onPaper(sheet2.frontCoverRect, place2), content, fonts, textColor);
     for (const x of sheet2.foldLinesX) drawFoldGuide(page2, x + place2.offsetXPt, place2.offsetYPt, sheet2.heightPt, textColor);
-    if (place2.fitsPrinterSheet) drawCropMarks(page2, place2, sheet2.widthPt, sheet2.heightPt, 'left', textColor);
+    if (place2.fitsPrinterSheet) drawCropMarks(page2, place2, sheet2.widthPt, sheet2.heightPt, 'left');
 
     return doc.save();
   }

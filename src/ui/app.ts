@@ -1388,6 +1388,12 @@ export function initApp(): void {
       wrapMarginPt: (isHardcover ? 15 : 0) * MM_TO_PT,
       format: wrapCoverFormat,
     };
+    if (wrapCoverFormat === 'a4-direct') {
+      // Direct A4 printing on an A4 sheet cannot carry bleed or turn-in allowances.
+      // Panel dimensions reflect the book's true trim.
+      dimInput.bleedPt = 0;
+      dimInput.wrapMarginPt = 0;
+    }
 
     return {
       spine,
@@ -1676,7 +1682,7 @@ export function initApp(): void {
 
   let currentPickerPath = '';
   let selectedPickerFiles: { name: string; uri: string }[] = [];
-  let pickerResolve: ((value: any) => void) | null = null;
+  let pickerResolve: ((value: PickedPdf | PickedPdf[] | null) => void) | null = null;
 
   function renderBinderyPickerBreadcrumb(): void {
     binderyPickerBreadcrumb.innerHTML = '';
@@ -1685,7 +1691,7 @@ export function initApp(): void {
     btn.textContent = t('files.root');
     btn.addEventListener('click', () => {
       currentPickerPath = '';
-      void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
+      void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
     });
     binderyPickerBreadcrumb.appendChild(btn);
 
@@ -1705,7 +1711,7 @@ export function initApp(): void {
         folderBtn.textContent = part;
         folderBtn.addEventListener('click', () => {
           currentPickerPath = currentPath;
-          void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
+          void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
         });
         binderyPickerBreadcrumb.appendChild(folderBtn);
       });
@@ -1794,8 +1800,10 @@ export function initApp(): void {
     }
   }
 
-  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<any> {
-    return new Promise((resolve) => {
+  function promptAndPickPdfs(options: { allowMultiple: true }): Promise<PickedPdf[]>;
+  function promptAndPickPdfs(options: { allowMultiple: false }): Promise<PickedPdf | null>;
+  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<PickedPdf | PickedPdf[] | null> {
+    return new Promise<PickedPdf | PickedPdf[] | null>((resolve) => {
       pickerResolve = resolve;
 
       const handleDevice = async () => {
@@ -2355,8 +2363,16 @@ export function initApp(): void {
       // The cover is measured from what the booklet ACTUALLY came out as, not
       // from the config screen's projection, so a padding or signature decision
       // the engine made cannot leave the spine wrong.
+      //
+      // A cover that cannot be produced (e.g. COVER_TOO_LARGE for a 1 × A4 wrap)
+      // is caught on its own rather than by the outer catch: the booklet above
+      // already succeeded, and must still reach the result screen to be saved.
       const wrapCoverPdfs = bookletWrapCover
-        ? await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount)
+        ? await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount).catch((coverError: unknown) => {
+            console.warn('Wrap cover could not be produced; keeping the booklet:', coverError);
+            showToast(errorText(coverError), { type: 'error' });
+            return {};
+          })
         : {};
 
       booklet = {
@@ -3900,7 +3916,7 @@ export function initApp(): void {
   });
 
   // --- Image Cropping & Perspective Correction Logic ---
-  let cropQueue: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' }[] = [];
+  const cropQueue: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' }[] = [];
   let currentCropItem: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' } | null = null;
   let cropImageWidth = 0;
   let cropImageHeight = 0;
@@ -3945,7 +3961,7 @@ export function initApp(): void {
     }
 
     currentCropItem = cropQueue[0];
-    const blob = new Blob([currentCropItem.bytes as any], { type: currentCropItem.format === 'png' ? 'image/png' : 'image/jpeg' });
+    const blob = new Blob([new Uint8Array(currentCropItem.bytes)], { type: currentCropItem.format === 'png' ? 'image/png' : 'image/jpeg' });
     const url = URL.createObjectURL(blob);
 
     cropSourceImg.src = url;
@@ -4173,7 +4189,7 @@ export function initApp(): void {
         1754
       );
 
-      const url = URL.createObjectURL(new Blob([warpedBytes as any], { type: 'image/jpeg' }));
+      const url = URL.createObjectURL(new Blob([new Uint8Array(warpedBytes)], { type: 'image/jpeg' }));
       selectedImages.push({
         id: Math.random().toString(36).substring(2, 9),
         name: currentCropItem.name,
@@ -4209,11 +4225,17 @@ export function initApp(): void {
     const sheetCount = Math.max(1, coverSheetCount);
     const signatureCount = coverBindingType === 'saddle' ? 1 : Math.max(1, coverSigCount);
     const isA5 = coverPageTrim === 'A5';
-    const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
+    let pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
     const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
     const isHardcover = coverCoverStyle === 'hardcover';
-    const bleedMm = isHardcover ? 0 : 3;
-    const wrapAllowanceMm = isHardcover ? 15 : 0;
+    let bleedMm = isHardcover ? 0 : 3;
+    let wrapAllowanceMm = isHardcover ? 15 : 0;
+    if (coverFormat === 'a4-direct') {
+      // Direct A4 printing on an A4 sheet cannot carry bleed or turn-in allowances.
+      // Panel dimensions reflect the book's true trim.
+      bleedMm = 0;
+      wrapAllowanceMm = 0;
+    }
     return {
       sheetCount,
       signatureCount,
@@ -4516,13 +4538,13 @@ export function initApp(): void {
 
   coverSheetCountInput.addEventListener('input', () => {
     const val = parseInt(coverSheetCountInput.value, 10);
-    coverSheetCount = isNaN(val) || val < 1 ? 1 : val;
+    coverSheetCount = Number.isNaN(val) || val < 1 ? 1 : val;
     updateCoverLiveCalculations();
   });
 
   coverSigCountInput.addEventListener('input', () => {
     const val = parseInt(coverSigCountInput.value, 10);
-    coverSigCount = isNaN(val) || val < 1 ? 1 : val;
+    coverSigCount = Number.isNaN(val) || val < 1 ? 1 : val;
     updateCoverLiveCalculations();
   });
 
@@ -7393,7 +7415,7 @@ export function initApp(): void {
         isDir ? t('common.newFolderPrompt') : t('common.newFileNamePrompt'),
         currentName,
       );
-      if (!input || !input.trim()) return;
+      if (!input?.trim()) return;
       const newName = safeFileName(input, { ensurePdf: !isDir });
       if (!newName) {
         showToast(t('toast.invalidFileName'));
@@ -7693,7 +7715,7 @@ export function initApp(): void {
   // --- Toolbar event listeners ---
   filesNewFolderBtn.addEventListener('click', async () => {
     const name = prompt(t('common.newFolderPrompt'));
-    if (!name || !name.trim()) return;
+    if (!name?.trim()) return;
     const safeName = safeFileName(name, { ensurePdf: false });
     if (!safeName) {
       showToast(t('toast.invalidFileName'));

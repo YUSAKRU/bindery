@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fc from 'fast-check';
@@ -674,6 +674,38 @@ describe('generateCoverPdf — split format', () => {
     }
   }
 
+  /** The stroke color (as pdf.js's #rrggbb) in effect for every solid stroked line segment, per page. */
+  async function extractSolidLineStrokeColorsPerPage(pdfBytes: Uint8Array): Promise<string[][]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    try {
+      const pdfDoc = await loadingTask.promise;
+      const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const pages: string[][] = [];
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const opList = await page.getOperatorList();
+        const colors: string[] = [];
+        let currentDash: number[] = [];
+        let currentStroke = '';
+        for (let op = 0; op < opList.fnArray.length; op++) {
+          const fn = opList.fnArray[op];
+          if (fn === OPS.setDash) {
+            currentDash = opList.argsArray[op][0] as number[];
+          } else if (fn === OPS.setStrokeRGBColor) {
+            currentStroke = opList.argsArray[op][0] as string;
+          } else if (fn === OPS.constructPath && currentDash.length === 0 && opList.argsArray[op][0] === OPS.stroke) {
+            const coords = opList.argsArray[op][2];
+            if (coords && coords.length === 4) colors.push(currentStroke);
+          }
+        }
+        pages.push(colors);
+      }
+      return pages;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
   it('produces a 2-page PDF on real A4 sheets, not on the artwork\'s own box', async () => {
     stubFontFetch();
     const dimensions = computeSplitCoverDimensions(A5_SPLIT);
@@ -814,7 +846,7 @@ describe('generateCoverPdf — split format', () => {
     expect((await extractDashPatternsPerPage(pdfBytes))[0]).toHaveLength(0);
   });
 
-  it('draws hairline crop marks in waste margins on both split sheets', async () => {
+  it('draws hairline crop marks in waste margins on both split sheets, none on the paper edge', async () => {
     stubFontFetch();
     const dimensions = computeSplitCoverDimensions(A5_SPLIT);
     const pdfBytes = await generateCoverPdf({
@@ -824,8 +856,8 @@ describe('generateCoverPdf — split format', () => {
     });
 
     const [sheet1Lines, sheet2Lines] = await extractSolidLinesPerPage(pdfBytes);
-    expect(sheet1Lines).toHaveLength(6);
-    expect(sheet2Lines).toHaveLength(6);
+    expect(sheet1Lines).toHaveLength(4);
+    expect(sheet2Lines).toHaveLength(4);
 
     const place1 = placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.totalHeightPt, 'right');
     const place2 = placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.totalHeightPt, 'left');
@@ -838,11 +870,14 @@ describe('generateCoverPdf — split format', () => {
     const s1x1 = place1.offsetXPt + dimensions.sheet1.widthPt;
 
     const approx = (val: number) => expect.closeTo(val, 1);
-    // Vertical marks on sheet 1
+    // Vertical marks on sheet 1 (left edge only)
     expect(sheet1Lines).toContainEqual([approx(s1x0), approx(y1), approx(s1x0), approx(y1 + 14)]);
-    expect(sheet1Lines).toContainEqual([approx(s1x1), approx(y1), approx(s1x1), approx(y1 + 14)]);
     expect(sheet1Lines).toContainEqual([approx(s1x0), approx(y0 - 14), approx(s1x0), approx(y0)]);
-    expect(sheet1Lines).toContainEqual([approx(s1x1), approx(y0 - 14), approx(s1x1), approx(y0)]);
+    // x1 is the paper's own edge: a mark there would be clipped by the printer
+    expect(s1x1).toBeCloseTo(place1.pageWidthPt, 6);
+    for (const [ax, , bx] of sheet1Lines) {
+      expect(Math.max(ax, bx)).toBeLessThan(s1x1 - 1);
+    }
     // Horizontal marks on sheet 1 (on left edge)
     expect(sheet1Lines).toContainEqual([approx(s1x0 - 14), approx(y1), approx(s1x0), approx(y1)]);
     expect(sheet1Lines).toContainEqual([approx(s1x0 - 14), approx(y0), approx(s1x0), approx(y0)]);
@@ -851,14 +886,39 @@ describe('generateCoverPdf — split format', () => {
     const s2x0 = place2.offsetXPt;
     const s2x1 = place2.offsetXPt + dimensions.sheet2.widthPt;
 
-    // Vertical marks on sheet 2
-    expect(sheet2Lines).toContainEqual([approx(s2x0), approx(y1), approx(s2x0), approx(y1 + 14)]);
+    // Vertical marks on sheet 2 (right edge only)
     expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y1), approx(s2x1), approx(y1 + 14)]);
-    expect(sheet2Lines).toContainEqual([approx(s2x0), approx(y0 - 14), approx(s2x0), approx(y0)]);
     expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y0 - 14), approx(s2x1), approx(y0)]);
+    // x0 is the paper's own edge: a mark there would be clipped by the printer
+    expect(s2x0).toBe(0);
+    for (const [ax, , bx] of sheet2Lines) {
+      expect(Math.min(ax, bx)).toBeGreaterThan(s2x0 + 1);
+    }
     // Horizontal marks on sheet 2 (on right edge)
     expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y1), approx(s2x1 + 14), approx(y1)]);
     expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y0), approx(s2x1 + 14), approx(y0)]);
+  });
+
+  it('draws crop marks in a fixed near-black even on dark themes with light text', async () => {
+    stubFontFetch();
+    // navy/burgundy/charcoal carry near-white text; marks in that color would be
+    // invisible on the bare white paper outside the artwork.
+    const darkThemes: CoverTheme[] = ['navy', 'burgundy', 'charcoal'];
+    const dimensions = computeSplitCoverDimensions(A5_SPLIT);
+    for (const theme of darkThemes) {
+      expect(Math.min(...COVER_THEMES[theme].textRgb)).toBeGreaterThan(0.9);
+      const pdfBytes = await generateCoverPdf({
+        dimensions,
+        content: { title: 'Dark Crop Marks', synopsis: 'Back.', theme },
+        spineResult,
+      });
+      const pages = await extractSolidLineStrokeColorsPerPage(pdfBytes);
+      expect(pages).toHaveLength(2);
+      for (const colors of pages) {
+        expect(colors, `${theme}: every crop mark stroke`).toHaveLength(4);
+        for (const color of colors) expect(color, theme).toBe('#1a1a1a');
+      }
+    }
   });
 
   it('the single format draws no crop marks', async () => {
@@ -1005,6 +1065,43 @@ describe('computeA4DirectCoverDimensions', () => {
     expect(result.totalWidthPt / MM_TO_PT).toBeCloseTo(312, 6);
     expect(result.backCoverRect.x).toBe(0);
     expect(result.backCoverRect.y).toBe(0);
+  });
+
+  it('fits a real A5 trim (148 x 210 mm) on one A4 sheet once bleed is 0', () => {
+    // The UI's 1 x A4 geometry: no bleed, no wrap allowance, and each panel is
+    // half of what the 297 mm sheet leaves after the spine. With a 3 mm bleed
+    // the height alone is 216 mm and can never clear the 210 mm sheet.
+    const a4LongEdgePt = A4_LONG_EDGE_MM * MM_TO_PT;
+    const spine = computeSpineWidth({ sheetCount: 20, signatureCount: 1, paperGsm: 80, bindingType: 'saddle' });
+    const result = computeA4DirectCoverDimensions({
+      pageWidthPt: (a4LongEdgePt - spine.totalSpineWidthPt) / 2,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: spine.totalSpineWidthPt,
+      bleedPt: 0,
+      wrapMarginPt: 0,
+    });
+    expect(result.fitsSheet).toBe(true);
+    expect(result.totalWidthPt).toBeCloseTo(a4LongEdgePt, 6);
+    expect(result.totalHeightPt / MM_TO_PT).toBeCloseTo(210, 6);
+
+    // A literal 148 mm page with a spine that leaves exactly 297 mm also fits.
+    const literalA5 = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 0,
+      wrapMarginPt: 0,
+    });
+    expect(literalA5.fitsSheet).toBe(true);
+
+    // Same book with the old 3 mm bleed: 216 mm tall, never fits.
+    expect(computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+      wrapMarginPt: 0,
+    }).fitsSheet).toBe(false);
   });
 
   it('sets fitsSheet = false for a book whose height exceeds 210mm', () => {
@@ -1222,9 +1319,9 @@ describe('generateCoverPdf — a4-direct format', () => {
         format: 'a4-direct',
       });
       expect.unreachable('Should have thrown');
-    } catch (err: any) {
+    } catch (err) {
       expect(err).toBeInstanceOf(BookletError);
-      expect(err.code).toBe('COVER_TOO_LARGE');
+      expect((err as BookletError).code).toBe('COVER_TOO_LARGE');
     }
   });
 
@@ -1318,7 +1415,7 @@ describe('coverFitsPrinterSheet', () => {
 });
 
 describe('drawCropMarks', () => {
-  it('draws 6 hairline crop marks on sheet 1 (matingEdge === right)', () => {
+  it('draws 4 hairline crop marks on sheet 1 (matingEdge === right), none on the paper edge', () => {
     const drawnLines: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; thickness: number; opacity: number; color: unknown }> = [];
     const mockPage = {
       drawLine: vi.fn((opts) => drawnLines.push(opts)),
@@ -1333,15 +1430,13 @@ describe('drawCropMarks', () => {
     };
     const artworkWidthPt = 500;
     const artworkHeightPt = 612.29;
-    const color = { type: 'RGB', red: 0.1, green: 0.1, blue: 0.1 } as const;
+    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'right');
 
-    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'right', color as unknown as import('pdf-lib').RGB);
-
-    expect(mockPage.drawLine).toHaveBeenCalledTimes(6);
+    expect(mockPage.drawLine).toHaveBeenCalledTimes(4);
     for (const line of drawnLines) {
       expect(line.thickness).toBe(0.5);
       expect(line.opacity).toBe(0.6);
-      expect(line.color).toEqual(color);
+      expect(line.color).toEqual(rgb(0.1, 0.1, 0.1));
     }
 
     const x0 = place.offsetXPt;
@@ -1349,18 +1444,18 @@ describe('drawCropMarks', () => {
     const y0 = place.offsetYPt;
     const y1 = place.offsetYPt + artworkHeightPt;
 
-    // 4 vertical boundary marks
+    // 2 vertical marks on the left (cut) edge; x1 is the paper's right edge
+    expect(x1).toBeCloseTo(place.pageWidthPt, 6);
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y1 }, end: { x: x0, y: y1 + 14 } }));
-    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y1 }, end: { x: x1, y: y1 + 14 } }));
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y0 - 14 }, end: { x: x0, y: y0 } }));
-    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y0 - 14 }, end: { x: x1, y: y0 } }));
+    expect(drawnLines.filter((l) => l.start.x === x1 || l.end.x === x1)).toHaveLength(0);
 
     // 2 horizontal marks on the left (non-mating edge)
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0 - 14, y: y1 }, end: { x: x0, y: y1 } }));
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0 - 14, y: y0 }, end: { x: x0, y: y0 } }));
   });
 
-  it('draws 6 hairline crop marks on sheet 2 (matingEdge === left)', () => {
+  it('draws 4 hairline crop marks on sheet 2 (matingEdge === left), none on the paper edge', () => {
     const drawnLines: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; thickness: number; opacity: number }> = [];
     const mockPage = {
       drawLine: vi.fn((opts) => drawnLines.push(opts)),
@@ -1375,11 +1470,9 @@ describe('drawCropMarks', () => {
     };
     const artworkWidthPt = 456;
     const artworkHeightPt = 612.29;
-    const color = { type: 'RGB', red: 0.1, green: 0.1, blue: 0.1 } as const;
+    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'left');
 
-    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'left', color as unknown as import('pdf-lib').RGB);
-
-    expect(mockPage.drawLine).toHaveBeenCalledTimes(6);
+    expect(mockPage.drawLine).toHaveBeenCalledTimes(4);
     for (const line of drawnLines) {
       expect(line.thickness).toBe(0.5);
       expect(line.opacity).toBe(0.6);
@@ -1390,11 +1483,10 @@ describe('drawCropMarks', () => {
     const y0 = place.offsetYPt;
     const y1 = place.offsetYPt + artworkHeightPt;
 
-    // 4 vertical boundary marks
-    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y1 }, end: { x: x0, y: y1 + 14 } }));
+    // 2 vertical marks on the right (cut) edge; x0 is the paper's left edge
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y1 }, end: { x: x1, y: y1 + 14 } }));
-    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y0 - 14 }, end: { x: x0, y: y0 } }));
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y0 - 14 }, end: { x: x1, y: y0 } }));
+    expect(drawnLines.filter((l) => l.start.x === x0 || l.end.x === x0)).toHaveLength(0);
 
     // 2 horizontal marks on the right (non-mating edge)
     expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y1 }, end: { x: x1 + 14, y: y1 } }));
@@ -1410,7 +1502,7 @@ describe('drawCropMarks', () => {
       offsetYPt: 0,
       fitsPrinterSheet: false,
     };
-    drawCropMarks(mockPage, place, 500, 700, 'right', { type: 'RGB', red: 0, green: 0, blue: 0 } as unknown as import('pdf-lib').RGB);
+    drawCropMarks(mockPage, place, 500, 700, 'right');
     expect(mockPage.drawLine).not.toHaveBeenCalled();
   });
 });

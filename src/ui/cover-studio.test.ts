@@ -689,3 +689,56 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(openStudioHandler).toContain("if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct')");
   });
 });
+
+describe('Cover Studio - 1 × A4 direct geometry and wrap-cover failure resilience', () => {
+  function sourceBetween(from: string, to: string): string {
+    const start = appSource.indexOf(from);
+    expect(start, `expected to find "${from}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const end = appSource.indexOf(to, start + from.length);
+    expect(end, `expected to find "${to}" in app.ts`).toBeGreaterThanOrEqual(0);
+    return appSource.slice(start, end);
+  }
+
+  it('drops bleed and wrap allowance for 1 × A4 without falsifying the book panel trim, in both flows', () => {
+    const studio = sourceBetween('function getEffectiveCoverSpecs(', 'function updateCoverLiveCalculations(');
+    const studioDirect = studio.slice(studio.indexOf("if (coverFormat === 'a4-direct') {"));
+    expect(studioDirect).toContain('bleedMm = 0;');
+    expect(studioDirect).toContain('wrapAllowanceMm = 0;');
+    expect(studioDirect).not.toContain('pageWidthPt = (sheetWidthPt - spineWidthPt) / 2;');
+    expect(studio.indexOf("if (coverFormat === 'a4-direct') {")).toBeGreaterThan(0);
+
+    const pipeline = sourceBetween('function wrapCoverGeometry(', 'function wrapCoverContent(');
+    const pipelineDirect = pipeline.slice(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {"));
+    expect(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {")).toBeGreaterThan(0);
+    expect(pipelineDirect).toContain('dimInput.bleedPt = 0;');
+    expect(pipelineDirect).toContain('dimInput.wrapMarginPt = 0;');
+    expect(pipelineDirect).not.toContain('dimInput.pageWidthPt = (sheetWidthPt - spine.totalSpineWidthPt) / 2;');
+    // The override must land before the geometry is computed from dimInput.
+    expect(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {"))
+      .toBeLessThan(pipeline.indexOf('computeSplitCoverDimensions(dimInput)'));
+  });
+
+  it('keeps the finished booklet when the wrap cover fails, reporting the cover error by toast instead of the error screen', () => {
+    const generate = sourceBetween("generateBtn.addEventListener('click'", 'function applyWrapCoverResultVisibility');
+    const coverCall = 'await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount)';
+    const callAt = generate.indexOf(coverCall);
+    expect(callAt, 'the wrap cover is still built from the produced booklet').toBeGreaterThan(0);
+
+    // The cover promise carries its own catch, so a COVER_TOO_LARGE rejection
+    // never reaches the handler's outer catch (which calls goToError).
+    const afterCall = generate.slice(callAt + coverCall.length);
+    expect(afterCall.startsWith('.catch((coverError: unknown) => {')).toBe(true);
+    const coverCatch = afterCall.slice(0, afterCall.indexOf('\n          })'));
+    expect(coverCatch).toContain('console.warn(');
+    expect(coverCatch).toContain("showToast(errorText(coverError), { type: 'error' })");
+    expect(coverCatch).toContain('return {};');
+    expect(coverCatch).not.toContain('goToError');
+    expect(coverCatch).not.toContain('throw');
+
+    // ...and the booklet then goes on to the result screen as usual.
+    const afterCover = generate.slice(callAt);
+    expect(afterCover.indexOf('booklet = {')).toBeGreaterThan(0);
+    expect(afterCover.indexOf("showScreen('result')")).toBeGreaterThan(afterCover.indexOf('booklet = {'));
+    expect(afterCover.indexOf("showScreen('result')")).toBeLessThan(afterCover.indexOf('goToError('));
+  });
+});

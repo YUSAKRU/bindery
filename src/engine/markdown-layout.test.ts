@@ -458,6 +458,28 @@ describe('wrapCodeLine', () => {
     const rows = wrapCodeLine(line, budgetWidth, 8, metrics);
     expect(rows[1]).toBe(`${indent}${CODE_WRAP_INDENT}dget next `);
   });
+
+  it('does not cut a continuation inside its own leading spaces', () => {
+    // The first cut lands inside a run of spaces, so the continuation starts
+    // with the rest of that run. The only space in reach is part of it; cutting
+    // there would print a row of nothing but whitespace.
+    const line = `${'x'.repeat(18)}${' '.repeat(10)}${'y'.repeat(40)}`;
+    const rows = wrapCodeLine(line, 20 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.trim().length).toBeGreaterThan(0);
+    expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(line);
+  });
+
+  it('does not collapse continuation budget to 1 on deep indentation', () => {
+    const indent = ' '.repeat(58);
+    const line = `${indent}${'a'.repeat(200)}`;
+    const budgetWidth = 60 * 8 * RATIOS.mono;
+    const rows = wrapCodeLine(line, budgetWidth, 8, metrics);
+    expect(rows.length).toBeLessThan(20);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].trim().length).toBeGreaterThanOrEqual(10);
+    }
+  });
 });
 
 describe('wrapSpans', () => {

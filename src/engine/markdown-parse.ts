@@ -190,7 +190,11 @@ function latexSpans(source: string, base: InlineSpan): InlineSpan[] {
         const group = readGroup(input, after);
         if (!group) throw new UnprintableLatex(input);
         flush();
-        walk(group.inner, name === 'mathbf' || name === 'bm' || name === 'textbf', true, depth + 1);
+        const isBold = name === 'mathbf' || name === 'bm' || name === 'textbf';
+        // Only \text{…} makes its content literal. \mathbf{x_1} is still maths:
+        // its subscript must bail to source like any other, not print as "x_1".
+        const isLiteral = name === 'text' || literal;
+        walk(group.inner, isBold, isLiteral, depth + 1);
         i = group.next;
         continue;
       }
@@ -364,16 +368,52 @@ const HTML_ELEMENTS = new Set(
  * job and inventing a half-decoder here would be worse than leaving them
  * visible.
  */
-export function stripHtmlTags(raw: string): string {
+export function stripHtmlTags(raw: string, closingTags?: Set<string>): string {
+  if (!closingTags) {
+    closingTags = new Set<string>();
+    for (const match of raw.matchAll(/<\/\s*([a-zA-Z][\w-]*)/g)) {
+      closingTags.add(match[1].toLowerCase());
+    }
+  }
+
   return raw.replace(HTML_TAG, (tag: string, name: string) => {
-    if (!HTML_ELEMENTS.has(name.toLowerCase())) return tag;
-    return /^(br|hr)$/i.test(name) ? ' ' : '';
+    const lower = name.toLowerCase();
+    if (!HTML_ELEMENTS.has(lower)) return tag;
+
+    // Void elements: line breaks and rules always produce a space, even with trailing slash/spaces (<br />, <hr />).
+    if (/^(br|hr)$/i.test(name)) return ' ';
+
+    // Closing tags and tags with attributes are always HTML markup, never generics.
+    if (tag.startsWith('</') || /\s|=/.test(tag)) return '';
+
+    // Bare "<a>" without attributes is never a valid HTML link; it is a generic type parameter (Result<a>, Option<a>).
+    if (lower === 'a') return tag;
+
+    // Single-letter tags: if there is a matching closing tag in the enclosing block,
+    // it is an HTML formatting pair (e.g. <b>...</b>, <B>...</B>).
+    if (closingTags.has(lower)) return '';
+
+    // Bare single-letter tags without closing tags are generic type parameters (Vec<U>, Box<B>, etc.).
+    if (name.length === 1) return tag;
+
+    return '';
   });
 }
+
+/** Stands in for an escaped `\$` while inline maths is split; see `inlineSpans`. */
+const ESCAPED_DOLLAR = '\uE000';
+const ESCAPED_DOLLAR_ALL = /\uE000/g;
 
 /** Flattens marked's inline tokens into styled spans. */
 export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { text: '' }): InlineSpan[] {
   if (!tokens) return [];
+  const closingTags = new Set<string>();
+  for (const t of tokens) {
+    if (t.type === 'html' && (t as Tokens.HTML).raw?.startsWith('</')) {
+      const match = /^<\/\s*([a-zA-Z][\w-]*)/.exec((t as Tokens.HTML).raw ?? '');
+      if (match) closingTags.add(match[1].toLowerCase());
+    }
+  }
   const out: InlineSpan[] = [];
   let pending = '';
   const flushPending = () => {
@@ -402,7 +442,7 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
         out.push({ ...base, text: (token as Tokens.Codespan).text, mono: true });
         break;
       case 'html':
-        out.push({ ...base, text: stripHtmlTags((token as Tokens.HTML).raw ?? '') });
+        out.push({ ...base, text: stripHtmlTags((token as Tokens.HTML).raw ?? '', closingTags) });
         break;
       case 'image': {
         // The file cannot travel into the booklet, so the alt text stands in
@@ -427,7 +467,10 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
           // Buffered rather than split on the spot: `marked` cuts a markdown
           // escape into its own token, so "$\mathbf{0\%}$" arrives as three
           // pieces and a formula split across them would never be recognised.
-          pending += (token as Tokens.Text).text ?? '';
+          // An escaped "\$" is a literal dollar, never a delimiter, so it is held
+          // as a private-use sentinel until maths has been split out.
+          const isEscapedDollar = token.type === 'escape' && (token as { text?: string }).text === '$';
+          pending += isEscapedDollar ? ESCAPED_DOLLAR : ((token as Tokens.Text).text ?? '');
         }
         break;
       }
@@ -441,7 +484,7 @@ export function inlineSpans(tokens: Token[] | undefined, base: InlineSpan = { te
   }
   flushPending();
   return out
-    .map((span) => ({ ...span, text: collapseInlineWhitespace(span.text) }))
+    .map((span) => ({ ...span, text: collapseInlineWhitespace(span.text).replace(ESCAPED_DOLLAR_ALL, '$') }))
     .filter((span) => span.text.length > 0);
 }
 
@@ -463,6 +506,9 @@ function asDisplayMath(text: string): string[] | null {
   if (!trimmed.startsWith(BLOCK_MATH) || trimmed.length < BLOCK_MATH.length * 2) return null;
   if (!trimmed.endsWith(BLOCK_MATH)) return null;
   const inner = trimmed.slice(BLOCK_MATH.length, -BLOCK_MATH.length).trim();
+  // "$$ a $$ text $$ b $$" starts and ends with a delimiter but is two inline
+  // blocks with prose between them, not one display block.
+  if (inner.includes(BLOCK_MATH)) return null;
   return inner.length > 0 ? inner.split('\n').map((line) => line.trimEnd()) : null;
 }
 
