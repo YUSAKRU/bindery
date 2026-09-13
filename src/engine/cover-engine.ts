@@ -4,23 +4,66 @@ import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
 import notoSansBoldUrl from '../assets/fonts/NotoSans-Latin-Bold.ttf?url';
 import { computeCenteredRotatedPosition } from './watermark-engine';
 import { BookletError } from './types';
-import {
-  A4_LONG_EDGE_MM,
-  A4_SHORT_EDGE_MM,
-  calculateCoverSpine,
-  COVER_THEMES,
-  DEFAULT_BLEED_PT,
-  DEFAULT_WRAP_MARGIN_PT,
-  GLUE_TAB_WIDTH_MM,
-  LAP_FLAP_WIDTH_MM,
-  MM_TO_PT,
-  type CoverFormat,
-  type CoverTheme,
-  type SpineCalculationInput,
-  type SpineCalculationResult,
-} from '../types/cover';
 
-export * from '../types/cover';
+export type BindingType = 'sewn' | 'perfect' | 'saddle';
+export type PaperGsm = 70 | 80 | 90 | 100 | 120;
+
+export const PAPER_CALIPERS_MM: Record<PaperGsm, number> = {
+  70: 0.090, 80: 0.100, 90: 0.115, 100: 0.130, 120: 0.155,
+};
+export const THREAD_SWELL_PER_SIG_MM = 0.15;
+export const MM_TO_PT = 72 / 25.4;
+
+/** Below this, spine text is illegible and should be suppressed entirely (same philosophy as booklet-engine's COLLATION_BAR_LEGIBILITY_FLOOR). */
+const SPINE_TEXT_LEGIBILITY_FLOOR_MM = 3.5;
+
+/** mm added for a case-bound (board) cover's hinge/groove, independent of bindingType. */
+const BOARD_HINGE_ALLOWANCE_MM = 7;
+/** mm added for a soft-cover fold/score line on a sewn book block. */
+const SEWN_HINGE_ALLOWANCE_MM = 1.0;
+/** mm added for the glued edge of a perfect-bound book block. */
+const PERFECT_HINGE_ALLOWANCE_MM = 1.5;
+/** Saddle-stitched covers share the same fold as the text block, so no extra allowance. */
+const SADDLE_HINGE_ALLOWANCE_MM = 0;
+
+export interface SpineCalculationInput {
+  sheetCount: number;
+  signatureCount: number;
+  paperGsm: PaperGsm;
+  bindingType: BindingType;
+  boardThicknessMm?: number;
+}
+export interface SpineCalculationResult {
+  textBlockThicknessMm: number;
+  threadSwellMm: number;
+  hingeAllowanceMm: number;
+  totalSpineWidthMm: number;
+  totalSpineWidthPt: number;
+  canPrintSpineText: boolean;
+}
+/**
+ * How the wrap is cut up across printed sheets.
+ *
+ * `single` is the classic one-piece wrap (back + spine + front on one wide
+ * sheet). For an A5 book that sheet is at least 148.5 + spine + 148.5 mm wide,
+ * which no A4 home printer can feed, so it needs A3 or a copy shop.
+ *
+ * `split` cuts the same wrap into two A4-feedable sheets that overlap at the
+ * spine: sheet 1 carries back + spine + a lap flap, sheet 2 carries the front
+ * cover + a glue tab that is bonded underneath that flap. The overlap is not a
+ * compromise — it doubles the material over the spine, which is exactly where a
+ * home-bound book fails first.
+ */
+export type CoverFormat = 'single' | 'split' | 'a4-direct';
+
+/** Width of sheet 1's lap flap: the tongue that reaches past the spine and over sheet 2's glue tab. */
+export const LAP_FLAP_WIDTH_MM = 20;
+/** Width of sheet 2's glue tab: the strip on its spine edge that is bonded under sheet 1's lap flap. */
+export const GLUE_TAB_WIDTH_MM = 10;
+/** Long edge of A4 (mm) — the widest sheet a home printer can feed, landscape. */
+export const A4_LONG_EDGE_MM = 297;
+/** Short edge of A4 (mm). With A4_LONG_EDGE_MM, the portrait sheet a home printer actually feeds. */
+export const A4_SHORT_EDGE_MM = 210;
 
 export interface CoverRect { x: number; y: number; width: number; height: number }
 
@@ -79,6 +122,22 @@ export type AnyCoverDimensions =
   | CoverDimensionsResult
   | SplitCoverDimensionsResult
   | A4DirectCoverDimensionsResult;
+export type CoverTheme = 'cream' | 'white' | 'navy' | 'burgundy' | 'charcoal';
+
+export interface ThemeColors {
+  backgroundRgb: [number, number, number];
+  textRgb: [number, number, number];
+}
+
+/** Mirrors the swatch hex values in index.html / app.ts's themeConfigs, converted to 0..1 RGB for pdf-lib. */
+export const COVER_THEMES: Record<CoverTheme, ThemeColors> = {
+  cream: { backgroundRgb: [0.984, 0.973, 0.949], textRgb: [0.161, 0.145, 0.141] },
+  white: { backgroundRgb: [1, 1, 1], textRgb: [0.059, 0.090, 0.165] },
+  navy: { backgroundRgb: [0.059, 0.090, 0.165], textRgb: [0.973, 0.980, 0.988] },
+  burgundy: { backgroundRgb: [0.271, 0.039, 0.039], textRgb: [0.996, 0.949, 0.949] },
+  charcoal: { backgroundRgb: [0.118, 0.161, 0.231], textRgb: [0.973, 0.980, 0.988] },
+};
+
 const DEFAULT_COVER_THEME: CoverTheme = 'cream';
 
 export interface CoverContentInput {
@@ -92,8 +151,52 @@ export interface GenerateCoverOptions {
   format?: CoverFormat;
 }
 
+const DEFAULT_BLEED_PT = 9;
+const DEFAULT_WRAP_MARGIN_PT = 0;
+
 export function computeSpineWidth(input: SpineCalculationInput): SpineCalculationResult {
-  return calculateCoverSpine(input);
+  const { sheetCount, signatureCount, paperGsm, bindingType, boardThicknessMm } = input;
+
+  if (sheetCount <= 0) {
+    throw new BookletError(
+      'COVER_INVALID_SHEET_COUNT',
+      { sheetCount },
+      `Sheet count must be positive, got ${sheetCount}.`,
+    );
+  }
+  if (signatureCount <= 0) {
+    throw new BookletError(
+      'COVER_INVALID_SIGNATURE_COUNT',
+      { signatureCount },
+      `Signature count must be positive, got ${signatureCount}.`,
+    );
+  }
+
+  const textBlockThicknessMm = sheetCount * PAPER_CALIPERS_MM[paperGsm];
+
+  // Thread swell only accumulates when signatures are gathered and sewn together;
+  // saddle-stitching shares the text block's own fold (no separate stitching), and
+  // perfect binding glues rather than sews, so neither has a swell to account for.
+  const threadSwellMm = bindingType === 'sewn' ? signatureCount * THREAD_SWELL_PER_SIG_MM : 0;
+
+  let hingeAllowanceMm: number;
+  if (boardThicknessMm !== undefined) {
+    // Case-bound (board) covers need groove/hinge clearance regardless of how the
+    // text block itself is bound, so this overrides the bindingType-based default.
+    hingeAllowanceMm = 2 * boardThicknessMm + BOARD_HINGE_ALLOWANCE_MM;
+  } else if (bindingType === 'saddle') {
+    hingeAllowanceMm = SADDLE_HINGE_ALLOWANCE_MM;
+  } else if (bindingType === 'sewn') {
+    hingeAllowanceMm = SEWN_HINGE_ALLOWANCE_MM;
+  } else {
+    hingeAllowanceMm = PERFECT_HINGE_ALLOWANCE_MM;
+  }
+
+  const totalSpineWidthMm = textBlockThicknessMm + threadSwellMm + hingeAllowanceMm;
+  const totalSpineWidthPt = totalSpineWidthMm * MM_TO_PT;
+  const canPrintSpineText = totalSpineWidthMm >= SPINE_TEXT_LEGIBILITY_FLOOR_MM;
+
+  return { textBlockThicknessMm, threadSwellMm, hingeAllowanceMm, totalSpineWidthMm, totalSpineWidthPt, canPrintSpineText };
 }
 
 /**
