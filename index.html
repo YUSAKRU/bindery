@@ -869,18 +869,6 @@
               </div>
             </div>
 
-            <!-- Sheet Format: 2x A4 split (home) vs 1x A3 single wrap -->
-            <div class="setting-card hidden" id="coverFormatCard">
-              <div class="setting-row">
-                <span data-i18n="cover.formatTitle">Sheet Format</span>
-              </div>
-              <div class="segmented-group" id="coverFormatGroup">
-                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">2 × A4 (Home)</button>
-                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">1 × A3 (Wide)</button>
-              </div>
-              <p class="setting-hint" id="coverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets that overlap at the spine.</p>
-            </div>
-
             <!-- Live Reactive Spine Summary Card -->
             <div class="setting-card cover-summary-card" id="coverSummaryCard">
               <div class="cover-summary-head">
@@ -1029,21 +1017,20 @@
                 <span data-i18n="cover.bindingStyle">Binding Type</span>
               </div>
               <div class="segmented-group" id="coverBindingGroup">
-                <button type="button" class="segmented-btn is-active" data-binding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
                 <button type="button" class="segmented-btn" data-binding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
+                <button type="button" class="segmented-btn is-active" data-binding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
                 <button type="button" class="segmented-btn" data-binding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
               </div>
 
-              <!-- Cover Style: Direct A4 vs Split A4 vs Single A3 vs Hardcover -->
-              <div class="setting-row" style="margin-top: 12px;" id="coverStyleRow">
-                <span data-i18n="cover.coverType">Cover Style</span>
+              <!-- Cover Kind -->
+              <div class="setting-row" style="margin-top: 12px;" id="coverKindRow">
+                <span data-i18n="cover.coverKind">Cover Kind</span>
               </div>
-              <div class="segmented-group" id="coverStyleGroup">
-                <button type="button" class="segmented-btn is-active" data-style="split" data-i18n="cover.styleSplit">2 × A4 (Home)</button>
-                <button type="button" class="segmented-btn" data-style="single" data-i18n="cover.styleSingle">1 × A3 (Wide)</button>
-                <button type="button" class="segmented-btn" data-style="hardcover" data-i18n="cover.hardcover">Hardcover</button>
+              <div class="segmented-group" id="coverKindGroup">
+                <button type="button" class="segmented-btn is-active" data-kind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
+                <button type="button" class="segmented-btn" data-kind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
               </div>
-              <p class="setting-hint" id="coverStyleHint" data-i18n="cover.styleSplitHint">Two A4 sheets that meet at the spine: sheet 1's flap folds over sheet 2's glue tab. Standard for home printing.</p>
+              <p class="setting-hint" id="coverKindHint" data-i18n="cover.hardHint">Wraps the board with a 15 mm turn-in.</p>
 
               <!-- Hardcover Board Thickness -->
               <div class="setting-card-nested hidden" id="coverBoardThicknessBlock">
@@ -1054,9 +1041,18 @@
                   <button type="button" class="segmented-btn" data-board="1.5">1.5mm</button>
                   <button type="button" class="segmented-btn is-active" data-board="2.0">2.0mm</button>
                   <button type="button" class="segmented-btn" data-board="2.5">2.5mm</button>
-                  <button type="button" class="segmented-btn" data-board="3.0">3.0mm</button>
                 </div>
               </div>
+
+              <!-- 3. Print Paper -->
+              <div class="setting-row" style="margin-top: 12px;" id="coverFormatRow">
+                <span data-i18n="cover.formatTitle">Print Paper</span>
+              </div>
+              <div class="segmented-group" id="coverFormatGroup">
+                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">A4 paper (2 sheets)</button>
+                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
+              </div>
+              <p class="setting-hint" id="coverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
 
               <!-- Book Trim Size -->
               <div class="setting-row" style="margin-top: 12px;">
@@ -1067,6 +1063,7 @@
                 <button type="button" class="segmented-btn" data-trim="A4" data-i18n="cover.trimA4">A4 Book (210 × 297 mm)</button>
               </div>
               <p class="setting-hint" id="coverPageTrimHint" data-i18n="cover.pageTrimA5Hint">Standard A5 booklet (148 × 210 mm) — folded A4 sheet. Most common for home booklet printing.</p>
+              <p class="setting-hint cover-fit-badge--warn hidden" id="coverTrimUnsupportedHint" data-i18n="cover.trimUnsupportedHint">This booklet's paper size is not supported in Cover Studio; A5 trim is selected.</p>
             </div>
           </div>
 
@@ -1175,27 +1172,48 @@
             <p class="setting-hint" id="wrapCoverHintText" data-i18n="config.wrapCoverHint">Designs a printable outer cover for this booklet.</p>
 
             <div class="setting-card-nested hidden" id="wrapCoverOptions">
-              <!-- Sheet format -->
+              <!-- 1. Binding -->
               <div class="setting-row">
-                <span data-i18n="cover.formatTitle">Sheet Format</span>
-              </div>
-              <div class="segmented-group" id="wrapCoverFormatGroup">
-                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">2 × A4 (Home)</button>
-                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">1 × A3 (Wide)</button>
-              </div>
-              <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets that meet at the spine: sheet 1's flap folds over sheet 2's glue tab. Prints on any home printer.</p>
-
-              <!-- Binding -->
-              <div class="setting-row" style="margin-top: 12px;">
                 <span data-i18n="cover.bindingStyle">Binding Type</span>
               </div>
               <div class="segmented-group" id="wrapCoverBindingGroup">
                 <button type="button" class="segmented-btn" data-wrapbinding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
                 <button type="button" class="segmented-btn is-active" data-wrapbinding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
                 <button type="button" class="segmented-btn" data-wrapbinding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
-                <button type="button" class="segmented-btn" data-wrapbinding="hardcover" data-i18n="config.wrapCoverBindingHardcover">Hardcover</button>
               </div>
-              <p class="setting-hint" data-i18n="config.wrapCoverBindingHint">Pick the method you will bind with — the spine is measured to match it.</p>
+              <p class="setting-hint" id="wrapCoverBindingHint" data-i18n="config.wrapCoverBindingHint">Pick the method you will bind with — the spine is measured to match it.</p>
+
+              <!-- 2. Cover kind -->
+              <div class="setting-row" style="margin-top: 12px;" id="wrapCoverKindRow">
+                <span data-i18n="cover.coverKind">Cover Kind</span>
+              </div>
+              <div class="segmented-group" id="wrapCoverKindGroup">
+                <button type="button" class="segmented-btn is-active" data-wrapkind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
+                <button type="button" class="segmented-btn" data-wrapkind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
+              </div>
+              <p class="setting-hint" id="wrapCoverKindHint" data-i18n="cover.hardHint">Wraps the board with a 15 mm turn-in.</p>
+
+              <!-- Hardcover Board Thickness -->
+              <div class="setting-card-nested hidden" id="wrapCoverBoardThicknessBlock">
+                <div class="setting-row">
+                  <span data-i18n="cover.boardThickness">Board Thickness</span>
+                </div>
+                <div class="segmented-group" id="wrapCoverBoardGroup">
+                  <button type="button" class="segmented-btn" data-wrapboard="1.5">1.5mm</button>
+                  <button type="button" class="segmented-btn is-active" data-wrapboard="2.0">2.0mm</button>
+                  <button type="button" class="segmented-btn" data-wrapboard="2.5">2.5mm</button>
+                </div>
+              </div>
+
+              <!-- 3. Print paper -->
+              <div class="setting-row" style="margin-top: 12px;">
+                <span data-i18n="cover.formatTitle">Print Paper</span>
+              </div>
+              <div class="segmented-group" id="wrapCoverFormatGroup">
+                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">A4 paper (2 sheets)</button>
+                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
+              </div>
+              <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
 
               <!-- Paper weight: the spine cannot be measured without it -->
               <div class="setting-row" style="margin-top: 12px;">

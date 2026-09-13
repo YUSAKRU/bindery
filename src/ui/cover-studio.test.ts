@@ -50,7 +50,7 @@ describe('Cover Studio - UI & DOM Invariants', () => {
       'coverPreviewThumbImg',
       'coverGsmGroup',
       'coverBindingGroup',
-      'coverStyleGroup',
+      'coverKindGroup',
       'coverBoardThicknessBlock',
       'coverBoardGroup',
       'coverPageTrimGroup',
@@ -168,9 +168,9 @@ describe('Cover Studio - Localization Coverage', () => {
     'cover.bindingSaddle',
     'cover.bindingSewn',
     'cover.bindingPerfect',
-    'cover.coverType',
-    'cover.softcover',
-    'cover.hardcover',
+    'cover.coverKind',
+    'cover.kindSoft',
+    'cover.kindHard',
     'cover.boardThickness',
     'cover.pageTrim',
     'cover.spineCalcTitle',
@@ -451,13 +451,12 @@ describe('Cover Studio - Two-Sheet Split Format Wiring', () => {
     // updateCoverLiveCalculations declares an inline object return type, so its
     // body cannot be found by brace-matching from the signature.
     const live = sourceBetween('function updateCoverLiveCalculations(', 'function updateCoverPreviewVisuals(');
-    expect(live).toContain("coverFormat === 'split' ? computeSplitCoverDimensions(dimInput) : null");
+    expect(live).toContain("options.paper === 'split' ? computeSplitCoverDimensions(dimInput) : null");
 
     const generateStart = appSource.indexOf("coverGenerateBtn.addEventListener('click'");
     expect(generateStart).toBeGreaterThanOrEqual(0);
     const generate = appSource.slice(generateStart, appSource.indexOf('const coverSaveFlow', generateStart));
-    expect(generate).toContain("coverFormat === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
-    expect(generate).toContain('format: coverFormat');
+    expect(generate).toContain("options.paper === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
   });
 
   it('shows the per-sheet breakdown only for the split format', () => {
@@ -637,28 +636,34 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(group).toContain('data-format="single"');
   });
 
-  it('hides hardcover option and falls back to softcover and split format when saddle-stitched binding is selected', () => {
-    const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverStyleGroup.addEventListener('click'");
-    expect(bindingHandler).toContain("hardcoverBtn.classList.toggle('hidden', isSaddle)");
+  it('disables hardcover option and falls back to softcover when saddle-stitched binding is selected', () => {
+    const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverKindGroup.addEventListener('click'");
+    expect(bindingHandler).toContain("hardcoverBtn.disabled = isSaddle");
     expect(bindingHandler).toContain("coverCoverStyle = 'softcover'");
-    expect(bindingHandler).toContain("coverFormat = 'split'");
   });
 
-  it('falls back to softcover and split format on studio entry when saddle-stitched booklet was inferred', () => {
+  it('falls back to softcover on studio entry when saddle-stitched booklet was inferred', () => {
     const openStudioHandler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "let readerResizeTimer");
-    expect(openStudioHandler).toContain("if (isSaddle && coverCoverStyle === 'hardcover')");
-    expect(openStudioHandler).toContain("coverFormat = 'split'");
+    expect(openStudioHandler).toContain("binding: isSingle ? 'saddle' : 'sewn'");
+    expect(openStudioHandler).toContain("hardcoverBtn.disabled = isSaddle");
   });
 
-  it('provides split A4, single A3, and hardcover in coverStyleGroup', () => {
-    const styleGroup = htmlSource.slice(
-      htmlSource.indexOf('id="coverStyleGroup"'),
-      htmlSource.indexOf('id="coverStyleHint"'),
+  it('does not have coverStyleGroup, but separates cover kind and format groups', () => {
+    expect(htmlSource).not.toContain('id="coverStyleGroup"');
+    const kindGroup = htmlSource.slice(
+      htmlSource.indexOf('id="coverKindGroup"'),
+      htmlSource.indexOf('id="coverKindHint"'),
     );
-    expect(styleGroup).not.toContain('data-style="a4-direct"');
-    expect(styleGroup).toContain('data-style="split"');
-    expect(styleGroup).toContain('data-style="single"');
-    expect(styleGroup).toContain('data-style="hardcover"');
+    expect(kindGroup).toContain('data-kind="softcover"');
+    expect(kindGroup).toContain('data-kind="hardcover"');
+
+    const formatGroup = htmlSource.slice(
+      htmlSource.indexOf('id="coverFormatGroup"'),
+      htmlSource.indexOf('id="coverFormatHint"'),
+    );
+    expect(formatGroup).not.toContain('data-format="a4-direct"');
+    expect(formatGroup).toContain('data-format="split"');
+    expect(formatGroup).toContain('data-format="single"');
   });
 
   it('does not define retired a4-direct keys in dictionaries', () => {
