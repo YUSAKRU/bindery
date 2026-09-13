@@ -627,41 +627,49 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsA3':");
   });
 
-  it('supports the 1 × A4 direct format in Cover Studio', () => {
+  it('does not offer the retired 1 × A4 direct format in Cover Studio format group', () => {
     const group = htmlSource.slice(
       htmlSource.indexOf('id="coverFormatGroup"'),
       htmlSource.indexOf('id="coverFormatHint"'),
     );
-    expect(group).toContain('data-format="a4-direct"');
-    expect(group).toContain('data-i18n="cover.formatA4Direct"');
+    expect(group).not.toContain('data-format="a4-direct"');
+    expect(group).toContain('data-format="split"');
+    expect(group).toContain('data-format="single"');
   });
 
-  it('hides hardcover option and board controls when saddle-stitched binding is selected', () => {
+  it('hides hardcover option and falls back to softcover and split format when saddle-stitched binding is selected', () => {
     const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverStyleGroup.addEventListener('click'");
     expect(bindingHandler).toContain("hardcoverBtn.classList.toggle('hidden', isSaddle)");
     expect(bindingHandler).toContain("coverCoverStyle = 'softcover'");
+    expect(bindingHandler).toContain("coverFormat = 'split'");
   });
 
-  it('provides direct A4, split A4, single A3, and hardcover in coverStyleGroup', () => {
+  it('falls back to softcover and split format on studio entry when saddle-stitched booklet was inferred', () => {
+    const openStudioHandler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "let readerResizeTimer");
+    expect(openStudioHandler).toContain("if (isSaddle && coverCoverStyle === 'hardcover')");
+    expect(openStudioHandler).toContain("coverFormat = 'split'");
+  });
+
+  it('provides split A4, single A3, and hardcover in coverStyleGroup', () => {
     const styleGroup = htmlSource.slice(
       htmlSource.indexOf('id="coverStyleGroup"'),
       htmlSource.indexOf('id="coverStyleHint"'),
     );
-    expect(styleGroup).toContain('data-style="a4-direct"');
+    expect(styleGroup).not.toContain('data-style="a4-direct"');
     expect(styleGroup).toContain('data-style="split"');
     expect(styleGroup).toContain('data-style="single"');
     expect(styleGroup).toContain('data-style="hardcover"');
   });
 
-  it('defines a4-direct keys and warning in both dictionaries', () => {
+  it('does not define retired a4-direct keys in dictionaries', () => {
     const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
     const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
-    expect(enDictionary).toContain("'cover.formatA4Direct':");
-    expect(enDictionary).toContain("'cover.formatA4DirectHint':");
-    expect(enDictionary).toContain("'cover.needsA4Direct':");
-    expect(trDictionary).toContain("'cover.formatA4Direct':");
-    expect(trDictionary).toContain("'cover.formatA4DirectHint':");
-    expect(trDictionary).toContain("'cover.needsA4Direct':");
+    expect(enDictionary).not.toContain("'cover.formatA4Direct':");
+    expect(enDictionary).not.toContain("'cover.formatA4DirectHint':");
+    expect(enDictionary).not.toContain("'cover.needsA4Direct':");
+    expect(trDictionary).not.toContain("'cover.formatA4Direct':");
+    expect(trDictionary).not.toContain("'cover.formatA4DirectHint':");
+    expect(trDictionary).not.toContain("'cover.needsA4Direct':");
   });
 
   it('falls back to localized title and author in updateCoverPreviewVisuals when empty', () => {
@@ -670,27 +678,13 @@ describe('Cover Studio - A4 fit warning', () => {
     expect(fn).toContain("t('cover.author')");
   });
 
-  it('disables coverGenerateBtn when a4-direct exceeds sheet dimensions', () => {
+  it('does not touch coverGenerateBtn.disabled in updateCoverLiveCalculations', () => {
     const fn = functionSource('function updateCoverLiveCalculations(');
-    expect(fn).toContain("const isA4DirectBlocked = coverFormat === 'a4-direct' && singleDims !== null && 'fitsSheet' in singleDims && !singleDims.fitsSheet;");
-    expect(fn).toContain('coverGenerateBtn.disabled = Boolean(isA4DirectBlocked);');
-  });
-
-  it('enforces mutual exclusion between hardcover and a4-direct in wrap cover and studio entry', () => {
-    const formatHandler = sourceBetween("wrapCoverFormatGroup.addEventListener('click'", "wrapCoverBindingGroup.addEventListener('click'");
-    expect(formatHandler).toContain("if (format === 'a4-direct' && wrapCoverBinding === 'hardcover')");
-    expect(formatHandler).toContain("wrapCoverBinding = 'sewn'");
-
-    const bindingHandler = sourceBetween("wrapCoverBindingGroup.addEventListener('click'", "wrapCoverGsmGroup.addEventListener('click'");
-    expect(bindingHandler).toContain("if (binding === 'hardcover' && wrapCoverFormat === 'a4-direct')");
-    expect(bindingHandler).toContain("wrapCoverFormat = 'split'");
-
-    const openStudioHandler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "let readerResizeTimer");
-    expect(openStudioHandler).toContain("if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct')");
+    expect(fn).not.toContain('coverGenerateBtn.disabled');
   });
 });
 
-describe('Cover Studio - 1 × A4 direct geometry and wrap-cover failure resilience', () => {
+describe('Cover Studio - wrap-cover failure resilience', () => {
   function sourceBetween(from: string, to: string): string {
     const start = appSource.indexOf(from);
     expect(start, `expected to find "${from}" in app.ts`).toBeGreaterThanOrEqual(0);
@@ -698,25 +692,6 @@ describe('Cover Studio - 1 × A4 direct geometry and wrap-cover failure resilien
     expect(end, `expected to find "${to}" in app.ts`).toBeGreaterThanOrEqual(0);
     return appSource.slice(start, end);
   }
-
-  it('drops bleed and wrap allowance for 1 × A4 without falsifying the book panel trim, in both flows', () => {
-    const studio = sourceBetween('function getEffectiveCoverSpecs(', 'function updateCoverLiveCalculations(');
-    const studioDirect = studio.slice(studio.indexOf("if (coverFormat === 'a4-direct') {"));
-    expect(studioDirect).toContain('bleedMm = 0;');
-    expect(studioDirect).toContain('wrapAllowanceMm = 0;');
-    expect(studioDirect).not.toContain('pageWidthPt = (sheetWidthPt - spineWidthPt) / 2;');
-    expect(studio.indexOf("if (coverFormat === 'a4-direct') {")).toBeGreaterThan(0);
-
-    const pipeline = sourceBetween('function wrapCoverGeometry(', 'function wrapCoverContent(');
-    const pipelineDirect = pipeline.slice(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {"));
-    expect(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {")).toBeGreaterThan(0);
-    expect(pipelineDirect).toContain('dimInput.bleedPt = 0;');
-    expect(pipelineDirect).toContain('dimInput.wrapMarginPt = 0;');
-    expect(pipelineDirect).not.toContain('dimInput.pageWidthPt = (sheetWidthPt - spine.totalSpineWidthPt) / 2;');
-    // The override must land before the geometry is computed from dimInput.
-    expect(pipeline.indexOf("if (wrapCoverFormat === 'a4-direct') {"))
-      .toBeLessThan(pipeline.indexOf('computeSplitCoverDimensions(dimInput)'));
-  });
 
   it('keeps the finished booklet when the wrap cover fails, reporting the cover error by toast instead of the error screen', () => {
     const generate = sourceBetween("generateBtn.addEventListener('click'", 'function applyWrapCoverResultVisibility');

@@ -223,7 +223,7 @@ describe('Booklet pipeline - Wiring', () => {
     expect(body).toContain('organizePages(pdfBytes, [0])');
     expect(body).toContain('organizePages(pdfBytes, [1])');
     // A single wrap is already one sheet; splitting it would be wrong.
-    expect(body).toContain("if (dimensions.format === 'single' || dimensions.format === 'a4-direct') return { wrapCoverPdf: pdfBytes }");
+    expect(body).toContain("if (dimensions.format === 'single') return { wrapCoverPdf: pdfBytes }");
     expect(body).toContain('format: wrapCoverFormat');
   });
 
@@ -700,13 +700,14 @@ describe('Booklet pipeline - Wrap cover vs separate cover', () => {
     expect(trDictionary).toContain("'config.coverWrapConflictHint':");
   });
 
-  it('supports 1 x A4 direct format in booklet wrap cover options', () => {
+  it('does not offer the retired 1 x A4 direct format in booklet wrap cover options', () => {
     const options = htmlSource.slice(
       htmlSource.indexOf('id="wrapCoverFormatGroup"'),
       htmlSource.indexOf('id="wrapCoverFormatHint"'),
     );
-    expect(options).toContain('data-format="a4-direct"');
-    expect(options).toContain('data-i18n="cover.formatA4Direct"');
+    expect(options).not.toContain('data-format="a4-direct"');
+    expect(options).toContain('data-format="split"');
+    expect(options).toContain('data-format="single"');
   });
 
   it('populates Cover Studio from booklet file when opening from result screen', () => {

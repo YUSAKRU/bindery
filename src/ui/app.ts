@@ -1388,12 +1388,6 @@ export function initApp(): void {
       wrapMarginPt: (isHardcover ? 15 : 0) * MM_TO_PT,
       format: wrapCoverFormat,
     };
-    if (wrapCoverFormat === 'a4-direct') {
-      // Direct A4 printing on an A4 sheet cannot carry bleed or turn-in allowances.
-      // Panel dimensions reflect the book's true trim.
-      dimInput.bleedPt = 0;
-      dimInput.wrapMarginPt = 0;
-    }
 
     return {
       spine,
@@ -1424,11 +1418,9 @@ export function initApp(): void {
     setActiveSegment(wrapCoverToggleGroup, 'wrapcover', bookletWrapCover ? 'on' : 'off');
     wrapCoverOptions.classList.toggle('hidden', !bookletWrapCover);
 
-    const splitKey = wrapCoverFormat === 'a4-direct'
-      ? 'cover.formatA4DirectHint'
-      : wrapCoverFormat === 'split'
-        ? 'cover.formatSplitHint'
-        : 'cover.formatSingleHint';
+    const splitKey = wrapCoverFormat === 'split'
+      ? 'cover.formatSplitHint'
+      : 'cover.formatSingleHint';
     wrapCoverFormatHint.dataset.i18n = splitKey;
     wrapCoverFormatHint.textContent = t(splitKey);
     setActiveSegment(wrapCoverFormatGroup, 'format', wrapCoverFormat);
@@ -1469,7 +1461,7 @@ export function initApp(): void {
     wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
 
     wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions));
-    const wrapPaperFitWarnKey = wrapCoverFormat === 'a4-direct' ? 'cover.needsA4Direct' : 'cover.needsA3';
+    const wrapPaperFitWarnKey = 'cover.needsA3';
     wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
     wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
 
@@ -1534,7 +1526,7 @@ export function initApp(): void {
       format: wrapCoverFormat,
     });
 
-    if (dimensions.format === 'single' || dimensions.format === 'a4-direct') return { wrapCoverPdf: pdfBytes };
+    if (dimensions.format === 'single') return { wrapCoverPdf: pdfBytes };
 
     const [sheet1, sheet2] = await Promise.all([
       organizePages(pdfBytes, [0]),
@@ -2270,12 +2262,8 @@ export function initApp(): void {
   wrapCoverFormatGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
+    if (format !== 'split' && format !== 'single') return;
     wrapCoverFormat = format;
-    if (format === 'a4-direct' && wrapCoverBinding === 'hardcover') {
-      wrapCoverBinding = 'sewn';
-      setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', 'sewn');
-    }
     applyWrapCoverToUi();
     updateWrapCoverCalculations();
   });
@@ -2285,10 +2273,6 @@ export function initApp(): void {
     const binding = btn?.dataset.wrapbinding as BindingType | 'hardcover' | undefined;
     if (!binding) return;
     wrapCoverBinding = binding;
-    if (binding === 'hardcover' && wrapCoverFormat === 'a4-direct') {
-      wrapCoverFormat = 'split';
-      applyWrapCoverToUi();
-    }
     setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', binding);
     updateWrapCoverCalculations();
   });
@@ -4225,17 +4209,11 @@ export function initApp(): void {
     const sheetCount = Math.max(1, coverSheetCount);
     const signatureCount = coverBindingType === 'saddle' ? 1 : Math.max(1, coverSigCount);
     const isA5 = coverPageTrim === 'A5';
-    let pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
+    const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
     const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
     const isHardcover = coverCoverStyle === 'hardcover';
-    let bleedMm = isHardcover ? 0 : 3;
-    let wrapAllowanceMm = isHardcover ? 15 : 0;
-    if (coverFormat === 'a4-direct') {
-      // Direct A4 printing on an A4 sheet cannot carry bleed or turn-in allowances.
-      // Panel dimensions reflect the book's true trim.
-      bleedMm = 0;
-      wrapAllowanceMm = 0;
-    }
+    const bleedMm = isHardcover ? 0 : 3;
+    const wrapAllowanceMm = isHardcover ? 15 : 0;
     return {
       sheetCount,
       signatureCount,
@@ -4303,12 +4281,9 @@ export function initApp(): void {
     }
 
     coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!));
-    const coverPaperFitWarnKey = coverFormat === 'a4-direct' ? 'cover.needsA4Direct' : 'cover.needsA3';
+    const coverPaperFitWarnKey = 'cover.needsA3';
     coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
     coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
-
-    const isA4DirectBlocked = coverFormat === 'a4-direct' && singleDims !== null && 'fitsSheet' in singleDims && !singleDims.fitsSheet;
-    coverGenerateBtn.disabled = Boolean(isA4DirectBlocked);
 
     coverTotalDimensionsLabel.textContent = splitDims
       ? t('cover.totalDimensionsSplit', {
@@ -4395,17 +4370,13 @@ export function initApp(): void {
       setActiveSegment(coverStyleGroup, 'style', coverFormat);
     }
 
-    const formatKey = coverFormat === 'a4-direct'
-      ? 'cover.formatA4DirectHint'
-      : (isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint');
+    const formatKey = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
     coverFormatHint.dataset.i18n = formatKey;
     coverFormatHint.textContent = t(coverFormatHint.dataset.i18n);
 
     const styleKey = coverCoverStyle === 'hardcover'
       ? 'cover.styleHardcoverHint'
-      : (coverFormat === 'a4-direct'
-          ? 'cover.styleA4DirectHint'
-          : (coverFormat === 'split' ? 'cover.styleSplitHint' : 'cover.styleSingleHint'));
+      : (coverFormat === 'split' ? 'cover.styleSplitHint' : 'cover.styleSingleHint');
     if (coverStyleHint) {
       coverStyleHint.dataset.i18n = styleKey;
       coverStyleHint.textContent = t(styleKey);
@@ -4632,7 +4603,7 @@ export function initApp(): void {
     }
     if (isSaddle && coverCoverStyle === 'hardcover') {
       coverCoverStyle = 'softcover';
-      coverFormat = 'a4-direct';
+      coverFormat = 'split';
       coverBoardThicknessBlock.classList.add('hidden');
     }
     applyCoverFormatToUi();
@@ -4645,9 +4616,6 @@ export function initApp(): void {
     if (!style) return;
     if (style === 'hardcover') {
       coverCoverStyle = 'hardcover';
-      if (coverFormat === 'a4-direct') {
-        coverFormat = 'split';
-      }
       coverBoardThicknessBlock.classList.remove('hidden');
     } else {
       coverCoverStyle = 'softcover';
@@ -4684,12 +4652,8 @@ export function initApp(): void {
   coverFormatGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
     const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single' && format !== 'a4-direct') return;
+    if (format !== 'split' && format !== 'single') return;
     coverFormat = format;
-    if (format === 'a4-direct' && coverCoverStyle === 'hardcover') {
-      coverCoverStyle = 'softcover';
-      coverBoardThicknessBlock.classList.add('hidden');
-    }
     applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
@@ -4866,9 +4830,6 @@ export function initApp(): void {
         coverPaperGsm = wrapCoverGsm;
         coverTheme = wrapCoverTheme;
         coverFormat = wrapCoverFormat;
-        if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct') {
-          coverFormat = 'split';
-        }
         coverAuthorInput.value = wrapCoverAuthorInput.value;
         coverSynopsisInput.value = wrapCoverSynopsisInput.value;
 
@@ -4891,11 +4852,8 @@ export function initApp(): void {
       if (hardcoverBtn) hardcoverBtn.classList.toggle('hidden', isSaddle);
       if (isSaddle && coverCoverStyle === 'hardcover') {
         coverCoverStyle = 'softcover';
-        coverFormat = 'a4-direct';
-        coverBoardThicknessBlock.classList.add('hidden');
-      }
-      if (coverCoverStyle === 'hardcover' && coverFormat === 'a4-direct') {
         coverFormat = 'split';
+        coverBoardThicknessBlock.classList.add('hidden');
       }
       applyCoverFormatToUi();
 
