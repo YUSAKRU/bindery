@@ -103,8 +103,10 @@ describe('sanitizeText', () => {
 describe('sanitizeBlocks', () => {
   it('checks heading text against the BOLD face, which is what draws it', () => {
     // 'H' is missing from bold but present in body: sanitising against the
-    // wrong face here would let an undrawable glyph reach pdf-lib.
-    const cov = coverage('Hi', 'i', 'Hi');
+    // wrong face here would let an undrawable glyph reach pdf-lib. Mono lacks
+    // it too, so the promotion path below cannot rescue it and this stays a
+    // test about picking the drawing face.
+    const cov = coverage('Hi', 'i', 'i');
     const blocks: MdBlock[] = [{ kind: 'heading', level: 2, spans: [{ text: 'Hi' }] }];
     const [out] = sanitizeBlocks(blocks, cov);
     if (out.kind !== 'heading') throw new Error('expected a heading');
@@ -131,6 +133,99 @@ describe('sanitizeBlocks', () => {
     const [out] = sanitizeBlocks(blocks, cov);
     if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
     expect(out.spans.map((s) => s.text).join('')).toBe('aZb');
+  });
+
+  it('draws a body glyph the proportional face lacks with the monospace face', () => {
+    // The real gap this guards: the bundled Noto Sans subsets carry no arrows,
+    // Noto Sans Mono carries all four. Before the split, `a→b` printed `a?b`.
+    const cov = coverage('ab', 'ab', 'ab→');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans.map((s) => s.text).join('')).toBe('a→b');
+    expect(out.spans.map((s) => ({ text: s.text, mono: s.mono === true }))).toEqual([
+      { text: 'a', mono: false },
+      { text: '→', mono: true },
+      { text: 'b', mono: false },
+    ]);
+  });
+
+  it('keeps neighbouring promoted characters in one run', () => {
+    const cov = coverage('ab', 'ab', 'ab→←');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→←b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans).toHaveLength(3);
+    expect(out.spans[1]).toMatchObject({ text: '→←', mono: true });
+  });
+
+  it('marks a promoted run as a fallback, not as a code span', () => {
+    // The layout engine sizes a fallback run to sit in running text and leaves
+    // real code spans at text size; without the flag it cannot tell them apart.
+    const cov = coverage('ab', 'ab', 'ab→');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans[1]).toMatchObject({ mono: true, fallback: true });
+    expect(out.spans[0].fallback).toBeUndefined();
+  });
+
+  it('splits a promoted run where the glyphs need different sizes', () => {
+    // '→' is one of the short glyphs the layout enlarges and '▲' is not, so
+    // they cannot share a run — a mixed run is left at text size for all of it.
+    const cov = coverage('ab', 'ab', 'ab→▲');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→▲b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans.map((s) => s.text)).toEqual(['a', '→', '▲', 'b']);
+  });
+
+  it('still replaces a glyph no bundled face can draw', () => {
+    const cov = coverage('ab', 'ab', 'ab');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans.map((s) => s.text).join('')).toBe(`a${UNSUPPORTED_GLYPH}b`);
+    expect(out.spans.some((s) => s.mono)).toBe(false);
+  });
+
+  it('promotes against the BOLD face inside a heading, not the body face', () => {
+    // '→' is drawable in body, but a heading is drawn bold and bold lacks it.
+    // Checking the wrong face here would leave it in the proportional run and
+    // sanitising would then replace it.
+    const cov = coverage('Hi→', 'Hi', 'Hi→');
+    const blocks: MdBlock[] = [{ kind: 'heading', level: 2, spans: [{ text: 'H→i' }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'heading') throw new Error('expected a heading');
+    expect(out.spans.map((s) => s.text).join('')).toBe('H→i');
+    expect(out.spans[1]).toMatchObject({ text: '→', mono: true });
+  });
+
+  it('preserves emphasis on the surviving parts of a split span', () => {
+    const cov = coverage('ab', 'ab', 'ab→');
+    const blocks: MdBlock[] = [{ kind: 'paragraph', spans: [{ text: 'a→b', bold: true }] }];
+    const [out] = sanitizeBlocks(blocks, cov);
+    if (out.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(out.spans[0]).toMatchObject({ text: 'a', bold: true });
+    expect(out.spans[2]).toMatchObject({ text: 'b', bold: true });
+  });
+
+  it('does not print a soft line break as an unsupported glyph', () => {
+    // Found on the device: every bullet of a real document came out as
+    // "01_PRD_AND_VISION.md?Ürün kimliği …". The '?' was the newline the
+    // parser left inside the span — no font maps U+000A, so sanitising
+    // replaced it. A soft break is a space in Markdown and must reach the page
+    // as one, whichever layer normalises it.
+    const source = '- **file.md**\n  description here\n';
+    const blocks = parseMarkdown(source);
+    const alphabet = 'filedscrptonhw.*-*Üünkmiğ ';
+    const cov = coverage(alphabet, alphabet, alphabet);
+    const out = sanitizeBlocks(blocks, cov);
+    const text = out
+      .flatMap((block) => ('spans' in block ? block.spans.map((span) => span.text) : []))
+      .join('');
+    expect(text).not.toContain(UNSUPPORTED_GLYPH);
+    expect(text).toContain('file.md description here');
   });
 
   it('walks table header and body cells', () => {

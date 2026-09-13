@@ -14,6 +14,7 @@ import {
   scaleTypography,
   layoutDocuments,
   wrapCodeLine,
+  SMALL_MONO_FALLBACK_SCALE,
   wrapSpans,
 } from './markdown-layout';
 import type { FontMetrics, LayoutLine, LayoutPage, MdBlock } from './markdown-types';
@@ -70,6 +71,292 @@ describe('parseMarkdown', () => {
     expect(paragraph.spans.filter((s) => s.mono).map((s) => s.text)).toEqual(['$t_f$']);
   });
 
+  describe('display LaTeX', () => {
+    const mathLines = (src: string) => {
+      const block = parseMarkdown(src)[0];
+      if (block?.kind !== 'math') throw new Error('expected a math block');
+      return block.lines;
+    };
+
+    it('renders a display block that can be printed faithfully', () => {
+      expect(
+        mathLines(
+          '$$\\text{snap}(\\text{snap}(T, \\text{FPS}), \\text{FPS}) \\equiv \\text{snap}(T, \\text{FPS})$$\n',
+        ),
+      ).toEqual(['snap(snap(T, FPS), FPS) == snap(T, FPS)']);
+    });
+
+    it('reads an underscore inside \\text as part of a name, not a subscript', () => {
+      // Deliberately a bare underscore, not "\\_": an escaped one is handled by
+      // the escape path and would not exercise the rule at all.
+      expect(mathLines('$$\\text{samples_to_us}(S, R) \\equiv S$$\n')).toEqual([
+        'samples_to_us(S, R) == S',
+      ]);
+    });
+
+    it('turns floor delimiters into the call they stand for', () => {
+      expect(mathLines('$$\\left\\lfloor \\frac{S + 1}{R} \\right\\rfloor$$\n')).toEqual([
+        'floor( (S + 1) / (R) )',
+      ]);
+    });
+
+    it('leaves the whole block as source when one line cannot be printed', () => {
+      // All or nothing per block, and it takes TWO lines to show it: with one
+      // line there is nothing to be inconsistent with. One converted line
+      // beside one raw line reads as two notations for the same statement.
+      const lines = mathLines('$$\\text{snap}(T) \\equiv T\n\\sum_{i=0}^{n} x_i$$\n');
+      expect(lines).toEqual(['\\text{snap}(T) \\equiv T', '\\sum_{i=0}^{n} x_i']);
+    });
+  });
+
+  describe('inline LaTeX', () => {
+    const flat = (src: string) => {
+      const block = parseMarkdown(`${src}\n`)[0];
+      if (block?.kind !== 'paragraph') throw new Error('expected a paragraph');
+      return block.spans;
+    };
+    const text = (src: string) =>
+      flat(src)
+        .map((s) => s.text)
+        .join('');
+
+    it('prints the commands it can draw as real characters', () => {
+      // Every target was checked against the bundled subsets: × · ± µ are in
+      // all three faces, → ← in the monospace face via the fallback.
+      expect(text('Hattı $\\rightarrow$ DMA-BUF')).toBe('Hattı → DMA-BUF');
+      // A binary operator keeps the space that terminates its name; only a
+      // unit prefix like \mu attaches to what follows.
+      expect(text('Oran $2 \\times 3$ kadar')).toBe('Oran 2 × 3 kadar');
+    });
+
+    it('writes the relations no bundled face carries as ASCII, spaced', () => {
+      // ≤ ≥ ≠ are absent from Noto Sans Regular itself, so they cannot be
+      // subset in — they would cost another font family.
+      expect(text('Başlangıç $\\le \\mathbf{500\\ ms}$')).toBe('Başlangıç <= 500 ms');
+      expect(text('En az $\\ge 10$ kere')).toBe('En az >= 10 kere');
+    });
+
+    it('keeps the micro sign glued to its unit', () => {
+      // "\mu s" means microseconds. The terminating space is LaTeX syntax, not
+      // a space the author wants printed.
+      expect(text('Gecikme $\\mathbf{0\\ \\mu s}$ olmalı')).toBe('Gecikme 0 µs olmalı');
+    });
+
+    it('carries \\mathbf through as real bold, not as literal source', () => {
+      const spans = flat('Kayıp $\\mathbf{0%}$ hedefi');
+      expect(spans.find((s) => s.bold)?.text).toBe('0%');
+      expect(spans.some((s) => s.mono)).toBe(false);
+    });
+
+    it('leaves a formula it cannot print faithfully as source', () => {
+      // Half-converting real notation would read as different maths, which is
+      // worse than showing the source — so superscripts and unknown commands
+      // keep the delimiters and the monospace face.
+      const sup = flat('Gerçek $E = mc^2$ korunur');
+      expect(sup.find((s) => s.mono)?.text).toBe('$E = mc^2$');
+      const unknown = flat('Toplam $\\sum_{i=0}^{n} x$ korunur');
+      expect(unknown.find((s) => s.mono)?.text).toBe('$\\sum_{i=0}^{n} x$');
+    });
+
+    it('prints a function name and spells the infinity it cannot draw', () => {
+      expect(text('tanjant ($\\tanh$) yumuşatması')).toBe('tanjant (tanh) yumuşatması');
+      expect(text('Aralık $\\pm\\infty$ olur')).toBe('Aralık ±inf olur');
+    });
+
+    it('treats a bare brace group as grouping, not as a formula it cannot read', () => {
+      // "R=96{,}000" is a number whose comma is punctuation; the braces are
+      // LaTeX grouping and print nothing of their own.
+      expect(text('Örnekleme $R=96{,}000$ Hz')).toBe('Örnekleme R=96,000 Hz');
+    });
+
+    it('sees a formula that a markdown escape cut into pieces', () => {
+      // `marked` makes "\%" its own escape token, so "$\mathbf{0\%}$" arrives
+      // as three tokens; splitting each one alone never finds the formula.
+      const spans = flat('sırasında $\\mathbf{0\\%}$ kare düşüşü');
+      expect(spans.find((s) => s.bold)?.text).toBe('0%');
+      expect(spans.some((s) => s.mono)).toBe(false);
+    });
+
+    it('never drops a command it does not know', () => {
+      // The safety valve, and the one that has to be tested without braces:
+      // "\frac{a}{b}" would bail on the brace anyway, so it cannot tell a
+      // deliberate bail from a silent skip. "\oplus" can. Dropping it would
+      // print "a b" — a formula quietly turned into different maths.
+      const spans = flat('Toplam $a \\oplus b$ olur');
+      expect(spans.find((s) => s.mono)?.text).toBe('$a \\oplus b$');
+      expect(spans.map((s) => s.text).join('')).toContain('\\oplus');
+    });
+
+    it('writes a fraction as a bracketed division rather than giving up', () => {
+      // "(a) / (b)" is the whole fraction, not half of one — the brackets keep
+      // precedence exact. A stacked fraction is what one line cannot show.
+      expect(text('Süre $\\frac{S + 1}{R}$ olur')).toBe('Süre (S + 1) / (R) olur');
+    });
+
+    it('still leaves a lone dollar amount alone', () => {
+      expect(text('Fiyat $50 tek dolar')).toBe('Fiyat $50 tek dolar');
+    });
+
+    it('leaves two dollar amounts in one sentence as prose', () => {
+      // The pair of '$' matches, and the prose between them "converts"
+      // perfectly — as the prose it already was — so both delimiters were eaten
+      // and the sentence lost its currency. A run has to carry a command or a
+      // brace before it is read as maths.
+      expect(text('Tutar $50 ve $100 arası')).toBe('Tutar $50 ve $100 arası');
+      expect(text('A $1 B $2 C $3 D')).toBe('A $1 B $2 C $3 D');
+      expect(text('Yol $HOME ve $PATH ayarlı')).toBe('Yol $HOME ve $PATH ayarlı');
+    });
+
+    it('reads a display block written inside a paragraph, delimiters and all', () => {
+      // Two "$$…$$" blocks side by side on one line: asDisplayMath only fires
+      // for a paragraph that is nothing but one block, so these fall to the
+      // inline path. Without the display alternative the single-'$' rule
+      // matched between the doubled delimiters and left a '$' on each side.
+      expect(text('formül: $$\\text{a_b}(S) = \\frac{S}{R}$$ $$\\text{c_d}(U) = U \\times 2$$')).toBe(
+        'formül: a_b(S) = (S) / (R) c_d(U) = U × 2',
+      );
+    });
+  });
+
+  it('strips inline HTML tags instead of printing them', () => {
+    const blocks = parseMarkdown('Su H<sub>2</sub>O olur.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Su H2O olur.');
+  });
+
+  it('keeps generics and placeholders that only look like tags', () => {
+    // `marked` calls anything tag-shaped inline HTML. These documents are full
+    // of Rust generics and shell placeholders that are not markup, and deleting
+    // them loses the reader's content — worse than the tags the strip removes.
+    const cases: Array<[string, string]> = [
+      ['Tampon Vec<u8> olarak tutulur.', 'Tampon Vec<u8> olarak tutulur.'],
+      ['Paylaşım Arc<Mutex<T>> ile yapılır.', 'Paylaşım Arc<Mutex<T>> ile yapılır.'],
+      ['Yol: pipe kurgu_<USERNAME> olur.', 'Yol: pipe kurgu_<USERNAME> olur.'],
+    ];
+    for (const [source, expected] of cases) {
+      const block = parseMarkdown(`${source}\n`)[0];
+      if (block?.kind !== 'paragraph') throw new Error('expected a paragraph');
+      expect(block.spans.map((s) => s.text).join('')).toBe(expected);
+    }
+  });
+
+  it('turns an inline line-break tag into a space, not into nothing', () => {
+    const blocks = parseMarkdown('Satır<br>sonu.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Satır sonu.');
+  });
+
+  it('keeps the text of an HTML block and drops its tags', () => {
+    const blocks = parseMarkdown('<div class="x">içerik</div>\n');
+    expect(blocks).toEqual([{ kind: 'paragraph', spans: [{ text: 'içerik' }] }]);
+  });
+
+  it('brackets an image so its alt text does not read as prose', () => {
+    const blocks = parseMarkdown('Şema: ![Mimari şeması](diagram.png) burada.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Şema: [Mimari şeması] burada.');
+  });
+
+  it('prints nothing for an image with no alt text', () => {
+    const blocks = parseMarkdown('Şema: ![](diagram.png) burada.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).not.toContain('[');
+  });
+
+  it('marks struck text so it does not read as ordinary prose', () => {
+    const blocks = parseMarkdown('Bu ~~yanlış~~ doğru.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    const struck = paragraph.spans.filter((span) => span.strike);
+    expect(struck.map((span) => span.text)).toEqual(['yanlış']);
+    expect(paragraph.spans.filter((span) => span.strike !== true).length).toBeGreaterThan(0);
+  });
+
+  it('keeps a task list item\'s state in its marker', () => {
+    // `marked` strips the "[x]" from the text and reports the state separately.
+    // Dropping it printed a finished task and a pending one identically.
+    const blocks = parseMarkdown('- [x] biten iş\n- [ ] bekleyen iş\n');
+    expect(blocks.map((b) => (b.kind === 'listItem' ? [b.marker, b.spans[0].text] : b.kind))).toEqual([
+      ['[x]', 'biten iş'],
+      ['[ ]', 'bekleyen iş'],
+    ]);
+  });
+
+  it('writes the task marker with glyphs the body face actually has', () => {
+    // The marker is drawn straight from the body face and skips sanitising, so
+    // an absent glyph aborts the conversion rather than degrading. Nothing in
+    // the ☐/☑/✓/□ family is in the bundled subset.
+    const blocks = parseMarkdown('- [x] a\n- [ ] b\n');
+    for (const block of blocks) {
+      if (block.kind !== 'listItem') continue;
+      for (const ch of block.marker) expect(ch.codePointAt(0)).toBeLessThan(0x80);
+    }
+  });
+
+  it('leaves an ordinary bullet and an ordered number alone', () => {
+    const bullets = parseMarkdown('- düz madde\n');
+    expect(bullets[0]).toMatchObject({ kind: 'listItem', marker: '•' });
+    const ordered = parseMarkdown('3. üçüncü\n4. dördüncü\n');
+    expect(ordered.map((b) => (b.kind === 'listItem' ? b.marker : b.kind))).toEqual(['3.', '4.']);
+  });
+
+  it('collapses a soft line break into a space instead of leaving it in the span', () => {
+    // No bundled face maps U+000A, so a newline that survives into a span is
+    // printed as '?'. Found on the device: "01_PRD_AND_VISION.md?Ürün kimliği".
+    const blocks = parseMarkdown('Birinci satır\nikinci satır\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Birinci satır ikinci satır');
+  });
+
+  it('collapses the continuation line of a list item too', () => {
+    const blocks = parseMarkdown('- 01_PRD.md\n  Ürün kimliği burada\n');
+    const item = blocks[0];
+    if (item?.kind !== 'listItem') throw new Error('expected a list item');
+    expect(item.spans.map((s) => s.text).join('')).toBe('01_PRD.md Ürün kimliği burada');
+  });
+
+  it('collapses a tab between words', () => {
+    // `marked` leaves a tab in the span and no bundled face maps U+0009 either.
+    const blocks = parseMarkdown('kelime1\tkelime2\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('kelime1 kelime2');
+  });
+
+  it('does not let the collapse turn two prices into one formula', () => {
+    // The regression the ordering guards. `$…$` deliberately refuses to cross a
+    // line, so collapsing the break BEFORE the split would hand the pattern
+    // "Tutar $50. Sonraki $100." and "$50. Sonraki $" would be set as maths.
+    const blocks = parseMarkdown('Tutar $50.\nSonraki $100.\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.some((s) => s.mono)).toBe(false);
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Tutar $50. Sonraki $100.');
+  });
+
+  it('leaves the newlines inside a fenced code block alone', () => {
+    // Code blocks reach the layout engine as `lines`, never through
+    // `inlineSpans` — a collapse that reached them would flatten the listing.
+    const blocks = parseMarkdown('```rust\nfn main() {\n    let a = 1;\n}\n```\n');
+    expect(blocks[0]).toEqual({
+      kind: 'code',
+      lang: 'rust',
+      lines: ['fn main() {', '    let a = 1;', '}'],
+    });
+  });
+
+  it('drops a byte-order mark instead of printing it', () => {
+    const blocks = parseMarkdown('﻿Başlangıç\n');
+    const paragraph = blocks[0];
+    if (paragraph?.kind !== 'paragraph') throw new Error('expected a paragraph');
+    expect(paragraph.spans.map((s) => s.text).join('')).toBe('Başlangıç');
+  });
+
   it('does not treat a lone dollar sign as maths', () => {
     expect(splitInlineMath('costs $5 and rises', { text: '' })).toEqual([
       { text: 'costs $5 and rises' },
@@ -99,19 +386,57 @@ describe('wrapCodeLine', () => {
     expect(RUST_112).toHaveLength(112);
   });
 
-  it('wraps that line into two rows, the second indented', () => {
+  it('wraps that line into two rows, continued under its own indent', () => {
     const inner = PRINTABLE_WIDTH - DEFAULT_TYPOGRAPHY.codePadding * 2;
     const rows = wrapCodeLine(RUST_112, inner, DEFAULT_TYPOGRAPHY.codeSize, metrics);
+    // The line's own four spaces, then the continuation marker: a wrapped row
+    // flush against the box edge breaks the shape of the code around it.
+    const prefix = `    ${CODE_WRAP_INDENT}`;
 
     expect(rows).toHaveLength(2);
     expect(CODE_WRAP_INDENT).toBe('  ');
-    expect(rows[1].startsWith('  ')).toBe(true);
-    expect(rows[1]).not.toBe(rows[1].trimStart());
+    expect(rows[1].startsWith(prefix)).toBe(true);
     // Nothing is lost or duplicated by the break.
-    expect(rows[0] + rows[1].slice(CODE_WRAP_INDENT.length)).toBe(RUST_112);
+    expect(rows[0] + rows[1].slice(prefix.length)).toBe(RUST_112);
     for (const row of rows) {
       expect(metrics.widthOfText(row, DEFAULT_TYPOGRAPHY.codeSize, 'mono')).toBeLessThanOrEqual(inner);
     }
+  });
+
+  it('breaks at a space so an identifier is never cut in half', () => {
+    // The corpus printed "fps i" / "n arb_frame_rate()" and "denomina" /
+    // "tor: 1 })" — code a reader cannot retype.
+    const line = '    fn prop_frame_snapping_idempotent(us in 0u64..360u64, fps in arb_frame_rate()) {';
+    const rows = wrapCodeLine(line, 50 * 8 * RATIOS.mono, 8, metrics);
+    const prefix = `    ${CODE_WRAP_INDENT}`;
+    expect(rows.length).toBeGreaterThan(1);
+
+    // Every continuation starts right after a space, so no row begins with the
+    // tail of an identifier — that is the whole point of the change.
+    for (const row of rows.slice(1)) {
+      expect(row.startsWith(prefix)).toBe(true);
+      expect(row.slice(prefix.length).startsWith(' ')).toBe(false);
+    }
+    for (const row of rows) expect(row.endsWith(' ') || row === rows[rows.length - 1]).toBe(true);
+
+    // Nothing lost or duplicated.
+    expect(rows[0] + rows.slice(1).map((row) => row.slice(prefix.length)).join('')).toBe(line);
+  });
+
+  it('does not treat a space inside the indent as a word boundary', () => {
+    // A deeply indented unbroken token: the only spaces in reach are the
+    // indent itself. Breaking there would spend a whole row on whitespace.
+    const line = `${' '.repeat(8)}${'a'.repeat(80)}`;
+    const rows = wrapCodeLine(line, 40 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.trim().length).toBeGreaterThan(0);
+  });
+
+  it('still cuts a diagram row by character, having no space to break at', () => {
+    const diagram = `├${'─'.repeat(40)}►`;
+    const rows = wrapCodeLine(diagram, 20 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(diagram);
   });
 
   it('leaves a line that already fits untouched, and keeps blank lines', () => {
@@ -124,6 +449,36 @@ describe('wrapCodeLine', () => {
     const rows = wrapCodeLine(diagram, 20 * 8 * RATIOS.mono, 8, metrics);
     expect(rows.length).toBeGreaterThan(1);
     expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(diagram);
+  });
+
+  it('breaks continuation line at word space even when indent of first line was wider than space offset', () => {
+    const indent = ' '.repeat(10);
+    const line = `${indent}first_chunk_that_fills_budget next a_very_long_third_chunk_that_exceeds_budget`;
+    const budgetWidth = 35 * 8 * RATIOS.mono;
+    const rows = wrapCodeLine(line, budgetWidth, 8, metrics);
+    expect(rows[1]).toBe(`${indent}${CODE_WRAP_INDENT}dget next `);
+  });
+
+  it('does not cut a continuation inside its own leading spaces', () => {
+    // The first cut lands inside a run of spaces, so the continuation starts
+    // with the rest of that run. The only space in reach is part of it; cutting
+    // there would print a row of nothing but whitespace.
+    const line = `${'x'.repeat(18)}${' '.repeat(10)}${'y'.repeat(40)}`;
+    const rows = wrapCodeLine(line, 20 * 8 * RATIOS.mono, 8, metrics);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.trim().length).toBeGreaterThan(0);
+    expect(rows.map((r, i) => (i === 0 ? r : r.slice(CODE_WRAP_INDENT.length))).join('')).toBe(line);
+  });
+
+  it('does not collapse continuation budget to 1 on deep indentation', () => {
+    const indent = ' '.repeat(58);
+    const line = `${indent}${'a'.repeat(200)}`;
+    const budgetWidth = 60 * 8 * RATIOS.mono;
+    const rows = wrapCodeLine(line, budgetWidth, 8, metrics);
+    expect(rows.length).toBeLessThan(20);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].trim().length).toBeGreaterThanOrEqual(10);
+    }
   });
 });
 
@@ -154,6 +509,78 @@ describe('wrapSpans', () => {
   it('offsets runs from the given left edge', () => {
     const [runs] = wrapSpans([{ text: 'hi' }], 200, 9.5, metrics, 36);
     expect(runs[0].x).toBe(36);
+  });
+
+  it('draws a rule over struck text, above the baseline and no wider than the run', () => {
+    const pages = layoutDocument(parseMarkdown('Bu ~~yanlış~~ doğru.\n'), metrics);
+    const rects = pages
+      .flatMap((page) => page.items)
+      .filter((item): item is Extract<typeof item, { kind: 'rect' }> => item.kind === 'rect');
+    const strikes = rects.filter((rect) => rect.role === 'strike');
+    expect(strikes).toHaveLength(1);
+
+    const line = pages
+      .flatMap((page) => page.items)
+      .find((item): item is LayoutLine => item.kind === 'line');
+    if (!line) throw new Error('expected a line');
+    const run = line.runs.find((r) => r.strike);
+    if (!run) throw new Error('expected a struck run');
+
+    // Over the text, not through the descenders and not floating above it.
+    expect(strikes[0].y).toBeGreaterThan(line.y);
+    expect(strikes[0].y).toBeLessThan(line.y + run.size * 0.536);
+    expect(strikes[0].x).toBeCloseTo(run.x, 6);
+    expect(strikes[0].width).toBeCloseTo(run.width as number, 6);
+    expect(strikes[0].height).toBeGreaterThan(0);
+  });
+
+  it('leaves prose that was never struck without a rule', () => {
+    const pages = layoutDocument(parseMarkdown('Bu doğru.\n'), metrics);
+    const strikes = pages
+      .flatMap((page) => page.items)
+      .filter((item) => item.kind === 'rect' && item.role === 'strike');
+    expect(strikes).toEqual([]);
+  });
+
+  it('keeps a struck run apart from its neighbours and measures it', () => {
+    const [runs] = wrapSpans(
+      [{ text: 'bu ' }, { text: 'yanlış', strike: true }, { text: ' doğru' }],
+      400,
+      9.5,
+      metrics,
+    );
+    const struck = runs.filter((run) => run.strike);
+    expect(struck).toHaveLength(1);
+    expect(struck[0].text).toBe('yanlış');
+    expect(struck[0].width).toBeCloseTo(metrics.widthOfText('yanlış', 9.5, 'body'), 6);
+    expect(runs.filter((run) => run.strike !== true).length).toBeGreaterThan(0);
+  });
+
+  it('enlarges a fallback run of the short mono glyphs so it sits in running text', () => {
+    // Noto Sans Mono draws U+2192 234/1000 em tall against an x-height of 536,
+    // so a fallback run left at text size reads as a subscript.
+    const [runs] = wrapSpans([{ text: '→', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBeCloseTo(9.5 * SMALL_MONO_FALLBACK_SCALE, 6);
+  });
+
+  it('leaves a fallback run of normally-sized glyphs at text size', () => {
+    // U+25B2 measures 585 tall in the same face and needs no help.
+    const [runs] = wrapSpans([{ text: '▲', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
+  });
+
+  it('leaves a real code span at text size even when it holds an arrow', () => {
+    // A code span must stay aligned with the code blocks around it, so the
+    // enlargement is keyed on `fallback`, not on the character or the face.
+    const [runs] = wrapSpans([{ text: '→', mono: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
+  });
+
+  it('does not enlarge a fallback run that mixes short and normal glyphs', () => {
+    // The renderer splits these apart, but the sizing rule has to be safe on
+    // its own: enlarging a run because of one character would blow up the rest.
+    const [runs] = wrapSpans([{ text: '→▲', mono: true, fallback: true }], 200, 9.5, metrics);
+    expect(runs[0].size).toBe(9.5);
   });
 });
 
@@ -531,6 +958,21 @@ describe('table rows carried onto a new page', () => {
     for (const preset of Object.values(TYPOGRAPHY_PRESETS)) {
       expect(overprintingPairs(layoutDocument(blocks, metrics, { typography: preset }))).toBe(0);
     }
+  });
+
+  it('draws strike-through rects for struck text inside table cells', () => {
+    const tableWithStrike: MdBlock = {
+      kind: 'table',
+      align: ['left', 'left'],
+      header: [[{ text: 'Col 1' }], [{ text: 'Col 2' }]],
+      rows: [
+        [[{ text: 'Normal' }], [{ text: 'Struck', strike: true }]],
+      ],
+    };
+    const pages = layoutDocument([tableWithStrike], metrics);
+    expect(pages.length).toBe(1);
+    const strikeRects = pages[0].items.filter((item) => item.kind === 'rect' && item.role === 'strike');
+    expect(strikeRects.length).toBeGreaterThan(0);
   });
 });
 

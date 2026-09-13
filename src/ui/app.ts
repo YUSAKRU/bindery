@@ -25,8 +25,17 @@ import {
   type CoverTheme,
   type PaperGsm,
   PAPER_CALIPERS_MM,
-  MM_TO_PT,
 } from '../engine/cover-engine';
+import {
+  type BoardThicknessMm,
+  type CoverOptions,
+  DEFAULT_COVER_OPTIONS,
+  normalizeCoverOptions,
+  coverGeometryInput,
+  spineInput,
+  resolveCoverPageTrim,
+  checkCoverFormatFit,
+} from './cover-options';
 import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
@@ -85,6 +94,7 @@ import {
   readerScrollTopForPage as scrollTopForPage,
   describeSignatureSplit,
   resolveMarksLabels,
+  resolveSignatureHintData,
   sortFileEntries,
   type FileSortMode,
   type MarksLabels,
@@ -396,7 +406,12 @@ export function initApp(): void {
   const wrapCoverOptions = byId<HTMLDivElement>('wrapCoverOptions');
   const wrapCoverFormatGroup = byId<HTMLDivElement>('wrapCoverFormatGroup');
   const wrapCoverFormatHint = byId<HTMLParagraphElement>('wrapCoverFormatHint');
+  const wrapCoverFormatResultLine = byId<HTMLParagraphElement>('wrapCoverFormatResultLine');
   const wrapCoverBindingGroup = byId<HTMLDivElement>('wrapCoverBindingGroup');
+  const wrapCoverKindGroup = byId<HTMLDivElement>('wrapCoverKindGroup');
+  const wrapCoverKindHint = byId<HTMLParagraphElement>('wrapCoverKindHint');
+  const wrapCoverBoardThicknessBlock = byId<HTMLDivElement>('wrapCoverBoardThicknessBlock');
+  const wrapCoverBoardGroup = byId<HTMLDivElement>('wrapCoverBoardGroup');
   const wrapCoverGsmGroup = byId<HTMLDivElement>('wrapCoverGsmGroup');
   const wrapCoverPaletteGroup = byId<HTMLDivElement>('wrapCoverPaletteGroup');
   const wrapCoverTitleInput = byId<HTMLInputElement>('wrapCoverTitleInput');
@@ -407,6 +422,7 @@ export function initApp(): void {
   const wrapCoverThreadSwellBadge = byId<HTMLSpanElement>('wrapCoverThreadSwellBadge');
   const wrapCoverHingeBadge = byId<HTMLSpanElement>('wrapCoverHingeBadge');
   const wrapCoverFitBadge = byId<HTMLSpanElement>('wrapCoverFitBadge');
+  const wrapCoverPaperFitBadge = byId<HTMLSpanElement>('wrapCoverPaperFitBadge');
   const wrapCoverDimsLabel = byId<HTMLDivElement>('wrapCoverDimsLabel');
   const wrapCoverMiniPreview = byId<HTMLDivElement>('wrapCoverMiniPreview');
   const wrapCoverMiniSynopsis = byId<HTMLParagraphElement>('wrapCoverMiniSynopsis');
@@ -516,12 +532,12 @@ export function initApp(): void {
   // Original page count of the selected source (0 = none). Drives the live
   // config summary and the separate-cover availability check.
   let bookletOriginalPages = 0;
-  // Wrap-around cover section on the config screen. `hardcover` is a cover
-  // STYLE, not one of the engine's BindingTypes — it maps to sewn + a board
-  // thickness, the same way Cover Studio's own Softcover/Hardcover pair does.
+  // Wrap-around cover section on the config screen, using the shared CoverOptions model.
   let bookletWrapCover = false;
   let wrapCoverFormat: CoverFormat = 'split';
-  let wrapCoverBinding: BindingType | 'hardcover' = 'sewn';
+  let wrapCoverBinding: BindingType = 'sewn';
+  let wrapCoverKind: 'softcover' | 'hardcover' = 'softcover';
+  let wrapCoverBoardMm: BoardThicknessMm = 2.0;
   let wrapCoverGsm: PaperGsm = 80;
   let wrapCoverTheme: CoverTheme = 'cream';
   /**
@@ -532,8 +548,17 @@ export function initApp(): void {
    * bounds) — the cover section falls back to A4 and says so.
    */
   let bookletSourceSheetSize: [number, number] | null = null;
-  /** Board thickness used when the cover style is Hardcover, matching Cover Studio's default. */
-  const WRAP_COVER_BOARD_MM = 2.0;
+
+  function getBookletCoverOptions(): CoverOptions {
+    return normalizeCoverOptions({
+      paper: wrapCoverFormat === 'single' ? 'single' : 'split',
+      kind: wrapCoverKind,
+      binding: wrapCoverBinding,
+      boardMm: wrapCoverBoardMm,
+      gsm: wrapCoverGsm,
+      theme: wrapCoverTheme,
+    });
+  }
   let returnScreenOnError: ScreenId = 'picker';
 
   let mergeFiles: PickedPdf[] = [];
@@ -689,9 +714,12 @@ export function initApp(): void {
   const coverThreadSwellBadge = byId<HTMLSpanElement>('coverThreadSwellBadge');
   const coverHingeBadge = byId<HTMLSpanElement>('coverHingeBadge');
   const coverSpineFitBadge = byId<HTMLSpanElement>('coverSpineFitBadge');
+  const coverPaperFitBadge = byId<HTMLSpanElement>('coverPaperFitBadge');
   const coverTotalDimensionsLabel = byId<HTMLDivElement>('coverTotalDimensionsLabel');
+  const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
   const coverFormatGroup = byId<HTMLDivElement>('coverFormatGroup');
   const coverFormatHint = byId<HTMLParagraphElement>('coverFormatHint');
+  const coverFormatResultLine = byId<HTMLParagraphElement>('coverFormatResultLine');
   const coverPreviewHeading = byId<HTMLSpanElement>('coverPreviewHeading');
   const coverLayoutPreview = byId<HTMLDivElement>('coverLayoutPreview');
   const coverSplitPreview = byId<HTMLDivElement>('coverSplitPreview');
@@ -719,11 +747,14 @@ export function initApp(): void {
   const coverImageStatus = byId<HTMLParagraphElement>('coverImageStatus');
   const coverPaletteGroup = byId<HTMLDivElement>('coverPaletteGroup');
   const coverGsmGroup = byId<HTMLDivElement>('coverGsmGroup');
-  const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
-  const coverStyleGroup = byId<HTMLDivElement>('coverStyleGroup');
+  const coverKindRow = byId<HTMLDivElement>('coverKindRow');
+  const coverKindGroup = byId<HTMLDivElement>('coverKindGroup');
+  const coverKindHint = byId<HTMLParagraphElement>('coverKindHint');
   const coverBoardThicknessBlock = byId<HTMLDivElement>('coverBoardThicknessBlock');
   const coverBoardGroup = byId<HTMLDivElement>('coverBoardGroup');
   const coverPageTrimGroup = byId<HTMLDivElement>('coverPageTrimGroup');
+  const coverPageTrimHint = byId<HTMLParagraphElement>('coverPageTrimHint');
+  const coverTrimUnsupportedHint = byId<HTMLParagraphElement>('coverTrimUnsupportedHint');
   const coverGenerateBtn = byId<HTMLButtonElement>('coverGenerateBtn');
   const coverGenerateBtnLabel = byId<HTMLSpanElement>('coverGenerateBtnLabel');
   const coverGenerateSpinner = byId<HTMLSpanElement>('coverGenerateSpinner');
@@ -748,13 +779,24 @@ export function initApp(): void {
   let coverPaperGsm: PaperGsm = 80;
   let coverBindingType: BindingType = 'sewn';
   let coverCoverStyle: 'softcover' | 'hardcover' = 'softcover';
-  let coverBoardThicknessMm = 2.0;
+  let coverBoardThicknessMm: BoardThicknessMm = 2.0;
   let coverPageTrim: 'A5' | 'A4' = 'A5';
   // Two A4 sheets is the default: a single-piece A5 wrap is ~305mm wide and
   // cannot be fed through a home A4 printer at all (see cover-engine's
   // CoverFormat). Users with A3 access opt into 'single' explicitly.
   let coverFormat: CoverFormat = 'split';
   let coverTheme: 'cream' | 'white' | 'navy' | 'burgundy' | 'charcoal' = 'cream';
+
+  function getStudioCoverOptions(): CoverOptions {
+    return normalizeCoverOptions({
+      paper: coverFormat === 'single' ? 'single' : 'split',
+      kind: coverCoverStyle,
+      binding: coverBindingType,
+      boardMm: coverBoardThicknessMm,
+      gsm: coverPaperGsm,
+      theme: coverTheme,
+    });
+  }
   let coverImageBytes: Uint8Array | null = null;
   let coverResultPdf: Uint8Array | null = null;
   let coverSaveState: 'idle' | 'saving' | 'saved' = 'idle';
@@ -1180,6 +1222,8 @@ export function initApp(): void {
     bookletWrapCover = false;
     wrapCoverFormat = 'split';
     wrapCoverBinding = 'sewn';
+    wrapCoverKind = 'softcover';
+    wrapCoverBoardMm = 2.0;
     wrapCoverGsm = 80;
     wrapCoverTheme = 'cream';
     wrapCoverTitleInput.value = '';
@@ -1359,31 +1403,19 @@ export function initApp(): void {
    */
   function wrapCoverGeometry(sheets: number, signatures: number) {
     const [sheetWidthPt, sheetHeightPt] = wrapCoverSheetSize();
-    // A hardcover is a sewn book block in a case: same swell, plus board and groove.
-    const isHardcover = wrapCoverBinding === 'hardcover';
-    const bindingType: BindingType = wrapCoverBinding === 'hardcover' ? 'sewn' : wrapCoverBinding;
+    const options = getBookletCoverOptions();
 
-    const spine = computeSpineWidth({
-      sheetCount: Math.max(1, sheets),
-      signatureCount: Math.max(1, signatures),
-      paperGsm: wrapCoverGsm,
-      bindingType,
-      boardThicknessMm: isHardcover ? WRAP_COVER_BOARD_MM : undefined,
-    });
-
-    // Mirrors Cover Studio's own allowances: a soft cover is trimmed (bleed),
-    // a case-bound cover is turned in over the board (wrap allowance).
-    const dimInput = {
-      pageWidthPt: sheetWidthPt / 2,
-      pageHeightPt: sheetHeightPt,
-      spineWidthPt: spine.totalSpineWidthPt,
-      bleedPt: (isHardcover ? 0 : 3) * MM_TO_PT,
-      wrapMarginPt: (isHardcover ? 15 : 0) * MM_TO_PT,
-    };
+    const spine = computeSpineWidth(spineInput(options, sheets, signatures));
+    const dimInput = coverGeometryInput(
+      options,
+      sheetWidthPt / 2,
+      sheetHeightPt,
+      spine.totalSpineWidthPt,
+    );
 
     return {
       spine,
-      dimensions: wrapCoverFormat === 'split'
+      dimensions: options.paper === 'split'
         ? computeSplitCoverDimensions(dimInput)
         : computeCoverDimensions(dimInput),
     };
@@ -1400,6 +1432,20 @@ export function initApp(): void {
     };
   }
 
+  function applyWrapCoverKindHint(): void {
+    if (!wrapCoverKindHint) return;
+    if (wrapCoverBinding === 'saddle') {
+      wrapCoverKindHint.dataset.i18n = 'cover.saddleNote';
+      wrapCoverKindHint.textContent = t('cover.saddleNote');
+    } else if (wrapCoverKind === 'hardcover') {
+      wrapCoverKindHint.dataset.i18n = 'cover.hardHint';
+      wrapCoverKindHint.textContent = t('cover.hardHint');
+    } else {
+      wrapCoverKindHint.dataset.i18n = '';
+      wrapCoverKindHint.textContent = '';
+    }
+  }
+
   /**
    * Shows/hides the inline cover options and keeps the format hint's data-i18n
    * key in step with the selected format, so a later language change does not
@@ -1410,15 +1456,28 @@ export function initApp(): void {
     setActiveSegment(wrapCoverToggleGroup, 'wrapcover', bookletWrapCover ? 'on' : 'off');
     wrapCoverOptions.classList.toggle('hidden', !bookletWrapCover);
 
-    const splitKey = wrapCoverFormat === 'split' ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
+    const splitKey = wrapCoverFormat === 'split'
+      ? 'cover.formatSplitHint'
+      : 'cover.formatSingleHint';
     wrapCoverFormatHint.dataset.i18n = splitKey;
     wrapCoverFormatHint.textContent = t(splitKey);
     setActiveSegment(wrapCoverFormatGroup, 'format', wrapCoverFormat);
     setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', wrapCoverBinding);
+    setActiveSegment(wrapCoverKindGroup, 'wrapkind', wrapCoverKind);
+
+    const isSaddle = wrapCoverBinding === 'saddle';
+    const hardcoverBtn = wrapCoverKindGroup.querySelector<HTMLButtonElement>('[data-wrapkind="hardcover"]');
+    if (hardcoverBtn) {
+      hardcoverBtn.disabled = isSaddle;
+      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
+    }
+    wrapCoverBoardThicknessBlock.classList.toggle('hidden', wrapCoverKind !== 'hardcover');
+    setActiveSegment(wrapCoverBoardGroup, 'wrapboard', String(wrapCoverBoardMm));
     setActiveSegment(wrapCoverGsmGroup, 'gsm', String(wrapCoverGsm));
     wrapCoverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
       swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === wrapCoverTheme);
     });
+    applyWrapCoverKindHint();
   }
 
   /**
@@ -1433,6 +1492,7 @@ export function initApp(): void {
     if (!metrics) {
       wrapCoverSpineLabel.textContent = '—';
       wrapCoverDimsLabel.textContent = t('config.wrapCoverNeedsFile');
+      wrapCoverPaperFitBadge.classList.add('hidden');
       return;
     }
 
@@ -1448,6 +1508,23 @@ export function initApp(): void {
       ? 'cover-fit-badge cover-fit-badge--ok'
       : 'cover-fit-badge cover-fit-badge--warn';
     wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
+
+    const fitResult = checkCoverFormatFit(dimensions);
+    wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
+    const wrapPaperFitWarnKey = fitResult.warnKey;
+    wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
+    wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
+
+    if (wrapCoverFormatResultLine) {
+      wrapCoverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
+      if (fitResult.fits) {
+        wrapCoverFormatResultLine.textContent = t('cover.formatResultFit', {
+          paper: t(fitResult.paperKey),
+          w: fitResult.wMm.toFixed(1),
+          h: fitResult.hMm.toFixed(1),
+        });
+      }
+    }
 
     const heightMm = dimensions.totalHeightPt * mmPerPt;
     wrapCoverDimsLabel.textContent = dimensions.format === 'split'
@@ -1581,8 +1658,9 @@ export function initApp(): void {
       signatureHintText.textContent = t('config.signatureHint');
       return;
     }
-    const { pages, sigs } = describeSignatureSplit(sheetsPerSignature);
-    signatureHintText.textContent = t('config.signatureHintResolved', { pages, sigs });
+    const split = describeSignatureSplit(sheetsPerSignature);
+    const { key, params } = resolveSignatureHintData(split, bookletSignature);
+    signatureHintText.textContent = t(key, params);
   }
 
   /**
@@ -1657,7 +1735,7 @@ export function initApp(): void {
 
   let currentPickerPath = '';
   let selectedPickerFiles: { name: string; uri: string }[] = [];
-  let pickerResolve: ((value: any) => void) | null = null;
+  let pickerResolve: ((value: PickedPdf | PickedPdf[] | null) => void) | null = null;
 
   function renderBinderyPickerBreadcrumb(): void {
     binderyPickerBreadcrumb.innerHTML = '';
@@ -1666,7 +1744,7 @@ export function initApp(): void {
     btn.textContent = t('files.root');
     btn.addEventListener('click', () => {
       currentPickerPath = '';
-      void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
+      void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
     });
     binderyPickerBreadcrumb.appendChild(btn);
 
@@ -1686,7 +1764,7 @@ export function initApp(): void {
         folderBtn.textContent = part;
         folderBtn.addEventListener('click', () => {
           currentPickerPath = currentPath;
-          void renderBinderyPickerList(binderyPickerConfirmBtn.classList.contains('hidden') ? false : true);
+          void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
         });
         binderyPickerBreadcrumb.appendChild(folderBtn);
       });
@@ -1775,8 +1853,10 @@ export function initApp(): void {
     }
   }
 
-  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<any> {
-    return new Promise((resolve) => {
+  function promptAndPickPdfs(options: { allowMultiple: true }): Promise<PickedPdf[]>;
+  function promptAndPickPdfs(options: { allowMultiple: false }): Promise<PickedPdf | null>;
+  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<PickedPdf | PickedPdf[] | null> {
+    return new Promise<PickedPdf | PickedPdf[] | null>((resolve) => {
       pickerResolve = resolve;
 
       const handleDevice = async () => {
@@ -2012,6 +2092,7 @@ export function initApp(): void {
     // Each selected size → an honest, readable example (sheetsPerSig = size ÷ 4).
     const SCEN: Record<string, Scenario> = {
       single: mk('single', 6, 1, { single: true }),
+      '4': mk('4', 1, 4),
       '8': mk('8', 2, 3),
       '16': mk('16', 4, 3),
       '32': mk('32', 8, 2),
@@ -2250,10 +2331,45 @@ export function initApp(): void {
 
   wrapCoverBindingGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const binding = btn?.dataset.wrapbinding as BindingType | 'hardcover' | undefined;
+    const binding = btn?.dataset.wrapbinding as BindingType | undefined;
     if (!binding) return;
     wrapCoverBinding = binding;
     setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', binding);
+
+    const isSaddle = binding === 'saddle';
+    const hardcoverBtn = wrapCoverKindGroup.querySelector<HTMLButtonElement>('[data-wrapkind="hardcover"]');
+    if (hardcoverBtn) {
+      hardcoverBtn.disabled = isSaddle;
+      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
+    }
+    if (isSaddle && wrapCoverKind === 'hardcover') {
+      wrapCoverKind = 'softcover';
+      setActiveSegment(wrapCoverKindGroup, 'wrapkind', 'softcover');
+      wrapCoverBoardThicknessBlock.classList.add('hidden');
+    }
+    applyWrapCoverKindHint();
+    updateWrapCoverCalculations();
+  });
+
+  wrapCoverKindGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    if (btn?.disabled) return;
+    const kind = btn?.dataset.wrapkind as 'softcover' | 'hardcover' | undefined;
+    if (!kind) return;
+    if (wrapCoverBinding === 'saddle' && kind === 'hardcover') return;
+    wrapCoverKind = kind;
+    setActiveSegment(wrapCoverKindGroup, 'wrapkind', kind);
+    wrapCoverBoardThicknessBlock.classList.toggle('hidden', kind !== 'hardcover');
+    applyWrapCoverKindHint();
+    updateWrapCoverCalculations();
+  });
+
+  wrapCoverBoardGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const board = Number(btn?.dataset.wrapboard) as BoardThicknessMm;
+    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
+    wrapCoverBoardMm = board;
+    setActiveSegment(wrapCoverBoardGroup, 'wrapboard', String(board));
     updateWrapCoverCalculations();
   });
 
@@ -2327,8 +2443,16 @@ export function initApp(): void {
       // The cover is measured from what the booklet ACTUALLY came out as, not
       // from the config screen's projection, so a padding or signature decision
       // the engine made cannot leave the spine wrong.
+      //
+      // A cover that cannot be produced (e.g. COVER_TOO_LARGE for a 1 × A4 wrap)
+      // is caught on its own rather than by the outer catch: the booklet above
+      // already succeeded, and must still reach the result screen to be saved.
       const wrapCoverPdfs = bookletWrapCover
-        ? await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount)
+        ? await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount).catch((coverError: unknown) => {
+            console.warn('Wrap cover could not be produced; keeping the booklet:', coverError);
+            showToast(errorText(coverError), { type: 'error' });
+            return {};
+          })
         : {};
 
       booklet = {
@@ -2511,10 +2635,18 @@ export function initApp(): void {
         wrapCover2: 'booklet.wrapCoverSheet2Lower',
       };
       const label = t(labelKeyByTarget[target]);
+      // front/back/combined are the imposed booklet sheets, so their page size
+      // is exactly the sheet size already resolved for the current paper
+      // selection — no need to re-derive it from the PDF bytes.
+      const dimsByTarget: Partial<Record<typeof target, { widthPt: number; heightPt: number }>> = {};
+      if (target === 'front' || target === 'back' || target === 'combined') {
+        const [widthPt, heightPt] = wrapCoverSheetSize();
+        dimsByTarget[target] = { widthPt, heightPt };
+      }
 
       try {
         if (action === 'print') {
-          await printPdf(bytes, filename, `${label} PDF`);
+          await withBusyOverlay(() => printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]));
           actionStatus.textContent = t('status.printed');
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
@@ -3296,16 +3428,26 @@ export function initApp(): void {
       | 'binding'
       | 'wrapcover'
       | 'wrapbinding'
+      | 'wrapkind'
+      | 'wrapboard'
       | 'cover'
       | 'instr'
       | 'order'
       | 'marks'
       | 'gsm'
       | 'style'
+      | 'kind'
       | 'board'
       | 'trim',
     value: string,
   ): void {
+    if (dataKey === 'style' && value === 'softcover') {
+      const target = coverFormat;
+      group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.style === target);
+      });
+      return;
+    }
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });
@@ -3857,7 +3999,7 @@ export function initApp(): void {
   });
 
   // --- Image Cropping & Perspective Correction Logic ---
-  let cropQueue: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' }[] = [];
+  const cropQueue: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' }[] = [];
   let currentCropItem: { bytes: Uint8Array; name: string; format: 'png' | 'jpg' } | null = null;
   let cropImageWidth = 0;
   let cropImageHeight = 0;
@@ -3902,7 +4044,7 @@ export function initApp(): void {
     }
 
     currentCropItem = cropQueue[0];
-    const blob = new Blob([currentCropItem.bytes as any], { type: currentCropItem.format === 'png' ? 'image/png' : 'image/jpeg' });
+    const blob = new Blob([new Uint8Array(currentCropItem.bytes)], { type: currentCropItem.format === 'png' ? 'image/png' : 'image/jpeg' });
     const url = URL.createObjectURL(blob);
 
     cropSourceImg.src = url;
@@ -4130,7 +4272,7 @@ export function initApp(): void {
         1754
       );
 
-      const url = URL.createObjectURL(new Blob([warpedBytes as any], { type: 'image/jpeg' }));
+      const url = URL.createObjectURL(new Blob([new Uint8Array(warpedBytes)], { type: 'image/jpeg' }));
       selectedImages.push({
         id: Math.random().toString(36).substring(2, 9),
         name: currentCropItem.name,
@@ -4155,30 +4297,18 @@ export function initApp(): void {
 
   // ── Cover Studio Screen Logic ─────────────────────────────────────────────
 
-  function getEffectiveCoverSpecs(): {
-    sheetCount: number;
-    signatureCount: number;
-    pageWidthPt: number;
-    pageHeightPt: number;
-    bleedMm: number;
-    wrapAllowanceMm: number;
-  } {
-    const sheetCount = Math.max(1, coverSheetCount);
-    const signatureCount = coverBindingType === 'saddle' ? 1 : Math.max(1, coverSigCount);
-    const isA5 = coverPageTrim === 'A5';
-    const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
-    const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
-    const isHardcover = coverCoverStyle === 'hardcover';
-    const bleedMm = isHardcover ? 0 : 3;
-    const wrapAllowanceMm = isHardcover ? 15 : 0;
-    return {
-      sheetCount,
-      signatureCount,
-      pageWidthPt,
-      pageHeightPt,
-      bleedMm,
-      wrapAllowanceMm,
-    };
+  function applyCoverKindHint(): void {
+    if (!coverKindHint) return;
+    if (coverBindingType === 'saddle') {
+      coverKindHint.dataset.i18n = 'cover.saddleNote';
+      coverKindHint.textContent = t('cover.saddleNote');
+    } else if (coverCoverStyle === 'hardcover') {
+      coverKindHint.dataset.i18n = 'cover.hardHint';
+      coverKindHint.textContent = t('cover.hardHint');
+    } else {
+      coverKindHint.dataset.i18n = '';
+      coverKindHint.textContent = '';
+    }
   }
 
   function updateCoverLiveCalculations(): {
@@ -4191,34 +4321,33 @@ export function initApp(): void {
     totalWidthMm: number;
     totalHeightMm: number;
   } {
-    const specs = getEffectiveCoverSpecs();
-    const boardThicknessMm = coverCoverStyle === 'hardcover' ? coverBoardThicknessMm : undefined;
+    const options = getStudioCoverOptions();
+    const isA5 = coverPageTrim === 'A5';
+    const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
+    const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
 
-    const spineResult = computeSpineWidth({
-      sheetCount: specs.sheetCount,
-      paperGsm: coverPaperGsm,
-      bindingType: coverBindingType,
-      signatureCount: specs.signatureCount,
-      boardThicknessMm,
-    });
+    const spineResult = computeSpineWidth(
+      spineInput(options, coverSheetCount, coverSigCount),
+    );
 
-    const dimInput = {
-      pageWidthPt: specs.pageWidthPt,
-      pageHeightPt: specs.pageHeightPt,
-      spineWidthPt: spineResult.totalSpineWidthPt,
-      bleedPt: specs.bleedMm * MM_TO_PT,
-      wrapMarginPt: specs.wrapAllowanceMm * MM_TO_PT,
-    };
+    const dimInput = coverGeometryInput(
+      options,
+      pageWidthPt,
+      pageHeightPt,
+      spineResult.totalSpineWidthPt,
+    );
 
     const mmPerPt = 25.4 / 72;
     // In split mode "total width" is per sheet, not one wide wrap: sheet 1 is the
     // widest of the two, so it is what has to clear the printer.
-    const splitDims = coverFormat === 'split' ? computeSplitCoverDimensions(dimInput) : null;
+    const splitDims = options.paper === 'split' ? computeSplitCoverDimensions(dimInput) : null;
     const singleDims = splitDims ? null : computeCoverDimensions(dimInput);
     const sheet1WidthMm = splitDims ? splitDims.sheet1.widthPt * mmPerPt : 0;
     const sheet2WidthMm = splitDims ? splitDims.sheet2.widthPt * mmPerPt : 0;
-    const totalWidthMm = splitDims ? sheet1WidthMm : singleDims!.totalWidthPt * mmPerPt;
-    const totalHeightMm = (splitDims ? splitDims.totalHeightPt : singleDims!.totalHeightPt) * mmPerPt;
+    const singleWrapWidthPt = singleDims && 'totalWidthPt' in singleDims ? singleDims.totalWidthPt : 0;
+    const singleWrapHeightPt = singleDims && 'totalHeightPt' in singleDims ? singleDims.totalHeightPt : 0;
+    const totalWidthMm = splitDims ? sheet1WidthMm : singleWrapWidthPt * mmPerPt;
+    const totalHeightMm = (splitDims ? splitDims.totalHeightPt : singleWrapHeightPt) * mmPerPt;
 
     // UI Badges & Labels
     coverSpineWidthLabel.textContent = `${spineResult.totalSpineWidthMm.toFixed(2)} mm`;
@@ -4232,6 +4361,24 @@ export function initApp(): void {
     } else {
       coverSpineFitBadge.className = 'cover-fit-badge cover-fit-badge--warn';
       coverSpineFitBadge.textContent = t('cover.spineTextTooNarrow');
+    }
+
+    const dimensions = splitDims ?? singleDims!;
+    const fitResult = checkCoverFormatFit(dimensions);
+    coverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
+    const coverPaperFitWarnKey = fitResult.warnKey;
+    coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
+    coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
+
+    if (coverFormatResultLine) {
+      coverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
+      if (fitResult.fits) {
+        coverFormatResultLine.textContent = t('cover.formatResultFit', {
+          paper: t(fitResult.paperKey),
+          w: fitResult.wMm.toFixed(1),
+          h: fitResult.hMm.toFixed(1),
+        });
+      }
     }
 
     coverTotalDimensionsLabel.textContent = splitDims
@@ -4268,24 +4415,27 @@ export function initApp(): void {
     coverPreviewTitleText.textContent = title;
     coverPreviewAuthorText.textContent = author;
     coverPreviewSynopsisText.textContent = synopsis;
+
     coverSplitTitleText.textContent = title;
     coverSplitAuthorText.textContent = author;
     coverSplitSynopsisText.textContent = synopsis;
 
-    const visualSpineWidth = Math.max(18, Math.min(80, Math.round(spineWidthMm * 3.5)));
-    for (const spine of [coverSpinePreview, coverSplitSpinePreview]) {
-      spine.style.width = `${visualSpineWidth}px`;
-      spine.style.flexBasis = `${visualSpineWidth}px`;
-    }
+    const visualSpineWidth = Math.max(14, Math.min(80, Math.round(spineWidthMm * 4)));
+    coverSpinePreview.style.width = `${visualSpineWidth}px`;
+    coverSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
+    coverSplitSpinePreview.style.width = `${visualSpineWidth}px`;
+    coverSplitSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
 
-    for (const spineText of [coverPreviewSpineText, coverSplitSpineText]) {
-      if (canPrintSpineText) {
-        spineText.textContent = title;
-        spineText.style.display = 'block';
-      } else {
-        spineText.textContent = '';
-        spineText.style.display = 'none';
-      }
+    if (canPrintSpineText) {
+      coverPreviewSpineText.textContent = title;
+      coverPreviewSpineText.style.display = 'block';
+      coverSplitSpineText.textContent = title;
+      coverSplitSpineText.style.display = 'block';
+    } else {
+      coverPreviewSpineText.textContent = '';
+      coverPreviewSpineText.style.display = 'none';
+      coverSplitSpineText.textContent = '';
+      coverSplitSpineText.style.display = 'none';
     }
 
     const theme = coverPreviewTheme(coverTheme);
@@ -4310,8 +4460,10 @@ export function initApp(): void {
     const isSplit = coverFormat === 'split';
 
     setActiveSegment(coverFormatGroup, 'format', coverFormat);
+    setActiveSegment(coverKindGroup, 'kind', coverCoverStyle);
 
-    coverFormatHint.dataset.i18n = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
+    const formatKey = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
+    coverFormatHint.dataset.i18n = formatKey;
     coverFormatHint.textContent = t(coverFormatHint.dataset.i18n);
 
     coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle';
@@ -4357,10 +4509,25 @@ export function initApp(): void {
 
     setActiveSegment(coverGsmGroup, 'gsm', '80');
     setActiveSegment(coverBindingGroup, 'binding', 'sewn');
-    setActiveSegment(coverStyleGroup, 'style', 'softcover');
+    setActiveSegment(coverKindGroup, 'kind', 'softcover');
+    coverKindRow.classList.remove('hidden');
+    coverKindGroup.classList.remove('hidden');
+    const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
+    if (hardcoverBtn) {
+      hardcoverBtn.disabled = false;
+      hardcoverBtn.classList.remove('is-disabled');
+    }
     coverBoardThicknessBlock.classList.add('hidden');
     setActiveSegment(coverBoardGroup, 'board', '2.0');
     setActiveSegment(coverPageTrimGroup, 'trim', 'A5');
+    if (coverTrimUnsupportedHint) {
+      coverTrimUnsupportedHint.classList.add('hidden');
+    }
+    if (coverPageTrimHint) {
+      coverPageTrimHint.dataset.i18n = 'cover.pageTrimA5Hint';
+      coverPageTrimHint.textContent = t('cover.pageTrimA5Hint');
+    }
+    applyCoverKindHint();
     applyCoverFormatToUi();
 
     coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
@@ -4433,25 +4600,21 @@ export function initApp(): void {
 
   coverSheetCountInput.addEventListener('input', () => {
     const val = parseInt(coverSheetCountInput.value, 10);
-    coverSheetCount = isNaN(val) || val < 1 ? 1 : val;
+    coverSheetCount = Number.isNaN(val) || val < 1 ? 1 : val;
     updateCoverLiveCalculations();
   });
 
   coverSigCountInput.addEventListener('input', () => {
     const val = parseInt(coverSigCountInput.value, 10);
-    coverSigCount = isNaN(val) || val < 1 ? 1 : val;
+    coverSigCount = Number.isNaN(val) || val < 1 ? 1 : val;
     updateCoverLiveCalculations();
   });
 
   coverTitleInput.addEventListener('input', () => {
-    const specs = getEffectiveCoverSpecs();
-    const spine = computeSpineWidth({
-      sheetCount: specs.sheetCount,
-      paperGsm: coverPaperGsm,
-      bindingType: coverBindingType,
-      signatureCount: specs.signatureCount,
-      boardThicknessMm: coverCoverStyle === 'hardcover' ? coverBoardThicknessMm : undefined,
-    });
+    const options = getStudioCoverOptions();
+    const spine = computeSpineWidth(
+      spineInput(options, coverSheetCount, coverSigCount),
+    );
     updateCoverPreviewVisuals(spine.totalSpineWidthMm, spine.canPrintSpineText);
   });
 
@@ -4519,24 +4682,41 @@ export function initApp(): void {
     if (!binding) return;
     coverBindingType = binding;
     setActiveSegment(coverBindingGroup, 'binding', binding);
-    coverSigCountRow.classList.toggle('hidden', binding === 'saddle');
+    const isSaddle = binding === 'saddle';
+    coverSigCountRow.classList.toggle('hidden', isSaddle);
+    const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
+    if (hardcoverBtn) {
+      hardcoverBtn.disabled = isSaddle;
+      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
+    }
+    if (isSaddle && coverCoverStyle === 'hardcover') {
+      coverCoverStyle = 'softcover';
+      setActiveSegment(coverKindGroup, 'kind', 'softcover');
+      coverBoardThicknessBlock.classList.add('hidden');
+    }
+    applyCoverKindHint();
+    applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
 
-  coverStyleGroup.addEventListener('click', (event) => {
+  coverKindGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const style = btn?.dataset.style as 'softcover' | 'hardcover' | undefined;
-    if (!style) return;
-    coverCoverStyle = style;
-    setActiveSegment(coverStyleGroup, 'style', style);
-    coverBoardThicknessBlock.classList.toggle('hidden', style !== 'hardcover');
+    if (btn?.disabled) return;
+    const kind = btn?.dataset.kind as 'softcover' | 'hardcover' | undefined;
+    if (!kind) return;
+    if (coverBindingType === 'saddle' && kind === 'hardcover') return;
+    coverCoverStyle = kind;
+    setActiveSegment(coverKindGroup, 'kind', kind);
+    coverBoardThicknessBlock.classList.toggle('hidden', kind !== 'hardcover');
+    applyCoverKindHint();
+    applyCoverFormatToUi();
     updateCoverLiveCalculations();
   });
 
   coverBoardGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const board = Number(btn?.dataset.board);
-    if (!board) return;
+    const board = Number(btn?.dataset.board) as BoardThicknessMm;
+    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
     coverBoardThicknessMm = board;
     setActiveSegment(coverBoardGroup, 'board', String(board));
     updateCoverLiveCalculations();
@@ -4548,6 +4728,14 @@ export function initApp(): void {
     if (!trim) return;
     coverPageTrim = trim;
     setActiveSegment(coverPageTrimGroup, 'trim', trim);
+    if (coverTrimUnsupportedHint) {
+      coverTrimUnsupportedHint.classList.add('hidden');
+    }
+    if (coverPageTrimHint) {
+      const hintKey = trim === 'A5' ? 'cover.pageTrimA5Hint' : 'cover.pageTrimA4Hint';
+      coverPageTrimHint.dataset.i18n = hintKey;
+      coverPageTrimHint.textContent = t(hintKey);
+    }
     updateCoverLiveCalculations();
   });
 
@@ -4566,25 +4754,22 @@ export function initApp(): void {
     coverGenerateSpinner.classList.remove('hidden');
 
     try {
-      const specs = getEffectiveCoverSpecs();
-      const boardThicknessMm = coverCoverStyle === 'hardcover' ? coverBoardThicknessMm : undefined;
+      const options = getStudioCoverOptions();
+      const isA5 = coverPageTrim === 'A5';
+      const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
+      const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
 
-      const spineCalc = computeSpineWidth({
-        sheetCount: specs.sheetCount,
-        paperGsm: coverPaperGsm,
-        bindingType: coverBindingType,
-        signatureCount: specs.signatureCount,
-        boardThicknessMm,
-      });
+      const spineCalc = computeSpineWidth(
+        spineInput(options, coverSheetCount, coverSigCount),
+      );
 
-      const dimInput = {
-        pageWidthPt: specs.pageWidthPt,
-        pageHeightPt: specs.pageHeightPt,
-        spineWidthPt: spineCalc.totalSpineWidthPt,
-        bleedPt: specs.bleedMm * MM_TO_PT,
-        wrapMarginPt: specs.wrapAllowanceMm * MM_TO_PT,
-      };
-      const dimensions = coverFormat === 'split'
+      const dimInput = coverGeometryInput(
+        options,
+        pageWidthPt,
+        pageHeightPt,
+        spineCalc.totalSpineWidthPt,
+      );
+      const dimensions = options.paper === 'split'
         ? computeSplitCoverDimensions(dimInput)
         : computeCoverDimensions(dimInput);
 
@@ -4695,10 +4880,6 @@ export function initApp(): void {
   resultOpenCoverStudioBtn.addEventListener('click', () => {
     resetCoverScreen();
     if (booklet && selectedFile) {
-      setActiveSegment(coverSourceModeGroup, 'mode', 'manual');
-      coverPdfSourceCard.classList.add('hidden');
-      coverManualCountsCard.classList.remove('hidden');
-
       const sheets = parseInt(statSheets.textContent || '20', 10) || 20;
       coverSheetCount = sheets;
       coverSheetCountInput.value = String(sheets);
@@ -4712,33 +4893,75 @@ export function initApp(): void {
         coverSigCountInput.value = String(coverSigCount);
       }
 
+      coverPickedPdfName = selectedFile.name.replace(/\.pdf$/i, '');
+      coverPdfName.textContent = selectedFile.name;
+      coverPdfInfo.textContent = t('cover.pdfDetected', {
+        name: '',
+        pages: bookletOriginalPages,
+        sheets,
+      });
+      coverPdfBadge.classList.remove('hidden');
+      coverPickPdfBtn.classList.add('hidden');
+      coverPdfSourceCard.classList.remove('hidden');
+      coverManualCountsCard.classList.add('hidden');
+      setActiveSegment(coverSourceModeGroup, 'mode', 'pdf');
+
       // With the inline cover section on, Cover Studio opens on exactly what was
       // already produced — otherwise the binding is inferred from the imposition
       // (a single signature is saddle-stitched) as before.
+      let targetOptions: CoverOptions;
       if (bookletWrapCover) {
-        coverBindingType = wrapCoverBinding === 'hardcover' ? 'sewn' : wrapCoverBinding;
-        coverCoverStyle = wrapCoverBinding === 'hardcover' ? 'hardcover' : 'softcover';
-        coverBoardThicknessMm = WRAP_COVER_BOARD_MM;
-        coverPaperGsm = wrapCoverGsm;
-        coverTheme = wrapCoverTheme;
-        coverFormat = wrapCoverFormat;
+        targetOptions = getBookletCoverOptions();
         coverAuthorInput.value = wrapCoverAuthorInput.value;
         coverSynopsisInput.value = wrapCoverSynopsisInput.value;
-
-        setActiveSegment(coverGsmGroup, 'gsm', String(coverPaperGsm));
-        setActiveSegment(coverStyleGroup, 'style', coverCoverStyle);
-        setActiveSegment(coverBoardGroup, 'board', String(WRAP_COVER_BOARD_MM));
-        coverBoardThicknessBlock.classList.toggle('hidden', coverCoverStyle !== 'hardcover');
-        coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
-          swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === coverTheme);
-        });
-        applyCoverFormatToUi();
       } else {
         const isSingle = bookletSignature === 'single';
-        coverBindingType = isSingle ? 'saddle' : 'sewn';
+        targetOptions = normalizeCoverOptions({
+          ...DEFAULT_COVER_OPTIONS,
+          binding: isSingle ? 'saddle' : 'sewn',
+        });
       }
+
+      coverBindingType = targetOptions.binding;
+      coverCoverStyle = targetOptions.kind;
+      coverBoardThicknessMm = targetOptions.boardMm;
+      coverPaperGsm = targetOptions.gsm;
+      coverTheme = targetOptions.theme;
+      coverFormat = targetOptions.paper;
+
       setActiveSegment(coverBindingGroup, 'binding', coverBindingType);
-      coverSigCountRow.classList.toggle('hidden', coverBindingType === 'saddle');
+      setActiveSegment(coverKindGroup, 'kind', coverCoverStyle);
+      setActiveSegment(coverBoardGroup, 'board', String(coverBoardThicknessMm));
+      coverBoardThicknessBlock.classList.toggle('hidden', coverCoverStyle !== 'hardcover');
+      setActiveSegment(coverFormatGroup, 'format', coverFormat);
+      setActiveSegment(coverGsmGroup, 'gsm', String(coverPaperGsm));
+
+      coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
+        swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === coverTheme);
+      });
+
+      const isSaddle = coverBindingType === 'saddle';
+      coverSigCountRow.classList.toggle('hidden', isSaddle);
+      const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
+      if (hardcoverBtn) {
+        hardcoverBtn.disabled = isSaddle;
+        hardcoverBtn.classList.toggle('is-disabled', isSaddle);
+      }
+      applyCoverKindHint();
+      applyCoverFormatToUi();
+
+      const [sheetW, sheetH] = wrapCoverSheetSize();
+      const trimResult = resolveCoverPageTrim(sheetW, sheetH);
+      coverPageTrim = trimResult.trim;
+      setActiveSegment(coverPageTrimGroup, 'trim', coverPageTrim);
+      if (coverTrimUnsupportedHint) {
+        coverTrimUnsupportedHint.classList.toggle('hidden', trimResult.isSupported);
+      }
+      if (coverPageTrimHint) {
+        const hintKey = coverPageTrim === 'A4' ? 'cover.pageTrimA4Hint' : 'cover.pageTrimA5Hint';
+        coverPageTrimHint.dataset.i18n = hintKey;
+        coverPageTrimHint.textContent = t(hintKey);
+      }
 
       // The cover's own title wins over the file name the user typed on the
       // result screen — it is the one they actually wrote onto the cover.
@@ -6894,9 +7117,22 @@ export function initApp(): void {
   });
 
   printPdfBtn.addEventListener('click', async () => {
-    if (!readerBytes) return;
+    const bytes = readerBytes;
+    if (!bytes) return;
     try {
-      await printPdf(readerBytes, readerName, readerName);
+      await withBusyOverlay(async () => {
+        let pageDimensions: { widthPt: number; heightPt: number } | undefined;
+        if (readerDoc && readerDoc.proxy.numPages > 0) {
+          try {
+            const page = await readerDoc.proxy.getPage(1);
+            const vp = page.getViewport({ scale: 1 });
+            pageDimensions = { widthPt: vp.width, heightPt: vp.height };
+          } catch {
+            // If fetching page 1 fails, let printPdf fall back to internal loader
+          }
+        }
+        await printPdf(bytes, readerName, readerName, pageDimensions);
+      });
       showToast(t('status.printed'));
     } catch (error) {
       showToast(t('status.printFailed', { message: errorText(error) }), { type: 'error' });
@@ -7243,7 +7479,7 @@ export function initApp(): void {
         isDir ? t('common.newFolderPrompt') : t('common.newFileNamePrompt'),
         currentName,
       );
-      if (!input || !input.trim()) return;
+      if (!input?.trim()) return;
       const newName = safeFileName(input, { ensurePdf: !isDir });
       if (!newName) {
         showToast(t('toast.invalidFileName'));
@@ -7543,7 +7779,7 @@ export function initApp(): void {
   // --- Toolbar event listeners ---
   filesNewFolderBtn.addEventListener('click', async () => {
     const name = prompt(t('common.newFolderPrompt'));
-    if (!name || !name.trim()) return;
+    if (!name?.trim()) return;
     const safeName = safeFileName(name, { ensurePdf: false });
     if (!safeName) {
       showToast(t('toast.invalidFileName'));

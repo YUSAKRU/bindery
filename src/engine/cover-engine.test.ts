@@ -2,20 +2,25 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fc from 'fast-check';
 import {
   A4_LONG_EDGE_MM,
+  A4_SHORT_EDGE_MM,
   computeCoverDimensions,
   computeSpineWidth,
   computeSplitCoverDimensions,
+  computeA4DirectCoverDimensions,
   COVER_THEMES,
   generateCoverPdf,
   GLUE_TAB_WIDTH_MM,
   LAP_FLAP_WIDTH_MM,
   MM_TO_PT,
+  placeSheetOnPrinterPaper,
+  coverFitsPrinterSheet,
+  drawCropMarks,
 } from './cover-engine';
 import type { BindingType, CoverTheme, PaperGsm, SpineCalculationResult } from './cover-engine';
 import { BookletError } from './types';
@@ -638,7 +643,70 @@ describe('generateCoverPdf — split format', () => {
     }
   }
 
-  it('produces a 2-page PDF whose pages are exactly the two computed sheets', async () => {
+  /** Every stroked line segment [x1, y1, x2, y2] on each page that has solid style (empty dash). */
+  async function extractSolidLinesPerPage(pdfBytes: Uint8Array): Promise<Array<Array<[number, number, number, number]>>> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    try {
+      const pdfDoc = await loadingTask.promise;
+      const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const pages: Array<Array<[number, number, number, number]>> = [];
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const opList = await page.getOperatorList();
+        const lines: Array<[number, number, number, number]> = [];
+        let currentDash: number[] = [];
+        for (let op = 0; op < opList.fnArray.length; op++) {
+          const fn = opList.fnArray[op];
+          if (fn === OPS.setDash) {
+            currentDash = opList.argsArray[op][0] as number[];
+          } else if (fn === OPS.constructPath && currentDash.length === 0 && opList.argsArray[op][0] === OPS.stroke) {
+            const coords = opList.argsArray[op][2];
+            if (coords && coords.length === 4) {
+              lines.push([coords[0], coords[1], coords[2], coords[3]]);
+            }
+          }
+        }
+        pages.push(lines);
+      }
+      return pages;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  /** The stroke color (as pdf.js's #rrggbb) in effect for every solid stroked line segment, per page. */
+  async function extractSolidLineStrokeColorsPerPage(pdfBytes: Uint8Array): Promise<string[][]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    try {
+      const pdfDoc = await loadingTask.promise;
+      const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const pages: string[][] = [];
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const opList = await page.getOperatorList();
+        const colors: string[] = [];
+        let currentDash: number[] = [];
+        let currentStroke = '';
+        for (let op = 0; op < opList.fnArray.length; op++) {
+          const fn = opList.fnArray[op];
+          if (fn === OPS.setDash) {
+            currentDash = opList.argsArray[op][0] as number[];
+          } else if (fn === OPS.setStrokeRGBColor) {
+            currentStroke = opList.argsArray[op][0] as string;
+          } else if (fn === OPS.constructPath && currentDash.length === 0 && opList.argsArray[op][0] === OPS.stroke) {
+            const coords = opList.argsArray[op][2];
+            if (coords && coords.length === 4) colors.push(currentStroke);
+          }
+        }
+        pages.push(colors);
+      }
+      return pages;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  it('produces a 2-page PDF on real A4 sheets, not on the artwork\'s own box', async () => {
     stubFontFetch();
     const dimensions = computeSplitCoverDimensions(A5_SPLIT);
     const pdfBytes = await generateCoverPdf({
@@ -647,12 +715,71 @@ describe('generateCoverPdf — split format', () => {
       spineResult,
     });
 
+    // This used to assert the pages WERE the artwork boxes. That is exactly the
+    // bug: a 176.60 x 216.00 mm page box made every driver fit-to-page the sheet
+    // onto A4, enlarging the spine by 18.9% so the cover missed its book block.
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
     const doc = await PDFDocument.load(pdfBytes);
     expect(doc.getPageCount()).toBe(2);
-    expect(doc.getPage(0).getWidth()).toBeCloseTo(dimensions.sheet1.widthPt, 6);
-    expect(doc.getPage(0).getHeight()).toBeCloseTo(dimensions.totalHeightPt, 6);
-    expect(doc.getPage(1).getWidth()).toBeCloseTo(dimensions.sheet2.widthPt, 6);
-    expect(doc.getPage(1).getHeight()).toBeCloseTo(dimensions.totalHeightPt, 6);
+    for (const page of [doc.getPage(0), doc.getPage(1)]) {
+      expect(page.getWidth()).toBeCloseTo(a4WidthPt, 6);
+      expect(page.getHeight()).toBeCloseTo(a4HeightPt, 6);
+    }
+    // The artwork still has to fit inside that sheet, or the page box would be
+    // lying in the other direction.
+    expect(dimensions.sheet1.widthPt).toBeLessThanOrEqual(a4WidthPt);
+    expect(dimensions.totalHeightPt).toBeLessThanOrEqual(a4HeightPt);
+  });
+
+  it('butts each split sheet against its own mating edge and centres it vertically', () => {
+    const dimensions = computeSplitCoverDimensions(A5_SPLIT);
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
+
+    const place1 = placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.totalHeightPt, 'right');
+    const place2 = placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.totalHeightPt, 'left');
+
+    expect(place1.fitsPrinterSheet).toBe(true);
+    expect(place2.fitsPrinterSheet).toBe(true);
+
+    // Sheet 1's lap flap is its right edge and sheet 2's glue tab its left, so
+    // each of those lands on the paper's own edge and needs no cut at all.
+    expect(place1.offsetXPt).toBeCloseTo(a4WidthPt - dimensions.sheet1.widthPt, 6);
+    expect(place2.offsetXPt).toBeCloseTo(0, 6);
+
+    // Vertically there is no mating edge, so the artwork is centred: equal
+    // margin at head and tail.
+    const expectedY = (a4HeightPt - dimensions.totalHeightPt) / 2;
+    expect(place1.offsetYPt).toBeCloseTo(expectedY, 6);
+    expect(place2.offsetYPt).toBeCloseTo(expectedY, 6);
+
+    // The mating edges must end up at the same distance from their sheets'
+    // opposite paper edges, or the two halves cannot meet flush.
+    expect(place1.offsetXPt + dimensions.sheet1.widthPt).toBeCloseTo(a4WidthPt, 6);
+    expect(place2.offsetXPt).toBeCloseTo(0, 6);
+  });
+
+  it('leaves artwork too large for A4 at its own size rather than shrinking it', () => {
+    const a4WidthPt = A4_SHORT_EDGE_MM * MM_TO_PT;
+    const a4HeightPt = A4_LONG_EDGE_MM * MM_TO_PT;
+
+    // The single A5 wrap: 302 mm + spine wide, so it clears neither A4 edge and
+    // is a legitimate A3 / copy-shop job that must not regress.
+    const single = computeCoverDimensions(A5_SPLIT);
+    const tooWide = placeSheetOnPrinterPaper(single.totalWidthPt, single.totalHeightPt, 'right');
+    expect(single.totalWidthPt).toBeGreaterThan(a4WidthPt);
+    expect(tooWide.fitsPrinterSheet).toBe(false);
+    expect(tooWide.pageWidthPt).toBeCloseTo(single.totalWidthPt, 6);
+    expect(tooWide.pageHeightPt).toBeCloseTo(single.totalHeightPt, 6);
+    expect(tooWide.offsetXPt).toBe(0);
+    expect(tooWide.offsetYPt).toBe(0);
+
+    // Too tall counts just as much as too wide: an A4-trim book's cover is
+    // 303 mm high and must keep its own box too.
+    const tooTall = placeSheetOnPrinterPaper(a4WidthPt - 1, a4HeightPt + 1, 'left');
+    expect(tooTall.fitsPrinterSheet).toBe(false);
+    expect(tooTall.pageHeightPt).toBeCloseTo(a4HeightPt + 1, 6);
   });
 
   it('the single format still produces exactly 1 page from the same book', async () => {
@@ -717,6 +844,92 @@ describe('generateCoverPdf — split format', () => {
       spineResult,
     });
     expect((await extractDashPatternsPerPage(pdfBytes))[0]).toHaveLength(0);
+  });
+
+  it('draws hairline crop marks in waste margins on both split sheets, none on the paper edge', async () => {
+    stubFontFetch();
+    const dimensions = computeSplitCoverDimensions(A5_SPLIT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Crop Mark Test', synopsis: 'Back.' },
+      spineResult,
+    });
+
+    const [sheet1Lines, sheet2Lines] = await extractSolidLinesPerPage(pdfBytes);
+    expect(sheet1Lines).toHaveLength(4);
+    expect(sheet2Lines).toHaveLength(4);
+
+    const place1 = placeSheetOnPrinterPaper(dimensions.sheet1.widthPt, dimensions.totalHeightPt, 'right');
+    const place2 = placeSheetOnPrinterPaper(dimensions.sheet2.widthPt, dimensions.totalHeightPt, 'left');
+
+    const y0 = place1.offsetYPt;
+    const y1 = place1.offsetYPt + dimensions.totalHeightPt;
+
+    // Sheet 1: right edge is mating edge (x1 = paperWidthPt), left edge is x0 = place1.offsetXPt
+    const s1x0 = place1.offsetXPt;
+    const s1x1 = place1.offsetXPt + dimensions.sheet1.widthPt;
+
+    const approx = (val: number) => expect.closeTo(val, 1);
+    // Vertical marks on sheet 1 (left edge only)
+    expect(sheet1Lines).toContainEqual([approx(s1x0), approx(y1), approx(s1x0), approx(y1 + 14)]);
+    expect(sheet1Lines).toContainEqual([approx(s1x0), approx(y0 - 14), approx(s1x0), approx(y0)]);
+    // x1 is the paper's own edge: a mark there would be clipped by the printer
+    expect(s1x1).toBeCloseTo(place1.pageWidthPt, 6);
+    for (const [ax, , bx] of sheet1Lines) {
+      expect(Math.max(ax, bx)).toBeLessThan(s1x1 - 1);
+    }
+    // Horizontal marks on sheet 1 (on left edge)
+    expect(sheet1Lines).toContainEqual([approx(s1x0 - 14), approx(y1), approx(s1x0), approx(y1)]);
+    expect(sheet1Lines).toContainEqual([approx(s1x0 - 14), approx(y0), approx(s1x0), approx(y0)]);
+
+    // Sheet 2: left edge is mating edge (x0 = 0), right edge is x1 = place2.offsetXPt + sheet2.widthPt
+    const s2x0 = place2.offsetXPt;
+    const s2x1 = place2.offsetXPt + dimensions.sheet2.widthPt;
+
+    // Vertical marks on sheet 2 (right edge only)
+    expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y1), approx(s2x1), approx(y1 + 14)]);
+    expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y0 - 14), approx(s2x1), approx(y0)]);
+    // x0 is the paper's own edge: a mark there would be clipped by the printer
+    expect(s2x0).toBe(0);
+    for (const [ax, , bx] of sheet2Lines) {
+      expect(Math.min(ax, bx)).toBeGreaterThan(s2x0 + 1);
+    }
+    // Horizontal marks on sheet 2 (on right edge)
+    expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y1), approx(s2x1 + 14), approx(y1)]);
+    expect(sheet2Lines).toContainEqual([approx(s2x1), approx(y0), approx(s2x1 + 14), approx(y0)]);
+  });
+
+  it('draws crop marks in a fixed near-black even on dark themes with light text', async () => {
+    stubFontFetch();
+    // navy/burgundy/charcoal carry near-white text; marks in that color would be
+    // invisible on the bare white paper outside the artwork.
+    const darkThemes: CoverTheme[] = ['navy', 'burgundy', 'charcoal'];
+    const dimensions = computeSplitCoverDimensions(A5_SPLIT);
+    for (const theme of darkThemes) {
+      expect(Math.min(...COVER_THEMES[theme].textRgb)).toBeGreaterThan(0.9);
+      const pdfBytes = await generateCoverPdf({
+        dimensions,
+        content: { title: 'Dark Crop Marks', synopsis: 'Back.', theme },
+        spineResult,
+      });
+      const pages = await extractSolidLineStrokeColorsPerPage(pdfBytes);
+      expect(pages).toHaveLength(2);
+      for (const colors of pages) {
+        expect(colors, `${theme}: every crop mark stroke`).toHaveLength(4);
+        for (const color of colors) expect(color, theme).toBe('#1a1a1a');
+      }
+    }
+  });
+
+  it('the single format draws no crop marks', async () => {
+    stubFontFetch();
+    const pdfBytes = await generateCoverPdf({
+      dimensions: computeCoverDimensions(A5_SPLIT),
+      content: { title: 'No Crop Marks', synopsis: 'Back.' },
+      spineResult,
+    });
+    const [singleLines] = await extractSolidLinesPerPage(pdfBytes);
+    expect(singleLines).toHaveLength(0);
   });
 
   it('fills both sheets with the theme background so the two halves match once assembled', async () => {
@@ -801,5 +1014,495 @@ describe('generateCoverPdf — split format', () => {
 
     const [sheet1Text] = await extractTextPerPage(pdfBytes);
     expect(sheet1Text.join(' ')).not.toContain('Unprintable');
+  });
+});
+
+describe('computeA4DirectCoverDimensions', () => {
+  const SADDLE_A5_BOOK = {
+    pageWidthPt: 140 * MM_TO_PT,
+    pageHeightPt: 200 * MM_TO_PT,
+    spineWidthPt: 1 * MM_TO_PT,
+    bleedPt: 0,
+    wrapMarginPt: 0,
+  };
+
+  it('tags its result "a4-direct" with standard A4 landscape sheet dimensions', () => {
+    const result = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(result.format).toBe('a4-direct');
+    expect(result.sheetWidthPt).toBeCloseTo(A4_LONG_EDGE_MM * MM_TO_PT, 6);
+    expect(result.sheetHeightPt).toBeCloseTo(A4_SHORT_EDGE_MM * MM_TO_PT, 6);
+  });
+
+  it('fits a typical saddle-stitched A5 booklet (spine 1mm, page width 140-145mm) on A4 landscape', () => {
+    // 140 mm page width: 2 * 140 + 1 = 281 mm <= 297 mm
+    const res140 = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(res140.fitsSheet).toBe(true);
+    expect(res140.totalWidthPt / MM_TO_PT).toBeCloseTo(281, 6);
+    expect(res140.totalHeightPt / MM_TO_PT).toBeCloseTo(200, 6);
+
+    // Centered on the sheet:
+    const expectedOffsetX = (res140.sheetWidthPt - res140.totalWidthPt) / 2;
+    const expectedOffsetY = (res140.sheetHeightPt - res140.totalHeightPt) / 2;
+    expect(res140.backCoverRect.x).toBeCloseTo(expectedOffsetX, 6);
+    expect(res140.backCoverRect.y).toBeCloseTo(expectedOffsetY, 6);
+
+    // 145 mm page width: 2 * 145 + 1 = 291 mm <= 297 mm
+    const res145 = computeA4DirectCoverDimensions({ ...SADDLE_A5_BOOK, pageWidthPt: 145 * MM_TO_PT });
+    expect(res145.fitsSheet).toBe(true);
+    expect(res145.totalWidthPt / MM_TO_PT).toBeCloseTo(291, 6);
+  });
+
+  it('sets fitsSheet = false for a thick book (>297mm total wrap)', () => {
+    // 2 * (148 + 3) + 10 = 312 mm, exceeds 297 mm
+    const thickBook = {
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    };
+    const result = computeA4DirectCoverDimensions(thickBook);
+    expect(result.fitsSheet).toBe(false);
+    expect(result.totalWidthPt / MM_TO_PT).toBeCloseTo(312, 6);
+    expect(result.backCoverRect.x).toBe(0);
+    expect(result.backCoverRect.y).toBe(0);
+  });
+
+  it('fits a real A5 trim (148 x 210 mm) on one A4 sheet once bleed is 0', () => {
+    // The UI's 1 x A4 geometry: no bleed, no wrap allowance, and each panel is
+    // half of what the 297 mm sheet leaves after the spine. With a 3 mm bleed
+    // the height alone is 216 mm and can never clear the 210 mm sheet.
+    const a4LongEdgePt = A4_LONG_EDGE_MM * MM_TO_PT;
+    const spine = computeSpineWidth({ sheetCount: 20, signatureCount: 1, paperGsm: 80, bindingType: 'saddle' });
+    const result = computeA4DirectCoverDimensions({
+      pageWidthPt: (a4LongEdgePt - spine.totalSpineWidthPt) / 2,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: spine.totalSpineWidthPt,
+      bleedPt: 0,
+      wrapMarginPt: 0,
+    });
+    expect(result.fitsSheet).toBe(true);
+    expect(result.totalWidthPt).toBeCloseTo(a4LongEdgePt, 6);
+    expect(result.totalHeightPt / MM_TO_PT).toBeCloseTo(210, 6);
+
+    // A literal 148 mm page with a spine that leaves exactly 297 mm also fits.
+    const literalA5 = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 0,
+      wrapMarginPt: 0,
+    });
+    expect(literalA5.fitsSheet).toBe(true);
+
+    // Same book with the old 3 mm bleed: 216 mm tall, never fits.
+    expect(computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+      wrapMarginPt: 0,
+    }).fitsSheet).toBe(false);
+  });
+
+  it('sets fitsSheet = false for a book whose height exceeds 210mm', () => {
+    const tallBook = {
+      pageWidthPt: 100 * MM_TO_PT,
+      pageHeightPt: 215 * MM_TO_PT,
+      spineWidthPt: 2 * MM_TO_PT,
+      bleedPt: 0,
+    };
+    const result = computeA4DirectCoverDimensions(tallBook);
+    expect(result.fitsSheet).toBe(false);
+  });
+
+  it('applies default bleed (9pt) and wrapMargin (0pt) when omitted', () => {
+    const input = { pageWidthPt: 300, pageHeightPt: 400, spineWidthPt: 20 };
+    const result = computeA4DirectCoverDimensions(input);
+    expect(result.totalWidthPt).toBe(2 * 300 + 20 + 2 * 9);
+    expect(result.totalHeightPt).toBe(400 + 2 * 9);
+  });
+
+  it('panels tile left-to-right with no gap or overlap and share full height', () => {
+    const result = computeA4DirectCoverDimensions(SADDLE_A5_BOOK);
+    expect(result.backCoverRect.width + result.spineRect.width + result.frontCoverRect.width).toBeCloseTo(result.totalWidthPt, 6);
+    expect(result.spineRect.x).toBeCloseTo(result.backCoverRect.x + result.backCoverRect.width, 6);
+    expect(result.frontCoverRect.x).toBeCloseTo(result.spineRect.x + result.spineRect.width, 6);
+    expect(result.backCoverRect.height).toBe(result.totalHeightPt);
+    expect(result.spineRect.height).toBe(result.totalHeightPt);
+    expect(result.frontCoverRect.height).toBe(result.totalHeightPt);
+  });
+
+  it('can be invoked via computeCoverDimensions with format: "a4-direct"', () => {
+    const dims = computeCoverDimensions({ ...SADDLE_A5_BOOK, format: 'a4-direct' });
+    expect(dims.format).toBe('a4-direct');
+    expect(dims.totalWidthPt).toBeCloseTo(computeA4DirectCoverDimensions(SADDLE_A5_BOOK).totalWidthPt, 6);
+  });
+});
+
+describe('generateCoverPdf — a4-direct format', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const A5_DIRECT = {
+    pageWidthPt: 140 * MM_TO_PT,
+    pageHeightPt: 200 * MM_TO_PT,
+    spineWidthPt: 5 * MM_TO_PT,
+    bleedPt: 0,
+    wrapMarginPt: 0,
+  };
+
+  const spineResult: SpineCalculationResult = {
+    textBlockThicknessMm: 4,
+    threadSwellMm: 0,
+    hingeAllowanceMm: 1,
+    totalSpineWidthMm: 5,
+    totalSpineWidthPt: 5 * MM_TO_PT,
+    canPrintSpineText: true,
+  };
+
+  async function extractTextPerPage(pdfBytes: Uint8Array): Promise<string[][]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    const pages: string[][] = [];
+    try {
+      const pdfDoc = await loadingTask.promise;
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const items = textContent.items
+          .filter((it): it is typeof it & { str: string } => 'str' in it)
+          .map((it) => it.str.trim())
+          .filter(Boolean);
+        pages.push(items);
+      }
+      return pages;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  it('produces exactly a 1-page PDF on an A4 landscape sheet', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'A4 Direct Book', author: 'Direct Author', synopsis: 'A direct synopsis.' },
+      spineResult,
+    });
+
+    const doc = await PDFDocument.load(pdfBytes);
+    expect(doc.getPageCount()).toBe(1);
+    const page = doc.getPage(0);
+    expect(page.getWidth()).toBeCloseTo(A4_LONG_EDGE_MM * MM_TO_PT, 1);
+    expect(page.getHeight()).toBeCloseTo(A4_SHORT_EDGE_MM * MM_TO_PT, 1);
+  });
+
+  it('fills the artwork rectangle with the theme background color', async () => {
+    stubFontFetch();
+    const loadColors = async (pdfBytes: Uint8Array): Promise<string[]> => {
+      const loadingTask = getDocument({ data: pdfBytes.slice() });
+      try {
+        const pdfDoc = await loadingTask.promise;
+        const page = await pdfDoc.getPage(1);
+        const opList = await page.getOperatorList();
+        const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        const colors: string[] = [];
+        for (let i = 0; i < opList.fnArray.length; i++) {
+          if (opList.fnArray[i] === OPS.setFillRGBColor) colors.push(opList.argsArray[i][0] as string);
+        }
+        return colors;
+      } finally {
+        await loadingTask.destroy();
+      }
+    };
+    const channel = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
+    const expected = `#${COVER_THEMES.navy.backgroundRgb.map(channel).join('')}`;
+
+    const pdfBytes = await generateCoverPdf({
+      dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+      content: { title: 'Navy Direct', synopsis: 'Back content.', theme: 'navy' },
+      spineResult,
+    });
+
+    const colors = await loadColors(pdfBytes);
+    expect(colors[0]).toBe(expected);
+  });
+
+  it('renders front cover title/author, back cover synopsis, and spine title', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Direct Wrap', author: 'Cover Author', synopsis: 'This is the synopsis text.' },
+      spineResult,
+    });
+
+    const [pageText] = await extractTextPerPage(pdfBytes);
+    const textJoined = pageText.join(' ');
+    expect(textJoined).toContain('Direct Wrap');
+    expect(textJoined).toContain('Cover Author');
+    expect(textJoined).toContain('This is the synopsis text.');
+  });
+
+  async function extractTextInXRange(pdfBytes: Uint8Array, xMin: number, xMax: number): Promise<string[]> {
+    const loadingTask = getDocument({ data: pdfBytes.slice() });
+    const items: string[] = [];
+    try {
+      const pdfDoc = await loadingTask.promise;
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        for (const item of textContent.items) {
+          if (!('str' in item) || !item.str.trim()) continue;
+          const x = item.transform[4];
+          if (x >= xMin - 0.01 && x <= xMax + 0.01) {
+            items.push(item.str);
+          }
+        }
+      }
+    } finally {
+      await loadingTask.destroy();
+    }
+    return items;
+  }
+
+  it('leaves the spine blank when spine is below legibility floor', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Unprintable Direct Spine' },
+      spineResult: { ...spineResult, canPrintSpineText: false },
+    });
+
+    const spineText = await extractTextInXRange(pdfBytes, dimensions.spineRect.x, dimensions.spineRect.x + dimensions.spineRect.width);
+    expect(spineText).toHaveLength(0);
+  });
+
+  it('prints the (rotated) title on the spine when canPrintSpineText is true', async () => {
+    stubFontFetch();
+    const dimensions = computeA4DirectCoverDimensions(A5_DIRECT);
+    const pdfBytes = await generateCoverPdf({
+      dimensions,
+      content: { title: 'Printable Direct Spine' },
+      spineResult: { ...spineResult, canPrintSpineText: true },
+    });
+
+    const spineText = await extractTextInXRange(pdfBytes, dimensions.spineRect.x, dimensions.spineRect.x + dimensions.spineRect.width);
+    expect(spineText.length).toBeGreaterThan(0);
+  });
+
+  it('accepts options.format: "a4-direct" when dimensions agree', async () => {
+    stubFontFetch();
+    const pdfBytes = await generateCoverPdf({
+      dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+      content: { title: 'Agrees Direct' },
+      spineResult,
+      format: 'a4-direct',
+    });
+    expect((await PDFDocument.load(pdfBytes)).getPageCount()).toBe(1);
+  });
+
+  it('throws COVER_TOO_LARGE when cover exceeds single A4 sheet', async () => {
+    stubFontFetch();
+    const overflowing = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    });
+    expect(overflowing.fitsSheet).toBe(false);
+
+    try {
+      await generateCoverPdf({
+        dimensions: overflowing,
+        content: { title: 'Too Large' },
+        spineResult,
+        format: 'a4-direct',
+      });
+      expect.unreachable('Should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(BookletError);
+      expect((err as BookletError).code).toBe('COVER_TOO_LARGE');
+    }
+  });
+
+  it('rejects options.format that disagrees with dimensions', async () => {
+    stubFontFetch();
+    await expect(
+      generateCoverPdf({
+        dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'single',
+      }),
+    ).rejects.toThrow(BookletError);
+
+    await expect(
+      generateCoverPdf({
+        dimensions: computeA4DirectCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'split',
+      }),
+    ).rejects.toThrow(BookletError);
+
+    await expect(
+      generateCoverPdf({
+        dimensions: computeCoverDimensions(A5_DIRECT),
+        content: { title: 'Mismatch' },
+        spineResult,
+        format: 'a4-direct',
+      }),
+    ).rejects.toThrow(BookletError);
+  });
+});
+
+describe('coverFitsPrinterSheet', () => {
+  const A5_BOOK = {
+    pageWidthPt: 148 * MM_TO_PT,
+    pageHeightPt: 210 * MM_TO_PT,
+    spineWidthPt: 8 * MM_TO_PT,
+    bleedPt: 3 * MM_TO_PT,
+    wrapMarginPt: 0,
+  };
+  const A4_BOOK = { ...A5_BOOK, pageWidthPt: 210 * MM_TO_PT, pageHeightPt: 297 * MM_TO_PT };
+
+  it('clears A4 for an A5 split pair and fails for the same book as one wide wrap', () => {
+    // Split sheet 1: 148 + 3 bleed + 8 spine + 20 flap = 179 mm, under 210.
+    expect(computeSplitCoverDimensions(A5_BOOK).sheet1.widthPt / MM_TO_PT).toBeCloseTo(179, 6);
+    expect(coverFitsPrinterSheet(computeSplitCoverDimensions(A5_BOOK))).toBe(true);
+
+    // The same book in one piece: 2 x 151 + 8 = 310 mm, an A3 job.
+    expect(computeCoverDimensions(A5_BOOK).totalWidthPt / MM_TO_PT).toBeCloseTo(310, 6);
+    expect(coverFitsPrinterSheet(computeCoverDimensions(A5_BOOK))).toBe(false);
+  });
+
+  it('fails an A4-trim book, whose split sheets are 241 x 303 mm', () => {
+    const dimensions = computeSplitCoverDimensions(A4_BOOK);
+    expect(dimensions.sheet1.widthPt / MM_TO_PT).toBeCloseTo(241, 6);
+    expect(dimensions.totalHeightPt / MM_TO_PT).toBeCloseTo(303, 6);
+    expect(coverFitsPrinterSheet(dimensions)).toBe(false);
+  });
+
+  it('answers for BOTH split sheets, not just the wider one', () => {
+    // computeSplitCoverDimensions always makes sheet 1 the wider of the two, so
+    // only a hand-built pair can prove sheet 2 is really being asked about.
+    const dimensions = computeSplitCoverDimensions(A5_BOOK);
+    const sheet2TooWide = {
+      ...dimensions,
+      sheet2: { ...dimensions.sheet2, widthPt: 250 * MM_TO_PT },
+    };
+    expect(coverFitsPrinterSheet(dimensions)).toBe(true);
+    expect(coverFitsPrinterSheet(sheet2TooWide)).toBe(false);
+  });
+
+  it('clears A4 for an a4-direct booklet that fits and fails when it overflows', () => {
+    const fitting = computeA4DirectCoverDimensions({
+      pageWidthPt: 140 * MM_TO_PT,
+      pageHeightPt: 200 * MM_TO_PT,
+      spineWidthPt: 1 * MM_TO_PT,
+      bleedPt: 0,
+    });
+    expect(coverFitsPrinterSheet(fitting)).toBe(true);
+
+    const overflowing = computeA4DirectCoverDimensions({
+      pageWidthPt: 148 * MM_TO_PT,
+      pageHeightPt: 210 * MM_TO_PT,
+      spineWidthPt: 10 * MM_TO_PT,
+      bleedPt: 3 * MM_TO_PT,
+    });
+    expect(coverFitsPrinterSheet(overflowing)).toBe(false);
+  });
+});
+
+describe('drawCropMarks', () => {
+  it('draws 4 hairline crop marks on sheet 1 (matingEdge === right), none on the paper edge', () => {
+    const drawnLines: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; thickness: number; opacity: number; color: unknown }> = [];
+    const mockPage = {
+      drawLine: vi.fn((opts) => drawnLines.push(opts)),
+    } as unknown as import('pdf-lib').PDFPage;
+
+    const place = {
+      pageWidthPt: 595.28,
+      pageHeightPt: 841.89,
+      offsetXPt: 95.28,
+      offsetYPt: 114.8,
+      fitsPrinterSheet: true,
+    };
+    const artworkWidthPt = 500;
+    const artworkHeightPt = 612.29;
+    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'right');
+
+    expect(mockPage.drawLine).toHaveBeenCalledTimes(4);
+    for (const line of drawnLines) {
+      expect(line.thickness).toBe(0.5);
+      expect(line.opacity).toBe(0.6);
+      expect(line.color).toEqual(rgb(0.1, 0.1, 0.1));
+    }
+
+    const x0 = place.offsetXPt;
+    const x1 = place.offsetXPt + artworkWidthPt;
+    const y0 = place.offsetYPt;
+    const y1 = place.offsetYPt + artworkHeightPt;
+
+    // 2 vertical marks on the left (cut) edge; x1 is the paper's right edge
+    expect(x1).toBeCloseTo(place.pageWidthPt, 6);
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y1 }, end: { x: x0, y: y1 + 14 } }));
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0, y: y0 - 14 }, end: { x: x0, y: y0 } }));
+    expect(drawnLines.filter((l) => l.start.x === x1 || l.end.x === x1)).toHaveLength(0);
+
+    // 2 horizontal marks on the left (non-mating edge)
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0 - 14, y: y1 }, end: { x: x0, y: y1 } }));
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x0 - 14, y: y0 }, end: { x: x0, y: y0 } }));
+  });
+
+  it('draws 4 hairline crop marks on sheet 2 (matingEdge === left), none on the paper edge', () => {
+    const drawnLines: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; thickness: number; opacity: number }> = [];
+    const mockPage = {
+      drawLine: vi.fn((opts) => drawnLines.push(opts)),
+    } as unknown as import('pdf-lib').PDFPage;
+
+    const place = {
+      pageWidthPt: 595.28,
+      pageHeightPt: 841.89,
+      offsetXPt: 0,
+      offsetYPt: 114.8,
+      fitsPrinterSheet: true,
+    };
+    const artworkWidthPt = 456;
+    const artworkHeightPt = 612.29;
+    drawCropMarks(mockPage, place, artworkWidthPt, artworkHeightPt, 'left');
+
+    expect(mockPage.drawLine).toHaveBeenCalledTimes(4);
+    for (const line of drawnLines) {
+      expect(line.thickness).toBe(0.5);
+      expect(line.opacity).toBe(0.6);
+    }
+
+    const x0 = place.offsetXPt;
+    const x1 = place.offsetXPt + artworkWidthPt;
+    const y0 = place.offsetYPt;
+    const y1 = place.offsetYPt + artworkHeightPt;
+
+    // 2 vertical marks on the right (cut) edge; x0 is the paper's left edge
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y1 }, end: { x: x1, y: y1 + 14 } }));
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y0 - 14 }, end: { x: x1, y: y0 } }));
+    expect(drawnLines.filter((l) => l.start.x === x0 || l.end.x === x0)).toHaveLength(0);
+
+    // 2 horizontal marks on the right (non-mating edge)
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y1 }, end: { x: x1 + 14, y: y1 } }));
+    expect(drawnLines).toContainEqual(expect.objectContaining({ start: { x: x1, y: y0 }, end: { x: x1 + 14, y: y0 } }));
+  });
+
+  it('draws nothing when place.fitsPrinterSheet is false', () => {
+    const mockPage = { drawLine: vi.fn() } as unknown as import('pdf-lib').PDFPage;
+    const place = {
+      pageWidthPt: 500,
+      pageHeightPt: 700,
+      offsetXPt: 0,
+      offsetYPt: 0,
+      fitsPrinterSheet: false,
+    };
+    drawCropMarks(mockPage, place, 500, 700, 'right');
+    expect(mockPage.drawLine).not.toHaveBeenCalled();
   });
 });

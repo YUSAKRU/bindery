@@ -105,15 +105,23 @@ describe('Booklet pipeline - Inline Wrap Cover DOM', () => {
     expect(options.match(/<button[^>]*data-format="single"[^>]*>/)![0]).not.toContain('is-active');
   });
 
-  it('offers all four cover styles, including hardcover', () => {
-    const group = htmlSource.slice(
+  it('offers saddle, sewn, and perfect in wrapCoverBindingGroup, and separate cover kind group', () => {
+    const bindingGroup = htmlSource.slice(
       htmlSource.indexOf('id="wrapCoverBindingGroup"'),
-      htmlSource.indexOf('id="wrapCoverGsmGroup"'),
+      htmlSource.indexOf('id="wrapCoverBindingHint"'),
     );
-    for (const binding of ['saddle', 'sewn', 'perfect', 'hardcover']) {
-      expect(group, `expected a data-wrapbinding="${binding}" button`).toContain(`data-wrapbinding="${binding}"`);
+    for (const binding of ['saddle', 'sewn', 'perfect']) {
+      expect(bindingGroup, `expected a data-wrapbinding="${binding}" button`).toContain(`data-wrapbinding="${binding}"`);
     }
-    expect(group.match(/<button[^>]*data-wrapbinding="sewn"[^>]*>/)![0]).toContain('is-active');
+    expect(bindingGroup).not.toContain('data-wrapbinding="hardcover"');
+    expect(bindingGroup.match(/<button[^>]*data-wrapbinding="sewn"[^>]*>/)![0]).toContain('is-active');
+
+    const kindGroup = htmlSource.slice(
+      htmlSource.indexOf('id="wrapCoverKindGroup"'),
+      htmlSource.indexOf('id="wrapCoverKindHint"'),
+    );
+    expect(kindGroup).toContain('data-wrapkind="softcover"');
+    expect(kindGroup).toContain('data-wrapkind="hardcover"');
   });
 
   it('offers every cover theme the engine defines', () => {
@@ -168,7 +176,7 @@ describe('Booklet pipeline - Wiring', () => {
   it('defaults the pipeline to no cover, split format, sewn, 80gsm, cream', () => {
     expect(appSource).toMatch(/let bookletWrapCover = false;/);
     expect(appSource).toMatch(/let wrapCoverFormat: CoverFormat = 'split';/);
-    expect(appSource).toMatch(/let wrapCoverBinding: BindingType \| 'hardcover' = 'sewn';/);
+    expect(appSource).toMatch(/let wrapCoverBinding: BindingType = 'sewn';/);
     expect(appSource).toMatch(/let wrapCoverGsm: PaperGsm = 80;/);
     expect(appSource).toMatch(/let wrapCoverTheme: CoverTheme = 'cream';/);
   });
@@ -185,8 +193,8 @@ describe('Booklet pipeline - Wiring', () => {
   it('takes the cover page size from the booklet sheet, halved — never from a hardcoded trim', () => {
     const body = extractFunctionBody('function wrapCoverGeometry(');
     expect(body).toContain('const [sheetWidthPt, sheetHeightPt] = wrapCoverSheetSize()');
-    expect(body).toContain('pageWidthPt: sheetWidthPt / 2');
-    expect(body).toContain('pageHeightPt: sheetHeightPt');
+    expect(body).toContain('sheetWidthPt / 2');
+    expect(body).toContain('sheetHeightPt');
   });
 
   it('resolves the sheet size through the engine, including the cached source size', () => {
@@ -204,18 +212,17 @@ describe('Booklet pipeline - Wiring', () => {
     expect(load).toContain('bookletSourceSheetSize = null');
   });
 
-  it('maps hardcover to a sewn block plus board thickness rather than inventing a binding type', () => {
+  it('delegates spine and geometry calculation to shared helpers without duplicated allowances', () => {
     const body = extractFunctionBody('function wrapCoverGeometry(');
-    expect(body).toContain("wrapCoverBinding === 'hardcover' ? 'sewn' : wrapCoverBinding");
-    expect(body).toContain('boardThicknessMm: isHardcover ? WRAP_COVER_BOARD_MM : undefined');
-    // Hardcover turns in over board (wrap allowance); softcover is trimmed (bleed).
-    expect(body).toContain('bleedPt: (isHardcover ? 0 : 3) * MM_TO_PT');
-    expect(body).toContain('wrapMarginPt: (isHardcover ? 15 : 0) * MM_TO_PT');
+    expect(body).toContain('computeSpineWidth(spineInput(options, sheets, signatures))');
+    expect(body).toContain('coverGeometryInput(');
+    // Allowances live in pure cover-options helpers, not locally in wrapCoverGeometry.
+    expect(body).not.toContain('MM_TO_PT');
   });
 
   it('picks split geometry for the split format and the single wrap otherwise', () => {
     const body = extractFunctionBody('function wrapCoverGeometry(');
-    expect(body).toContain("wrapCoverFormat === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
+    expect(body).toContain("options.paper === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
   });
 
   it('splits the 2-page cover into one PDF per printed sheet via the engine, not hand-rolled page copying', () => {
@@ -286,7 +293,6 @@ describe('Booklet pipeline - Wiring', () => {
 
   it('swaps the format hint data-i18n key with its text so a language change keeps the right wording', () => {
     const body = extractFunctionBody('function applyWrapCoverToUi(');
-    expect(body).toContain("wrapCoverFormat === 'split' ? 'cover.formatSplitHint' : 'cover.formatSingleHint'");
     expect(body).toContain('wrapCoverFormatHint.dataset.i18n = splitKey');
     expect(body).toContain('wrapCoverFormatHint.textContent = t(splitKey)');
   });
@@ -386,11 +392,15 @@ describe('Booklet pipeline - Result screen', () => {
 describe('Booklet pipeline - Cover Studio handoff', () => {
   const handoff = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", 'let readerResizeTimer');
 
-  it('carries every inline cover setting into Cover Studio', () => {
+  it('carries whole CoverOptions object into Cover Studio', () => {
     for (const line of [
-      'coverPaperGsm = wrapCoverGsm',
-      'coverTheme = wrapCoverTheme',
-      'coverFormat = wrapCoverFormat',
+      'targetOptions = getBookletCoverOptions()',
+      'coverBindingType = targetOptions.binding',
+      'coverCoverStyle = targetOptions.kind',
+      'coverBoardThicknessMm = targetOptions.boardMm',
+      'coverPaperGsm = targetOptions.gsm',
+      'coverTheme = targetOptions.theme',
+      'coverFormat = targetOptions.paper',
       'coverAuthorInput.value = wrapCoverAuthorInput.value',
       'coverSynopsisInput.value = wrapCoverSynopsisInput.value',
     ]) {
@@ -398,16 +408,14 @@ describe('Booklet pipeline - Cover Studio handoff', () => {
     }
   });
 
-  it('maps hardcover back to Cover Studio’s own softcover/hardcover style control', () => {
-    expect(handoff).toContain("coverCoverStyle = wrapCoverBinding === 'hardcover' ? 'hardcover' : 'softcover'");
-    expect(handoff).toContain("coverBindingType = wrapCoverBinding === 'hardcover' ? 'sewn' : wrapCoverBinding");
-    expect(handoff).toContain('coverBoardThicknessMm = WRAP_COVER_BOARD_MM');
-  });
-
-  it('syncs the segmented controls, not just the state behind them', () => {
+  it('syncs the segmented controls and kind/format UI', () => {
     for (const call of [
+      "setActiveSegment(coverBindingGroup, 'binding', coverBindingType)",
+      "setActiveSegment(coverKindGroup, 'kind', coverCoverStyle)",
+      "setActiveSegment(coverBoardGroup, 'board', String(coverBoardThicknessMm))",
+      "setActiveSegment(coverFormatGroup, 'format', coverFormat)",
       "setActiveSegment(coverGsmGroup, 'gsm', String(coverPaperGsm))",
-      "setActiveSegment(coverStyleGroup, 'style', coverCoverStyle)",
+      'applyCoverKindHint()',
       'applyCoverFormatToUi()',
     ]) {
       expect(handoff, `expected the handoff to run: ${call}`).toContain(call);
@@ -416,7 +424,15 @@ describe('Booklet pipeline - Cover Studio handoff', () => {
 
   it('still infers the binding from the imposition when no inline cover was used', () => {
     expect(handoff).toContain("const isSingle = bookletSignature === 'single'");
-    expect(handoff).toContain("coverBindingType = isSingle ? 'saddle' : 'sewn'");
+    expect(handoff).toContain("binding: isSingle ? 'saddle' : 'sewn'");
+  });
+
+  it('sets coverPageTrim from real sheet size and toggles unsupported hint', () => {
+    expect(handoff).toContain('const [sheetW, sheetH] = wrapCoverSheetSize()');
+    expect(handoff).toContain('const trimResult = resolveCoverPageTrim(sheetW, sheetH)');
+    expect(handoff).toContain('coverPageTrim = trimResult.trim');
+    expect(handoff).toContain("setActiveSegment(coverPageTrimGroup, 'trim', coverPageTrim)");
+    expect(handoff).toContain("coverTrimUnsupportedHint.classList.toggle('hidden', trimResult.isSupported)");
   });
 
   it('prefers the cover’s own title over the result screen’s file name', () => {
@@ -449,7 +465,7 @@ describe('Booklet pipeline - Localization', () => {
     'config.wrapCoverOn',
     'config.wrapCoverHint',
     'config.wrapCoverContent',
-    'config.wrapCoverBindingHardcover',
+    'cover.kindHard',
     'config.wrapCoverBindingHint',
     'config.wrapCoverPreview',
     'config.wrapCoverNeedsFile',
@@ -699,5 +715,23 @@ describe('Booklet pipeline - Wrap cover vs separate cover', () => {
     expect(t('config.coverWrapConflictHint')).not.toBe('config.coverWrapConflictHint');
     const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
     expect(trDictionary).toContain("'config.coverWrapConflictHint':");
+  });
+
+  it('does not offer the retired 1 x A4 direct format in booklet wrap cover options', () => {
+    const options = htmlSource.slice(
+      htmlSource.indexOf('id="wrapCoverFormatGroup"'),
+      htmlSource.indexOf('id="wrapCoverFormatHint"'),
+    );
+    expect(options).not.toContain('data-format="a4-direct"');
+    expect(options).toContain('data-format="split"');
+    expect(options).toContain('data-format="single"');
+  });
+
+  it('populates Cover Studio from booklet file when opening from result screen', () => {
+    const handler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "window.addEventListener('resize'");
+    expect(handler).toContain("coverPickedPdfName = selectedFile.name.replace(/\\.pdf$/i, '')");
+    expect(handler).toContain("setActiveSegment(coverSourceModeGroup, 'mode', 'pdf')");
+    expect(handler).toContain('coverPdfBadge.classList.remove');
+    expect(handler).toContain('coverManualCountsCard.classList.add');
   });
 });

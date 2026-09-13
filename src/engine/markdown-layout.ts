@@ -183,15 +183,56 @@ export function wrapCodeLine(
   // Constant advance width, so one division gives the exact character budget.
   const perChar = full / line.length;
   const firstBudget = Math.max(1, Math.floor(maxWidth / perChar));
-  const contBudget = Math.max(1, firstBudget - CODE_WRAP_INDENT.length);
+  // The continuation sits under the line's own indent, not under the box's
+  // left edge: a wrapped row flush against the margin breaks the shape of the
+  // code around it, which on a printed page is the only structure a reader has.
+  const ownIndent = /^[ \t]*/.exec(line)?.[0] ?? '';
+  // Ensure continuation has enough room for code rather than collapsing to 1 char/line
+  // when ownIndent takes up nearly the entire line budget.
+  const minContBudget = Math.min(20, Math.floor(firstBudget / 2));
+  const maxContIndent = Math.max(0, firstBudget - minContBudget);
+  const fullContPrefix = ownIndent + CODE_WRAP_INDENT;
+  const contPrefix = fullContPrefix.length <= maxContIndent
+    ? fullContPrefix
+    : ownIndent.slice(0, Math.max(0, maxContIndent - CODE_WRAP_INDENT.length)) + CODE_WRAP_INDENT;
+  const contBudget = Math.max(minContBudget, firstBudget - contPrefix.length);
 
-  const out: string[] = [line.slice(0, firstBudget)];
-  let rest = line.slice(firstBudget);
-  while (rest.length > 0) {
-    out.push(CODE_WRAP_INDENT + rest.slice(0, contBudget));
-    rest = rest.slice(contBudget);
+  const out: string[] = [];
+  let rest = line;
+  let prefix = '';
+  let budget = firstBudget;
+  let currentIndentLen = ownIndent.length;
+  while (rest.length > budget) {
+    const cut = breakPoint(rest, budget, currentIndentLen);
+    out.push(prefix + rest.slice(0, cut));
+    rest = rest.slice(cut);
+    prefix = contPrefix;
+    budget = contBudget;
+    currentIndentLen = 0;
   }
+  out.push(prefix + rest);
   return out;
+}
+
+/**
+ * Where to cut a code row that is too long.
+ *
+ * A break at the last space that still fits keeps identifiers whole: the corpus
+ * printed `fps i` / `n arb_frame_rate()` and `denomina` / `tor: 1 })` before
+ * this, which a reader cannot retype. When the run holds no space to break at —
+ * a box-drawing diagram row is the case that matters — it falls back to cutting
+ * at the budget, which is what this function always used to do. The space stays
+ * on the first row so the rows still rejoin into the original line.
+ */
+function breakPoint(rest: string, budget: number, indentLength: number): number {
+  const space = rest.lastIndexOf(' ', budget - 1);
+  // A space inside the leading indent is not a word boundary, and cutting there
+  // would make no progress. A continuation can start with spaces of its own
+  // when the previous cut fell inside a run of them, so those count too.
+  const restIndent = /^[ \t]*/.exec(rest)?.[0]?.length ?? 0;
+  const minCut = Math.max(indentLength, restIndent);
+  if (space > minCut) return space + 1;
+  return budget;
 }
 
 interface Token {
@@ -199,6 +240,7 @@ interface Token {
   font: FontRole;
   size: number;
   width: number;
+  strike?: boolean;
 }
 
 function fontOf(span: InlineSpan): FontRole {
@@ -207,16 +249,56 @@ function fontOf(span: InlineSpan): FontRole {
   return 'body';
 }
 
+/**
+ * Noto Sans Mono draws the two horizontal arrows small and low: U+2192's ink is
+ * 234/1000 em tall and sits between y=49 and y=283, against an x-height of 536
+ * and a cap height of 714. Dropped into running text at text size it reads as a
+ * subscript. Every other glyph the fallback promotes measures 429-604 tall and
+ * needs no help — the vertical arrows are 592 — so this is the exact set that
+ * measured short, not a category.
+ */
+export const SMALL_MONO_FALLBACK = new Set([0x2190, 0x2192]);
+
+/**
+ * Scaling a short fallback run by this much puts U+2192's ink between y=93 and
+ * y=538: starting just above the baseline and topping out at x-height, which is
+ * where an arrow belongs. Runs are drawn on the line's baseline and carry no
+ * vertical offset, so the size is the only lever — and at 1.9x the glyph still
+ * stops below cap height, so it cannot collide with the line above.
+ */
+export const SMALL_MONO_FALLBACK_SCALE = 1.9;
+
+/**
+ * The point size a span is drawn at. Only a fallback run made entirely of the
+ * short glyphs is scaled; a real code span keeps text size so it stays aligned
+ * with the code blocks around it.
+ */
+function sizeOf(span: InlineSpan, size: number): number {
+  if (!span.fallback) return size;
+  for (const ch of span.text) {
+    if (!SMALL_MONO_FALLBACK.has(ch.codePointAt(0) as number)) return size;
+  }
+  return size * SMALL_MONO_FALLBACK_SCALE;
+}
+
 function tokenize(spans: InlineSpan[], size: number, metrics: FontMetrics): Array<Token | null> {
   // `null` marks a collapsible inter-word space.
   const out: Array<Token | null> = [];
   for (const span of spans) {
     const font = fontOf(span);
+    const spanSize = sizeOf(span, size);
     const parts = span.text.split(/(\s+)/);
     for (const part of parts) {
       if (part.length === 0) continue;
       if (/^\s+$/.test(part)) out.push(null);
-      else out.push({ text: part, font, size, width: metrics.widthOfText(part, size, font) });
+      else
+        out.push({
+          text: part,
+          font,
+          size: spanSize,
+          width: metrics.widthOfText(part, spanSize, font),
+          strike: span.strike,
+        });
     }
   }
   return out;
@@ -241,16 +323,22 @@ function breakToken(token: Token, maxWidth: number, metrics: FontMetrics): Token
   return out;
 }
 
-/** Merges neighbouring tokens sharing a face and size into single draw runs. */
+/**
+ * Merges neighbouring tokens sharing a face, size and strike state into single
+ * draw runs, and records each run's measured width — the strike rule is drawn
+ * from it, and only a run that was actually measured can carry one.
+ */
 function toRuns(tokens: Token[], startX: number): LayoutRun[] {
   const runs: LayoutRun[] = [];
   let x = startX;
   for (const token of tokens) {
     const last = runs[runs.length - 1];
-    if (last && last.font === token.font && last.size === token.size) {
+    const strike = token.strike === true;
+    if (last && last.font === token.font && last.size === token.size && last.strike === strike) {
       last.text += token.text;
+      last.width = (last.width ?? 0) + token.width;
     } else {
-      runs.push({ text: token.text, font: token.font, size: token.size, x });
+      runs.push({ text: token.text, font: token.font, size: token.size, x, width: token.width, strike });
     }
     x += token.width;
   }
@@ -406,10 +494,36 @@ function reserve(cursor: Cursor, leading: number, ascent: number): number {
   return baseline;
 }
 
-function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: number): LayoutLine {
-  const line: LayoutLine = { kind: 'line', y: reserve(cursor, leading, ascent), runs };
+/**
+ * Height of the strike rule above the baseline, and its thickness, both as a
+ * fraction of the type size. 0.28 em sits just under the middle of the
+ * x-height (0.536 em in the bundled faces), which is where a strike belongs —
+ * high enough to read as struck, low enough not to be mistaken for an overline.
+ */
+const STRIKE_OFFSET = 0.28;
+const STRIKE_THICKNESS = 0.055;
+/** Below this the rule stops being visible when the page is rasterised. */
+const MIN_STRIKE_THICKNESS = 0.4;
+
+function emitLineAt(cursor: Cursor, runs: LayoutRun[], y: number): LayoutLine {
+  const line: LayoutLine = { kind: 'line', y, runs };
   cursor.items.push(line);
+  for (const run of runs) {
+    if (run.strike !== true || run.width === undefined || run.width <= 0) continue;
+    cursor.items.push({
+      kind: 'rect',
+      x: run.x,
+      y: line.y + run.size * STRIKE_OFFSET,
+      width: run.width,
+      height: Math.max(MIN_STRIKE_THICKNESS, run.size * STRIKE_THICKNESS),
+      role: 'strike',
+    });
+  }
   return line;
+}
+
+function emitLine(cursor: Cursor, runs: LayoutRun[], leading: number, ascent: number): LayoutLine {
+  return emitLineAt(cursor, runs, reserve(cursor, leading, ascent));
 }
 
 interface Geometry {
@@ -533,11 +647,7 @@ function layoutTable(
             widths[c] - TABLE_CELL_PADDING * 2,
             runsWidth(runs, metrics),
           );
-        cursor.items.push({
-          kind: 'line',
-          y: top - r * bodyLeading - ascent,
-          runs: shiftRuns(runs, dx),
-        });
+        emitLineAt(cursor, shiftRuns(runs, dx), top - r * bodyLeading - ascent);
       });
     });
     cursor.top = top - rows * bodyLeading;

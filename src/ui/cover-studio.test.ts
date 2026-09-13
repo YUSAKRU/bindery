@@ -50,7 +50,7 @@ describe('Cover Studio - UI & DOM Invariants', () => {
       'coverPreviewThumbImg',
       'coverGsmGroup',
       'coverBindingGroup',
-      'coverStyleGroup',
+      'coverKindGroup',
       'coverBoardThicknessBlock',
       'coverBoardGroup',
       'coverPageTrimGroup',
@@ -168,9 +168,9 @@ describe('Cover Studio - Localization Coverage', () => {
     'cover.bindingSaddle',
     'cover.bindingSewn',
     'cover.bindingPerfect',
-    'cover.coverType',
-    'cover.softcover',
-    'cover.hardcover',
+    'cover.coverKind',
+    'cover.kindSoft',
+    'cover.kindHard',
     'cover.boardThickness',
     'cover.pageTrim',
     'cover.spineCalcTitle',
@@ -200,6 +200,11 @@ describe('Cover Studio - Localization Coverage', () => {
     'cover.splitSheet1Desc',
     'cover.splitSheet2Desc',
     'cover.sheetBreakdown',
+    'cover.formatResultFit',
+    'cover.paperSplitSheets',
+    'cover.paperSingleSheet',
+    'cover.needsA3',
+    'cover.needsLarger',
   ];
 
   it('defines all required Cover Studio keys in English dictionary', () => {
@@ -435,7 +440,7 @@ describe('Cover Studio - Two-Sheet Split Format Wiring', () => {
 
   it('swaps the data-i18n key alongside the text when the format changes, so a later language switch keeps the right wording', () => {
     const body = extractFunctionBody('function applyCoverFormatToUi(');
-    expect(body).toContain("coverFormatHint.dataset.i18n = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint'");
+    expect(body).toContain('coverFormatHint.dataset.i18n = formatKey');
     expect(body).toContain("coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle'");
     expect(body).toContain('coverFormatHint.textContent = t(coverFormatHint.dataset.i18n)');
     expect(body).toContain('coverPreviewHeading.textContent = t(coverPreviewHeading.dataset.i18n)');
@@ -451,13 +456,12 @@ describe('Cover Studio - Two-Sheet Split Format Wiring', () => {
     // updateCoverLiveCalculations declares an inline object return type, so its
     // body cannot be found by brace-matching from the signature.
     const live = sourceBetween('function updateCoverLiveCalculations(', 'function updateCoverPreviewVisuals(');
-    expect(live).toContain("coverFormat === 'split' ? computeSplitCoverDimensions(dimInput) : null");
+    expect(live).toContain("options.paper === 'split' ? computeSplitCoverDimensions(dimInput) : null");
 
     const generateStart = appSource.indexOf("coverGenerateBtn.addEventListener('click'");
     expect(generateStart).toBeGreaterThanOrEqual(0);
     const generate = appSource.slice(generateStart, appSource.indexOf('const coverSaveFlow', generateStart));
-    expect(generate).toContain("coverFormat === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
-    expect(generate).toContain('format: coverFormat');
+    expect(generate).toContain("options.paper === 'split'\n        ? computeSplitCoverDimensions(dimInput)\n        : computeCoverDimensions(dimInput)");
   });
 
   it('shows the per-sheet breakdown only for the split format', () => {
@@ -568,5 +572,176 @@ describe('Cover Studio - Turkish Dictionary Entries', () => {
       expect(placeholders(trDictionary, key), `placeholder mismatch for ${key}`)
         .toEqual(placeholders(enDictionary, key));
     }
+  });
+});
+
+describe('Cover Studio - A4 fit warning', () => {
+  /**
+   * Source of one function, signature to the next sibling function. Sliced this
+   * way rather than by brace depth because updateCoverLiveCalculations declares
+   * an inline object return type, whose braces close before the body opens.
+   */
+  function functionSource(fnSignature: string): string {
+    const start = appSource.indexOf(fnSignature);
+    expect(start, `expected to find "${fnSignature}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const next = appSource.indexOf('\n  function ', start + fnSignature.length);
+    return appSource.slice(start, next === -1 ? undefined : next);
+  }
+
+  function sourceBetween(from: string, to: string): string {
+    const start = appSource.indexOf(from);
+    expect(start, `expected to find "${from}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const end = appSource.indexOf(to, start + from.length);
+    expect(end, `expected to find "${to}" in app.ts`).toBeGreaterThanOrEqual(0);
+    return appSource.slice(start, end);
+  }
+
+  /** The markup of one badge span, looked up by its id. */
+  function badgeTag(id: string): string {
+    const at = htmlSource.indexOf(`id="${id}"`);
+    expect(at, `expected #${id} to exist in index.html`).toBeGreaterThan(0);
+    return htmlSource.slice(htmlSource.lastIndexOf('<span', at), htmlSource.indexOf('</span>', at));
+  }
+
+  it('carries a warning badge on both cover flows, hidden until a calculation says otherwise', () => {
+    for (const id of ['coverPaperFitBadge', 'wrapCoverPaperFitBadge']) {
+      const tag = badgeTag(id);
+      expect(tag, `#${id} should start hidden`).toContain('hidden');
+      expect(tag, `#${id} should carry the shared warning text`).toContain('data-i18n="cover.needsA3"');
+    }
+  });
+
+  it('toggles that badge from the engine predicate in both flows', () => {
+    expect(functionSource('function updateCoverLiveCalculations('))
+      .toContain("coverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
+    expect(functionSource('function updateWrapCoverCalculations('))
+      .toContain("wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
+  });
+
+  it('uses the predicate for nothing but those two badges, so an oversize cover is still produced', () => {
+    // Two call sites and no more: the warning tells the binder which paper to
+    // feed, it never gates generateCoverPdf or trims anything down to A4.
+    expect(appSource.match(/checkCoverFormatFit\(/g) ?? []).toHaveLength(2);
+  });
+
+  it('gives the A4 warning its own entry in both dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).toContain("'cover.needsA3':");
+    expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsA3':");
+  });
+
+  it('gives the A3 overflow warning its own entry in both dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).toContain("'cover.needsLarger':");
+    expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsLarger':");
+  });
+
+  it('updates the paper fit badge i18n key with fitResult.warnKey in both flows', () => {
+    const updateCover = functionSource('function updateCoverLiveCalculations(');
+    const updateWrap = functionSource('function updateWrapCoverCalculations(');
+    expect(updateCover).toContain('const coverPaperFitWarnKey = fitResult.warnKey;');
+    expect(updateCover).toContain('coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;');
+    expect(updateCover).toContain('coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);');
+    expect(updateWrap).toContain('const wrapPaperFitWarnKey = fitResult.warnKey;');
+    expect(updateWrap).toContain('wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;');
+    expect(updateWrap).toContain('wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);');
+  });
+
+  it('does not offer the retired 1 × A4 direct format in Cover Studio format group', () => {
+    const group = htmlSource.slice(
+      htmlSource.indexOf('id="coverFormatGroup"'),
+      htmlSource.indexOf('id="coverFormatHint"'),
+    );
+    expect(group).not.toContain('data-format="a4-direct"');
+    expect(group).toContain('data-format="split"');
+    expect(group).toContain('data-format="single"');
+  });
+
+  it('disables hardcover option and falls back to softcover when saddle-stitched binding is selected', () => {
+    const bindingHandler = sourceBetween("coverBindingGroup.addEventListener('click'", "coverKindGroup.addEventListener('click'");
+    expect(bindingHandler).toContain("hardcoverBtn.disabled = isSaddle");
+    expect(bindingHandler).toContain("coverCoverStyle = 'softcover'");
+  });
+
+  it('falls back to softcover on studio entry when saddle-stitched booklet was inferred', () => {
+    const openStudioHandler = sourceBetween("resultOpenCoverStudioBtn.addEventListener('click'", "let readerResizeTimer");
+    expect(openStudioHandler).toContain("binding: isSingle ? 'saddle' : 'sewn'");
+    expect(openStudioHandler).toContain("hardcoverBtn.disabled = isSaddle");
+  });
+
+  it('does not have coverStyleGroup, but separates cover kind and format groups', () => {
+    expect(htmlSource).not.toContain('id="coverStyleGroup"');
+    const kindGroup = htmlSource.slice(
+      htmlSource.indexOf('id="coverKindGroup"'),
+      htmlSource.indexOf('id="coverKindHint"'),
+    );
+    expect(kindGroup).toContain('data-kind="softcover"');
+    expect(kindGroup).toContain('data-kind="hardcover"');
+
+    const formatGroup = htmlSource.slice(
+      htmlSource.indexOf('id="coverFormatGroup"'),
+      htmlSource.indexOf('id="coverFormatHint"'),
+    );
+    expect(formatGroup).not.toContain('data-format="a4-direct"');
+    expect(formatGroup).toContain('data-format="split"');
+    expect(formatGroup).toContain('data-format="single"');
+  });
+
+  it('does not define retired a4-direct keys in dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).not.toContain("'cover.formatA4Direct':");
+    expect(enDictionary).not.toContain("'cover.formatA4DirectHint':");
+    expect(enDictionary).not.toContain("'cover.needsA4Direct':");
+    expect(trDictionary).not.toContain("'cover.formatA4Direct':");
+    expect(trDictionary).not.toContain("'cover.formatA4DirectHint':");
+    expect(trDictionary).not.toContain("'cover.needsA4Direct':");
+  });
+
+  it('falls back to localized title and author in updateCoverPreviewVisuals when empty', () => {
+    const fn = functionSource('function updateCoverPreviewVisuals(');
+    expect(fn).toContain("t('cover.bookTitle')");
+    expect(fn).toContain("t('cover.author')");
+  });
+
+  it('does not touch coverGenerateBtn.disabled in updateCoverLiveCalculations', () => {
+    const fn = functionSource('function updateCoverLiveCalculations(');
+    expect(fn).not.toContain('coverGenerateBtn.disabled');
+  });
+});
+
+describe('Cover Studio - wrap-cover failure resilience', () => {
+  function sourceBetween(from: string, to: string): string {
+    const start = appSource.indexOf(from);
+    expect(start, `expected to find "${from}" in app.ts`).toBeGreaterThanOrEqual(0);
+    const end = appSource.indexOf(to, start + from.length);
+    expect(end, `expected to find "${to}" in app.ts`).toBeGreaterThanOrEqual(0);
+    return appSource.slice(start, end);
+  }
+
+  it('keeps the finished booklet when the wrap cover fails, reporting the cover error by toast instead of the error screen', () => {
+    const generate = sourceBetween("generateBtn.addEventListener('click'", 'function applyWrapCoverResultVisibility');
+    const coverCall = 'await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount)';
+    const callAt = generate.indexOf(coverCall);
+    expect(callAt, 'the wrap cover is still built from the produced booklet').toBeGreaterThan(0);
+
+    // The cover promise carries its own catch, so a COVER_TOO_LARGE rejection
+    // never reaches the handler's outer catch (which calls goToError).
+    const afterCall = generate.slice(callAt + coverCall.length);
+    expect(afterCall.startsWith('.catch((coverError: unknown) => {')).toBe(true);
+    const coverCatch = afterCall.slice(0, afterCall.indexOf('\n          })'));
+    expect(coverCatch).toContain('console.warn(');
+    expect(coverCatch).toContain("showToast(errorText(coverError), { type: 'error' })");
+    expect(coverCatch).toContain('return {};');
+    expect(coverCatch).not.toContain('goToError');
+    expect(coverCatch).not.toContain('throw');
+
+    // ...and the booklet then goes on to the result screen as usual.
+    const afterCover = generate.slice(callAt);
+    expect(afterCover.indexOf('booklet = {')).toBeGreaterThan(0);
+    expect(afterCover.indexOf("showScreen('result')")).toBeGreaterThan(afterCover.indexOf('booklet = {'));
+    expect(afterCover.indexOf("showScreen('result')")).toBeLessThan(afterCover.indexOf('goToError('));
   });
 });
