@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   checkCoverFormatFit,
   coverGeometryInput,
@@ -15,6 +15,7 @@ import type {
   SplitCoverDimensionsResult,
 } from '../engine/cover-engine';
 import { MM_TO_PT } from '../engine/cover-engine';
+import { setLanguage, t } from '../i18n';
 
 const htmlPath = fileURLToPath(new URL('../../index.html', import.meta.url));
 const htmlSource = readFileSync(htmlPath, 'utf-8');
@@ -433,6 +434,7 @@ describe('CoverOptions - checkCoverFormatFit', () => {
     const res = checkCoverFormatFit(splitDims);
     expect(res.fits).toBe(true);
     expect(res.paperKey).toBe('cover.paperSplitSheets');
+    expect(res.warnKey).toBe('cover.needsA3');
     expect(res.wMm).toBeCloseTo(176.6, 1);
     expect(res.hMm).toBeCloseTo(216.0, 1);
   });
@@ -460,6 +462,7 @@ describe('CoverOptions - checkCoverFormatFit', () => {
     const res = checkCoverFormatFit(oversizeSplit);
     expect(res.fits).toBe(false);
     expect(res.paperKey).toBe('cover.paperSplitSheets');
+    expect(res.warnKey).toBe('cover.needsA3');
   });
 
   it('correctly reports fits for normal A5 single wrap on A3 (420 x 297 mm)', () => {
@@ -474,6 +477,7 @@ describe('CoverOptions - checkCoverFormatFit', () => {
     const res = checkCoverFormatFit(singleDims);
     expect(res.fits).toBe(true);
     expect(res.paperKey).toBe('cover.paperSingleSheet');
+    expect(res.warnKey).toBe('cover.needsLarger');
     expect(res.wMm).toBeCloseTo(305.0, 1);
     expect(res.hMm).toBeCloseTo(216.0, 1);
   });
@@ -490,5 +494,92 @@ describe('CoverOptions - checkCoverFormatFit', () => {
     const res = checkCoverFormatFit(hugeDims);
     expect(res.fits).toBe(false);
     expect(res.paperKey).toBe('cover.paperSingleSheet');
+    expect(res.warnKey).toBe('cover.needsLarger');
+  });
+
+  it('selects needsLarger when single wrap width exceeds 420 mm', () => {
+    const wrapOver420: CoverDimensionsResult = {
+      format: 'single',
+      totalWidthPt: 421 * MM_TO_PT,
+      totalHeightPt: 250 * MM_TO_PT,
+      backCoverRect: { x: 0, y: 0, width: 200 * MM_TO_PT, height: 250 * MM_TO_PT },
+      spineRect: { x: 200 * MM_TO_PT, y: 0, width: 21 * MM_TO_PT, height: 250 * MM_TO_PT },
+      frontCoverRect: { x: 221 * MM_TO_PT, y: 0, width: 200 * MM_TO_PT, height: 250 * MM_TO_PT },
+    };
+    const res = checkCoverFormatFit(wrapOver420);
+    expect(res.fits).toBe(false);
+    expect(res.paperKey).toBe('cover.paperSingleSheet');
+    expect(res.warnKey).toBe('cover.needsLarger');
+  });
+});
+
+describe('Cover format result line i18n', () => {
+  beforeAll(() => {
+    let mockStorage: Record<string, string> = {};
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => mockStorage[k] ?? null,
+      setItem: (k: string, v: string) => {
+        mockStorage[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete mockStorage[k];
+      },
+      clear: () => {
+        mockStorage = {};
+      },
+    });
+    vi.stubGlobal('document', {
+      documentElement: { lang: 'en' },
+      querySelectorAll: () => [],
+    });
+  });
+
+  afterAll(() => {
+    setLanguage('en');
+    vi.unstubAllGlobals();
+  });
+
+  it('formats Turkish result line correctly for split sheets and single sheet', () => {
+    setLanguage('tr');
+    try {
+      const splitText = t('cover.formatResultFit', {
+        paper: t('cover.paperSplitSheets'),
+        w: '176.6',
+        h: '216.0',
+      });
+      expect(splitText).toBe('Kapak A4 kâğıda 2 tabaka hâlinde sığıyor · toplam 176.6 × 216.0 mm');
+
+      const singleText = t('cover.formatResultFit', {
+        paper: t('cover.paperSingleSheet'),
+        w: '305.0',
+        h: '216.0',
+      });
+      expect(singleText).toBe('Kapak tek A3 tabakaya sığıyor · toplam 305.0 × 216.0 mm');
+
+      expect(t('cover.needsLarger')).toBe("⚠️ A3'ten büyük — bu kapak için daha geniş bir tabaka gerekir");
+      expect(t('cover.needsA3')).toBe('⚠️ A4 tabakaya sığmaz — bu tabakayı A3 kağıda basın');
+    } finally {
+      setLanguage('en');
+    }
+  });
+
+  it('formats English result line and warnings correctly', () => {
+    setLanguage('en');
+    const splitText = t('cover.formatResultFit', {
+      paper: t('cover.paperSplitSheets'),
+      w: '176.6',
+      h: '216.0',
+    });
+    expect(splitText).toBe('Cover fits on 2 A4 sheets · total 176.6 × 216.0 mm');
+
+    const singleText = t('cover.formatResultFit', {
+      paper: t('cover.paperSingleSheet'),
+      w: '305.0',
+      h: '216.0',
+    });
+    expect(singleText).toBe('Cover fits on one A3 sheet · total 305.0 × 216.0 mm');
+
+    expect(t('cover.needsLarger')).toBe('⚠️ Larger than A3 — this cover needs a wider sheet');
+    expect(t('cover.needsA3')).toBe('⚠️ Too wide for A4 — print this sheet on A3');
   });
 });

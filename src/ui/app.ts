@@ -1511,7 +1511,7 @@ export function initApp(): void {
 
     const fitResult = checkCoverFormatFit(dimensions);
     wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
-    const wrapPaperFitWarnKey = 'cover.needsA3';
+    const wrapPaperFitWarnKey = fitResult.warnKey;
     wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
     wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
 
@@ -4366,7 +4366,7 @@ export function initApp(): void {
     const dimensions = splitDims ?? singleDims!;
     const fitResult = checkCoverFormatFit(dimensions);
     coverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
-    const coverPaperFitWarnKey = 'cover.needsA3';
+    const coverPaperFitWarnKey = fitResult.warnKey;
     coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
     coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
 

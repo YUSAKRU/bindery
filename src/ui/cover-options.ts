@@ -128,6 +128,7 @@ export function resolveCoverPageTrim(
 export interface CoverFormatFitResult {
   fits: boolean;
   paperKey: 'cover.paperSplitSheets' | 'cover.paperSingleSheet';
+  warnKey: 'cover.needsA3' | 'cover.needsLarger';
   wMm: number;
   hMm: number;
 }
@@ -148,6 +149,7 @@ export function checkCoverFormatFit(
     return {
       fits,
       paperKey: 'cover.paperSplitSheets',
+      warnKey: 'cover.needsA3',
       wMm: widestSheetWidthPt * mmPerPt,
       hMm: dimensions.totalHeightPt * mmPerPt,
     };
@@ -160,6 +162,7 @@ export function checkCoverFormatFit(
   return {
     fits,
     paperKey: 'cover.paperSingleSheet',
+    warnKey: 'cover.needsLarger',
     wMm: wrapWidthMm,
     hMm: wrapHeightMm,
   };

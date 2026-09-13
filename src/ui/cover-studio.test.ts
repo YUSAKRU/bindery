@@ -200,6 +200,11 @@ describe('Cover Studio - Localization Coverage', () => {
     'cover.splitSheet1Desc',
     'cover.splitSheet2Desc',
     'cover.sheetBreakdown',
+    'cover.formatResultFit',
+    'cover.paperSplitSheets',
+    'cover.paperSingleSheet',
+    'cover.needsA3',
+    'cover.needsLarger',
   ];
 
   it('defines all required Cover Studio keys in English dictionary', () => {
@@ -624,6 +629,24 @@ describe('Cover Studio - A4 fit warning', () => {
     const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
     expect(enDictionary).toContain("'cover.needsA3':");
     expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsA3':");
+  });
+
+  it('gives the A3 overflow warning its own entry in both dictionaries', () => {
+    const enDictionary = i18nSource.slice(i18nSource.indexOf('\n  en: {'), i18nSource.indexOf('\n  tr: {'));
+    const trDictionary = i18nSource.slice(i18nSource.indexOf('\n  tr: {'));
+    expect(enDictionary).toContain("'cover.needsLarger':");
+    expect(trDictionary, 'a missing TR entry silently falls back to English').toContain("'cover.needsLarger':");
+  });
+
+  it('updates the paper fit badge i18n key with fitResult.warnKey in both flows', () => {
+    const updateCover = functionSource('function updateCoverLiveCalculations(');
+    const updateWrap = functionSource('function updateWrapCoverCalculations(');
+    expect(updateCover).toContain('const coverPaperFitWarnKey = fitResult.warnKey;');
+    expect(updateCover).toContain('coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;');
+    expect(updateCover).toContain('coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);');
+    expect(updateWrap).toContain('const wrapPaperFitWarnKey = fitResult.warnKey;');
+    expect(updateWrap).toContain('wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;');
+    expect(updateWrap).toContain('wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);');
   });
 
   it('does not offer the retired 1 × A4 direct format in Cover Studio format group', () => {
