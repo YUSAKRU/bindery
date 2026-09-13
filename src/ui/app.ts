@@ -19,7 +19,6 @@ import {
   computeSpineWidth,
   computeCoverDimensions,
   computeSplitCoverDimensions,
-  coverFitsPrinterSheet,
   generateCoverPdf,
   type BindingType,
   type CoverFormat,
@@ -28,12 +27,14 @@ import {
   PAPER_CALIPERS_MM,
 } from '../engine/cover-engine';
 import {
+  type BoardThicknessMm,
   type CoverOptions,
   DEFAULT_COVER_OPTIONS,
   normalizeCoverOptions,
   coverGeometryInput,
   spineInput,
   resolveCoverPageTrim,
+  checkCoverFormatFit,
 } from './cover-options';
 import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
@@ -405,6 +406,7 @@ export function initApp(): void {
   const wrapCoverOptions = byId<HTMLDivElement>('wrapCoverOptions');
   const wrapCoverFormatGroup = byId<HTMLDivElement>('wrapCoverFormatGroup');
   const wrapCoverFormatHint = byId<HTMLParagraphElement>('wrapCoverFormatHint');
+  const wrapCoverFormatResultLine = byId<HTMLParagraphElement>('wrapCoverFormatResultLine');
   const wrapCoverBindingGroup = byId<HTMLDivElement>('wrapCoverBindingGroup');
   const wrapCoverKindGroup = byId<HTMLDivElement>('wrapCoverKindGroup');
   const wrapCoverKindHint = byId<HTMLParagraphElement>('wrapCoverKindHint');
@@ -535,7 +537,7 @@ export function initApp(): void {
   let wrapCoverFormat: CoverFormat = 'split';
   let wrapCoverBinding: BindingType = 'sewn';
   let wrapCoverKind: 'softcover' | 'hardcover' = 'softcover';
-  let wrapCoverBoardMm: 1.5 | 2.0 | 2.5 = 2.0;
+  let wrapCoverBoardMm: BoardThicknessMm = 2.0;
   let wrapCoverGsm: PaperGsm = 80;
   let wrapCoverTheme: CoverTheme = 'cream';
   /**
@@ -717,6 +719,7 @@ export function initApp(): void {
   const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
   const coverFormatGroup = byId<HTMLDivElement>('coverFormatGroup');
   const coverFormatHint = byId<HTMLParagraphElement>('coverFormatHint');
+  const coverFormatResultLine = byId<HTMLParagraphElement>('coverFormatResultLine');
   const coverPreviewHeading = byId<HTMLSpanElement>('coverPreviewHeading');
   const coverLayoutPreview = byId<HTMLDivElement>('coverLayoutPreview');
   const coverSplitPreview = byId<HTMLDivElement>('coverSplitPreview');
@@ -776,7 +779,7 @@ export function initApp(): void {
   let coverPaperGsm: PaperGsm = 80;
   let coverBindingType: BindingType = 'sewn';
   let coverCoverStyle: 'softcover' | 'hardcover' = 'softcover';
-  let coverBoardThicknessMm: 1.5 | 2.0 | 2.5 = 2.0;
+  let coverBoardThicknessMm: BoardThicknessMm = 2.0;
   let coverPageTrim: 'A5' | 'A4' = 'A5';
   // Two A4 sheets is the default: a single-piece A5 wrap is ~305mm wide and
   // cannot be fed through a home A4 printer at all (see cover-engine's
@@ -1506,10 +1509,22 @@ export function initApp(): void {
       : 'cover-fit-badge cover-fit-badge--warn';
     wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
 
-    wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions));
+    const fitResult = checkCoverFormatFit(dimensions);
+    wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
     const wrapPaperFitWarnKey = 'cover.needsA3';
     wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
     wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
+
+    if (wrapCoverFormatResultLine) {
+      wrapCoverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
+      if (fitResult.fits) {
+        wrapCoverFormatResultLine.textContent = t('cover.formatResultFit', {
+          paper: t(fitResult.paperKey),
+          w: fitResult.wMm.toFixed(1),
+          h: fitResult.hMm.toFixed(1),
+        });
+      }
+    }
 
     const heightMm = dimensions.totalHeightPt * mmPerPt;
     wrapCoverDimsLabel.textContent = dimensions.format === 'split'
@@ -2351,8 +2366,8 @@ export function initApp(): void {
 
   wrapCoverBoardGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const board = Number(btn?.dataset.wrapboard) as 1.5 | 2.0 | 2.5;
-    if (!board || (board !== 1.5 && board !== 2.0 && board !== 2.5)) return;
+    const board = Number(btn?.dataset.wrapboard) as BoardThicknessMm;
+    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
     wrapCoverBoardMm = board;
     setActiveSegment(wrapCoverBoardGroup, 'wrapboard', String(board));
     updateWrapCoverCalculations();
@@ -4348,10 +4363,23 @@ export function initApp(): void {
       coverSpineFitBadge.textContent = t('cover.spineTextTooNarrow');
     }
 
-    coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!));
+    const dimensions = splitDims ?? singleDims!;
+    const fitResult = checkCoverFormatFit(dimensions);
+    coverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
     const coverPaperFitWarnKey = 'cover.needsA3';
     coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
     coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
+
+    if (coverFormatResultLine) {
+      coverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
+      if (fitResult.fits) {
+        coverFormatResultLine.textContent = t('cover.formatResultFit', {
+          paper: t(fitResult.paperKey),
+          w: fitResult.wMm.toFixed(1),
+          h: fitResult.hMm.toFixed(1),
+        });
+      }
+    }
 
     coverTotalDimensionsLabel.textContent = splitDims
       ? t('cover.totalDimensionsSplit', {
@@ -4687,8 +4715,8 @@ export function initApp(): void {
 
   coverBoardGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const board = Number(btn?.dataset.board) as 1.5 | 2.0 | 2.5;
-    if (!board || (board !== 1.5 && board !== 2.0 && board !== 2.5)) return;
+    const board = Number(btn?.dataset.board) as BoardThicknessMm;
+    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
     coverBoardThicknessMm = board;
     setActiveSegment(coverBoardGroup, 'board', String(board));
     updateCoverLiveCalculations();

@@ -1030,7 +1030,7 @@
                 <button type="button" class="segmented-btn is-active" data-kind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
                 <button type="button" class="segmented-btn" data-kind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
               </div>
-              <p class="setting-hint" id="coverKindHint" data-i18n="cover.hardHint">Wraps the board with a 15 mm turn-in.</p>
+              <p class="setting-hint" id="coverKindHint"></p>
 
               <!-- Hardcover Board Thickness -->
               <div class="setting-card-nested hidden" id="coverBoardThicknessBlock">
@@ -1041,6 +1041,7 @@
                   <button type="button" class="segmented-btn" data-board="1.5">1.5mm</button>
                   <button type="button" class="segmented-btn is-active" data-board="2.0">2.0mm</button>
                   <button type="button" class="segmented-btn" data-board="2.5">2.5mm</button>
+                  <button type="button" class="segmented-btn" data-board="3.0">3.0mm</button>
                 </div>
               </div>
 
@@ -1053,6 +1054,7 @@
                 <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
               </div>
               <p class="setting-hint" id="coverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
+              <p class="setting-hint hidden" id="coverFormatResultLine"></p>
 
               <!-- Book Trim Size -->
               <div class="setting-row" style="margin-top: 12px;">
@@ -1191,7 +1193,7 @@
                 <button type="button" class="segmented-btn is-active" data-wrapkind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
                 <button type="button" class="segmented-btn" data-wrapkind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
               </div>
-              <p class="setting-hint" id="wrapCoverKindHint" data-i18n="cover.hardHint">Wraps the board with a 15 mm turn-in.</p>
+              <p class="setting-hint" id="wrapCoverKindHint"></p>
 
               <!-- Hardcover Board Thickness -->
               <div class="setting-card-nested hidden" id="wrapCoverBoardThicknessBlock">
@@ -1202,6 +1204,7 @@
                   <button type="button" class="segmented-btn" data-wrapboard="1.5">1.5mm</button>
                   <button type="button" class="segmented-btn is-active" data-wrapboard="2.0">2.0mm</button>
                   <button type="button" class="segmented-btn" data-wrapboard="2.5">2.5mm</button>
+                  <button type="button" class="segmented-btn" data-wrapboard="3.0">3.0mm</button>
                 </div>
               </div>
 
@@ -1214,6 +1217,7 @@
                 <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
               </div>
               <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
+              <p class="setting-hint hidden" id="wrapCoverFormatResultLine"></p>
 
               <!-- Paper weight: the spine cannot be measured without it -->
               <div class="setting-row" style="margin-top: 12px;">

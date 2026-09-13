@@ -2,12 +2,18 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  checkCoverFormatFit,
   coverGeometryInput,
   normalizeCoverOptions,
   resolveCoverPageTrim,
   spineInput,
+  type BoardThicknessMm,
   type CoverOptions,
 } from './cover-options';
+import type {
+  CoverDimensionsResult,
+  SplitCoverDimensionsResult,
+} from '../engine/cover-engine';
 import { MM_TO_PT } from '../engine/cover-engine';
 
 const htmlPath = fileURLToPath(new URL('../../index.html', import.meta.url));
@@ -57,12 +63,22 @@ describe('CoverOptions - normalizeCoverOptions', () => {
     }
   }
 
-  it('clamps invalid board thickness to 2.0 default', () => {
+  it('accepts 3.0 mm board thickness and clamps invalid board thickness to 2.0 default', () => {
+    const opt30 = normalizeCoverOptions({
+      binding: 'sewn',
+      kind: 'hardcover',
+      paper: 'split',
+      boardMm: 3.0,
+      gsm: 80,
+      theme: 'cream',
+    });
+    expect(opt30.boardMm).toBe(3.0);
+
     const opt = normalizeCoverOptions({
       binding: 'sewn',
       kind: 'hardcover',
       paper: 'split',
-      boardMm: 3.5 as unknown as 1.5 | 2.0 | 2.5,
+      boardMm: 3.5 as unknown as BoardThicknessMm,
       gsm: 80,
       theme: 'cream',
     });
@@ -335,24 +351,38 @@ describe('CoverOptions - UI Invariants & Voice', () => {
     expect(appSource).not.toContain('coverStyleGroup');
   });
 
-  it('provides board thickness 1.5, 2.0, 2.5 in both flows', () => {
-    const bookletBoard = htmlSource.slice(
-      htmlSource.indexOf('id="wrapCoverBoardGroup"'),
-      htmlSource.indexOf('id="wrapCoverFormatGroup"'),
-    );
-    expect(bookletBoard).toContain('data-wrapboard="1.5"');
-    expect(bookletBoard).toContain('data-wrapboard="2.0"');
-    expect(bookletBoard).toContain('data-wrapboard="2.5"');
-    expect(bookletBoard).not.toContain('data-wrapboard="3.0"');
+  it('both board groups offer exactly the four values: 1.5, 2.0, 2.5, 3.0', () => {
+    const bookletMatches = [...htmlSource.matchAll(/data-wrapboard="([^"]+)"/g)].map((m) => m[1]);
+    expect(bookletMatches).toEqual(['1.5', '2.0', '2.5', '3.0']);
 
-    const studioBoard = htmlSource.slice(
-      htmlSource.indexOf('id="coverBoardGroup"'),
-      htmlSource.indexOf('id="coverPageTrimGroup"'),
-    );
-    expect(studioBoard).toContain('data-board="1.5"');
-    expect(studioBoard).toContain('data-board="2.0"');
-    expect(studioBoard).toContain('data-board="2.5"');
-    expect(studioBoard).not.toContain('data-board="3.0"');
+    const studioMatches = [...htmlSource.matchAll(/data-board="([^"]+)"/g)].map((m) => m[1]);
+    expect(studioMatches).toEqual(['1.5', '2.0', '2.5', '3.0']);
+  });
+
+  it('starts first-paint kind hints empty so softcover default is not overridden before handler runs', () => {
+    expect(htmlSource).toContain('<p class="setting-hint" id="coverKindHint"></p>');
+    expect(htmlSource).toContain('<p class="setting-hint" id="wrapCoverKindHint"></p>');
+    expect(htmlSource).not.toMatch(/id="coverKindHint"[^>]*data-i18n="cover\.hardHint"/);
+    expect(htmlSource).not.toMatch(/id="wrapCoverKindHint"[^>]*data-i18n="cover\.hardHint"/);
+  });
+
+  it('renders computed geometry result line under Print Paper group in both flows', () => {
+    // Both result lines exist in HTML under format hints
+    expect(htmlSource).toContain('id="wrapCoverFormatResultLine"');
+    expect(htmlSource).toContain('id="coverFormatResultLine"');
+
+    // Both handlers wire checkCoverFormatFit and formatResultFit with t()
+    expect(appSource).toContain("wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
+    expect(appSource).toContain("wrapCoverFormatResultLine.classList.toggle('hidden', !fitResult.fits)");
+    expect(appSource).toContain("t('cover.formatResultFit'");
+
+    expect(appSource).toContain("coverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
+    expect(appSource).toContain("coverFormatResultLine.classList.toggle('hidden', !fitResult.fits)");
+
+    // i18n has keys for both languages
+    expect(i18nSource).toContain("'cover.formatResultFit':");
+    expect(i18nSource).toContain("'cover.paperSplitSheets':");
+    expect(i18nSource).toContain("'cover.paperSingleSheet':");
   });
 
   it('never uses forbidden words in cover labels or hints in HTML or i18n', () => {
@@ -376,5 +406,89 @@ describe('CoverOptions - UI Invariants & Voice', () => {
     );
     expect(coverSectionTr).not.toMatch(/\byarat/i);
     expect(coverSectionTr).not.toMatch(/\boluştur/i);
+  });
+});
+
+describe('CoverOptions - checkCoverFormatFit', () => {
+  it('correctly reports fits for normal A5 split cover (A4 case)', () => {
+    const splitDims: SplitCoverDimensionsResult = {
+      format: 'split',
+      totalHeightPt: 216 * MM_TO_PT,
+      sheet1: {
+        widthPt: 176.6 * MM_TO_PT,
+        heightPt: 216 * MM_TO_PT,
+        backCoverRect: { x: 0, y: 0, width: 151 * MM_TO_PT, height: 216 * MM_TO_PT },
+        spineRect: { x: 151 * MM_TO_PT, y: 0, width: 5.6 * MM_TO_PT, height: 216 * MM_TO_PT },
+        lapFlapRect: { x: 156.6 * MM_TO_PT, y: 0, width: 20 * MM_TO_PT, height: 216 * MM_TO_PT },
+        foldLinesX: [151 * MM_TO_PT, 156.6 * MM_TO_PT],
+      },
+      sheet2: {
+        widthPt: 161 * MM_TO_PT,
+        heightPt: 216 * MM_TO_PT,
+        glueTabRect: { x: 0, y: 0, width: 10 * MM_TO_PT, height: 216 * MM_TO_PT },
+        frontCoverRect: { x: 10 * MM_TO_PT, y: 0, width: 151 * MM_TO_PT, height: 216 * MM_TO_PT },
+        foldLinesX: [10 * MM_TO_PT],
+      },
+    };
+    const res = checkCoverFormatFit(splitDims);
+    expect(res.fits).toBe(true);
+    expect(res.paperKey).toBe('cover.paperSplitSheets');
+    expect(res.wMm).toBeCloseTo(176.6, 1);
+    expect(res.hMm).toBeCloseTo(216.0, 1);
+  });
+
+  it('correctly reports fits=false for oversize split cover exceeding A4', () => {
+    const oversizeSplit: SplitCoverDimensionsResult = {
+      format: 'split',
+      totalHeightPt: 216 * MM_TO_PT,
+      sheet1: {
+        widthPt: 220 * MM_TO_PT,
+        heightPt: 216 * MM_TO_PT,
+        backCoverRect: { x: 0, y: 0, width: 190 * MM_TO_PT, height: 216 * MM_TO_PT },
+        spineRect: { x: 190 * MM_TO_PT, y: 0, width: 10 * MM_TO_PT, height: 216 * MM_TO_PT },
+        lapFlapRect: { x: 200 * MM_TO_PT, y: 0, width: 20 * MM_TO_PT, height: 216 * MM_TO_PT },
+        foldLinesX: [190 * MM_TO_PT, 200 * MM_TO_PT],
+      },
+      sheet2: {
+        widthPt: 161 * MM_TO_PT,
+        heightPt: 216 * MM_TO_PT,
+        glueTabRect: { x: 0, y: 0, width: 10 * MM_TO_PT, height: 216 * MM_TO_PT },
+        frontCoverRect: { x: 10 * MM_TO_PT, y: 0, width: 151 * MM_TO_PT, height: 216 * MM_TO_PT },
+        foldLinesX: [10 * MM_TO_PT],
+      },
+    };
+    const res = checkCoverFormatFit(oversizeSplit);
+    expect(res.fits).toBe(false);
+    expect(res.paperKey).toBe('cover.paperSplitSheets');
+  });
+
+  it('correctly reports fits for normal A5 single wrap on A3 (420 x 297 mm)', () => {
+    const singleDims: CoverDimensionsResult = {
+      format: 'single',
+      totalWidthPt: 305 * MM_TO_PT,
+      totalHeightPt: 216 * MM_TO_PT,
+      backCoverRect: { x: 0, y: 0, width: 151 * MM_TO_PT, height: 216 * MM_TO_PT },
+      spineRect: { x: 151 * MM_TO_PT, y: 0, width: 3 * MM_TO_PT, height: 216 * MM_TO_PT },
+      frontCoverRect: { x: 154 * MM_TO_PT, y: 0, width: 151 * MM_TO_PT, height: 216 * MM_TO_PT },
+    };
+    const res = checkCoverFormatFit(singleDims);
+    expect(res.fits).toBe(true);
+    expect(res.paperKey).toBe('cover.paperSingleSheet');
+    expect(res.wMm).toBeCloseTo(305.0, 1);
+    expect(res.hMm).toBeCloseTo(216.0, 1);
+  });
+
+  it('correctly reports fits=false for oversize single wrap exceeding A3', () => {
+    const hugeDims: CoverDimensionsResult = {
+      format: 'single',
+      totalWidthPt: 450 * MM_TO_PT,
+      totalHeightPt: 310 * MM_TO_PT,
+      backCoverRect: { x: 0, y: 0, width: 220 * MM_TO_PT, height: 310 * MM_TO_PT },
+      spineRect: { x: 220 * MM_TO_PT, y: 0, width: 10 * MM_TO_PT, height: 310 * MM_TO_PT },
+      frontCoverRect: { x: 230 * MM_TO_PT, y: 0, width: 220 * MM_TO_PT, height: 310 * MM_TO_PT },
+    };
+    const res = checkCoverFormatFit(hugeDims);
+    expect(res.fits).toBe(false);
+    expect(res.paperKey).toBe('cover.paperSingleSheet');
   });
 });

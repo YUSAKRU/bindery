@@ -608,15 +608,15 @@ describe('Cover Studio - A4 fit warning', () => {
 
   it('toggles that badge from the engine predicate in both flows', () => {
     expect(functionSource('function updateCoverLiveCalculations('))
-      .toContain("coverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(splitDims ?? singleDims!))");
+      .toContain("coverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
     expect(functionSource('function updateWrapCoverCalculations('))
-      .toContain("wrapCoverPaperFitBadge.classList.toggle('hidden', coverFitsPrinterSheet(dimensions))");
+      .toContain("wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits)");
   });
 
   it('uses the predicate for nothing but those two badges, so an oversize cover is still produced', () => {
     // Two call sites and no more: the warning tells the binder which paper to
     // feed, it never gates generateCoverPdf or trims anything down to A4.
-    expect(appSource.match(/coverFitsPrinterSheet\(/g) ?? []).toHaveLength(2);
+    expect(appSource.match(/checkCoverFormatFit\(/g) ?? []).toHaveLength(2);
   });
 
   it('gives the A4 warning its own entry in both dictionaries', () => {

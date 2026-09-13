@@ -1,16 +1,19 @@
 import type {
+  AnyCoverDimensions,
   CoverDimensionsInput,
   CoverTheme,
   PaperGsm,
   SpineCalculationInput,
 } from '../engine/cover-engine';
-import { MM_TO_PT } from '../engine/cover-engine';
+import { coverFitsPrinterSheet, MM_TO_PT } from '../engine/cover-engine';
+
+export type BoardThicknessMm = 1.5 | 2.0 | 2.5 | 3.0;
 
 export interface CoverOptions {
   paper: 'split' | 'single'; // A4 paper (2 sheets) | A3 paper (1 sheet)
   kind: 'softcover' | 'hardcover'; // flexible | hard (board)
   binding: 'saddle' | 'sewn' | 'perfect';
-  boardMm: 1.5 | 2.0 | 2.5; // only meaningful when kind === 'hardcover'
+  boardMm: BoardThicknessMm; // only meaningful when kind === 'hardcover'
   gsm: PaperGsm;
   theme: CoverTheme;
 }
@@ -28,12 +31,12 @@ export const DEFAULT_COVER_OPTIONS: CoverOptions = {
  * Normalizes cover options according to physical binding constraints:
  * - Saddle stitch cannot take a hard cover (board): saddle => kind = 'softcover'.
  * - Paper format and cover kind are independent (split/single + soft/hard are valid).
- * - boardMm is clamped/defaulted to 1.5 | 2.0 | 2.5.
+ * - boardMm is validated against [1.5, 2.0, 2.5, 3.0] (defaults to 2.0).
  */
 export function normalizeCoverOptions(o: CoverOptions): CoverOptions {
   const kind: 'softcover' | 'hardcover' = o.binding === 'saddle' ? 'softcover' : o.kind;
-  const boardMm: 1.5 | 2.0 | 2.5 =
-    o.boardMm === 1.5 || o.boardMm === 2.0 || o.boardMm === 2.5 ? o.boardMm : 2.0;
+  const validBoards: BoardThicknessMm[] = [1.5, 2.0, 2.5, 3.0];
+  const boardMm: BoardThicknessMm = validBoards.includes(o.boardMm) ? o.boardMm : 2.0;
   return {
     paper: o.paper,
     kind,
@@ -121,3 +124,44 @@ export function resolveCoverPageTrim(
   }
   return { trim: 'A5', isSupported: false };
 }
+
+export interface CoverFormatFitResult {
+  fits: boolean;
+  paperKey: 'cover.paperSplitSheets' | 'cover.paperSingleSheet';
+  wMm: number;
+  hMm: number;
+}
+
+/**
+ * Checks whether a cover fits on its intended printer sheet:
+ * - split (A4 case): judged by coverFitsPrinterSheet (both sheets must fit A4).
+ * - single (A3 case): judged against A3 (420 × 297 mm).
+ * Returns dimension numbers in mm for formatting into the result line.
+ */
+export function checkCoverFormatFit(
+  dimensions: AnyCoverDimensions,
+  mmPerPt: number = 25.4 / 72,
+): CoverFormatFitResult {
+  if (dimensions.format === 'split') {
+    const fits = coverFitsPrinterSheet(dimensions);
+    const widestSheetWidthPt = Math.max(dimensions.sheet1.widthPt, dimensions.sheet2.widthPt);
+    return {
+      fits,
+      paperKey: 'cover.paperSplitSheets',
+      wMm: widestSheetWidthPt * mmPerPt,
+      hMm: dimensions.totalHeightPt * mmPerPt,
+    };
+  }
+
+  // single wrap judged against A3 (420 × 297 mm)
+  const wrapWidthMm = dimensions.totalWidthPt * mmPerPt;
+  const wrapHeightMm = dimensions.totalHeightPt * mmPerPt;
+  const fits = (wrapWidthMm <= 420 && wrapHeightMm <= 297) || (wrapWidthMm <= 297 && wrapHeightMm <= 420);
+  return {
+    fits,
+    paperKey: 'cover.paperSingleSheet',
+    wMm: wrapWidthMm,
+    hMm: wrapHeightMm,
+  };
+}
+
