@@ -89,6 +89,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.group.diagnostics': 'Diagnostics',
     'settings.errorLog': 'Recent Errors',
     'settings.errorLogDesc': 'Kept on this device only, and never sent anywhere',
+    'settings.group.shareAndSupport': 'Share & Support',
+    'settings.shareApp': 'Share Bindery',
+    'settings.shareAppDesc': 'Tell friends or colleagues about Bindery',
+    'settings.rateApp': 'Rate on Google Play',
+    'settings.rateAppDesc': 'Support development with a 5-star review',
     'settings.group.about': 'About',
     'settings.appVersion': 'App Version',
     'settings.developer': 'Developer',
@@ -392,6 +397,18 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Advanced settings',
     'config.advancedModified': '· modified',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
+    'picker.largeFileWarning':
+      'Large document detected (>150 pages or >50 MB). Processing may take longer and use more memory.',
+    'config.preflightWarning':
+      'Large document detected (>150 pages or >50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.',
+    'growth.shareTitle': 'Bindery — Offline Booklet & PDF Tools',
+    'growth.shareText':
+      'Check out Bindery — 100% private, on-device booklet imposition and PDF tools for Android: https://play.google.com/store/apps/details?id=com.yusakru.bindery',
+    'growth.reviewPromptTitle': 'Enjoying Bindery?',
+    'growth.reviewPromptText':
+      'If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!',
+    'growth.reviewPromptRate': 'Rate on Google Play',
+    'growth.reviewPromptLater': 'Maybe Later',
     'config.generateBooklet': 'Create Booklet',
 
     'stat.blankPagesAdded': 'Padding Pages',
@@ -767,6 +784,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'settings.group.diagnostics': 'Tanılama',
     'settings.errorLog': 'Son Hatalar',
     'settings.errorLogDesc': 'Yalnızca bu cihazda tutulur, hiçbir yere gönderilmez',
+    'settings.group.shareAndSupport': 'Paylaş & Destek',
+    'settings.shareApp': "Bindery'yi Paylaş",
+    'settings.shareAppDesc': "Arkadaşlarınıza veya meslektaşlarınıza Bindery'den bahsedin",
+    'settings.rateApp': "Google Play'de Değerlendir",
+    'settings.rateAppDesc': 'Geliştirmeyi 5 yıldızlı bir yorumla destekleyin',
     'settings.group.about': 'Hakkında',
     'settings.appVersion': 'Uygulama Sürümü',
     'settings.developer': 'Geliştirici',
@@ -1070,6 +1092,18 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Gelişmiş ayarlar',
     'config.advancedModified': '· değişiklik var',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
+    'picker.largeFileWarning':
+      'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). İşlem daha uzun sürebilir ve daha fazla bellek kullanabilir.',
+    'config.preflightWarning':
+      'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). Rahat katlama ve ciltleme için formalara bölmeniz (örn. 16 veya 32 sayfa) şiddetle önerilir.',
+    'growth.shareTitle': 'Bindery — Çevrimdışı Kitapçık ve PDF Araçları',
+    'growth.shareText':
+      "Bindery'ye göz atın — Android için %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları: https://play.google.com/store/apps/details?id=com.yusakru.bindery",
+    'growth.reviewPromptTitle': "Bindery'yi beğendiniz mi?",
+    'growth.reviewPromptText':
+      "Bindery kitapçık basmanıza veya PDF düzenlemenize yardımcı olduysa, Google Play'de yapacağınız kısa bir yorum başkalarının da keşfetmesini sağlar!",
+    'growth.reviewPromptRate': "Google Play'de Puan Ver",
+    'growth.reviewPromptLater': 'Daha Sonra',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 
     'stat.blankPagesAdded': 'Tamamlama Boşluğu',

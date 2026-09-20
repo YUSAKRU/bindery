@@ -3,6 +3,7 @@ import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 import type { BookletOptions, BookletResult, PaperSize } from './types';
 import { makeInstructionsPage } from './instructions-page';
+import { runInPdfWorker } from './worker-client';
 
 const TARGET_WIDTH = 842.0; // A4 landscape, points
 const TARGET_HEIGHT = 595.0;
@@ -574,7 +575,7 @@ async function combineFrontBack(frontDoc: PDFDocument, backDoc: PDFDocument): Pr
  * of pdf_booklet/engine.py (BookletEngine.make_booklet) — kept numerically
  * identical so the two implementations always agree.
  */
-export async function makeBooklet(
+export async function makeBookletCore(
   inputBytes: Uint8Array,
   options: BookletOptions = {},
 ): Promise<BookletResult> {
@@ -851,3 +852,15 @@ export async function makeBooklet(
     instructionsPdf,
   };
 }
+
+export async function makeBooklet(
+  inputBytes: Uint8Array,
+  options: BookletOptions = {},
+): Promise<BookletResult> {
+  return runInPdfWorker(
+    'makeBooklet',
+    { pdfBytes: inputBytes, options },
+    () => makeBookletCore(inputBytes, options),
+  );
+}
+

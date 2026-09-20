@@ -83,6 +83,14 @@ import {
   setErrorScreen,
   type ErrorEntry,
 } from '../native/error-log';
+import {
+  recordSuccessfulOperation,
+  isReviewEligible,
+  openStoreListing,
+  markReviewCompleted,
+  recordReviewPromptShown,
+  shareBinderyApp,
+} from '../native/review-hook';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
 import { createSaveFlow, type SaveFlowDeps } from './save-flow';
@@ -434,6 +442,13 @@ export function initApp(): void {
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
+  const preflightLargeFileWarning = byId<HTMLDivElement>('preflightLargeFileWarning');
+  const configPreflightWarning = byId<HTMLDivElement>('configPreflightWarning');
+  const settingsShareAppBtn = byId<HTMLButtonElement>('settingsShareAppBtn');
+  const settingsRateAppBtn = byId<HTMLButtonElement>('settingsRateAppBtn');
+  const growthReviewDialog = byId<HTMLDialogElement>('growthReviewDialog');
+  const growthReviewRateBtn = byId<HTMLButtonElement>('growthReviewRateBtn');
+  const growthReviewLaterBtn = byId<HTMLButtonElement>('growthReviewLaterBtn');
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
@@ -1200,6 +1215,8 @@ export function initApp(): void {
     continueBtn.classList.add('hidden');
     pickFileBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
+    preflightLargeFileWarning.classList.add('hidden');
+    configPreflightWarning.classList.add('hidden');
     bookletFlipEdge = 'short';
     setActiveSegment(flipEdgeGroup, 'flip', 'short');
     bookletPaperSize = 'A4';
@@ -1958,6 +1975,8 @@ export function initApp(): void {
     pickFileBtn.classList.add('hidden');
     continueBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
+    preflightLargeFileWarning.classList.add('hidden');
+    configPreflightWarning.classList.add('hidden');
     void showMixedSizeWarningIfNeeded(bytes);
   }
 
@@ -1981,6 +2000,9 @@ export function initApp(): void {
       if (selectedFile?.bytes === bytes) {
         mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
         bookletOriginalPages = pageCount;
+        const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
+        preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
+        configPreflightWarning.classList.toggle('hidden', !isLarge);
         // A document whose own page size is outside the engine's printable
         // bounds throws here; the cover section then falls back to A4 rather
         // than blocking the booklet itself, which does not need this value.
@@ -2648,9 +2670,11 @@ export function initApp(): void {
         if (action === 'print') {
           await withBusyOverlay(() => printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]));
           actionStatus.textContent = t('status.printed');
+          void triggerReviewPromptIfEligible();
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
           actionStatus.textContent = t('status.booklet.shared', { label });
+          void triggerReviewPromptIfEligible();
         }
       } catch (error) {
         const message = errorText(error);
@@ -2731,6 +2755,7 @@ export function initApp(): void {
       bookletSaveState = 'saved';
       refreshSaveLabel();
       bookletGoToLocationBtn.classList.remove('hidden');
+      void triggerReviewPromptIfEligible();
     } catch (error) {
       const message = errorText(error);
       actionStatus.textContent = t('status.saveFailed', { message });
@@ -8144,6 +8169,53 @@ export function initApp(): void {
     } catch (error) {
       recordError('caught', error);
       showToast(t('toast.clearCacheError'));
+    }
+  });
+
+  async function triggerReviewPromptIfEligible(): Promise<void> {
+    try {
+      await recordSuccessfulOperation();
+      const eligible = await isReviewEligible();
+      if (eligible && growthReviewDialog && typeof growthReviewDialog.showModal === 'function') {
+        growthReviewDialog.showModal();
+        await recordReviewPromptShown();
+      }
+    } catch (e) {
+      console.warn('Review prompt trigger failed:', e);
+    }
+  }
+
+  settingsShareAppBtn.addEventListener('click', async () => {
+    try {
+      await shareBinderyApp();
+    } catch (e) {
+      console.warn('Share app failed:', e);
+    }
+  });
+
+  settingsRateAppBtn.addEventListener('click', async () => {
+    try {
+      await openStoreListing();
+    } catch (e) {
+      console.warn('Rate app failed:', e);
+    }
+  });
+
+  growthReviewRateBtn.addEventListener('click', async () => {
+    try {
+      growthReviewDialog.close();
+      await markReviewCompleted();
+      await openStoreListing();
+    } catch (e) {
+      console.warn('Growth review rate failed:', e);
+    }
+  });
+
+  growthReviewLaterBtn.addEventListener('click', () => {
+    try {
+      growthReviewDialog.close();
+    } catch (e) {
+      console.warn('Growth review close failed:', e);
     }
   });
 

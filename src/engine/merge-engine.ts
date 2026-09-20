@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
+import { runInPdfWorker } from './worker-client';
 
 export interface MergeInput {
   name: string;
@@ -14,11 +15,9 @@ export interface MergeResult {
 }
 
 /**
- * Merges multiple PDFs, in the given order, into a single PDF. Uses
- * `copyPages` (not page embedding) so the merged document's pages stay
- * independent/editable rather than flattened form XObjects.
+ * Core implementation of merging multiple PDFs into a single PDF.
  */
-export async function mergePdfs(inputs: MergeInput[]): Promise<MergeResult> {
+export async function mergePdfsCore(inputs: MergeInput[]): Promise<MergeResult> {
   if (inputs.length < 2) {
     throw new BookletError('MERGE_MIN_FILES', undefined, 'You must select at least 2 PDFs.');
   }
@@ -36,4 +35,15 @@ export async function mergePdfs(inputs: MergeInput[]): Promise<MergeResult> {
   const mergedPdf = await mergedDoc.save();
 
   return { fileCount: inputs.length, pageCount, mergedPdf };
+}
+
+/**
+ * Merges multiple PDFs, running in a Web Worker when available.
+ */
+export async function mergePdfs(inputs: MergeInput[]): Promise<MergeResult> {
+  return runInPdfWorker(
+    'mergePdfs',
+    { inputs },
+    () => mergePdfsCore(inputs),
+  );
 }

@@ -4,6 +4,7 @@ import notoSansUrl from '../assets/fonts/NotoSans-Latin.ttf?url';
 import notoSansBoldUrl from '../assets/fonts/NotoSans-Latin-Bold.ttf?url';
 import { computeCenteredRotatedPosition } from './watermark-engine';
 import { BookletError } from './types';
+import { runInPdfWorker } from './worker-client';
 
 export type BindingType = 'sewn' | 'perfect' | 'saddle';
 export type PaperGsm = 70 | 80 | 90 | 100 | 120;
@@ -695,7 +696,7 @@ function drawBackCoverPanel(
  * StandardFonts), so Turkish characters (ı, ş, ğ, ü, ö, ç) render correctly —
  * see loadCoverFonts.
  */
-export async function generateCoverPdf(options: GenerateCoverOptions): Promise<Uint8Array> {
+export async function generateCoverPdfCore(options: GenerateCoverOptions): Promise<Uint8Array> {
   const { dimensions, content, spineResult } = options;
 
   if (options.format !== undefined && options.format !== dimensions.format) {
@@ -787,3 +788,12 @@ export async function generateCoverPdf(options: GenerateCoverOptions): Promise<U
 
   return doc.save();
 }
+
+export async function generateCoverPdf(options: GenerateCoverOptions): Promise<Uint8Array> {
+  return runInPdfWorker(
+    'generateCoverPdf',
+    { options },
+    () => generateCoverPdfCore(options),
+  );
+}
+

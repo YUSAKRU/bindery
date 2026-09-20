@@ -344,6 +344,11 @@
             <span data-i18n="picker.mixedSizeWarning">This document has mixed page sizes; scaling may look inconsistent in the booklet.</span>
           </div>
 
+          <div class="warning-banner hidden" id="preflightLargeFileWarning" role="status">
+            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+            <span id="preflightLargeFileWarningText" data-i18n="picker.largeFileWarning">Large document detected (&gt;150 pages or &gt;50 MB). Processing may take longer and use more memory.</span>
+          </div>
+
           <button class="btn btn-primary btn-large hidden" id="continueBtn" data-i18n="common.continue">Continue</button>
         </section>
 
@@ -1410,6 +1415,11 @@
 
           <div class="config-summary hidden" id="configSummary" aria-live="polite"></div>
 
+          <div class="warning-banner hidden" id="configPreflightWarning" role="status">
+            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+            <span id="configPreflightWarningText" data-i18n="config.preflightWarning">Large document detected (&gt;150 pages or &gt;50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.</span>
+          </div>
+
           <button class="btn btn-primary btn-large" id="generateBtn">
             <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
             <span class="spinner hidden" id="generateSpinner"></span>
@@ -1663,6 +1673,18 @@
               <button class="settings-row-btn" id="settingsErrorLogBtn">
                 <span class="settings-btn-label" data-i18n="settings.errorLog">Recent Errors</span>
                 <span class="settings-btn-sub" data-i18n="settings.errorLogDesc">Kept on this device only, and never sent anywhere</span>
+              </button>
+            </div>
+
+            <div class="settings-group">
+              <h3 class="settings-group-title" data-i18n="settings.group.shareAndSupport">Share & Support</h3>
+              <button class="settings-row-btn" id="settingsShareAppBtn">
+                <span class="settings-btn-label" data-i18n="settings.shareApp">Share Bindery</span>
+                <span class="settings-btn-sub" data-i18n="settings.shareAppDesc">Tell friends or colleagues about Bindery</span>
+              </button>
+              <button class="settings-row-btn" id="settingsRateAppBtn">
+                <span class="settings-btn-label" data-i18n="settings.rateApp">Rate on Google Play</span>
+                <span class="settings-btn-sub" data-i18n="settings.rateAppDesc">Support development with a 5-star review</span>
               </button>
             </div>
 
@@ -2036,9 +2058,18 @@
           <button type="button" class="imza-btn imza-btn--primary" id="signatureInfoReplay" data-i18n="signatureInfo.replay">Replay</button>
           <button type="button" class="imza-btn imza-btn--ghost" id="signatureInfoGotIt" data-i18n="signatureInfo.gotIt">Got it</button>
         </div>
-      </div>
-    </div>
+      <dialog class="modal-sheet" id="growthReviewDialog">
+        <div class="modal-sheet-content">
+          <div class="hero-icon" aria-hidden="true">⭐</div>
+          <h2 data-i18n="growth.reviewPromptTitle">Enjoying Bindery?</h2>
+          <p class="hero-subtitle" data-i18n="growth.reviewPromptText">If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!</p>
+          <div class="modal-sheet-actions">
+            <button class="btn btn-primary" id="growthReviewRateBtn" data-i18n="growth.reviewPromptRate">Rate on Google Play</button>
+            <button class="btn btn-tonal" id="growthReviewLaterBtn" data-i18n="growth.reviewPromptLater">Maybe Later</button>
+          </div>
+        </div>
+      </dialog>
 
-    <script type="module" src="/src/main.ts"></script>
+      <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
