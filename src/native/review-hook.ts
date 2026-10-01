@@ -6,8 +6,8 @@ export const PREF_SUCCESSFUL_OPS_COUNT = 'bindery_successful_ops_count';
 export const PREF_LAST_REVIEW_PROMPT = 'bindery_last_review_prompt_time';
 export const PREF_REVIEW_COMPLETED = 'bindery_review_completed';
 
-export const STORE_URL = 'https://play.google.com/store/apps/details?id=com.yusakru.bindery';
-export const MARKET_URI = 'market://details?id=com.yusakru.bindery';
+export const STORE_URL = 'https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery';
+export const MARKET_URI = 'market://details?id=com.eduplayconnect.bindery';
 
 export const MIN_OPS_FOR_REVIEW = 2;
 export const PROMPT_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
@@ -59,9 +59,10 @@ export async function isReviewEligible(): Promise<boolean> {
  */
 export async function openStoreListing(): Promise<void> {
   try {
-    // Attempt market protocol first, fallback to web URL
     if (typeof window !== 'undefined') {
-      window.open(STORE_URL, '_blank');
+      // In Capacitor Android WebView, window.location.href triggers shouldOverrideUrlLoading,
+      // which launches an ACTION_VIEW Intent directly to the Play Store app or browser.
+      window.location.href = STORE_URL;
     }
   } catch (err) {
     console.warn('Failed to open store listing:', err);
@@ -96,5 +97,5 @@ export async function recordReviewPromptShown(): Promise<void> {
 export async function shareBinderyApp(): Promise<void> {
   const title = t('growth.shareTitle');
   const text = t('growth.shareText');
-  await shareText(title, text);
+  await shareText(text, title);
 }

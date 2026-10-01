@@ -87,18 +87,18 @@ describe('In-App Review & Share Hook', () => {
   it('invokes shareText when shareBinderyApp is called', async () => {
     await shareBinderyApp();
     expect(shareText).toHaveBeenCalledWith(
-      expect.stringContaining('Bindery'),
       expect.stringContaining('play.google.com'),
+      expect.stringContaining('Bindery'),
     );
   });
 
   it('opens store URL without crashing', async () => {
     const originalWindow = (globalThis as unknown as { window?: unknown }).window;
-    const openMock = vi.fn();
-    (globalThis as unknown as { window?: unknown }).window = { open: openMock };
+    const locationMock = { href: '' };
+    (globalThis as unknown as { window?: unknown }).window = { location: locationMock };
     try {
       await openStoreListing();
-      expect(openMock).toHaveBeenCalledWith(expect.stringContaining('play.google.com'), '_blank');
+      expect(locationMock.href).toContain('play.google.com/store/apps/details?id=com.eduplayconnect.bindery');
     } finally {
       (globalThis as unknown as { window?: unknown }).window = originalWindow;
     }

@@ -2115,6 +2115,53 @@ body {
   }
 }
 
+/* Native dialog element styling (growthReviewDialog) */
+dialog.modal-sheet {
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  padding: 0;
+  max-width: calc(100vw - 40px);
+  width: 360px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+  margin: auto;
+  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+dialog.modal-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal-sheet-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.modal-sheet-content h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.modal-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.modal-sheet-actions .btn {
+  width: 100%;
+}
+
 .modal-title {
   font-size: 1.25rem;
   font-weight: 600;

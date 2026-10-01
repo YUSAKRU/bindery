@@ -8247,6 +8247,12 @@ export function initApp(): void {
     }
   });
 
+  growthReviewDialog.addEventListener('click', (event) => {
+    if (event.target === growthReviewDialog) {
+      growthReviewDialog.close();
+    }
+  });
+
   // Check and request camera permission on startup
   void (async () => {
     try {
