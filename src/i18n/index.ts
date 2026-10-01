@@ -412,7 +412,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
       'Large document detected (>150 pages or >50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.',
     'growth.shareTitle': 'Bindery — Offline Booklet & PDF Tools',
     'growth.shareText':
-      'Check out Bindery — 100% private, on-device booklet imposition and PDF tools for Android: https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery',
+      'Check out Bindery — 100% private, on-device booklet imposition and PDF tools for Android: {url}',
     'growth.reviewPromptTitle': 'Enjoying Bindery?',
     'growth.reviewPromptText':
       'If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!',
@@ -1116,7 +1116,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
       'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). Rahat katlama ve ciltleme için formalara bölmeniz (örn. 16 veya 32 sayfa) şiddetle önerilir.',
     'growth.shareTitle': 'Bindery — Çevrimdışı Kitapçık ve PDF Araçları',
     'growth.shareText':
-      "Bindery'ye göz atın — Android için %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları: https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery",
+      "Bindery'ye göz atın — Android için %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları: {url}",
     'growth.reviewPromptTitle': "Bindery'yi beğendiniz mi?",
     'growth.reviewPromptText':
       "Bindery kitapçık basmanıza veya PDF düzenlemenize yardımcı olduysa, Google Play'de yapacağınız kısa bir yorum başkalarının da keşfetmesini sağlar!",

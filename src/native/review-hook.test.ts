@@ -11,6 +11,11 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }));
 
+const isNative = vi.hoisted(() => ({ value: true }));
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: () => isNative.value },
+}));
+
 vi.mock('./file-bridge', () => ({
   shareText: vi.fn(async () => {}),
 }));
@@ -27,7 +32,9 @@ import {
   recordReviewPromptShown,
   recordSuccessfulOperation,
   shareBinderyApp,
+  STORE_URL,
 } from './review-hook';
+import { setLanguage, t } from '../i18n';
 import { shareText } from './file-bridge';
 
 describe('In-App Review & Share Hook', () => {
@@ -84,23 +91,57 @@ describe('In-App Review & Share Hook', () => {
     expect(await isReviewEligible()).toBe(true);
   });
 
-  it('invokes shareText when shareBinderyApp is called', async () => {
+  it('invokes shareText with the store URL filled into the share text', async () => {
     await shareBinderyApp();
-    expect(shareText).toHaveBeenCalledWith(
-      expect.stringContaining('play.google.com'),
-      expect.stringContaining('Bindery'),
-    );
+    expect(shareText).toHaveBeenCalledWith(expect.stringContaining(STORE_URL), expect.stringContaining('Bindery'));
+    const [text] = vi.mocked(shareText).mock.calls[0];
+    expect(text).not.toContain('{url}');
   });
 
-  it('opens store URL without crashing', async () => {
+  it('fills the store URL into the share text in every language', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+    vi.stubGlobal('document', { documentElement: { lang: 'en' }, querySelectorAll: () => [] });
+    try {
+      for (const lang of ['en', 'tr'] as const) {
+        setLanguage(lang);
+        const text = t('growth.shareText', { url: STORE_URL });
+        expect(text).toContain(STORE_URL);
+        expect(text).not.toContain('{url}');
+      }
+    } finally {
+      setLanguage('en');
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('navigates to the store URL on the native platform', async () => {
+    isNative.value = true;
     const originalWindow = (globalThis as unknown as { window?: unknown }).window;
     const locationMock = { href: '' };
-    (globalThis as unknown as { window?: unknown }).window = { location: locationMock };
+    const openMock = vi.fn();
+    (globalThis as unknown as { window?: unknown }).window = { location: locationMock, open: openMock };
     try {
       await openStoreListing();
-      expect(locationMock.href).toContain('play.google.com/store/apps/details?id=com.eduplayconnect.bindery');
+      expect(locationMock.href).toBe('https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery');
+      expect(openMock).not.toHaveBeenCalled();
     } finally {
       (globalThis as unknown as { window?: unknown }).window = originalWindow;
+    }
+  });
+
+  it('opens the store in a new tab on the web, leaving the app loaded', async () => {
+    isNative.value = false;
+    const originalWindow = (globalThis as unknown as { window?: unknown }).window;
+    const locationMock = { href: '' };
+    const openMock = vi.fn();
+    (globalThis as unknown as { window?: unknown }).window = { location: locationMock, open: openMock };
+    try {
+      await openStoreListing();
+      expect(openMock).toHaveBeenCalledWith(STORE_URL, '_blank', 'noopener');
+      expect(locationMock.href).toBe('');
+    } finally {
+      (globalThis as unknown as { window?: unknown }).window = originalWindow;
+      isNative.value = true;
     }
   });
 });

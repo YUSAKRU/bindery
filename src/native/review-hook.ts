@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { shareText } from './file-bridge';
 import { t } from '../i18n';
@@ -6,8 +7,8 @@ export const PREF_SUCCESSFUL_OPS_COUNT = 'bindery_successful_ops_count';
 export const PREF_LAST_REVIEW_PROMPT = 'bindery_last_review_prompt_time';
 export const PREF_REVIEW_COMPLETED = 'bindery_review_completed';
 
+/** The single source of the Play listing URL; share texts take it as `{url}`. */
 export const STORE_URL = 'https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery';
-export const MARKET_URI = 'market://details?id=com.eduplayconnect.bindery';
 
 export const MIN_OPS_FOR_REVIEW = 2;
 export const PROMPT_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
@@ -59,10 +60,14 @@ export async function isReviewEligible(): Promise<boolean> {
  */
 export async function openStoreListing(): Promise<void> {
   try {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    if (Capacitor.isNativePlatform()) {
       // In Capacitor Android WebView, window.location.href triggers shouldOverrideUrlLoading,
       // which launches an ACTION_VIEW Intent directly to the Play Store app or browser.
       window.location.href = STORE_URL;
+    } else {
+      // In a browser, navigating the page itself would unload the app and lose its state.
+      window.open(STORE_URL, '_blank', 'noopener');
     }
   } catch (err) {
     console.warn('Failed to open store listing:', err);
@@ -96,6 +101,6 @@ export async function recordReviewPromptShown(): Promise<void> {
  */
 export async function shareBinderyApp(): Promise<void> {
   const title = t('growth.shareTitle');
-  const text = t('growth.shareText');
+  const text = t('growth.shareText', { url: STORE_URL });
   await shareText(text, title);
 }
