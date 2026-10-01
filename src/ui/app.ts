@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { Binding, FlipEdge, PaperSize } from '../engine/types';
-import { makeBooklet, computeSignatureMappings, resolveSheetSize } from '../engine/booklet-engine';
+import { makeBooklet, computeSignatureMappings, inspectPdf, resolveSheetSize } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../engine/page-numbers-engine';
 import { rotatePages } from '../engine/rotate-engine';
 import { downloadPdfFromUrl } from '../engine/download-engine';
-import { loadAndValidatePdf, validatePdf } from '../engine/validator';
+import { validatePdf } from '../engine/validator';
 import { addWatermark, type WatermarkOptions } from '../engine/watermark-engine';
 import { imagesToPdf } from '../engine/image-to-pdf-engine';
 import { warpPerspective, type Point } from '../engine/perspective-warp';
@@ -442,6 +442,7 @@ export function initApp(): void {
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
+  const trimBoxNotice = byId<HTMLDivElement>('trimBoxNotice');
   const preflightLargeFileWarning = byId<HTMLDivElement>('preflightLargeFileWarning');
   const configPreflightWarning = byId<HTMLDivElement>('configPreflightWarning');
   const settingsShareAppBtn = byId<HTMLButtonElement>('settingsShareAppBtn');
@@ -1215,6 +1216,7 @@ export function initApp(): void {
     continueBtn.classList.add('hidden');
     pickFileBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
+    trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
     configPreflightWarning.classList.add('hidden');
     bookletFlipEdge = 'short';
@@ -1975,6 +1977,7 @@ export function initApp(): void {
     pickFileBtn.classList.add('hidden');
     continueBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
+    trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
     configPreflightWarning.classList.add('hidden');
     void showMixedSizeWarningIfNeeded(bytes);
@@ -1985,10 +1988,10 @@ export function initApp(): void {
   // captures the page count for the live summary and cover availability.
   async function showMixedSizeWarningIfNeeded(bytes: Uint8Array): Promise<void> {
     try {
-      // loadAndValidatePdf (not validatePdf) so the parsed document can also
-      // answer resolveSheetSize('source') once, here, instead of on every
-      // keystroke in the cover section's live spine readout.
-      const { doc, metadata: { pageCount, pageSizes } } = await loadAndValidatePdf(bytes);
+      // One parse, on the PDF worker: page count, displayed page sizes and the
+      // 'source' sheet size (resolved once here rather than on every keystroke
+      // in the cover section's live spine readout).
+      const { pageCount, pageSizes, sourceSheetSize, trimmedPages } = await inspectPdf(bytes);
       const TOL = 0.5;
       const distinct = pageSizes.filter(
         ([w, h], i) =>
@@ -1999,18 +2002,15 @@ export function initApp(): void {
       // Guard against a race where the user cleared/replaced the file meanwhile.
       if (selectedFile?.bytes === bytes) {
         mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
+        trimBoxNotice.classList.toggle('hidden', trimmedPages === 0);
         bookletOriginalPages = pageCount;
         const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
         preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
         configPreflightWarning.classList.toggle('hidden', !isLarge);
-        // A document whose own page size is outside the engine's printable
-        // bounds throws here; the cover section then falls back to A4 rather
+        // Null when the document's own page size is outside the engine's
+        // printable bounds; the cover section then falls back to A4 rather
         // than blocking the booklet itself, which does not need this value.
-        try {
-          bookletSourceSheetSize = resolveSheetSize('source', doc, pageCount);
-        } catch {
-          bookletSourceSheetSize = null;
-        }
+        bookletSourceSheetSize = sourceSheetSize;
         updateCoverAvailability();
         refreshConfigSummary();
       }

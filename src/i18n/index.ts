@@ -397,6 +397,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Advanced settings',
     'config.advancedModified': '· modified',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
+    'picker.trimBoxNotice':
+      "This PDF defines a trim box. Pages are imposed at their trimmed size, without bleed or printer's marks.",
     'picker.largeFileWarning':
       'Large document detected (>150 pages or >50 MB). Processing may take longer and use more memory.',
     'config.preflightWarning':
@@ -1092,6 +1094,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Gelişmiş ayarlar',
     'config.advancedModified': '· değişiklik var',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
+    'picker.trimBoxNotice':
+      'Bu PDF\'te kesim kutusu (TrimBox) tanımlı. Sayfalar taşma payı ve kesim işaretleri olmadan, kesilmiş boyutlarıyla yerleştirilir.',
     'picker.largeFileWarning':
       'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). İşlem daha uzun sürebilir ve daha fazla bellek kullanabilir.',
     'config.preflightWarning':

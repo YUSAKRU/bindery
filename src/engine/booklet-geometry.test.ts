@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   computeClipRects,
+  inspectPdfCore,
   makeBookletCore,
   pageGeometry,
   rotatedPlacement,
@@ -282,5 +283,34 @@ describe('makeBooklet: shared resources', () => {
     expect(await imageCount(result.combinedPdf)).toBe(perCopy);
     expect(await imageCount(result.frontPdf)).toBe(perCopy);
     expect(await imageCount(result.backPdf)).toBe(perCopy);
+  });
+});
+
+describe('inspectPdfCore', () => {
+  it('reports displayed sizes, the source sheet and trimmed pages in one parse', async () => {
+    const doc = await PDFDocument.create();
+    const rotated = doc.addPage([842, 595]);
+    rotated.setRotation(degrees(90));
+    rotated.pushOperators();
+    const trimmed = doc.addPage([615, 862]);
+    trimmed.setTrimBox(10, 10, 595, 842);
+    trimmed.pushOperators();
+    doc.addPage([595, 842]).pushOperators();
+
+    const info = await inspectPdfCore(await doc.save());
+    expect(info.pageCount).toBe(3);
+    expect(info.pageSizes).toEqual([
+      [595, 842],
+      [595, 842],
+      [595, 842],
+    ]);
+    expect(info.sourceSheetSize).toEqual([1190, 842]);
+    expect(info.trimmedPages).toBe(1);
+  });
+
+  it('returns a null source sheet when the page is too large to double', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([8000, 8000]).pushOperators();
+    expect((await inspectPdfCore(await doc.save())).sourceSheetSize).toBeNull();
   });
 });

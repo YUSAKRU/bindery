@@ -1042,6 +1042,47 @@ export async function makeBookletCore(
   };
 }
 
+/** What the picker shows about a document before anything is imposed. */
+export interface PdfInspection {
+  pageCount: number;
+  /** Displayed page sizes: the imposed box (see {@link pageGeometry}) with /Rotate applied. */
+  pageSizes: Array<[number, number]>;
+  /** The 'source' sheet size, or null when it falls outside the printable bounds. */
+  sourceSheetSize: [number, number] | null;
+  /** Pages imposed at a TrimBox/CropBox smaller than their MediaBox. */
+  trimmedPages: number;
+}
+
+/**
+ * Validates and inspects a PDF in one parse: page count, displayed page sizes,
+ * the 'source' sheet size and how many pages carry a trim box. Throws the same
+ * validation errors as {@link loadAndValidatePdf}.
+ */
+export async function inspectPdfCore(inputBytes: Uint8Array): Promise<PdfInspection> {
+  const { doc, metadata: { pageCount } } = await loadAndValidatePdf(inputBytes);
+  const geometries = doc.getPages().map(pageGeometry);
+  let sourceSheetSize: [number, number] | null;
+  try {
+    sourceSheetSize = resolveSheetSize('source', doc, pageCount);
+  } catch {
+    sourceSheetSize = null;
+  }
+  return {
+    pageCount,
+    pageSizes: geometries.map((g) => [g.width, g.height]),
+    sourceSheetSize,
+    trimmedPages: geometries.filter((g) => g.trimmed).length,
+  };
+}
+
+/**
+ * {@link inspectPdfCore} on the PDF worker, so parsing a large document does
+ * not block the UI thread.
+ */
+export async function inspectPdf(inputBytes: Uint8Array): Promise<PdfInspection> {
+  return runInPdfWorker('inspectPdf', { pdfBytes: inputBytes }, () => inspectPdfCore(inputBytes));
+}
+
 export async function makeBooklet(
   inputBytes: Uint8Array,
   options: BookletOptions = {},
