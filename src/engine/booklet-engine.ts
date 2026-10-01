@@ -1,4 +1,14 @@
-import { PDFDocument, PDFEmbeddedPage, PDFPage, degrees, rgb } from 'pdf-lib';
+import {
+  PDFDocument,
+  clip as clip_,
+  degrees,
+  endPath,
+  popGraphicsState,
+  pushGraphicsState,
+  rectangle,
+  rgb,
+} from 'pdf-lib';
+import type { PDFEmbeddedPage, PDFPage } from 'pdf-lib';
 import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
 import type { BookletOptions, BookletResult, PaperSize } from './types';
@@ -21,6 +31,9 @@ const SHEET_PRESETS = {
 // sane floor for a printable sheet.
 const MIN_SHEET_PT = 72;
 const MAX_SHEET_PT = 14400;
+
+// Floating-point slack for geometric comparisons, in points.
+const EPSILON = 1e-6;
 
 // Assembly marks, all in points. See BookletOptions.foldGuides / collationMarks.
 const FOLD_GUIDE_THICKNESS = 0.5;
@@ -113,13 +126,19 @@ export interface FitRect {
 }
 
 /**
- * Computes the left/right slot rectangles for one booklet sheet, applying the
- * gutter/creep inward shift. Pure arithmetic extracted 1:1 from makeBooklet's
- * per-sheet layout so it can be unit-tested against hand-computed constants.
+ * Computes the left/right content rectangles for one booklet sheet.
  *
- * `sheetIndex` is the 0-based sheet number, `gutter` the total binding gutter
- * and `creep` the per-sheet creep step (all in points). `sheetWidth`/
- * `sheetHeight` default to A4 landscape so existing callers are unaffected.
+ * Each half of the sheet holds one page. The gutter is taken out of the
+ * half's width on the fold side, so a page shrinks to make room for it rather
+ * than being pushed off the outer edge of the sheet. Creep then translates the
+ * rectangle toward the fold by `sheetIndex * creep`. Past the gutter, creep
+ * carries the rectangle across the fold line; the page is clipped to its own
+ * half there (see {@link computeClipRects}), so it never overprints the
+ * facing page.
+ *
+ * `sheetIndex` is the 0-based sheet number within its signature, `gutter` the
+ * total binding gutter and `creep` the per-sheet creep step (all in points).
+ * `sheetWidth`/`sheetHeight` default to A4 landscape.
  */
 export function computeSlotRects(
   sheetIndex: number,
@@ -128,14 +147,140 @@ export function computeSlotRects(
   sheetWidth: number = TARGET_WIDTH,
   sheetHeight: number = TARGET_HEIGHT,
 ): { left: FitRect; right: FitRect } {
-  const wSlot = sheetWidth / 2.0;
-  const hSlot = sheetHeight;
+  const half = sheetWidth / 2.0;
+  const width = half - gutter / 2.0;
   const creepShift = sheetIndex * creep;
-  const shiftInward = creepShift - gutter / 2.0;
 
-  const left: FitRect = { x: shiftInward, y: 0, width: wSlot, height: hSlot };
-  const right: FitRect = { x: wSlot - shiftInward, y: 0, width: wSlot, height: hSlot };
+  const left: FitRect = { x: creepShift, y: 0, width, height: sheetHeight };
+  const right: FitRect = { x: half + gutter / 2.0 - creepShift, y: 0, width, height: sheetHeight };
   return { left, right };
+}
+
+/**
+ * The half of the sheet each page may paint in. A page is clipped to its half
+ * only when its content rectangle actually leaves it, i.e. when creep has
+ * carried it past the fold.
+ */
+export function computeClipRects(
+  sheetWidth: number = TARGET_WIDTH,
+  sheetHeight: number = TARGET_HEIGHT,
+): { left: FitRect; right: FitRect } {
+  const half = sheetWidth / 2.0;
+  return {
+    left: { x: 0, y: 0, width: half, height: sheetHeight },
+    right: { x: half, y: 0, width: half, height: sheetHeight },
+  };
+}
+
+/** A page box in the page's own user space, as pdf-lib's embedPages takes it. */
+export interface PageBox {
+  left: number;
+  bottom: number;
+  right: number;
+  top: number;
+}
+
+/**
+ * What the imposition needs to know about one source page: the box to embed,
+ * the page's /Rotate, and the size the page is DISPLAYED at once that rotation
+ * is applied.
+ */
+export interface PageGeometry {
+  box: PageBox;
+  rotation: 0 | 90 | 180 | 270;
+  /** Displayed width, after /Rotate. */
+  width: number;
+  /** Displayed height, after /Rotate. */
+  height: number;
+  /** True when the embedded box is smaller than the MediaBox (TrimBox or CropBox in use). */
+  trimmed: boolean;
+}
+
+function normalizeRotation(angle: number): 0 | 90 | 180 | 270 {
+  const quarter = Math.round(angle / 90);
+  return ((((quarter % 4) + 4) % 4) * 90) as 0 | 90 | 180 | 270;
+}
+
+/**
+ * Resolves the box and rotation a page is imposed with.
+ *
+ * The box is the TrimBox, which pdf-lib falls back to the CropBox and then
+ * the MediaBox when absent, clipped to the MediaBox (ISO 32000-1 §14.11.2).
+ * Print-ready PDF/X files carry bleed and printer's marks outside the TrimBox;
+ * embedding the MediaBox would shrink the page to fit them and print the marks
+ * inside the booklet. A box that does not overlap the MediaBox falls back to
+ * the MediaBox.
+ *
+ * /Rotate (ISO 32000-1 Table 30) is not applied by pdf-lib's embedPages, so it
+ * is carried here and applied when the page is drawn.
+ */
+export function pageGeometry(page: PDFPage): PageGeometry {
+  const media = page.getMediaBox();
+  const trim = page.getTrimBox();
+  const mediaBox: PageBox = {
+    left: media.x,
+    bottom: media.y,
+    right: media.x + media.width,
+    top: media.y + media.height,
+  };
+  const clipped: PageBox = {
+    left: Math.max(mediaBox.left, Math.min(trim.x, trim.x + trim.width)),
+    bottom: Math.max(mediaBox.bottom, Math.min(trim.y, trim.y + trim.height)),
+    right: Math.min(mediaBox.right, Math.max(trim.x, trim.x + trim.width)),
+    top: Math.min(mediaBox.top, Math.max(trim.y, trim.y + trim.height)),
+  };
+  const usable = clipped.right - clipped.left >= 1 && clipped.top - clipped.bottom >= 1;
+  const box = usable ? clipped : mediaBox;
+  const trimmed =
+    usable &&
+    (Math.abs(box.left - mediaBox.left) > SIZE_TOLERANCE ||
+      Math.abs(box.bottom - mediaBox.bottom) > SIZE_TOLERANCE ||
+      Math.abs(box.right - mediaBox.right) > SIZE_TOLERANCE ||
+      Math.abs(box.top - mediaBox.top) > SIZE_TOLERANCE);
+
+  const rotation = normalizeRotation(page.getRotation().angle);
+  const boxWidth = box.right - box.left;
+  const boxHeight = box.top - box.bottom;
+  const sideways = rotation === 90 || rotation === 270;
+  return {
+    box,
+    rotation,
+    width: sideways ? boxHeight : boxWidth,
+    height: sideways ? boxWidth : boxHeight,
+    trimmed,
+  };
+}
+
+/**
+ * Where drawPage must put the embedded page's origin, and at what angle, so a
+ * page with display rotation `rotation` fills the displayed rectangle at
+ * (x, y) of size `drawnWidth` x `drawnHeight`.
+ *
+ * pdf-lib rotates counter-clockwise about the origin it is given, while /Rotate
+ * turns the page clockwise, so the content is drawn at `-rotation` and the
+ * origin moved to the corner the rotation swings the box away from:
+ *   0   -> (x, y)
+ *   90  -> (x, y + drawnHeight)
+ *   180 -> (x + drawnWidth, y + drawnHeight)
+ *   270 -> (x + drawnWidth, y)
+ */
+export function rotatedPlacement(
+  rotation: 0 | 90 | 180 | 270,
+  x: number,
+  y: number,
+  drawnWidth: number,
+  drawnHeight: number,
+): { x: number; y: number; angle: number } {
+  switch (rotation) {
+    case 90:
+      return { x, y: y + drawnHeight, angle: -90 };
+    case 180:
+      return { x: x + drawnWidth, y: y + drawnHeight, angle: -180 };
+    case 270:
+      return { x: x + drawnWidth, y, angle: -270 };
+    default:
+      return { x, y, angle: 0 };
+  }
 }
 
 /** Human-readable label for the resolved sheet, for the instructions page. */
@@ -150,43 +295,75 @@ function paperLabel(paperSize: PaperSize | undefined, width: number, height: num
 
 /**
  * Scales an embedded source page to fit inside `rect` while preserving its
- * aspect ratio, centering it within the rect — mirrors PyMuPDF's
- * `show_pdf_page(rect, ..., keep_proportion=True)` behaviour.
+ * displayed aspect ratio (after /Rotate), centering it within the rect —
+ * mirrors PyMuPDF's `show_pdf_page(rect, ..., keep_proportion=True)` behaviour.
+ *
+ * When the rect leaves `clip`, the page is drawn inside a clipping path so it
+ * cannot paint past the fold (`q x y w h re W n ... Q`).
+ *
+ * `rotate180` turns the whole composition 180° about the sheet centre for
+ * long-edge duplex: the displayed rectangle and the clip are point-reflected
+ * through the centre, and the page's own rotation gains a half turn.
  */
 function drawFitted(
   page: PDFPage,
   embedded: PDFEmbeddedPage,
+  geometry: Pick<PageGeometry, 'rotation' | 'width' | 'height'>,
   rect: FitRect,
+  clip: FitRect,
   rotate180 = false,
   sheetWidth: number = TARGET_WIDTH,
   sheetHeight: number = TARGET_HEIGHT,
 ): void {
-  const scale = Math.min(rect.width / embedded.width, rect.height / embedded.height);
-  const drawnWidth = embedded.width * scale;
-  const drawnHeight = embedded.height * scale;
-  const x = rect.x + (rect.width - drawnWidth) / 2;
-  const y = rect.y + (rect.height - drawnHeight) / 2;
+  const scale = Math.min(rect.width / geometry.width, rect.height / geometry.height);
+  const drawnWidth = geometry.width * scale;
+  const drawnHeight = geometry.height * scale;
+  let x = rect.x + (rect.width - drawnWidth) / 2;
+  let y = rect.y + (rect.height - drawnHeight) / 2;
+  let clipRect = clip;
+  let rotation = geometry.rotation;
 
-  if (!rotate180) {
-    page.drawPage(embedded, { x, y, width: drawnWidth, height: drawnHeight });
-    return;
+  const needsClip =
+    rect.x < clip.x - EPSILON ||
+    rect.x + rect.width > clip.x + clip.width + EPSILON ||
+    rect.y < clip.y - EPSILON ||
+    rect.y + rect.height > clip.y + clip.height + EPSILON;
+
+  if (rotate180) {
+    x = sheetWidth - x - drawnWidth;
+    y = sheetHeight - y - drawnHeight;
+    clipRect = {
+      x: sheetWidth - clip.x - clip.width,
+      y: sheetHeight - clip.y - clip.height,
+      width: clip.width,
+      height: clip.height,
+    };
+    rotation = normalizeRotation(rotation + 180);
   }
 
-  // Long-edge duplex: rotate the whole back composition 180° about the sheet
-  // centre (point reflection). pdf-lib's drawPage rotates about the supplied
-  // (x, y) origin, and with rotate:180 the scaled page extends *down-left* from
-  // that origin. Passing the point-reflected top-right corner
-  // (sheetWidth - x, sheetHeight - y) therefore lands the rotated page in the
-  // reflected rectangle — the reflection MUST use the actual sheet size, not a
-  // fixed A4 constant. Offset verified against the emitted content-stream matrix
-  // in booklet-engine.test.ts (not assumed).
+  // Verified against the emitted content-stream matrix in booklet-engine.test.ts
+  // (not assumed): rotation 180 lands the origin on the point-reflected
+  // top-right corner, the historical long-edge placement.
+  const placement = rotatedPlacement(rotation, x, y, drawnWidth, drawnHeight);
+
+  if (needsClip) {
+    page.pushOperators(
+      pushGraphicsState(),
+      rectangle(clipRect.x, clipRect.y, clipRect.width, clipRect.height),
+      clip_(),
+      endPath(),
+    );
+  }
   page.drawPage(embedded, {
-    x: sheetWidth - x,
-    y: sheetHeight - y,
-    width: drawnWidth,
-    height: drawnHeight,
-    rotate: degrees(180),
+    x: placement.x,
+    y: placement.y,
+    width: embedded.width * scale,
+    height: embedded.height * scale,
+    ...(placement.angle !== 0 ? { rotate: degrees(placement.angle) } : {}),
   });
+  if (needsClip) {
+    page.pushOperators(popGraphicsState());
+  }
 }
 
 /** A rectangle on the imposed sheet, in PDF points from the bottom-left. */
@@ -416,10 +593,13 @@ function modeOfSizes(sizes: Array<[number, number]>): [number, number] {
   return best.size;
 }
 
-/** Page sizes of `srcDoc` at the given 0-based indices. */
+/**
+ * Displayed sizes of `srcDoc`'s pages at the given 0-based indices: the
+ * imposed box (TrimBox, falling back to CropBox/MediaBox) with /Rotate applied.
+ */
 function pageSizesAt(doc: PDFDocument, indices: number[]): Array<[number, number]> {
   return indices.map((i) => {
-    const { width, height } = doc.getPage(i).getSize();
+    const { width, height } = pageGeometry(doc.getPage(i));
     return [width, height];
   });
 }
@@ -483,87 +663,107 @@ interface SheetLayout {
 }
 
 /**
- * Imposes a flat sheet list into separate front/back PDFDocuments, embedding the
- * required source pages from `srcDoc`. `toSrcIndex` maps a mapping's local page
- * index to the actual `srcDoc` page index (identity for a whole document, a
- * lookup table for a padded sub-block or the cover). Shared by the book block
- * and the separate cover so both go through identical drawing code.
+ * Imposes a flat sheet list into one PDFDocument whose pages alternate front,
+ * back, front, back… and returns its serialized bytes plus the front-only and
+ * back-only PDFs derived from it (skipped when `withSides` is false).
+ *
+ * Every source page is embedded through ONE embedPdf call, so pdf-lib copies
+ * each shared resource (a font, a background image used on every page) into
+ * the output once. The front/back PDFs are then taken with copyPages, again
+ * one copier each, so each output file carries every resource exactly once.
+ *
+ * `toSrcIndex` maps a mapping's local page index to a `srcDoc` page index, or
+ * to `null` for a blank slot (an inserted blank or mod-4 padding), which is
+ * simply left empty. Shared by the book block and the separate cover so both
+ * go through identical drawing code.
  */
-async function imposeFrontBack(
+async function imposeSheets(
   srcDoc: PDFDocument,
   flatSheets: FlatSheet[],
-  toSrcIndex: (localIndex: number) => number,
+  toSrcIndex: (localIndex: number) => number | null,
   layout: SheetLayout,
   marks: SheetMarks,
-): Promise<{ frontDoc: PDFDocument; backDoc: PDFDocument }> {
-  const frontIndices: number[] = [];
-  const backIndices: number[] = [];
+  withSides = true,
+): Promise<{ frontPdf?: Uint8Array; backPdf?: Uint8Array; combinedPdf: Uint8Array }> {
+  const slots: Array<number | null> = [];
   for (const { sheet } of flatSheets) {
-    frontIndices.push(toSrcIndex(sheet.frontLeft), toSrcIndex(sheet.frontRight));
-    backIndices.push(toSrcIndex(sheet.backLeft), toSrcIndex(sheet.backRight));
+    slots.push(
+      toSrcIndex(sheet.frontLeft),
+      toSrcIndex(sheet.frontRight),
+      toSrcIndex(sheet.backLeft),
+      toSrcIndex(sheet.backRight),
+    );
   }
 
-  const frontDoc = await PDFDocument.create();
-  const backDoc = await PDFDocument.create();
-  const frontEmbedded = await frontDoc.embedPdf(srcDoc, frontIndices);
-  const backEmbedded = await backDoc.embedPdf(srcDoc, backIndices);
+  const srcPages = srcDoc.getPages();
+  const used = [...new Set(slots.filter((i): i is number => i !== null))];
+  const geometries = new Map(used.map((i) => [i, pageGeometry(srcPages[i])]));
+
+  const combined = await PDFDocument.create();
+  const embeddedList = await combined.embedPages(
+    used.map((i) => srcPages[i]),
+    used.map((i) => geometries.get(i)!.box),
+  );
+  const embedded = new Map(used.map((i, k) => [i, embeddedList[k]]));
 
   const { sheetWidth, sheetHeight, gutter, creep, rotateBack } = layout;
+  const clips = computeClipRects(sheetWidth, sheetHeight);
+  const draw = (page: PDFPage, srcIndex: number | null, rect: FitRect, clip: FitRect, rotate180: boolean) => {
+    if (srcIndex === null) return;
+    drawFitted(page, embedded.get(srcIndex)!, geometries.get(srcIndex)!, rect, clip, rotate180, sheetWidth, sheetHeight);
+  };
+
   for (let j = 0; j < flatSheets.length; j++) {
+    const { sheetInSignature, signatureIndex } = flatSheets[j];
     const { left: leftRect, right: rightRect } = computeSlotRects(
-      flatSheets[j].sheetInSignature,
+      sheetInSignature,
       gutter,
       creep,
       sheetWidth,
       sheetHeight,
     );
+    const [frontLeft, frontRight, backLeft, backRight] = slots.slice(4 * j, 4 * j + 4);
 
-    const frontPage = frontDoc.addPage([sheetWidth, sheetHeight]);
-    drawFitted(frontPage, frontEmbedded[2 * j], leftRect);
-    drawFitted(frontPage, frontEmbedded[2 * j + 1], rightRect);
+    const frontPage = combined.addPage([sheetWidth, sheetHeight]);
+    draw(frontPage, frontLeft, leftRect, clips.left, false);
+    draw(frontPage, frontRight, rightRect, clips.right, false);
 
-    const backPage = backDoc.addPage([sheetWidth, sheetHeight]);
-    drawFitted(backPage, backEmbedded[2 * j], leftRect, rotateBack, sheetWidth, sheetHeight);
-    drawFitted(backPage, backEmbedded[2 * j + 1], rightRect, rotateBack, sheetWidth, sheetHeight);
+    const backPage = combined.addPage([sheetWidth, sheetHeight]);
+    draw(backPage, backLeft, leftRect, clips.left, rotateBack);
+    draw(backPage, backRight, rightRect, clips.right, rotateBack);
 
-    // Marks go on last so they sit above the imposed content. The fold line is
-    // the sheet's vertical centre and is its own point-reflection, so the back
-    // side needs no `rotateBack` handling. The collation bar is front-side only
-    // — that is the face left showing on the folded signature's spine, and it
-    // sidesteps the 180° back composition entirely.
+    // A sheet whose creep has carried content past the fold skips the guide
+    // rather than draw it over that content (see foldGuideCrossesContent).
     if (
       marks.foldGuides &&
-      !foldGuideCrossesContent(flatSheets[j].sheetInSignature, gutter, creep, sheetWidth, sheetHeight)
+      !foldGuideCrossesContent(sheetInSignature, gutter, creep, sheetWidth, sheetHeight)
     ) {
       drawFoldGuide(frontPage, sheetWidth, sheetHeight);
       drawFoldGuide(backPage, sheetWidth, sheetHeight);
     }
-    if (marks.collation && flatSheets[j].sheetInSignature === 0) {
-      const bar = computeCollationMarkRect(
-        flatSheets[j].signatureIndex,
-        marks.signaturesCount,
-        sheetWidth,
-        sheetHeight,
-      );
+    // Collation bar: outermost sheet of each signature, front side only.
+    if (marks.collation && sheetInSignature === 0) {
+      const bar = computeCollationMarkRect(signatureIndex, marks.signaturesCount, sheetWidth, sheetHeight);
       frontPage.drawRectangle({ ...bar, color: rgb(0, 0, 0) });
     }
   }
 
-  return { frontDoc, backDoc };
+  const S = flatSheets.length;
+  const frontIndices = Array.from({ length: S }, (_, j) => 2 * j);
+  const backIndices = Array.from({ length: S }, (_, j) => 2 * j + 1);
+  const combinedPdf = await combined.save();
+  if (!withSides) return { combinedPdf };
+  const frontPdf = await saveSubset(combined, frontIndices);
+  const backPdf = await saveSubset(combined, backIndices);
+  return { frontPdf, backPdf, combinedPdf };
 }
 
-/** Interleaves front/back sheets (front₀, back₀, front₁, …) into one PDF. */
-async function combineFrontBack(frontDoc: PDFDocument, backDoc: PDFDocument): Promise<Uint8Array> {
-  const S = frontDoc.getPageCount();
-  const combinedDoc = await PDFDocument.create();
-  const indices = Array.from({ length: S }, (_, i) => i);
-  const frontPages = await combinedDoc.copyPages(frontDoc, indices);
-  const backPages = await combinedDoc.copyPages(backDoc, indices);
-  for (let j = 0; j < S; j++) {
-    combinedDoc.addPage(frontPages[j]);
-    combinedDoc.addPage(backPages[j]);
-  }
-  return combinedDoc.save();
+/** Serializes the given pages of `doc` as a new PDF, through one object copier. */
+async function saveSubset(doc: PDFDocument, indices: number[]): Promise<Uint8Array> {
+  const out = await PDFDocument.create();
+  const pages = await out.copyPages(doc, indices);
+  for (const page of pages) out.addPage(page);
+  return out.save();
 }
 
 /**
@@ -646,15 +846,15 @@ export async function makeBookletCore(
   }
   const blanksInserted = insertBlankAfter.length;
   const sortedInserts = [...insertBlankAfter].sort((a, b) => a - b);
-  const logicalOrder: number[] = [];
+  // `null` marks a blank slot. Blanks are never added to srcDoc: a slot with
+  // nothing to draw needs no page, and leaving srcDoc unmodified keeps the
+  // parsed source reusable.
+  const logicalOrder: Array<number | null> = [];
   if (blanksInserted > 0) {
-    const blankSize = modePageSize(srcDoc, originalPageCount);
     let insertPtr = 0;
     const emitBlanksAt = (position: number): void => {
       while (insertPtr < sortedInserts.length && sortedInserts[insertPtr] === position) {
-        const blank = srcDoc.addPage(blankSize);
-        blank.pushOperators();
-        logicalOrder.push(srcDoc.getPageCount() - 1);
+        logicalOrder.push(null);
         insertPtr += 1;
       }
     };
@@ -671,8 +871,8 @@ export async function makeBookletCore(
   // 2 pages of the LOGICAL order. The remaining inner pages form the "book
   // block" that is padded and imposed on their own. Without a separate cover the
   // block is the whole logical order.
-  let coverIndices: number[] | null = null;
-  let blockOrder: number[];
+  let coverIndices: Array<number | null> | null = null;
+  let blockOrder: Array<number | null>;
   if (separateCover) {
     if (originalPageCount < 8) {
       throw new BookletError(
@@ -688,21 +888,12 @@ export async function makeBookletCore(
     blockOrder = logicalOrder.slice();
   }
 
-  // Dynamic blank page padding so the block page count is a multiple of 4.
-  // Blank pages take the block's most common (mode) page size rather than merely
-  // the last page's, so a stray final page doesn't dictate the padding geometry.
+  // Blank padding so the block page count is a multiple of 4, as blank slots.
   const remainder = blockOrder.length % 4;
   let paddingApplied = 0;
   if (remainder !== 0) {
     paddingApplied = 4 - remainder;
-    const [padWidth, padHeight] = modeOfSizes(pageSizesAt(srcDoc, blockOrder));
-    for (let i = 0; i < paddingApplied; i++) {
-      const blankPage = srcDoc.addPage([padWidth, padHeight]);
-      // pdf-lib only materializes a page's Contents stream once something is
-      // drawn on it; embedPdf() requires Contents to exist, so force it here.
-      blankPage.pushOperators();
-      blockOrder.push(srcDoc.getPageCount() - 1);
-    }
+    for (let i = 0; i < paddingApplied; i++) blockOrder.push(null);
   }
 
   const N = blockOrder.length;
@@ -769,17 +960,14 @@ export async function makeBookletCore(
 
   // Impose the book block. `blockOrder[localIndex]` maps a mapping page index to
   // the real srcDoc page (identity for a whole document, a lookup for a cover's
-  // inner block or padding pages).
-  const { frontDoc, backDoc } = await imposeFrontBack(
+  // inner block), or null for a blank slot.
+  const block = await imposeSheets(
     srcDoc,
     flatSheets,
     (localIndex) => blockOrder[localIndex],
     layout,
     marks,
   );
-  const frontPdf = await frontDoc.save();
-  const backPdf = await backDoc.save();
-  const combinedPdf = await combineFrontBack(frontDoc, backDoc);
 
   // Impose the cover as a single four-page sheet: front [last | first],
   // back [second | second-last]; mirrored for RTL. Creep is 0 (one sheet).
@@ -796,14 +984,15 @@ export async function makeBookletCore(
     }));
     // The cover is one wrap-around sheet, not a signature in the gathered
     // stack, so it takes the fold guide but never a collation bar.
-    const { frontDoc: coverFront, backDoc: coverBack } = await imposeFrontBack(
+    const cover = await imposeSheets(
       srcDoc,
       coverFlat,
       (localIndex) => coverIndices![localIndex],
       { ...layout, creep: 0 },
       { foldGuides, collation: false, signaturesCount: 1 },
+      false,
     );
-    coverPdf = await combineFrontBack(coverFront, coverBack);
+    coverPdf = cover.combinedPdf;
   }
 
   // Optional printing-instructions + reading-order sheet, in the app's current
@@ -845,9 +1034,9 @@ export async function makeBookletCore(
     paddingApplied,
     blanksInserted,
     signaturesCount,
-    frontPdf,
-    backPdf,
-    combinedPdf,
+    frontPdf: block.frontPdf!,
+    backPdf: block.backPdf!,
+    combinedPdf: block.combinedPdf,
     coverPdf,
     instructionsPdf,
   };

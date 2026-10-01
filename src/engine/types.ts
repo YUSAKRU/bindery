@@ -38,7 +38,17 @@ export type PaperSizePreset = 'A4' | 'Letter' | 'A5' | 'A3' | 'source';
 export type PaperSize = PaperSizePreset | { width: number; height: number };
 
 export interface BookletOptions {
+  /**
+   * Total binding gutter at the fold, in points. Each page gives up half of it
+   * on its fold side and is scaled down to fit, so the outer edge of the sheet
+   * is never pushed off the paper.
+   */
   gutter?: number;
+  /**
+   * Creep step per sheet, in points: sheet k of a signature (0 = outermost) is
+   * shifted k * creep toward the fold. Past the gutter, a shifted page is
+   * clipped at the fold so it never overprints the facing page.
+   */
   creep?: number;
   /**
    * Duplex flip edge of the printer. 'short' (default) matches short-edge
