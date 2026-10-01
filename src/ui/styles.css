@@ -1170,6 +1170,12 @@ body {
   font-size: 0.95rem;
 }
 
+/* Grammage field beside its label in the creep card: three digits wide. */
+.number-input.creep-gsm-input {
+  width: 6.5rem;
+  flex: 0 0 auto;
+}
+
 .watermark-overlay-text {
   position: absolute;
   top: 50%;

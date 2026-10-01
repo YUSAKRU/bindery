@@ -101,11 +101,14 @@ import {
   readerPageAtScrollTop as pageAtScrollTop,
   readerScrollTopForPage as scrollTopForPage,
   describeSignatureSplit,
+  creepFromPaper,
+  formatCreepLabel,
   resolveMarksLabels,
   resolveSignatureHintData,
   sortFileEntries,
   type FileSortMode,
   type MarksLabels,
+  type PaperType,
 } from './app-helpers';
 
 type ScreenId =
@@ -394,6 +397,8 @@ export function initApp(): void {
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
   const creepSlider = byId<HTMLInputElement>('creepSlider');
   const creepValueLabel = byId<HTMLSpanElement>('creepValueLabel');
+  const creepPaperGsm = byId<HTMLInputElement>('creepPaperGsm');
+  const creepPaperTypeGroup = byId<HTMLDivElement>('creepPaperTypeGroup');
   const paperSizeGroup = byId<HTMLDivElement>('paperSizeGroup');
   const flipEdgeGroup = byId<HTMLDivElement>('flipEdgeGroup');
   const signatureSizeGroup = byId<HTMLDivElement>('signatureSizeGroup');
@@ -2063,8 +2068,30 @@ export function initApp(): void {
   });
 
   creepSlider.addEventListener('input', () => {
-    creepValueLabel.textContent = `${Number(creepSlider.value).toFixed(1)} pt`;
+    creepValueLabel.textContent = formatCreepLabel(Number(creepSlider.value));
+    // A hand-set creep no longer matches the paper fields, so clear the weight
+    // rather than leave it implying a value it did not produce.
+    creepPaperGsm.value = '';
     updateAdvancedBadge();
+  });
+
+  // Creep from paper: caliper = grammage × bulk (see creepFromPaper).
+  let creepPaperType: PaperType = 'uncoated';
+  function applyCreepFromPaper(): void {
+    const creep = creepFromPaper(Number(creepPaperGsm.value), creepPaperType);
+    if (creep === null) return;
+    creepSlider.value = String(Math.min(creep, Number(creepSlider.max)));
+    creepValueLabel.textContent = formatCreepLabel(Number(creepSlider.value));
+    updateAdvancedBadge();
+  }
+  creepPaperGsm.addEventListener('input', applyCreepFromPaper);
+  creepPaperTypeGroup.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    const paperType = btn?.dataset.paperType;
+    if (!paperType) return;
+    creepPaperType = paperType as PaperType;
+    setActiveSegment(creepPaperTypeGroup, 'paperType', paperType);
+    applyCreepFromPaper();
   });
 
   paperSizeGroup.addEventListener('click', (event) => {
@@ -3463,7 +3490,8 @@ export function initApp(): void {
       | 'style'
       | 'kind'
       | 'board'
-      | 'trim',
+      | 'trim'
+      | 'paperType',
     value: string,
   ): void {
     if (dataKey === 'style' && value === 'softcover') {

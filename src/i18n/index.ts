@@ -297,9 +297,16 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'config.gutter': 'Gutter',
     'config.gutterHint':
-      'Space left between pages along the fold line, for stitching or glue. At 0, the fold and spine marks can print over content sitting close to the fold.',
+      'Space left between pages along the fold line, for stitching or glue. Pages shrink slightly to make room, so nothing is cut off the outer edge. At 0, the fold and spine marks can print over content sitting close to the fold.',
     'config.creep': 'Creep',
     'config.creepHint': 'Amount inner pages shift inward to compensate for paper thickness.',
+    'config.creepPaperGsm': 'Paper weight (g/m²)',
+    'config.creepPaper.uncoated': 'Uncoated',
+    'config.creepPaper.matte': 'Matte coated',
+    'config.creepPaper.gloss': 'Gloss coated',
+    'config.creepPaper.bulky': 'Bulky book',
+    'config.creepPaperHint':
+      "Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.",
     'config.paperSize': 'Paper size',
     'config.paperSize.source': 'Source size',
     'config.paperSizeHint': "The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.",
@@ -995,9 +1002,16 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'config.gutter': 'Orta Boşluk (Gutter)',
     'config.gutterHint':
-      'Katlama çizgisinde sayfalar arasında bırakılan boşluk; dikiş ya da yapıştırma için. 0 olduğunda katlama ve sırt işaretleri, katlamaya yakın içeriğin üzerine basabilir.',
+      'Katlama çizgisinde sayfalar arasında bırakılan boşluk; dikiş ya da yapıştırma için. Yer açmak için sayfalar biraz küçülür, böylece dış kenardan içerik kesilmez. 0 olduğunda katlama ve sırt işaretleri, katlamaya yakın içeriğin üzerine basabilir.',
     'config.creep': 'Kağıt Taşma Payı (Creep)',
     'config.creepHint': 'Kağıt kalınlığını telafi etmek için iç sayfaların içe kaydırılma miktarı.',
+    'config.creepPaperGsm': 'Kağıt gramajı (g/m²)',
+    'config.creepPaper.uncoated': 'Kuşesiz',
+    'config.creepPaper.matte': 'Mat kuşe',
+    'config.creepPaper.gloss': 'Parlak kuşe',
+    'config.creepPaper.bulky': 'Kitap kağıdı',
+    'config.creepPaperHint':
+      'Creep değerini kağıt kalınlığından ayarlamak için gramajı girin: gramaj × hacim katsayısı, kalınlığı mikron olarak verir.',
     'config.paperSize': 'Kağıt boyutu',
     'config.paperSize.source': 'Kaynak boyutu',
     'config.paperSizeHint': 'Yazıcıya koyacağın kağıdın boyutu. Katlanınca yarısı kitapçık sayfası olur.',

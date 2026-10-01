@@ -1351,16 +1351,27 @@
                 <span class="setting-value" id="gutterValueLabel">0 pt</span>
               </div>
               <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
-              <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line, for stitching or glue. At 0, the fold and spine marks can print over content sitting close to the fold.</p>
+              <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line, for stitching or glue. Pages shrink slightly to make room, so nothing is cut off the outer edge. At 0, the fold and spine marks can print over content sitting close to the fold.</p>
             </div>
 
             <div class="setting-card">
               <div class="setting-row">
                 <label for="creepSlider" data-i18n="config.creep">Creep</label>
-                <span class="setting-value" id="creepValueLabel">0.0 pt</span>
+                <span class="setting-value" id="creepValueLabel">0.00 pt · 0.00 mm</span>
               </div>
-              <input type="range" id="creepSlider" min="0" max="5" step="0.1" value="0" class="slider" />
+              <input type="range" id="creepSlider" min="0" max="5" step="0.01" value="0" class="slider" />
               <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
+              <div class="setting-row">
+                <label for="creepPaperGsm" data-i18n="config.creepPaperGsm">Paper weight (g/m²)</label>
+                <input type="number" id="creepPaperGsm" class="number-input creep-gsm-input" min="30" max="400" step="1" inputmode="numeric" placeholder="80" />
+              </div>
+              <div class="segmented-group" id="creepPaperTypeGroup">
+                <button type="button" class="segmented-btn is-active" data-paper-type="uncoated" data-i18n="config.creepPaper.uncoated">Uncoated</button>
+                <button type="button" class="segmented-btn" data-paper-type="matte" data-i18n="config.creepPaper.matte">Matte coated</button>
+                <button type="button" class="segmented-btn" data-paper-type="gloss" data-i18n="config.creepPaper.gloss">Gloss coated</button>
+                <button type="button" class="segmented-btn" data-paper-type="bulky" data-i18n="config.creepPaper.bulky">Bulky book</button>
+              </div>
+              <p class="setting-hint" data-i18n="config.creepPaperHint">Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.</p>
             </div>
 
             <div class="setting-card">

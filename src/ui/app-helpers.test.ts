@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { t } from '../i18n';
 import {
+  creepFromPaper,
+  formatCreepLabel,
   generateDefaultMergeName,
   paperSummaryLabel,
   parseInsertBlankList,
@@ -463,3 +465,32 @@ describe('resolveSignatureHintData', () => {
   });
 });
 
+
+describe('creepFromPaper', () => {
+  // Hand-computed: caliper µm = grammage × bulk; pt = µm / 25400 × 72.
+  it('converts 80 g/m² uncoated (100 µm) to 0.28 pt', () => {
+    expect(creepFromPaper(80, 'uncoated')).toBe(0.28);
+  });
+
+  it('converts 115 g/m² gloss coated (92 µm) to 0.26 pt', () => {
+    expect(creepFromPaper(115, 'gloss')).toBe(0.26);
+  });
+
+  it('converts 90 g/m² bulky book (157.5 µm) to 0.45 pt', () => {
+    expect(creepFromPaper(90, 'bulky')).toBe(0.45);
+  });
+
+  it('returns null for a missing or non-positive weight', () => {
+    expect(creepFromPaper(0, 'matte')).toBeNull();
+    expect(creepFromPaper(-80, 'matte')).toBeNull();
+    expect(creepFromPaper(Number.NaN, 'matte')).toBeNull();
+  });
+});
+
+describe('formatCreepLabel', () => {
+  it('shows points and millimetres to two decimals', () => {
+    expect(formatCreepLabel(0)).toBe('0.00 pt · 0.00 mm');
+    expect(formatCreepLabel(0.28)).toBe('0.28 pt · 0.10 mm');
+    expect(formatCreepLabel(5)).toBe('5.00 pt · 1.76 mm');
+  });
+});
