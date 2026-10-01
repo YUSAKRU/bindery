@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PDFDocument } from 'pdf-lib';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { makeInstructionsPage } from './instructions-page';
+import { buildInstructionsLines, makeInstructionsPage } from './instructions-page';
 import type { InstructionsData } from './instructions-page';
 
 import { setLanguage } from '../i18n';
@@ -126,6 +126,29 @@ describe('makeInstructionsPage', () => {
       paddingApplied: 1,
     });
     expect(await pageCountOf(pdf)).toBe(1);
+  });
+
+  it('includes single-sided printer workflow instructions in both locales', () => {
+    setLanguage('en');
+    const enLines = buildInstructionsLines(baseData).map((l) => l.text);
+    expect(enLines.some((l) => l.includes('Single-sided printer: Print Front Side.pdf'))).toBe(true);
+
+    setLanguage('tr');
+    const trLines = buildInstructionsLines(baseData).map((l) => l.text);
+    expect(trLines.some((l) => l.includes('Tek taraflı yazıcı: Önce Front Side.pdf'))).toBe(true);
+  });
+
+  it('includes wrap cover studio note when separateCover is enabled and omits when disabled', () => {
+    setLanguage('en');
+    const withoutCover = buildInstructionsLines(baseData).map((l) => l.text);
+    expect(withoutCover.some((l) => l.includes('Cover Wrap.pdf'))).toBe(false);
+
+    const withCoverEn = buildInstructionsLines({ ...baseData, separateCover: true }).map((l) => l.text);
+    expect(withCoverEn.some((l) => l.includes('Cover Wrap.pdf'))).toBe(true);
+
+    setLanguage('tr');
+    const withCoverTr = buildInstructionsLines({ ...baseData, separateCover: true }).map((l) => l.text);
+    expect(withCoverTr.some((l) => l.includes('Cover Wrap.pdf'))).toBe(true);
   });
 
   // Needs a module instance whose font cache is still empty, so it resets the
