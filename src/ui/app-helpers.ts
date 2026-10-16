@@ -264,3 +264,36 @@ export function resolveSignatureHintData(
   };
 }
 
+
+/**
+ * Bulk (cm³/g) by paper type: caliper in µm = grammage (g/m²) × bulk. Typical
+ * mid-range values; real stock varies (uncoated offset 1.2–1.4, matte coated
+ * ~0.9–1.0, gloss coated ~0.75–0.85, bulky book 1.6–1.9).
+ */
+export const PAPER_BULK = {
+  uncoated: 1.25,
+  matte: 0.95,
+  gloss: 0.8,
+  bulky: 1.75,
+} as const;
+
+export type PaperType = keyof typeof PAPER_BULK;
+
+const POINTS_PER_MM = 72 / 25.4;
+
+/**
+ * Creep step (pt per sheet) for one sheet of the given grammage and paper
+ * type: caliper t = grammage × bulk µm, converted at 72pt per 25.4mm and
+ * rounded to the slider's 0.01pt step. Null for a missing or non-positive
+ * grammage.
+ */
+export function creepFromPaper(grammage: number, paperType: PaperType): number | null {
+  if (!Number.isFinite(grammage) || grammage <= 0) return null;
+  const caliperMm = (grammage * PAPER_BULK[paperType]) / 1000;
+  return Math.round(caliperMm * POINTS_PER_MM * 100) / 100;
+}
+
+/** Creep slider readout, in points and millimetres: "0.28 pt · 0.10 mm". */
+export function formatCreepLabel(creepPt: number): string {
+  return `${creepPt.toFixed(2)} pt · ${(creepPt / POINTS_PER_MM).toFixed(2)} mm`;
+}

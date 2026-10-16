@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { isWorkerSupported, runInPdfWorker, terminatePdfWorker } from './worker-client';
 import { BookletError } from './types';
-import { makeBooklet } from './booklet-engine';
+import { inspectPdf, makeBooklet } from './booklet-engine';
 import { mergePdfs } from './merge-engine';
 import { generateCoverPdf } from './cover-engine';
 import { PDFDocument } from 'pdf-lib';
@@ -24,6 +24,18 @@ describe('PDF Web Worker client and fallback architecture', () => {
     expect(result.sheetsCount).toBe(1);
     expect(result.frontPdf).toBeInstanceOf(Uint8Array);
     expect(result.backPdf).toBeInstanceOf(Uint8Array);
+  });
+
+  it('runs inspectPdf cleanly via fallback when worker is unavailable', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([200, 300]).drawText('Page 1');
+    const info = await inspectPdf(await doc.save());
+    expect(info).toEqual({
+      pageCount: 1,
+      pageSizes: [[200, 300]],
+      sourceSheetSize: [400, 300],
+      trimmedPages: 0,
+    });
   });
 
   it('runs mergePdfs cleanly via fallback when worker is unavailable', async () => {

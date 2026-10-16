@@ -144,10 +144,13 @@ export function buildInstructionsLines(data: InstructionsData): InstructionsLine
   );
   push(t('instructions.step.duplex', { edge: flipLabel }), 11, true, 17);
   push(t('instructions.step.print', { file: FILE_COMBINED }), 11);
+  push(t('instructions.step.singleSided'), 11);
   push(t('instructions.step.fold', { perSignature }), 11);
   let stepNo = 4;
   if (data.separateCover) {
     push(t('instructions.step.cover', { n: stepNo, file: FILE_COVER }), 11);
+    stepNo += 1;
+    push(t('instructions.step.wrapCoverNote', { n: stepNo }), 11);
     stepNo += 1;
   }
   if (data.binding === 'rtl') {
@@ -247,13 +250,24 @@ export async function makeInstructionsPage(data: InstructionsData): Promise<Uint
 
   // Footer with the fine geometry values, pinned to a fixed bottom baseline so
   // it is always on the page regardless of how much content precedes it.
-  page.drawText(t('instructions.footer', { gutter: data.gutter, creep: data.creep }), {
-    x: margin,
-    y: margin,
-    size: 8,
-    font,
-    color: ink,
-  });
+  const ptToMm = (pt: number) => (pt * 25.4) / 72;
+  const gutterMm = ptToMm(data.gutter).toFixed(1);
+  const creepMm = ptToMm(data.creep).toFixed(2);
+  page.drawText(
+    t('instructions.footer', {
+      gutter: data.gutter,
+      gutterMm,
+      creep: data.creep,
+      creepMm,
+    }),
+    {
+      x: margin,
+      y: margin,
+      size: 8,
+      font,
+      color: ink,
+    },
+  );
 
   return doc.save();
 }

@@ -205,11 +205,21 @@ describe('Booklet pipeline - Wiring', () => {
   });
 
   it('caches the source sheet size at file-pick time and clears it when the file changes', () => {
-    expect(appSource).toContain("bookletSourceSheetSize = resolveSheetSize('source', doc, pageCount)");
-    // A failure to resolve must not block the booklet, which does not need it.
-    expect(appSource).toContain('} catch {\n          bookletSourceSheetSize = null;\n        }');
+    // Resolved once by the worker-side inspection; null (not a throw) when the
+    // size is out of bounds, so it never blocks the booklet.
+    const preflight = extractFunctionBody('async function showMixedSizeWarningIfNeeded(');
+    expect(preflight).toContain('await inspectPdf(bytes)');
+    expect(preflight).toContain('bookletSourceSheetSize = sourceSheetSize');
     const load = extractFunctionBody('function loadBookletFile(');
     expect(load).toContain('bookletSourceSheetSize = null');
+  });
+
+  it('never parses the picked PDF on the UI thread during preflight', () => {
+    const preflight = extractFunctionBody('async function showMixedSizeWarningIfNeeded(');
+    expect(preflight).not.toContain('loadAndValidatePdf');
+    expect(preflight).toContain("trimBoxNotice.classList.toggle('hidden', trimmedPages === 0)");
+    const load = extractFunctionBody('function loadBookletFile(');
+    expect(load).toContain("trimBoxNotice.classList.add('hidden')");
   });
 
   it('delegates spine and geometry calculation to shared helpers without duplicated allowances', () => {

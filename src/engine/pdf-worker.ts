@@ -8,7 +8,7 @@
 // Tag globalThis so engines know we are executing inside the worker
 (globalThis as unknown as { __IS_PDF_WORKER__?: boolean }).__IS_PDF_WORKER__ = true;
 
-import { makeBookletCore } from './booklet-engine';
+import { inspectPdfCore, makeBookletCore } from './booklet-engine';
 import { mergePdfsCore } from './merge-engine';
 import { generateCoverPdfCore } from './cover-engine';
 import { organizePages } from './organize-engine';
@@ -57,6 +57,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         if (result.combinedPdf?.buffer instanceof ArrayBuffer) transferables.push(result.combinedPdf.buffer);
         if (result.coverPdf?.buffer instanceof ArrayBuffer) transferables.push(result.coverPdf.buffer);
         if (result.instructionsPdf?.buffer instanceof ArrayBuffer) transferables.push(result.instructionsPdf.buffer);
+        break;
+      }
+      case 'inspectPdf': {
+        result = await inspectPdfCore(payload.pdfBytes);
         break;
       }
       case 'mergePdfs': {

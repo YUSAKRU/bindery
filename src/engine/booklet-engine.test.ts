@@ -197,33 +197,39 @@ describe('computeSlotRects', () => {
     expect(right).toEqual({ x: 421, y: 0, width: 421, height: 595 });
   });
 
-  it('shifts both slots outward by half the gutter', () => {
-    // gutter = 10 -> shiftInward = -5 -> left.x = -5, right.x = 421 - (-5) = 426
+  it('takes the gutter out of each slot on the fold side', () => {
+    // gutter = 10 -> each slot loses 5pt on its fold side: width = 421 - 5 = 416.
+    // Left keeps its outer edge at 0, right keeps its outer edge at 842.
     const { left, right } = computeSlotRects(0, 10, 0);
-    expect(left.x).toBe(-5);
-    expect(right.x).toBe(426);
-    expect(left).toEqual({ x: -5, y: 0, width: 421, height: 595 });
-    expect(right).toEqual({ x: 426, y: 0, width: 421, height: 595 });
+    expect(left).toEqual({ x: 0, y: 0, width: 416, height: 595 });
+    expect(right).toEqual({ x: 426, y: 0, width: 416, height: 595 });
+  });
+
+  it('never places a slot outside the sheet because of the gutter', () => {
+    const { left, right } = computeSlotRects(0, 50, 0);
+    expect(left.x).toBe(0);
+    expect(right.x + right.width).toBe(842);
   });
 
   it('shifts slots inward by creep * sheetIndex', () => {
     // creep = 2, gutter = 0:
-    //   j = 0 -> shiftInward = 0  -> left.x = 0, right.x = 421
+    //   j = 0 -> left.x = 0, right.x = 421
     expect(computeSlotRects(0, 0, 2).left.x).toBe(0);
     expect(computeSlotRects(0, 0, 2).right.x).toBe(421);
-    //   j = 1 -> shiftInward = 2  -> left.x = 2, right.x = 419
+    //   j = 1 -> left.x = 2, right.x = 419
     expect(computeSlotRects(1, 0, 2).left.x).toBe(2);
     expect(computeSlotRects(1, 0, 2).right.x).toBe(419);
-    //   j = 3 -> shiftInward = 6  -> left.x = 6, right.x = 415
+    //   j = 3 -> left.x = 6, right.x = 415
     expect(computeSlotRects(3, 0, 2).left.x).toBe(6);
     expect(computeSlotRects(3, 0, 2).right.x).toBe(415);
   });
 
   it('combines gutter and creep (gutter = 10, creep = 4, j = 2)', () => {
-    // shiftInward = 2*4 - 10/2 = 8 - 5 = 3 -> left.x = 3, right.x = 418
+    // width = 421 - 5 = 416; creep shift = 2*4 = 8.
+    // left.x = 8 (right edge 424, 3pt past the fold), right.x = 421 + 5 - 8 = 418.
     const { left, right } = computeSlotRects(2, 10, 4);
-    expect(left.x).toBe(3);
-    expect(right.x).toBe(418);
+    expect(left).toEqual({ x: 8, y: 0, width: 416, height: 595 });
+    expect(right).toEqual({ x: 418, y: 0, width: 416, height: 595 });
   });
 });
 

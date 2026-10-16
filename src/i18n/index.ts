@@ -297,9 +297,16 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'config.gutter': 'Gutter',
     'config.gutterHint':
-      'Space left between pages along the fold line, for stitching or glue. At 0, the fold and spine marks can print over content sitting close to the fold.',
+      'Space left between pages along the fold line, for stitching or glue. Pages shrink slightly to make room, so nothing is cut off the outer edge. At 0, the fold and spine marks can print over content sitting close to the fold.',
     'config.creep': 'Creep',
     'config.creepHint': 'Amount inner pages shift inward to compensate for paper thickness.',
+    'config.creepPaperGsm': 'Paper weight (g/m²)',
+    'config.creepPaper.uncoated': 'Uncoated',
+    'config.creepPaper.matte': 'Matte coated',
+    'config.creepPaper.gloss': 'Gloss coated',
+    'config.creepPaper.bulky': 'Bulky book',
+    'config.creepPaperHint':
+      "Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.",
     'config.paperSize': 'Paper size',
     'config.paperSize.source': 'Source size',
     'config.paperSizeHint': "The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.",
@@ -397,13 +404,15 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Advanced settings',
     'config.advancedModified': '· modified',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
+    'picker.trimBoxNotice':
+      "This PDF defines a trim box. Pages are imposed at their trimmed size, without bleed or printer's marks.",
     'picker.largeFileWarning':
       'Large document detected (>150 pages or >50 MB). Processing may take longer and use more memory.',
     'config.preflightWarning':
       'Large document detected (>150 pages or >50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.',
     'growth.shareTitle': 'Bindery — Offline Booklet & PDF Tools',
     'growth.shareText':
-      'Check out Bindery — 100% private, on-device booklet imposition and PDF tools for Android: https://play.google.com/store/apps/details?id=com.yusakru.bindery',
+      'Check out Bindery — 100% private, on-device booklet imposition and PDF tools for Android: {url}',
     'growth.reviewPromptTitle': 'Enjoying Bindery?',
     'growth.reviewPromptText':
       'If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!',
@@ -531,9 +540,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.edge.short': 'SHORT',
     'instructions.edge.long': 'LONG',
     'instructions.step.duplex': '1. Printer duplex: Flip on {edge} edge.',
-    'instructions.step.print': '2. Print {file} double-sided (duplex), all sheets.',
+    'instructions.step.print': '2. Double-sided: Print {file} double-sided (duplex), all sheets.',
+    'instructions.step.singleSided': '2b. Single-sided printer: Print Front Side.pdf, reload the stack into the tray without rotating, then print Back Side.pdf.',
     'instructions.step.fold': '3. Fold each signature at the center. Sheets per signature: {perSignature}.',
     'instructions.step.cover': '{n}. Print {file} double-sided on heavier paper; it wraps the folded block.',
+    'instructions.step.wrapCoverNote': '{n}. Note (wrap cover): If using Cover Studio, assemble split sheets (glue tab) or wrap Cover Wrap.pdf around the spine.',
     'instructions.step.rtl': '{n}. Note: right-to-left book — the spine is on the right when folding.',
     'instructions.step.reversedOrder': '{n}. Note: within each signature, sheets print innermost-first; signature order is unchanged.',
     'instructions.step.foldGuides': '{n}. Note: the dashed line down the middle of each sheet marks the fold.',
@@ -543,7 +554,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.signatureStart': 'Signature {n} starts at page {page}',
     'instructions.andMore': '... and {count} more signatures (every {interval} pages).',
     'instructions.verify': 'After folding and collating, flip through: pages must read 1, 2, 3, ... in order.',
-    'instructions.footer': 'Gutter: {gutter} pt   Creep: {creep} pt',
+    'instructions.footer': 'Gutter: {gutter} pt ({gutterMm} mm)   Creep: {creep} pt ({creepMm} mm)',
     'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Could not load the instructions sheet font: {message}',
     'error.PRINT_UNAVAILABLE': 'This device has no printing service.',
     'error.PRINT_MISSING_URI': 'No file was supplied to print.',
@@ -993,9 +1004,16 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'config.gutter': 'Orta Boşluk (Gutter)',
     'config.gutterHint':
-      'Katlama çizgisinde sayfalar arasında bırakılan boşluk; dikiş ya da yapıştırma için. 0 olduğunda katlama ve sırt işaretleri, katlamaya yakın içeriğin üzerine basabilir.',
+      'Katlama çizgisinde sayfalar arasında bırakılan boşluk; dikiş ya da yapıştırma için. Yer açmak için sayfalar biraz küçülür, böylece dış kenardan içerik kesilmez. 0 olduğunda katlama ve sırt işaretleri, katlamaya yakın içeriğin üzerine basabilir.',
     'config.creep': 'Kağıt Taşma Payı (Creep)',
     'config.creepHint': 'Kağıt kalınlığını telafi etmek için iç sayfaların içe kaydırılma miktarı.',
+    'config.creepPaperGsm': 'Kağıt gramajı (g/m²)',
+    'config.creepPaper.uncoated': 'Kuşesiz',
+    'config.creepPaper.matte': 'Mat kuşe',
+    'config.creepPaper.gloss': 'Parlak kuşe',
+    'config.creepPaper.bulky': 'Kitap kağıdı',
+    'config.creepPaperHint':
+      'Creep değerini kağıt kalınlığından ayarlamak için gramajı girin: gramaj × hacim katsayısı, kalınlığı mikron olarak verir.',
     'config.paperSize': 'Kağıt boyutu',
     'config.paperSize.source': 'Kaynak boyutu',
     'config.paperSizeHint': 'Yazıcıya koyacağın kağıdın boyutu. Katlanınca yarısı kitapçık sayfası olur.',
@@ -1092,13 +1110,15 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.advanced': 'Gelişmiş ayarlar',
     'config.advancedModified': '· değişiklik var',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
+    'picker.trimBoxNotice':
+      'Bu PDF\'te kesim kutusu (TrimBox) tanımlı. Sayfalar taşma payı ve kesim işaretleri olmadan, kesilmiş boyutlarıyla yerleştirilir.',
     'picker.largeFileWarning':
       'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). İşlem daha uzun sürebilir ve daha fazla bellek kullanabilir.',
     'config.preflightWarning':
       'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). Rahat katlama ve ciltleme için formalara bölmeniz (örn. 16 veya 32 sayfa) şiddetle önerilir.',
     'growth.shareTitle': 'Bindery — Çevrimdışı Kitapçık ve PDF Araçları',
     'growth.shareText':
-      "Bindery'ye göz atın — Android için %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları: https://play.google.com/store/apps/details?id=com.yusakru.bindery",
+      "Bindery'ye göz atın — Android için %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları: {url}",
     'growth.reviewPromptTitle': "Bindery'yi beğendiniz mi?",
     'growth.reviewPromptText':
       "Bindery kitapçık basmanıza veya PDF düzenlemenize yardımcı olduysa, Google Play'de yapacağınız kısa bir yorum başkalarının da keşfetmesini sağlar!",
@@ -1226,9 +1246,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.edge.short': 'KISA',
     'instructions.edge.long': 'UZUN',
     'instructions.step.duplex': '1. Yazıcı çift taraflı ayarı: {edge} kenardan çevir.',
-    'instructions.step.print': '2. {file} dosyasını çift taraflı (duplex), tüm yapraklarıyla yazdır.',
+    'instructions.step.print': '2. Çift taraflı: {file} dosyasını çift taraflı (duplex), tüm yapraklarıyla yazdır.',
+    'instructions.step.singleSided': '2b. Tek taraflı yazıcı: Önce Front Side.pdf dosyasını yazdırın, çıkan desteyi yönünü bozmadan tepsiye koyup Back Side.pdf dosyasını yazdırın.',
     'instructions.step.fold': '3. Her formayı ortadan katla. Forma başına yaprak: {perSignature}.',
     'instructions.step.cover': '{n}. {file} dosyasını daha kalın kağıda çift taraflı yazdır; katlanmış bloğun üzerini sarar.',
+    'instructions.step.wrapCoverNote': '{n}. Not (sarma kapak): Cover Studio ile hazırlanan 2 parçalı kapakta kulakçığı yapıştırıp birleştirin veya Cover Wrap.pdf dosyasını doğrudan sırtın üzerine sarın.',
     'instructions.step.rtl': '{n}. Not: sağdan sola kitap — katlarken sırt sağ tarafta kalır.',
     'instructions.step.reversedOrder': '{n}. Not: her forma içinde yapraklar en içteki yapraktan başlayarak basılıyor; formaların kendi sırası değişmiyor.',
     'instructions.step.foldGuides': '{n}. Not: her yaprağın ortasındaki kesikli çizgi katlama yerini gösterir.',
@@ -1238,7 +1260,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'instructions.signatureStart': '{n}. forma {page}. sayfada başlıyor',
     'instructions.andMore': '... ve {count} forma daha (her {interval} sayfada bir).',
     'instructions.verify': 'Katlayıp harmanladıktan sonra sayfaları çevir: 1, 2, 3, ... sırayla okunmalı.',
-    'instructions.footer': 'Cilt payı: {gutter} pt   Kayma: {creep} pt',
+    'instructions.footer': 'Cilt payı: {gutter} pt ({gutterMm} mm)   Kayma: {creep} pt ({creepMm} mm)',
     'error.INSTRUCTIONS_FONT_LOAD_FAILED': 'Talimat sayfası yazı tipi yüklenemedi: {message}',
     'error.PRINT_UNAVAILABLE': 'Bu cihazda yazdırma servisi yok.',
     'error.PRINT_MISSING_URI': 'Yazdırılacak dosya verilmedi.',
