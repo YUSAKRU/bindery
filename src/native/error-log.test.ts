@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { App } from '@capacitor/app';
 import { BookletError } from '../engine/types';
+import pkg from '../../package.json';
 
 const store = new Map<string, string>();
 let setImpl: (key: string, value: string) => void = (key, value) => {
@@ -134,6 +136,17 @@ describe('error-log', () => {
     expect(entry.screen).toBe('reader');
     expect(entry.appVersion).toBe('0.4.1');
     expect(store.get(SCREEN_KEY)).toBe('reader');
+  });
+
+  it('stamps entry.appVersion with pkg.version when App.getInfo rejects on Web', async () => {
+    vi.mocked(App.getInfo).mockRejectedValueOnce(new Error('Not implemented on web'));
+    const { recordError, getErrors } = await importStore();
+    await Promise.resolve();
+    recordError('caught', new Error('web failure'));
+
+    const [entry] = await getErrors();
+    expect(entry.appVersion).toBe(pkg.version);
+    expect(entry.appVersion).not.toBe('unknown');
   });
 
   it('never throws when storage fails, and keeps working afterwards', async () => {

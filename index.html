@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Bindery" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#4A5568" />
     <title>Bindery</title>
@@ -30,6 +35,32 @@
           <div class="hero-fly" id="heroFly" aria-hidden="true">
             <div class="hero-booklet" id="heroBooklet" data-phase="load">
               <div class="hero-scene"><div class="hero-floor"></div><div class="hero-deck" id="heroDeck"></div></div>
+            </div>
+          </div>
+
+          <div class="pwa-banner" id="pwaInstallBanner" hidden>
+            <div class="pwa-banner-content">
+              <img src="/pwa-192.png" alt="" class="pwa-banner-icon" width="40" height="40" />
+              <div class="pwa-banner-text">
+                <strong data-i18n="pwa.bannerTitle">Install Bindery App</strong>
+                <span data-i18n="pwa.bannerSub">Use as an offline web app or get it on Google Play</span>
+              </div>
+              <button type="button" class="icon-btn pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Close">✕</button>
+            </div>
+            <div class="pwa-banner-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="pwaInstallBtn" data-i18n="pwa.installBtn">Install App</button>
+              <button type="button" class="btn btn-tonal btn-sm" id="pwaPlayStoreBtn" data-i18n="pwa.playStoreBtn">Google Play</button>
+            </div>
+          </div>
+
+          <div class="ios-pwa-card" id="iosInstallBanner" hidden>
+            <div class="ios-pwa-header">
+              <img src="/apple-touch-icon.png" alt="" class="pwa-banner-icon" width="40" height="40" />
+              <div class="pwa-banner-text">
+                <strong data-i18n="pwa.iosTitle">Add Bindery to Home Screen</strong>
+                <span data-i18n="pwa.iosSteps">Tap Share (in Safari [↑] or Chrome) and select "Add to Home Screen" to install as a full-screen offline app.</span>
+              </div>
+              <button type="button" class="icon-btn pwa-banner-close" id="iosBannerCloseBtn" aria-label="Close">✕</button>
             </div>
           </div>
 
@@ -1708,7 +1739,7 @@
               <h3 class="settings-group-title" data-i18n="settings.group.about">About</h3>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.appVersion">App Version</span>
-                <span class="info-value" id="appVersionValue">v0.2.4</span>
+                <span class="info-value" id="appVersionValue"></span>
               </div>
               <div class="settings-row-info">
                 <span class="info-label" data-i18n="settings.developer">Developer</span>

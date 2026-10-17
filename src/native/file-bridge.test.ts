@@ -16,6 +16,14 @@ const { writeFile, appendFile, readFile, readFileInChunks, readdir, mkdir, stat,
   getUri: vi.fn(),
 }));
 
+const { getPlatform } = vi.hoisted(() => ({
+  getPlatform: vi.fn(() => 'android'),
+}));
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { getPlatform },
+}));
+
 vi.mock('@capacitor/filesystem', () => ({
   Directory: { Documents: 'DOCUMENTS', Data: 'DATA', Cache: 'CACHE' },
   Filesystem: { writeFile, appendFile, readFile, readFileInChunks, readdir, mkdir, stat, getUri },
@@ -46,6 +54,7 @@ vi.mock('./print', () => ({ printPdfUri, canPrint }));
 
 const {
   savePdfPrivately,
+  savePdfToDevice,
   readPdfFromUri,
   listPrivateFolder,
   pickPdf,
@@ -90,6 +99,11 @@ function expectBytesEqual(actual: Uint8Array, expected: Uint8Array): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getPlatform.mockReturnValue('android');
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('bytesToBase64 (via savePdfPrivately)', () => {
@@ -767,3 +781,282 @@ describe('thumbnail disk cache', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('web platform fallbacks', () => {
+  it('reads via Filesystem.readFile instead of Filesystem.readFileInChunks and decodes base64 payload', async () => {
+    getPlatform.mockReturnValue('web');
+    const original = pseudoRandomBytes(2048, 42);
+    const base64 = Buffer.from(original).toString('base64');
+    readFile.mockResolvedValueOnce({ data: base64 });
+
+    const result = await readPdfFromUri('content://some/web-doc.pdf');
+
+    expect(readFile).toHaveBeenCalledWith({ path: 'content://some/web-doc.pdf' });
+    expect(readFileInChunks).not.toHaveBeenCalled();
+    expectBytesEqual(result.bytes, original);
+    expect(result.name).toBe('web-doc.pdf');
+  });
+
+  it('reads via Filesystem.readFile when data is an ArrayBuffer/Blob', async () => {
+    getPlatform.mockReturnValue('web');
+    const original = pseudoRandomBytes(1024, 99);
+    const blob = new Blob([new Uint8Array(original)]);
+    readFile.mockResolvedValueOnce({ data: blob });
+
+    const result = await readPdfFromUri('https://example.com/test.pdf');
+
+    expect(readFile).toHaveBeenCalledWith({ path: 'https://example.com/test.pdf' });
+    expect(readFileInChunks).not.toHaveBeenCalled();
+    expectBytesEqual(result.bytes, original);
+    expect(result.name).toBe('test.pdf');
+  });
+
+  it('calls navigator.share({ title, files: [File] }) when navigator.canShare({ files }) returns true, and returns "shared"', async () => {
+    getPlatform.mockReturnValue('web');
+    const shareFn = vi.fn().mockResolvedValue(undefined);
+    const canShareFn = vi.fn().mockReturnValue(true);
+
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+      canShare: canShareFn,
+    });
+
+    const bytes = pseudoRandomBytes(512, 101);
+    const outcome = await sharePdf(bytes, 'sheet.pdf', 'Sheet Title');
+
+    expect(outcome).toBe('shared');
+    expect(canShareFn).toHaveBeenCalledTimes(1);
+    const canShareArg = canShareFn.mock.calls[0][0];
+    expect(canShareArg.files).toHaveLength(1);
+    expect(canShareArg.files[0]).toBeInstanceOf(File);
+    expect(canShareArg.files[0].name).toBe('sheet.pdf');
+    expect(canShareArg.files[0].type).toBe('application/pdf');
+
+    expect(shareFn).toHaveBeenCalledTimes(1);
+    const shareArg = shareFn.mock.calls[0][0];
+    expect(shareArg.title).toBe('Sheet Title');
+    expect(shareArg.files).toHaveLength(1);
+    expect(shareArg.files[0].name).toBe('sheet.pdf');
+    expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('returns "canceled" when navigator.share rejects with an AbortError', async () => {
+    getPlatform.mockReturnValue('web');
+    const abortError = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    const shareFn = vi.fn().mockRejectedValue(abortError);
+    const canShareFn = vi.fn().mockReturnValue(true);
+
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+      canShare: canShareFn,
+    });
+
+    const bytes = pseudoRandomBytes(512, 102);
+    const outcome = await sharePdf(bytes, 'sheet.pdf', 'Sheet Title');
+
+    expect(outcome).toBe('canceled');
+  });
+
+  it('returns "canceled" when navigator.share rejects with "Share canceled" message', async () => {
+    getPlatform.mockReturnValue('web');
+    const shareFn = vi.fn().mockRejectedValue(new Error('Share canceled'));
+    const canShareFn = vi.fn().mockReturnValue(true);
+
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+      canShare: canShareFn,
+    });
+
+    const bytes = pseudoRandomBytes(512, 103);
+    const outcome = await sharePdf(bytes, 'sheet.pdf', 'Sheet Title');
+
+    expect(outcome).toBe('canceled');
+  });
+
+  it('rethrows unexpected errors from navigator.share', async () => {
+    getPlatform.mockReturnValue('web');
+    const shareFn = vi.fn().mockRejectedValue(new Error('Unexpected web share failure'));
+    const canShareFn = vi.fn().mockReturnValue(true);
+
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+      canShare: canShareFn,
+    });
+
+    const bytes = pseudoRandomBytes(512, 104);
+    await expect(sharePdf(bytes, 'sheet.pdf', 'Sheet Title')).rejects.toThrow('Unexpected web share failure');
+  });
+
+  it('falls back to browser <a download> and returns "shared" when navigator.canShare is unavailable or returns false', async () => {
+    getPlatform.mockReturnValue('web');
+    const canShareFn = vi.fn().mockReturnValue(false);
+    vi.stubGlobal('navigator', {
+      canShare: canShareFn,
+    });
+
+    const clickSpy = vi.fn();
+    const removeSpy = vi.fn();
+    const mockAnchor = {
+      set href(_v: string) {},
+      get href() { return ''; },
+      download: '',
+      style: { display: '' },
+      click: clickSpy,
+      remove: removeSpy,
+    };
+    const appendChildSpy = vi.fn();
+    const mockDocument = {
+      createElement: vi.fn((tag: string) => (tag === 'a' ? mockAnchor : {})),
+      body: {
+        appendChild: appendChildSpy,
+      },
+    };
+
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.stubGlobal('document', mockDocument);
+
+    const bytes = pseudoRandomBytes(256, 105);
+    const outcome = await sharePdf(bytes, 'fallback-download.pdf', 'Fallback Title');
+
+    expect(outcome).toBe('shared');
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(mockDocument.createElement).toHaveBeenCalledWith('a');
+    expect(mockAnchor.download).toBe('fallback-download.pdf');
+    expect(appendChildSpy).toHaveBeenCalledWith(mockAnchor);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+
+    createObjectURLSpy.mockRestore();
+    revokeObjectURLSpy.mockRestore();
+  });
+
+  it('falls back to browser <a download> when navigator.canShare is not a function', async () => {
+    getPlatform.mockReturnValue('web');
+    vi.stubGlobal('navigator', {});
+
+    const clickSpy = vi.fn();
+    const removeSpy = vi.fn();
+    const mockAnchor = {
+      set href(_v: string) {},
+      get href() { return ''; },
+      download: '',
+      style: { display: '' },
+      click: clickSpy,
+      remove: removeSpy,
+    };
+    const appendChildSpy = vi.fn();
+    const mockDocument = {
+      createElement: vi.fn((tag: string) => (tag === 'a' ? mockAnchor : {})),
+      body: {
+        appendChild: appendChildSpy,
+      },
+    };
+
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.stubGlobal('document', mockDocument);
+
+    const bytes = pseudoRandomBytes(256, 106);
+    const outcome = await sharePdf(bytes, 'no-can-share.pdf', 'Title');
+
+    expect(outcome).toBe('shared');
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    createObjectURLSpy.mockRestore();
+    revokeObjectURLSpy.mockRestore();
+  });
+
+  it('writes to Directory.Documents and triggers browser <a download> click on savePdfToDevice', async () => {
+    getPlatform.mockReturnValue('web');
+    writeFile.mockResolvedValueOnce({ uri: 'file:///docs/saved.pdf' });
+
+    const clickSpy = vi.fn();
+    const removeSpy = vi.fn();
+    const mockAnchor = {
+      set href(_v: string) {},
+      get href() { return ''; },
+      download: '',
+      style: { display: '' },
+      click: clickSpy,
+      remove: removeSpy,
+    };
+    const appendChildSpy = vi.fn();
+    const mockDocument = {
+      createElement: vi.fn((tag: string) => (tag === 'a' ? mockAnchor : {})),
+      body: {
+        appendChild: appendChildSpy,
+      },
+    };
+
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.stubGlobal('document', mockDocument);
+
+    const bytes = pseudoRandomBytes(512, 107);
+    const uri = await savePdfToDevice(bytes, 'saved.pdf');
+
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'saved.pdf',
+        directory: 'DOCUMENTS',
+      }),
+    );
+    expect(uri).toBe('file:///docs/saved.pdf');
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(mockDocument.createElement).toHaveBeenCalledWith('a');
+    expect(mockAnchor.download).toBe('saved.pdf');
+    expect(appendChildSpy).toHaveBeenCalledWith(mockAnchor);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+
+    createObjectURLSpy.mockRestore();
+    revokeObjectURLSpy.mockRestore();
+  });
+
+  it('uses navigator.share({ title, text }) on web when available and returns "shared"', async () => {
+    getPlatform.mockReturnValue('web');
+    const shareFn = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('shared');
+    expect(shareFn).toHaveBeenCalledWith({ title: 'Bindery', text: 'Check out Bindery' });
+    expect(Share.share).not.toHaveBeenCalled();
+  });
+
+  it('returns "canceled" when navigator.share rejects with AbortError on shareText', async () => {
+    getPlatform.mockReturnValue('web');
+    const abortError = Object.assign(new Error('Share canceled by user'), { name: 'AbortError' });
+    const shareFn = vi.fn().mockRejectedValue(abortError);
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('canceled');
+    expect(shareFn).toHaveBeenCalledWith({ title: 'Bindery', text: 'Check out Bindery' });
+  });
+
+  it('falls back to navigator.clipboard.writeText(text) when navigator.share is unavailable and returns "shared"', async () => {
+    getPlatform.mockReturnValue('web');
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: writeTextSpy,
+      },
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('shared');
+    expect(writeTextSpy).toHaveBeenCalledWith('Check out Bindery');
+    expect(Share.share).not.toHaveBeenCalled();
+  });
+});
+

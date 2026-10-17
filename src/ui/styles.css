@@ -4130,3 +4130,113 @@ dialog.modal-sheet::backdrop {
   padding: 8px 12px;
   margin-top: 8px;
 }
+
+/* ── PWA Install & iOS Add-to-Home-Screen Banners ───────────────────────────── */
+
+.pwa-banner[hidden],
+.ios-pwa-card[hidden] {
+  display: none !important;
+}
+
+.pwa-banner:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface-variant);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-1);
+}
+
+.pwa-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.pwa-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.pwa-banner-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.pwa-banner-text strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.pwa-banner-text span {
+  font-size: 0.8rem;
+  color: var(--color-on-surface-variant);
+  line-height: 1.35;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pwa-banner-actions .btn {
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.pwa-banner-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.pwa-banner-close:hover {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-on-surface);
+}
+
+.ios-pwa-card:not([hidden]) {
+  display: block;
+  background: var(--color-surface-variant);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-1);
+}
+
+.ios-pwa-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ios-pwa-header .pwa-banner-text {
+  flex: 1;
+}
+

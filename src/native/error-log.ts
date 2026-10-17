@@ -1,5 +1,6 @@
 import { App } from '@capacitor/app';
 import { Preferences } from '@capacitor/preferences';
+import pkg from '../../package.json';
 
 /**
  * A local-only record of things that went wrong, kept on the device and shown
@@ -59,7 +60,7 @@ const MAX_TOTAL_BYTES = 65536;
  * never has to await — an unresolved version is recorded as 'unknown' rather
  * than delaying (or dropping) the entry.
  */
-let appVersion = 'unknown';
+let appVersion: string = pkg.version;
 void App.getInfo()
   .then((info) => {
     appVersion = info.version;

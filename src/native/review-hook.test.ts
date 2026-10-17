@@ -11,9 +11,12 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }));
 
-const isNative = vi.hoisted(() => ({ value: true }));
+const platformState = vi.hoisted(() => ({ isNative: true, platform: 'android' }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => isNative.value },
+  Capacitor: {
+    isNativePlatform: () => platformState.isNative,
+    getPlatform: () => platformState.platform,
+  },
 }));
 
 vi.mock('./file-bridge', () => ({
@@ -33,6 +36,7 @@ import {
   recordSuccessfulOperation,
   shareBinderyApp,
   STORE_URL,
+  WEB_URL,
 } from './review-hook';
 import { setLanguage, t } from '../i18n';
 import { shareText } from './file-bridge';
@@ -41,6 +45,8 @@ describe('In-App Review & Share Hook', () => {
   beforeEach(() => {
     store.clear();
     vi.clearAllMocks();
+    platformState.platform = 'android';
+    platformState.isNative = true;
   });
 
   it('increments operation count on recordSuccessfulOperation', async () => {
@@ -91,22 +97,38 @@ describe('In-App Review & Share Hook', () => {
     expect(await isReviewEligible()).toBe(true);
   });
 
-  it('invokes shareText with the store URL filled into the share text', async () => {
-    await shareBinderyApp();
-    expect(shareText).toHaveBeenCalledWith(expect.stringContaining(STORE_URL), expect.stringContaining('Bindery'));
-    const [text] = vi.mocked(shareText).mock.calls[0];
-    expect(text).not.toContain('{url}');
+  it('returns false for isReviewEligible when platform is not android even if count reaches threshold', async () => {
+    for (let i = 0; i < MIN_OPS_FOR_REVIEW; i++) {
+      await recordSuccessfulOperation();
+    }
+    platformState.platform = 'web';
+    expect(await isReviewEligible()).toBe(false);
   });
 
-  it('fills the store URL into the share text in every language', () => {
+  it('invokes shareText with the store URL and web URL filled into the share text', async () => {
+    await shareBinderyApp();
+    expect(shareText).toHaveBeenCalledWith(
+      expect.stringContaining(STORE_URL),
+      expect.stringContaining('Bindery'),
+    );
+    const [text] = vi.mocked(shareText).mock.calls[0];
+    expect(text).toContain(STORE_URL);
+    expect(text).toContain(WEB_URL);
+    expect(text).not.toContain('{url}');
+    expect(text).not.toContain('{webUrl}');
+  });
+
+  it('fills the store URL and web URL into the share text in every language', () => {
     vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
     vi.stubGlobal('document', { documentElement: { lang: 'en' }, querySelectorAll: () => [] });
     try {
       for (const lang of ['en', 'tr'] as const) {
         setLanguage(lang);
-        const text = t('growth.shareText', { url: STORE_URL });
+        const text = t('growth.shareText', { url: STORE_URL, webUrl: WEB_URL });
         expect(text).toContain(STORE_URL);
+        expect(text).toContain(WEB_URL);
         expect(text).not.toContain('{url}');
+        expect(text).not.toContain('{webUrl}');
       }
     } finally {
       setLanguage('en');
@@ -115,7 +137,7 @@ describe('In-App Review & Share Hook', () => {
   });
 
   it('navigates to the store URL on the native platform', async () => {
-    isNative.value = true;
+    platformState.isNative = true;
     const originalWindow = (globalThis as unknown as { window?: unknown }).window;
     const locationMock = { href: '' };
     const openMock = vi.fn();
@@ -130,7 +152,7 @@ describe('In-App Review & Share Hook', () => {
   });
 
   it('opens the store in a new tab on the web, leaving the app loaded', async () => {
-    isNative.value = false;
+    platformState.isNative = false;
     const originalWindow = (globalThis as unknown as { window?: unknown }).window;
     const locationMock = { href: '' };
     const openMock = vi.fn();
@@ -141,7 +163,7 @@ describe('In-App Review & Share Hook', () => {
       expect(locationMock.href).toBe('');
     } finally {
       (globalThis as unknown as { window?: unknown }).window = originalWindow;
-      isNative.value = true;
+      platformState.isNative = true;
     }
   });
 });

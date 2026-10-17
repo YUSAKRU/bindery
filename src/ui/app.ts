@@ -1,3 +1,4 @@
+import pkg from '../../package.json';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { Binding, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet, computeSignatureMappings, inspectPdf, resolveSheetSize } from '../engine/booklet-engine';
@@ -36,6 +37,7 @@ import {
   resolveCoverPageTrim,
   checkCoverFormatFit,
 } from './cover-options';
+import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
@@ -91,6 +93,7 @@ import {
   recordReviewPromptShown,
   shareBinderyApp,
 } from '../native/review-hook';
+import { initPwaInstallExperience } from '../native/pwa-install';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
 import { createSaveFlow, type SaveFlowDeps } from './save-flow';
@@ -6997,6 +7000,12 @@ export function initApp(): void {
 
   hubOpenReaderBtn.addEventListener('click', async () => {
     try {
+      if (Capacitor.getPlatform() !== 'android') {
+        const picked = await pickPdf();
+        if (!picked) return;
+        await openReaderWithBytes(picked.bytes, picked.name, null);
+        return;
+      }
       const picked = await pickPdfWithPersistentUri();
       if (!picked) return;
       const file = await readForReader(picked.uri);
@@ -8280,8 +8289,11 @@ export function initApp(): void {
     formatError: errorText,
   });
 
+  initPwaInstallExperience({ showToast });
+
   showScreen('hub');
 
+  appVersionValue.textContent = `v${pkg.version}`;
   void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
 
   if (localStorage.getItem('bindery.onboarded') !== 'true') {
