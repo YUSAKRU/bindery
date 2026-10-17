@@ -424,7 +424,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'pwa.playStoreBtn': 'Google Play',
     'pwa.iosTitle': 'Add Bindery to Home Screen',
     'pwa.iosSteps':
-      'Tap Safari\'s Share [↑] button below, then select "Add to Home Screen [+]" to install as a full-screen offline app.',
+      'Tap Share (in Safari [↑] or Chrome) and select "Add to Home Screen" to install as a full-screen offline app.',
     'pwa.androidManualHint': 'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".',
     'config.generateBooklet': 'Create Booklet',
 
@@ -1138,7 +1138,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'pwa.playStoreBtn': 'Google Play',
     'pwa.iosTitle': "Bindery'yi Ana Ekrana Ekleyin",
     'pwa.iosSteps':
-      'Tam ekran çevrimdışı uygulama olarak kullanmak için Safari\'de aşağıdaki Paylaş [↑] düğmesine dokunun ve "Ana Ekrana Ekle [+]" seçeneğini seçin.',
+      'Tam ekran çevrimdışı uygulama olarak kullanmak için tarayıcınızın Paylaş menüsünden (Safari\'de [↑], Chrome\'da Paylaş) "Ana Ekrana Ekle" seçeneğini seçin.',
     'pwa.androidManualHint': 'Tarayıcı menüsünü (⋮) açıp "Uygulamayı yükle" veya "Ana ekrana ekle" seçeneğine dokunun.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 
