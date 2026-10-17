@@ -25,133 +25,317 @@
 
       <main class="screen-container">
         <section class="screen" id="screen-hub">
-          <div class="hub-hero" id="hubHero">
-            <div class="hero-stage" id="heroStage" aria-hidden="true"></div>
-            <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>
-            <p class="hub-hero-sub" data-i18n="hub.hero.sub">Pages fall into the right order — print, fold, done.</p>
-          </div>
-
-          <!-- Brand-moment overlay booklet (first open = fly-in "A", later = in-place fold "B") -->
-          <div class="hero-fly" id="heroFly" aria-hidden="true">
-            <div class="hero-booklet" id="heroBooklet" data-phase="load">
-              <div class="hero-scene"><div class="hero-floor"></div><div class="hero-deck" id="heroDeck"></div></div>
+          <!-- Legacy Hub View (deactivated, preserved intact for zero-regression DOM references) -->
+          <div class="hidden" id="hubLegacyView" aria-hidden="true">
+            <div class="hub-hero" id="hubHero">
+              <div class="hero-stage" id="heroStage" aria-hidden="true"></div>
+              <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>
+              <p class="hub-hero-sub" data-i18n="hub.hero.sub">Pages fall into the right order — print, fold, done.</p>
             </div>
-          </div>
 
-          <div class="pwa-banner" id="pwaInstallBanner" hidden>
-            <div class="pwa-banner-content">
-              <img src="/pwa-192.png" alt="" class="pwa-banner-icon" width="40" height="40" />
-              <div class="pwa-banner-text">
-                <strong data-i18n="pwa.bannerTitle">Install Bindery App</strong>
-                <span data-i18n="pwa.bannerSub">Use as an offline web app or get it on Google Play</span>
+            <!-- Brand-moment overlay booklet (first open = fly-in "A", later = in-place fold "B") -->
+            <div class="hero-fly" id="heroFly" aria-hidden="true">
+              <div class="hero-booklet" id="heroBooklet" data-phase="load">
+                <div class="hero-scene"><div class="hero-floor"></div><div class="hero-deck" id="heroDeck"></div></div>
               </div>
-              <button type="button" class="icon-btn pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Close">✕</button>
             </div>
-            <div class="pwa-banner-actions">
-              <button type="button" class="btn btn-primary btn-sm" id="pwaInstallBtn" data-i18n="pwa.installBtn">Install App</button>
-              <button type="button" class="btn btn-tonal btn-sm" id="pwaPlayStoreBtn" data-i18n="pwa.playStoreBtn">Google Play</button>
-            </div>
-          </div>
 
-          <div class="ios-pwa-card" id="iosInstallBanner" hidden>
-            <div class="ios-pwa-header">
-              <img src="/apple-touch-icon.png" alt="" class="pwa-banner-icon" width="40" height="40" />
-              <div class="pwa-banner-text">
-                <strong data-i18n="pwa.iosTitle">Add Bindery to Home Screen</strong>
-                <span data-i18n="pwa.iosSteps">Tap Share (in Safari [↑] or Chrome) and select "Add to Home Screen" to install as a full-screen offline app.</span>
+            <div class="pwa-banner" id="pwaInstallBanner" hidden>
+              <div class="pwa-banner-content">
+                <img src="/pwa-192.png" alt="" class="pwa-banner-icon" width="40" height="40" />
+                <div class="pwa-banner-text">
+                  <strong data-i18n="pwa.bannerTitle">Install Bindery App</strong>
+                  <span data-i18n="pwa.bannerSub">Use as an offline web app or get it on Google Play</span>
+                </div>
+                <button type="button" class="icon-btn pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Close">✕</button>
               </div>
-              <button type="button" class="icon-btn pwa-banner-close" id="iosBannerCloseBtn" aria-label="Close">✕</button>
+              <div class="pwa-banner-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="pwaInstallBtn" data-i18n="pwa.installBtn">Install App</button>
+                <button type="button" class="btn btn-tonal btn-sm" id="pwaPlayStoreBtn" data-i18n="pwa.playStoreBtn">Google Play</button>
+              </div>
             </div>
-          </div>
 
-          <button type="button" class="btn btn-primary btn-large" id="hubCreateBookletBtn">
-            <svg class="btn-lead-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-            <span data-i18n="hub.createBooklet">Create a booklet</span>
-          </button>
+            <div class="ios-pwa-card" id="iosInstallBanner" hidden>
+              <div class="ios-pwa-header">
+                <img src="/apple-touch-icon.png" alt="" class="pwa-banner-icon" width="40" height="40" />
+                <div class="pwa-banner-text">
+                  <strong data-i18n="pwa.iosTitle">Add Bindery to Home Screen</strong>
+                  <span data-i18n="pwa.iosSteps">Tap Share (in Safari [↑] or Chrome) and select "Add to Home Screen" to install as a full-screen offline app.</span>
+                </div>
+                <button type="button" class="icon-btn pwa-banner-close" id="iosBannerCloseBtn" aria-label="Close">✕</button>
+              </div>
+            </div>
 
-          <button type="button" class="btn btn-tonal btn-large" id="hubOpenReaderBtn">
-            <span data-i18n="hub.openPdf">📖 Open PDF</span>
-          </button>
+            <button type="button" class="btn btn-primary btn-large" id="hubCreateBookletBtn">
+              <svg class="btn-lead-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+              <span data-i18n="hub.createBooklet">Create a booklet</span>
+            </button>
 
-          <input
-            type="text"
-            class="hub-search"
-            id="hubSearchInput"
-            placeholder="Search tools..."
-            aria-label="Search tools"
-            data-i18n-aria-label="hub.searchAriaLabel"
-            data-i18n-placeholder="hub.searchPlaceholder"
-          />
+            <button type="button" class="btn btn-tonal btn-large" id="hubOpenReaderBtn">
+              <span data-i18n="hub.openPdf">📖 Open PDF</span>
+            </button>
 
-          <div class="hub-recents-head">
-            <h3 class="tool-category-title" data-i18n="nav.tools">Tools</h3>
-            <button type="button" class="hub-recents-viewall" id="toolsViewAllBtn" data-i18n="hub.tools.viewAll">View All</button>
-          </div>
-          <fieldset class="hub-carousel" id="hubCarousel" style="border: 0; min-width: 0;" aria-label="Quick access">
-            <button type="button" class="tool-row tool-row--carousel tool-row--featured" data-tool="booklet" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="cover" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.cover.title">Cover Studio</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="md-to-pdf" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.mdToPdf.title">Markdown to Booklet</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="rotate" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="organize" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="page-numbers" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="merge" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="watermark" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
-              </span>
-            </button>
-            <button type="button" class="tool-row tool-row--carousel" data-tool="image-to-pdf" data-enabled="true">
-              <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>
-              <span class="tool-row-meta">
-                <span class="tool-row-title" data-i18n="tool.imageToPdf.title">Image to PDF</span>
-              </span>
-            </button>
-          </fieldset>
+            <input
+              type="text"
+              class="hub-search"
+              id="hubSearchInput"
+              placeholder="Search tools..."
+              aria-label="Search tools"
+              data-i18n-aria-label="hub.searchAriaLabel"
+              data-i18n-placeholder="hub.searchPlaceholder"
+            />
 
-          <div class="recents-section" id="recentsSection">
             <div class="hub-recents-head">
-              <h3 class="tool-category-title" data-i18n="hub.recentlyOpened">Recently Opened</h3>
-              <button type="button" class="hub-recents-viewall" id="recentsViewAllBtn" data-i18n="hub.recents.viewAll">View All</button>
+              <h3 class="tool-category-title" data-i18n="nav.tools">Tools</h3>
+              <button type="button" class="hub-recents-viewall" id="toolsViewAllBtn" data-i18n="hub.tools.viewAll">View All</button>
             </div>
-            <div class="hub-recents-grid" id="recentsList"></div>
+            <fieldset class="hub-carousel" id="hubCarousel" style="border: 0; min-width: 0;" aria-label="Quick access">
+              <button type="button" class="tool-row tool-row--carousel tool-row--featured" data-tool="booklet" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.booklet.title">Booklet</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="cover" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.cover.title">Cover Studio</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="md-to-pdf" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.mdToPdf.title">Markdown to Booklet</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="rotate" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.rotate.title">Rotate</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="organize" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.organize.title">Organize Pages</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="page-numbers" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.pageNumbers.title">Page Numbers</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="merge" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="watermark" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.watermark.title">Watermark</span>
+                </span>
+              </button>
+              <button type="button" class="tool-row tool-row--carousel" data-tool="image-to-pdf" data-enabled="true">
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>
+                <span class="tool-row-meta">
+                  <span class="tool-row-title" data-i18n="tool.imageToPdf.title">Image to PDF</span>
+                </span>
+              </button>
+            </fieldset>
+
+            <div class="recents-section" id="recentsSection">
+              <div class="hub-recents-head">
+                <h3 class="tool-category-title" data-i18n="hub.recentlyOpened">Recently Opened</h3>
+                <button type="button" class="hub-recents-viewall" id="recentsViewAllBtn" data-i18n="hub.recents.viewAll">View All</button>
+              </div>
+              <div class="hub-recents-grid" id="recentsList"></div>
+            </div>
           </div>
 
+          <!-- Active Spatial Canvas Atelier Hub View -->
+          <div class="atelier-hub" id="hubAtelierView">
+            <!-- Faint Center Spine Calibration Line -->
+            <div class="atelier-spine-line" aria-hidden="true">
+              <div class="atelier-spine-dash">
+                <div class="atelier-spine-dot atelier-spine-dot--25"></div>
+                <div class="atelier-spine-dot atelier-spine-dot--50"></div>
+                <div class="atelier-spine-dot atelier-spine-dot--75"></div>
+              </div>
+            </div>
+
+            <!-- Radial Atelier Spotlight Glow -->
+            <div class="atelier-spotlight-container" aria-hidden="true">
+              <div class="atelier-spotlight"></div>
+            </div>
+
+            <!-- 1. Top Bar: Minimal '• Bindery Atelier' on top-left, GitHub star on top-right -->
+            <header class="atelier-header">
+              <div class="atelier-header-inner">
+                <div class="atelier-brand">
+                  <span class="atelier-pulse-dot" aria-hidden="true"></span>
+                  <div>
+                    <span class="atelier-brand-title">Bindery</span>
+                    <span class="atelier-brand-sub" data-i18n="atelier.brandSub">Atelier</span>
+                  </div>
+                </div>
+                <a
+                  aria-label="Star on GitHub"
+                  data-i18n-aria-label="atelier.starAria"
+                  class="atelier-github-btn"
+                  href="https://github.com/YUSAKRU/bindery"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg class="atelier-github-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                  </svg>
+                  <span class="atelier-github-text" data-i18n="atelier.starGithub">Star</span>
+                </a>
+              </div>
+            </header>
+
+            <!-- 2. Central Spatial Canvas: 3D Perspective Floating Deck & Carousel -->
+            <div class="atelier-main" id="atelierCanvasContainer">
+              <div class="atelier-spatial-header" id="atelierSpatialHeader">
+                <p class="atelier-desk-title" data-i18n="atelier.deskTitle">Spatial Workshop Desk</p>
+                <p class="atelier-mode-hint" id="atelierModeHint" data-i18n="atelier.hintFree">Tap anywhere to enter carousel from the nearest card</p>
+              </div>
+
+              <div class="atelier-viewport" id="atelierViewport3D">
+                <!-- CARD 0: Kitapçık Üret (Primary Terracotta Artisan Book) -->
+                <div class="atelier-card atelier-card--terracotta" data-atelier-index="0" id="atelierCard0">
+                  <div class="atelier-stitch-seam" aria-hidden="true"></div>
+                  <div class="atelier-card-glow-terracotta" aria-hidden="true"></div>
+                  <div class="atelier-card-header">
+                    <div class="atelier-badge">
+                      <span class="atelier-badge-dot" aria-hidden="true"></span>
+                      <span data-i18n="atelier.card1.badge">Atelier Imposition</span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-motif">
+                    <div class="atelier-motif-box">
+                      <span class="atelier-motif-icon" aria-hidden="true">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-footer">
+                    <div class="atelier-card-title" data-i18n="atelier.card1.title">Create Booklet</div>
+                    <p class="atelier-card-desc" data-i18n="atelier.card1.desc">Arrange &amp; stitch PDF signatures into eight-page folding order</p>
+                    <div class="atelier-card-meta-row">
+                      <span data-i18n="atelier.card1.module">MODULE // 01</span>
+                      <span data-i18n="atelier.card1.meta">A4 → A5 Signature</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD 1: Oku & Arşiv (Parchment Kraft Paper Feel) -->
+                <div class="atelier-card atelier-card--parchment" data-atelier-index="1" id="atelierCard1">
+                  <div class="atelier-stitch-seam" aria-hidden="true"></div>
+                  <div class="atelier-card-glow-parchment" aria-hidden="true"></div>
+                  <div class="atelier-card-header">
+                    <div class="atelier-badge">
+                      <span class="atelier-badge-dot" aria-hidden="true"></span>
+                      <span data-i18n="atelier.card2.badge">Local Library</span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-motif">
+                    <div class="atelier-motif-box">
+                      <span class="atelier-motif-icon" aria-hidden="true">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-footer">
+                    <div class="atelier-card-title" data-i18n="atelier.card2.title">Read &amp; Archive</div>
+                    <p class="atelier-card-desc" data-i18n="atelier.card2.desc">Saved fascicles, digital preview and offline reading shelf</p>
+                    <div class="atelier-card-meta-row">
+                      <span data-i18n="atelier.card2.module">MODULE // 02</span>
+                      <span id="atelierCard1SavedCount">0 Fascicles Saved</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD 2: Kapak Tasarla (Cardstock / Typography Foil Stamp) -->
+                <div class="atelier-card atelier-card--charcoal" data-atelier-index="2" id="atelierCard2">
+                  <div class="atelier-stitch-seam" aria-hidden="true"></div>
+                  <div class="atelier-card-glow-gold" aria-hidden="true"></div>
+                  <div class="atelier-card-header">
+                    <div class="atelier-badge">
+                      <span class="atelier-badge-dot" aria-hidden="true"></span>
+                      <span class="atelier-foil-text" data-i18n="atelier.card3.badge">Typographic Cover</span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-motif">
+                    <div class="atelier-motif-box">
+                      <span class="atelier-motif-icon" aria-hidden="true">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg>
+                      </span>
+                      <span class="atelier-motif-no" aria-hidden="true">№</span>
+                    </div>
+                  </div>
+                  <div class="atelier-card-footer">
+                    <div class="atelier-card-title" data-i18n="atelier.card3.title">Design Cover</div>
+                    <p class="atelier-card-desc" data-i18n="atelier.card3.desc">Press stamp, hot foil and spine width calculator</p>
+                    <div class="atelier-card-meta-row">
+                      <span data-i18n="atelier.card3.module">MODULE // 03</span>
+                      <span data-i18n="atelier.card3.meta">Foil &amp; Press</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode Switcher Pill Indicator -->
+              <div class="atelier-mode-bar">
+                <button class="atelier-mode-btn" id="atelierModeToggleBtn" type="button">
+                  <span class="atelier-mode-icon" aria-hidden="true">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+                  </span>
+                  <span id="atelierModeToggleLabel" data-i18n="atelier.modeFree">Mode: Free Float (Active)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. Bottom Interactive Dock -->
+            <footer class="atelier-footer">
+              <div class="atelier-indicators" id="atelierIndicators">
+                <button aria-label="Card 1" class="atelier-indicator-dot is-free" data-atelier-indicator="0" type="button"></button>
+                <button aria-label="Card 2" class="atelier-indicator-dot is-free" data-atelier-indicator="1" type="button"></button>
+                <button aria-label="Card 3" class="atelier-indicator-dot is-free" data-atelier-indicator="2" type="button"></button>
+              </div>
+
+              <button class="atelier-action-btn" id="atelierPrimaryActionBtn" type="button">
+                <div class="atelier-action-left">
+                  <div class="atelier-action-icon-box" id="atelierBtnIcon" aria-hidden="true">
+                    <svg aria-hidden="true" data-atelier-icon="0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                    <svg aria-hidden="true" class="hidden" data-atelier-icon="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                    <svg aria-hidden="true" class="hidden" data-atelier-icon="2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 2v20"/><path d="M12 7h5"/><path d="M12 11h5"/></svg>
+                  </div>
+                  <div class="atelier-action-copy">
+                    <div class="atelier-action-title" id="atelierBtnActionTitle" data-i18n="atelier.card1.ctaTitle">
+                      Start Booklet Production
+                    </div>
+                    <div class="atelier-action-sub" id="atelierBtnActionSub" data-i18n="atelier.card1.ctaSub">
+                      Load a PDF and extract folding signatures
+                    </div>
+                  </div>
+                </div>
+                <div class="atelier-action-arrow" aria-hidden="true">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </div>
+              </button>
+
+              <div class="atelier-privacy-row">
+                <div class="atelier-privacy-seal">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span data-i18n="atelier.privacySeal">Runs entirely on your device • Zero server transmission</span>
+                </div>
+              </div>
+            </footer>
+          </div>
         </section>
 
         <section class="screen hidden" id="screen-tools-all">
