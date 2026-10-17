@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { FilePicker, type PickedFile } from '@capawesome/capacitor-file-picker';
 import { Directory, Filesystem } from '@capacitor/filesystem';
@@ -173,6 +174,15 @@ const WRITE_CHUNK_BYTES = 1_572_864; // 1.5 MiB, and 1572864 % 3 === 0
  * full-size allocation but keeps the rare path working.
  */
 async function readFileChunked(uri: string, expectedSize: number | null): Promise<Uint8Array> {
+  if (Capacitor.getPlatform() === 'web') {
+    const { data } = await Filesystem.readFile({ path: uri });
+    if (typeof data !== 'string') {
+      const buffer = await data.arrayBuffer();
+      return new Uint8Array(buffer);
+    }
+    return base64ToBytes(data);
+  }
+
   return new Promise<Uint8Array>((resolve, reject) => {
     let target = expectedSize !== null ? new Uint8Array(expectedSize) : null;
     const collected: Uint8Array[] = [];
@@ -397,9 +407,35 @@ async function writeFileChunked(
   return uri;
 }
 
+/**
+ * Triggers a standard browser file download (`<a download>`) on Web platforms.
+ * No-op when `document` or `URL.createObjectURL` is unavailable (e.g. bare Node).
+ */
+function downloadPdfInBrowser(bytes: Uint8Array, filename: string): void {
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    return;
+  }
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const blob = new Blob([copy], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body?.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /** Writes a PDF to the device's Documents directory for permanent storage. */
 export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string> {
-  return writeFileChunked(filename, Directory.Documents, bytes);
+  const uri = await writeFileChunked(filename, Directory.Documents, bytes);
+  if (Capacitor.getPlatform() === 'web') {
+    downloadPdfInBrowser(bytes, filename);
+  }
+  return uri;
 }
 
 /** Checks whether a file or folder already exists at the given path inside Directory.Data. */
@@ -445,6 +481,26 @@ function isShareCanceled(error: unknown): boolean {
 
 /** Writes a PDF to a temp cache location and opens the native share sheet for it. */
 export async function sharePdf(bytes: Uint8Array, filename: string, title: string): Promise<ShareOutcome> {
+  if (Capacitor.getPlatform() === 'web') {
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const file = new File([copy], filename, { type: 'application/pdf' });
+    const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+    if (nav && typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+      try {
+        await nav.share({ title, files: [file] });
+        return 'shared';
+      } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || isShareCanceled(error))) {
+          return 'canceled';
+        }
+        throw error;
+      }
+    }
+    downloadPdfInBrowser(bytes, filename);
+    return 'shared';
+  }
+
   const uri = await writePdfToCache(bytes, filename);
   try {
     await Share.share({ title, files: [uri] });

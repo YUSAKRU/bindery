@@ -36,6 +36,7 @@ import {
   resolveCoverPageTrim,
   checkCoverFormatFit,
 } from './cover-options';
+import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
@@ -6997,6 +6998,12 @@ export function initApp(): void {
 
   hubOpenReaderBtn.addEventListener('click', async () => {
     try {
+      if (Capacitor.getPlatform() !== 'android') {
+        const picked = await pickPdf();
+        if (!picked) return;
+        await openReaderWithBytes(picked.bytes, picked.name, null);
+        return;
+      }
       const picked = await pickPdfWithPersistentUri();
       if (!picked) return;
       const file = await readForReader(picked.uri);
