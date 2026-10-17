@@ -1014,5 +1014,49 @@ describe('web platform fallbacks', () => {
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
   });
+
+  it('uses navigator.share({ title, text }) on web when available and returns "shared"', async () => {
+    getPlatform.mockReturnValue('web');
+    const shareFn = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('shared');
+    expect(shareFn).toHaveBeenCalledWith({ title: 'Bindery', text: 'Check out Bindery' });
+    expect(Share.share).not.toHaveBeenCalled();
+  });
+
+  it('returns "canceled" when navigator.share rejects with AbortError on shareText', async () => {
+    getPlatform.mockReturnValue('web');
+    const abortError = Object.assign(new Error('Share canceled by user'), { name: 'AbortError' });
+    const shareFn = vi.fn().mockRejectedValue(abortError);
+    vi.stubGlobal('navigator', {
+      share: shareFn,
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('canceled');
+    expect(shareFn).toHaveBeenCalledWith({ title: 'Bindery', text: 'Check out Bindery' });
+  });
+
+  it('falls back to navigator.clipboard.writeText(text) when navigator.share is unavailable and returns "shared"', async () => {
+    getPlatform.mockReturnValue('web');
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: writeTextSpy,
+      },
+    });
+
+    const outcome = await shareText('Check out Bindery', 'Bindery');
+
+    expect(outcome).toBe('shared');
+    expect(writeTextSpy).toHaveBeenCalledWith('Check out Bindery');
+    expect(Share.share).not.toHaveBeenCalled();
+  });
 });
 

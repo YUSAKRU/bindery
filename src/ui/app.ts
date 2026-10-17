@@ -1,3 +1,4 @@
+import pkg from '../../package.json';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { Binding, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet, computeSignatureMappings, inspectPdf, resolveSheetSize } from '../engine/booklet-engine';
@@ -8289,6 +8290,7 @@ export function initApp(): void {
 
   showScreen('hub');
 
+  appVersionValue.textContent = `v${pkg.version}`;
   void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
 
   if (localStorage.getItem('bindery.onboarded') !== 'true') {

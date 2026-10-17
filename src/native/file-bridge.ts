@@ -518,6 +518,26 @@ export async function sharePdf(bytes: Uint8Array, filename: string, title: strin
  * through `sharePdf`'s write-to-cache path would be all cost and no benefit.
  */
 export async function shareText(text: string, title: string): Promise<ShareOutcome> {
+  if (Capacitor.getPlatform() === 'web') {
+    const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+    if (nav && typeof nav.share === 'function') {
+      try {
+        await nav.share({ title, text });
+        return 'shared';
+      } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || isShareCanceled(error))) {
+          return 'canceled';
+        }
+        throw error;
+      }
+    }
+    if (nav?.clipboard && typeof nav.clipboard.writeText === 'function') {
+      await nav.clipboard.writeText(text);
+      return 'shared';
+    }
+    return 'shared';
+  }
+
   try {
     await Share.share({ title, text });
     return 'shared';

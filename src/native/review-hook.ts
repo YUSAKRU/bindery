@@ -9,6 +9,7 @@ export const PREF_REVIEW_COMPLETED = 'bindery_review_completed';
 
 /** The single source of the Play listing URL; share texts take it as `{url}`. */
 export const STORE_URL = 'https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery';
+export const WEB_URL = 'https://yusakru.github.io/bindery/';
 
 export const MIN_OPS_FOR_REVIEW = 2;
 export const PROMPT_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
@@ -35,6 +36,7 @@ export async function recordSuccessfulOperation(): Promise<number> {
  */
 export async function isReviewEligible(): Promise<boolean> {
   try {
+    if (Capacitor.getPlatform() !== 'android') return false;
     const { value: completed } = await Preferences.get({ key: PREF_REVIEW_COMPLETED });
     if (completed === 'true') return false;
 
@@ -101,6 +103,6 @@ export async function recordReviewPromptShown(): Promise<void> {
  */
 export async function shareBinderyApp(): Promise<void> {
   const title = t('growth.shareTitle');
-  const text = t('growth.shareText', { url: STORE_URL });
+  const text = t('growth.shareText', { url: STORE_URL, webUrl: WEB_URL });
   await shareText(text, title);
 }
