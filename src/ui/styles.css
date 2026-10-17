@@ -4150,25 +4150,16 @@ dialog.modal-sheet::backdrop {
   box-shadow: var(--shadow-1);
 }
 
-@media (min-width: 600px) {
-  .pwa-banner:not([hidden]) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
 .pwa-banner-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  min-width: 0;
-  flex: 1;
+  width: 100%;
 }
 
 .pwa-banner-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   object-fit: contain;
@@ -4177,8 +4168,9 @@ dialog.modal-sheet::backdrop {
 .pwa-banner-text {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
-  gap: 2px;
+  gap: 4px;
 }
 
 .pwa-banner-text strong {
@@ -4197,7 +4189,13 @@ dialog.modal-sheet::backdrop {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  width: 100%;
+}
+
+.pwa-banner-actions .btn {
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .pwa-banner-close {
@@ -4214,6 +4212,7 @@ dialog.modal-sheet::backdrop {
   border-radius: 50%;
   font-size: 0.85rem;
   margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .pwa-banner-close:hover {

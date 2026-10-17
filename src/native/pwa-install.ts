@@ -99,6 +99,14 @@ export function initPwaInstallExperience(options?: {
 
   let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
+  const notifyLayoutResize = (): void => {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof Event === 'function') {
+      try {
+        window.dispatchEvent(new Event('resize'));
+      } catch {}
+    }
+  };
+
   if (typeof window !== 'undefined') {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -109,6 +117,7 @@ export function initPwaInstallExperience(options?: {
       } catch {}
       if (pwaBanner && !dismissed) {
         pwaBanner.hidden = false;
+        notifyLayoutResize();
       }
     });
   }
@@ -116,9 +125,11 @@ export function initPwaInstallExperience(options?: {
   const os = detectWebOS();
   if (os === 'android' && pwaBanner) {
     pwaBanner.hidden = false;
+    notifyLayoutResize();
   }
   if (os === 'ios' && iosBanner) {
     iosBanner.hidden = false;
+    notifyLayoutResize();
   }
 
   pwaPlayStoreBtn?.addEventListener('click', () => {
@@ -135,6 +146,7 @@ export function initPwaInstallExperience(options?: {
         .then((choice) => {
           if (choice?.outcome === 'accepted' && pwaBanner) {
             pwaBanner.hidden = true;
+            notifyLayoutResize();
           }
         })
         .catch(() => {});
@@ -149,7 +161,10 @@ export function initPwaInstallExperience(options?: {
         localStorage.setItem(PREF_PWA_BANNER_DISMISSED, 'true');
       }
     } catch {}
-    if (pwaBanner) pwaBanner.hidden = true;
+    if (pwaBanner) {
+      pwaBanner.hidden = true;
+      notifyLayoutResize();
+    }
   });
 
   iosCloseBtn?.addEventListener('click', () => {
@@ -158,6 +173,9 @@ export function initPwaInstallExperience(options?: {
         localStorage.setItem(PREF_PWA_BANNER_DISMISSED, 'true');
       }
     } catch {}
-    if (iosBanner) iosBanner.hidden = true;
+    if (iosBanner) {
+      iosBanner.hidden = true;
+      notifyLayoutResize();
+    }
   });
 }

@@ -8289,12 +8289,12 @@ export function initApp(): void {
     formatError: errorText,
   });
 
+  initPwaInstallExperience({ showToast });
+
   showScreen('hub');
 
   appVersionValue.textContent = `v${pkg.version}`;
   void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
-
-  initPwaInstallExperience({ showToast });
 
   if (localStorage.getItem('bindery.onboarded') !== 'true') {
     startOnboarding();
