@@ -42,6 +42,7 @@ import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { initMdFlow } from './md-flow';
+import { initAtelierHub, type AtelierHubController } from './atelier-hub';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
 import { canPrint } from '../native/print';
@@ -1156,6 +1157,7 @@ export function initApp(): void {
   }
 
   let mdFlow: { reset: () => void } | null = null;
+  let atelierHub: AtelierHubController | null = null;
 
   function showScreen(id: ScreenId): void {
     if (getCurrentScreenId() === 'reader' && id !== 'reader') {
@@ -5829,7 +5831,9 @@ export function initApp(): void {
   let hubRecentsGeneration = 0;
 
   async function renderHubRecentsGrid(): Promise<void> {
-    const recents = (await getRecents()).slice(0, 3);
+    const allRecents = await getRecents();
+    atelierHub?.setSavedCount(allRecents.length);
+    const recents = allRecents.slice(0, 3);
     const generation = ++hubRecentsGeneration;
     const thumbTasks: { entry: RecentEntry; thumb: HTMLElement }[] = [];
     recentsList.innerHTML = '';
@@ -8069,6 +8073,7 @@ export function initApp(): void {
     refreshSaveLabel();
     updateCoverAvailability();
     refreshConfigSummary();
+    atelierHub?.refreshTexts();
   }
 
   function startOnboarding(): void {
@@ -8290,6 +8295,25 @@ export function initApp(): void {
   });
 
   initPwaInstallExperience({ showToast });
+
+  atelierHub = initAtelierHub({
+    t,
+    isHubVisible: () =>
+      getCurrentScreenId() === 'hub' &&
+      modalStack.length === 0 &&
+      onboardingOverlay.classList.contains('hidden'),
+    onSelectModule: (moduleIndex) => {
+      if (moduleIndex === 0) {
+        const entry = TOOL_ENTRY_SCREEN.booklet;
+        if (entry) showScreen(entry);
+      } else if (moduleIndex === 1) {
+        hubOpenReaderBtn.click();
+      } else if (moduleIndex === 2) {
+        const entry = TOOL_ENTRY_SCREEN.cover;
+        if (entry) showScreen(entry);
+      }
+    },
+  });
 
   showScreen('hub');
 

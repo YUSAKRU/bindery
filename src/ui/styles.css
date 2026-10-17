@@ -4240,3 +4240,1104 @@ dialog.modal-sheet::backdrop {
   flex: 1;
 }
 
+/* ── Atelier Hub & Spatial Canvas ─────────────────────────────────────────── */
+
+/* 1. Shell Integration when #screen-hub is active */
+.app:has(#screen-hub:not(.hidden)) .top-bar {
+  display: none;
+}
+
+.app:has(#screen-hub:not(.hidden)) .screen-container {
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+  overflow: hidden;
+}
+
+#screen-hub {
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
+/* 2. Scoped CSS Variables (Light Theme Default) */
+.atelier-hub,
+#hubAtelierView {
+  --atelier-bg: #fff8f5;
+  --atelier-surface-cream: #F3ECE1;
+  --atelier-paper-edge: #D8CDB4;
+  --atelier-border-hairline: #DCD5C9;
+  --atelier-ink-black: #1C1A18;
+  --atelier-ink-muted: #5C5650;
+  --atelier-primary: #9a401d;
+  --atelier-terracotta-deep: #8a3819;
+  --atelier-gold-foil: #c89d53;
+  --atelier-tertiary: #735732;
+  --atelier-slate-paper: #232830;
+  --atelier-card2-bg: #FAF5EE;
+  --atelier-card2-grad-end: rgba(239, 228, 211, 0.4);
+  --atelier-spotlight-from: rgba(243, 236, 225, 0.8);
+  --atelier-spotlight-via: rgba(252, 246, 237, 0.4);
+  --atelier-grid-dot1: #b8a994;
+  --atelier-grid-dot2: #9a401d;
+  --atelier-spine-dash: rgba(154, 64, 29, 0.4);
+  --atelier-spine-dot: rgba(154, 64, 29, 0.5);
+}
+
+/* Scoped Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) .atelier-hub,
+  :root:not(.light-theme) #hubAtelierView {
+    --atelier-bg: #161412;
+    --atelier-surface-cream: #25211d;
+    --atelier-paper-edge: #3d352e;
+    --atelier-border-hairline: #38312a;
+    --atelier-ink-black: #f5efe6;
+    --atelier-ink-muted: #b0a699;
+    --atelier-tertiary: #c4a882;
+    --atelier-card2-bg: #221e1a;
+    --atelier-card2-grad-end: rgba(45, 38, 30, 0.5);
+    --atelier-spotlight-from: rgba(56, 44, 34, 0.45);
+    --atelier-spotlight-via: rgba(36, 28, 22, 0.25);
+    --atelier-grid-dot1: #3d352e;
+    --atelier-grid-dot2: #5c3523;
+    --atelier-spine-dash: rgba(200, 157, 83, 0.35);
+    --atelier-spine-dot: rgba(200, 157, 83, 0.45);
+  }
+}
+
+:root.dark-theme .atelier-hub,
+:root.dark-theme #hubAtelierView {
+  --atelier-bg: #161412;
+  --atelier-surface-cream: #25211d;
+  --atelier-paper-edge: #3d352e;
+  --atelier-border-hairline: #38312a;
+  --atelier-ink-black: #f5efe6;
+  --atelier-ink-muted: #b0a699;
+  --atelier-tertiary: #c4a882;
+  --atelier-card2-bg: #221e1a;
+  --atelier-card2-grad-end: rgba(45, 38, 30, 0.5);
+  --atelier-spotlight-from: rgba(56, 44, 34, 0.45);
+  --atelier-spotlight-via: rgba(36, 28, 22, 0.25);
+  --atelier-grid-dot1: #3d352e;
+  --atelier-grid-dot2: #5c3523;
+  --atelier-spine-dash: rgba(200, 157, 83, 0.35);
+  --atelier-spine-dot: rgba(200, 157, 83, 0.45);
+}
+
+/* 3. Main Atelier Container & Millimeter Dot Grid */
+.atelier-hub {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+  color: var(--atelier-ink-black);
+  box-sizing: border-box;
+}
+
+.artisan-grid {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+/* Center Spine Calibration Line & Dots */
+.atelier-spine-line {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.atelier-spine-dash {
+  width: 100%;
+  height: 100%;
+  border-left: 1px dashed var(--atelier-spine-dash);
+  position: relative;
+}
+
+.atelier-spine-dot {
+  position: absolute;
+  left: -2.5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--atelier-spine-dot);
+}
+
+.atelier-spine-dot:nth-of-type(1),
+.atelier-spine-dot--25 {
+  top: 25%;
+}
+
+.atelier-spine-dot:nth-of-type(2),
+.atelier-spine-dot--50 {
+  top: 50%;
+}
+
+.atelier-spine-dot:nth-of-type(3),
+.atelier-spine-dot--75 {
+  top: 75%;
+}
+
+/* Radial Spotlight Glow */
+.atelier-spotlight-container {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.atelier-spotlight {
+  pointer-events: none;
+  position: absolute;
+  top: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  height: 380px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--atelier-spotlight-from) 0%, var(--atelier-spotlight-via) 45%, transparent 70%);
+  filter: blur(48px);
+  opacity: 0.8;
+}
+
+/* 4. Atelier Top Header & Minimal Brand */
+.atelier-header {
+  width: 100%;
+  z-index: 30;
+  padding-top: calc(env(safe-area-inset-top, 16px) + 8px);
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.atelier-header-inner {
+  max-width: 430px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.atelier-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.atelier-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: var(--atelier-primary);
+  box-shadow: 0 0 0 4px rgba(154, 64, 29, 0.2);
+  display: inline-block;
+  animation: atelierPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes atelierPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+}
+
+.atelier-brand-title {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.atelier-brand-sub {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--atelier-tertiary);
+  opacity: 0.75;
+  line-height: 1;
+  margin-left: 6px;
+}
+
+.atelier-github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.atelier-github-btn:hover {
+  border-color: rgba(186, 88, 50, 0.5);
+  color: var(--atelier-ink-black);
+}
+
+.atelier-github-btn:active {
+  transform: scale(0.95);
+}
+
+.atelier-github-icon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  color: var(--atelier-ink-black);
+  opacity: 0.85;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.atelier-github-btn:hover .atelier-github-icon {
+  color: var(--atelier-primary);
+  opacity: 1;
+}
+
+.atelier-github-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--atelier-ink-black);
+  opacity: 0.9;
+}
+
+.atelier-github-count {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--atelier-tertiary);
+  opacity: 0.8;
+  border-left: 1px solid var(--atelier-paper-edge);
+  padding-left: 6px;
+}
+
+/* 5. Spatial Canvas Main & Perspective Viewport */
+.atelier-main,
+#atelierCanvasContainer {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  overflow: visible;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.atelier-spatial-header,
+#atelierSpatialHeader {
+  text-align: center;
+  margin-bottom: 8px;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 20;
+}
+
+.atelier-desk-title {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+  margin: 0;
+}
+
+.atelier-mode-hint,
+#atelierModeHint {
+  font-size: 12px;
+  color: var(--atelier-ink-muted);
+  font-weight: 400;
+  margin: 4px 0 0;
+  line-height: 1.3;
+}
+
+.atelier-viewport,
+.spatial-viewport,
+#atelierViewport3D {
+  perspective: 1200px;
+  perspective-origin: 50% 48%;
+  transform-style: preserve-3d;
+  touch-action: pan-y;
+  position: relative;
+  width: 100%;
+  max-width: 390px;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 6. The 3D Atelier Cards */
+.atelier-card {
+  position: absolute;
+  width: 236px;
+  height: 300px;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  box-sizing: border-box;
+  translate: 0px 0px 0px;
+  rotate: z 0deg;
+  transition:
+    transform 0.68s cubic-bezier(0.19, 1, 0.22, 1),
+    translate 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    rotate 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    box-shadow 0.65s ease,
+    opacity 0.45s ease,
+    filter 0.5s ease;
+  will-change: transform, translate, opacity;
+  backface-visibility: hidden;
+}
+
+.card-transition {
+  translate: 0px 0px 0px;
+  rotate: z 0deg;
+  transition:
+    transform 0.68s cubic-bezier(0.19, 1, 0.22, 1),
+    translate 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    rotate 0.55s cubic-bezier(0.19, 1, 0.22, 1),
+    box-shadow 0.65s ease,
+    opacity 0.45s ease,
+    filter 0.5s ease;
+  will-change: transform, translate, opacity;
+  backface-visibility: hidden;
+}
+
+.atelier-card-dragging,
+.card-dragging {
+  transition:
+    transform 0.08s linear,
+    opacity 0.2s ease,
+    filter 0.2s ease !important;
+}
+
+/* Card 0: Terracotta Artisan */
+.atelier-card--terracotta {
+  background: linear-gradient(135deg, #9e421e 0%, #8c3917 50%, #6e290d 100%);
+  color: #ffffff;
+  border: 1px solid rgba(194, 94, 56, 0.7);
+  box-shadow: 0 16px 36px -6px rgba(110, 41, 13, 0.45);
+}
+
+.atelier-card-glow-terracotta {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 112px;
+  height: 112px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+/* Card 1: Parchment Kraft */
+.atelier-card--parchment {
+  background-color: var(--atelier-card2-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  box-shadow: 0 14px 30px -6px rgba(78, 60, 40, 0.18);
+}
+
+.atelier-card-glow-parchment {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, var(--atelier-card2-grad-end) 100%);
+  pointer-events: none;
+}
+
+/* Card 2: Charcoal Gold Foil */
+.atelier-card--charcoal {
+  background-color: #212429;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px -6px rgba(15, 18, 22, 0.45);
+}
+
+.atelier-card-glow-gold {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 144px;
+  height: 144px;
+  background: rgba(200, 157, 83, 0.15);
+  border-radius: 9999px;
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+/* Fine Stitching Seam */
+.atelier-stitch-seam,
+.stitch-seam {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background-image: radial-gradient(circle, #e6c093 1.2px, transparent 1.4px);
+  background-size: 2px 9px;
+  background-repeat: repeat-y;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.atelier-card--terracotta .atelier-stitch-seam {
+  opacity: 0.6;
+}
+
+.atelier-card--parchment .atelier-stitch-seam {
+  opacity: 0.5;
+}
+
+.atelier-card--charcoal .atelier-stitch-seam {
+  opacity: 0.4;
+}
+
+/* 7. Card Components & Typography */
+.atelier-card-header {
+  position: relative;
+  z-index: 10;
+  padding-left: 12px;
+}
+
+.atelier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.atelier-card--terracotta .atelier-badge {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffdbcf;
+}
+
+.atelier-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+}
+
+.atelier-card--terracotta .atelier-badge-dot {
+  background-color: #ffb59b;
+}
+
+.atelier-card--parchment .atelier-badge {
+  background: rgba(238, 227, 209, 0.8);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-tertiary);
+}
+
+.atelier-card--parchment .atelier-badge-dot {
+  background-color: #735732;
+}
+
+.atelier-card--charcoal .atelier-badge {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f7dc6f;
+}
+
+.atelier-card--charcoal .atelier-badge-dot {
+  background-color: var(--atelier-gold-foil);
+}
+
+.atelier-foil-text,
+.foil-text {
+  background: linear-gradient(120deg, #d4af37 0%, #fff2b2 30%, #aa771c 65%, #f7dc6f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Card Motif Box */
+.atelier-card-motif {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  margin-bottom: auto;
+  padding-left: 12px;
+}
+
+.atelier-motif-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.atelier-card--terracotta .atelier-motif-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.atelier-card--parchment .atelier-motif-box {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.atelier-card--charcoal .atelier-motif-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.atelier-motif-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atelier-card--terracotta .atelier-motif-icon {
+  color: rgba(255, 255, 255, 0.95);
+  fill: currentColor;
+}
+
+.atelier-card--parchment .atelier-motif-icon {
+  color: var(--atelier-tertiary);
+  fill: currentColor;
+}
+
+.atelier-card--charcoal .atelier-motif-icon {
+  color: var(--atelier-gold-foil);
+  fill: currentColor;
+}
+
+.atelier-motif-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.atelier-motif-icon .material-symbols-outlined {
+  font-size: 36px;
+}
+
+.atelier-motif-no {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 10px;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--atelier-gold-foil);
+}
+
+/* Card Footer */
+.atelier-card-footer {
+  position: relative;
+  z-index: 10;
+  padding-left: 12px;
+}
+
+.atelier-card-title {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.atelier-card--terracotta .atelier-card-title {
+  color: #ffffff;
+}
+
+.atelier-card--parchment .atelier-card-title {
+  color: var(--atelier-ink-black);
+}
+
+.atelier-card--charcoal .atelier-card-title {
+  color: #fffdfa;
+}
+
+.atelier-card-desc {
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-top: 6px;
+}
+
+.atelier-card--terracotta .atelier-card-desc {
+  color: rgba(255, 219, 207, 0.85);
+}
+
+.atelier-card--parchment .atelier-card-desc {
+  color: var(--atelier-ink-muted);
+}
+
+.atelier-card--charcoal .atelier-card-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.atelier-card-meta-row {
+  margin-top: 12px;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.05em;
+}
+
+.atelier-card--terracotta .atelier-card-meta-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.atelier-card--terracotta .atelier-card-meta-row span:last-child {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.atelier-card--parchment .atelier-card-meta-row {
+  border-top: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+}
+
+.atelier-card--parchment .atelier-card-meta-row span:last-child {
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+.atelier-card--charcoal .atelier-card-meta-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.atelier-card--charcoal .atelier-card-meta-row span:last-child {
+  font-weight: 600;
+  color: var(--atelier-gold-foil);
+}
+
+/* 8. Mode Switcher Bar */
+.atelier-mode-bar {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.atelier-mode-btn,
+#atelierModeToggleBtn {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--atelier-ink-muted);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.atelier-mode-btn:hover,
+#atelierModeToggleBtn:hover {
+  color: var(--atelier-ink-black);
+}
+
+.atelier-mode-btn:active,
+#atelierModeToggleBtn:active {
+  transform: scale(0.95);
+}
+
+.atelier-mode-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--atelier-tertiary);
+  fill: currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atelier-mode-icon .material-symbols-outlined {
+  font-size: 14px;
+}
+
+/* 9. Bottom Interactive Dock & Dynamic Launch Action Button */
+.atelier-footer {
+  width: 100%;
+  z-index: 30;
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 8px);
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  max-width: 430px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.atelier-indicators,
+#atelierIndicators,
+#carouselIndicators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.3s ease;
+}
+
+.atelier-indicator-dot,
+[data-atelier-indicator],
+[data-indicator] {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: var(--atelier-paper-edge);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1), background-color 0.3s ease, opacity 0.3s ease;
+}
+
+.atelier-indicator-dot.is-active,
+[data-atelier-indicator].is-active,
+[data-indicator].is-active {
+  width: 24px;
+  background-color: var(--atelier-primary);
+  opacity: 1;
+}
+
+.atelier-indicator-dot.is-free,
+[data-atelier-indicator].is-free,
+[data-indicator].is-free {
+  width: 6px;
+  height: 6px;
+  opacity: 0.6;
+}
+
+/* Dynamic Action Button */
+.atelier-action-btn,
+#atelierPrimaryActionBtn {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border-radius: 16px;
+  background-color: #9a401d;
+  color: #ffffff;
+  box-shadow: 0 8px 20px -4px rgba(154, 64, 29, 0.38);
+  border: 1px solid rgba(186, 88, 50, 0.6);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.atelier-action-btn:hover,
+#atelierPrimaryActionBtn:hover {
+  filter: brightness(0.96);
+}
+
+.atelier-action-btn:active,
+#atelierPrimaryActionBtn:active {
+  transform: scale(0.985);
+}
+
+.atelier-action-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.atelier-action-icon-box,
+#atelierBtnIcon,
+#btnIconContainer {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.atelier-action-btn:hover .atelier-action-icon-box,
+.atelier-action-btn:hover #atelierBtnIcon,
+.atelier-action-btn:hover #btnIconContainer,
+#atelierPrimaryActionBtn:hover .atelier-action-icon-box,
+#atelierPrimaryActionBtn:hover #atelierBtnIcon,
+#atelierPrimaryActionBtn:hover #btnIconContainer {
+  transform: scale(1.05);
+}
+
+.atelier-action-icon-box svg,
+#atelierBtnIcon svg,
+#btnIconContainer svg {
+  width: 22px;
+  height: 22px;
+}
+
+.atelier-action-icon-box .material-symbols-outlined,
+#atelierBtnIcon .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.atelier-action-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.atelier-action-title,
+#atelierBtnActionTitle {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atelier-action-sub,
+#atelierBtnActionSub {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  line-height: 1.25;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atelier-action-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.atelier-action-arrow svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.atelier-action-arrow .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.atelier-action-btn:hover .atelier-action-arrow,
+#atelierPrimaryActionBtn:hover .atelier-action-arrow {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Privacy Seal Row */
+.atelier-privacy-row {
+  padding-top: 2px;
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atelier-privacy-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--atelier-ink-muted);
+  opacity: 0.85;
+}
+
+.atelier-privacy-seal svg {
+  width: 13px;
+  height: 13px;
+  color: var(--atelier-tertiary);
+  opacity: 0.85;
+}
+
+.atelier-privacy-seal .material-symbols-outlined {
+  font-size: 13px;
+  color: var(--atelier-tertiary);
+  opacity: 0.85;
+}
+
+/* 10. Ambient Floating Keyframes & Classes */
+@keyframes orbitFloat1 {
+  0%, 100% {
+    translate: 0px 0px 0px;
+    rotate: z -1.5deg;
+  }
+  33% {
+    translate: -7px -11px 6px;
+    rotate: z 1deg;
+  }
+  66% {
+    translate: 5px -6px 3px;
+    rotate: z -2.5deg;
+  }
+}
+
+@keyframes orbitFloat2 {
+  0%, 100% {
+    translate: 0px 0px 0px;
+    rotate: z 1.5deg;
+  }
+  40% {
+    translate: 8px -12px 5px;
+    rotate: z 3.5deg;
+  }
+  75% {
+    translate: -5px -5px 2px;
+    rotate: z 0deg;
+  }
+}
+
+@keyframes orbitFloat3 {
+  0%, 100% {
+    translate: 0px 0px 0px;
+    rotate: z -1deg;
+  }
+  45% {
+    translate: -6px 9px 4px;
+    rotate: z 1.8deg;
+  }
+  80% {
+    translate: 7px -7px 2px;
+    rotate: z -2deg;
+  }
+}
+
+.atelier-card-float-1,
+.card-float-1 {
+  animation: orbitFloat1 6.4s ease-in-out infinite;
+}
+
+.atelier-card-float-2,
+.card-float-2 {
+  animation: orbitFloat2 7.2s ease-in-out infinite -1.8s;
+}
+
+.atelier-card-float-3,
+.card-float-3 {
+  animation: orbitFloat3 6.8s ease-in-out infinite -3.4s;
+}
+
+/* Tap Ripple Effect */
+@keyframes tapRipple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+.tap-ripple {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 2px solid var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.12);
+  pointer-events: none;
+  z-index: 50;
+  animation: tapRipple 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
