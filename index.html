@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Bindery" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#4A5568" />
     <title>Bindery</title>
@@ -20,6 +25,32 @@
 
       <main class="screen-container">
         <section class="screen" id="screen-hub">
+          <div class="pwa-banner" id="pwaInstallBanner" hidden>
+            <div class="pwa-banner-content">
+              <img src="/pwa-192.png" alt="" class="pwa-banner-icon" width="36" height="36" />
+              <div class="pwa-banner-text">
+                <strong data-i18n="pwa.bannerTitle">Install Bindery App</strong>
+                <span data-i18n="pwa.bannerSub">Use as an offline web app or get it on Google Play</span>
+              </div>
+            </div>
+            <div class="pwa-banner-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="pwaInstallBtn" data-i18n="pwa.installBtn">Install App</button>
+              <button type="button" class="btn btn-tonal btn-sm" id="pwaPlayStoreBtn" data-i18n="pwa.playStoreBtn">Google Play</button>
+              <button type="button" class="icon-btn pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Close">✕</button>
+            </div>
+          </div>
+
+          <div class="ios-pwa-card" id="iosInstallBanner" hidden>
+            <div class="ios-pwa-header">
+              <img src="/apple-touch-icon.png" alt="" class="pwa-banner-icon" width="36" height="36" />
+              <div class="pwa-banner-text">
+                <strong data-i18n="pwa.iosTitle">Add Bindery to Home Screen</strong>
+                <span data-i18n="pwa.iosSteps">Tap Safari's Share [↑] button below, then select "Add to Home Screen [+]" to install as a full-screen offline app.</span>
+              </div>
+              <button type="button" class="icon-btn pwa-banner-close" id="iosBannerCloseBtn" aria-label="Close">✕</button>
+            </div>
+          </div>
+
           <div class="hub-hero" id="hubHero">
             <div class="hero-stage" id="heroStage" aria-hidden="true"></div>
             <h2 class="hub-hero-title" data-i18n="hub.hero.title">Manage your PDFs with ease</h2>

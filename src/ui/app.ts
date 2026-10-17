@@ -93,6 +93,7 @@ import {
   recordReviewPromptShown,
   shareBinderyApp,
 } from '../native/review-hook';
+import { initPwaInstallExperience } from '../native/pwa-install';
 import { initLanguage, setLanguage, getLanguage, t, type Lang } from '../i18n';
 import { safeFileName, safeBaseName } from './filename';
 import { createSaveFlow, type SaveFlowDeps } from './save-flow';
@@ -8292,6 +8293,8 @@ export function initApp(): void {
 
   appVersionValue.textContent = `v${pkg.version}`;
   void App.getInfo().then((info) => { appVersionValue.textContent = `v${info.version}`; }).catch(() => {});
+
+  initPwaInstallExperience({ showToast });
 
   if (localStorage.getItem('bindery.onboarded') !== 'true') {
     startOnboarding();

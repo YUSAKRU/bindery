@@ -418,6 +418,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
       'If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!',
     'growth.reviewPromptRate': 'Rate on Google Play',
     'growth.reviewPromptLater': 'Maybe Later',
+    'pwa.bannerTitle': 'Install Bindery App',
+    'pwa.bannerSub': 'Use as an offline web app or get it on Google Play',
+    'pwa.installBtn': 'Install Web App',
+    'pwa.playStoreBtn': 'Google Play',
+    'pwa.iosTitle': 'Add Bindery to Home Screen',
+    'pwa.iosSteps':
+      'Tap Safari\'s Share [↑] button below, then select "Add to Home Screen [+]" to install as a full-screen offline app.',
+    'pwa.androidManualHint': 'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".',
     'config.generateBooklet': 'Create Booklet',
 
     'stat.blankPagesAdded': 'Padding Pages',
@@ -1124,6 +1132,14 @@ const STRINGS: Record<Lang, Record<string, string>> = {
       "Bindery kitapçık basmanıza veya PDF düzenlemenize yardımcı olduysa, Google Play'de yapacağınız kısa bir yorum başkalarının da keşfetmesini sağlar!",
     'growth.reviewPromptRate': "Google Play'de Puan Ver",
     'growth.reviewPromptLater': 'Daha Sonra',
+    'pwa.bannerTitle': 'Bindery Uygulamasını Yükle',
+    'pwa.bannerSub': "Çevrimdışı web uygulaması olarak kurun veya Google Play'den indirin",
+    'pwa.installBtn': 'Web Uygulamasını Kur',
+    'pwa.playStoreBtn': 'Google Play',
+    'pwa.iosTitle': "Bindery'yi Ana Ekrana Ekleyin",
+    'pwa.iosSteps':
+      'Tam ekran çevrimdışı uygulama olarak kullanmak için Safari\'de aşağıdaki Paylaş [↑] düğmesine dokunun ve "Ana Ekrana Ekle [+]" seçeneğini seçin.',
+    'pwa.androidManualHint': 'Tarayıcı menüsünü (⋮) açıp "Uygulamayı yükle" veya "Ana ekrana ekle" seçeneğine dokunun.',
     'config.generateBooklet': 'Kitapçığı Oluştur',
 
     'stat.blankPagesAdded': 'Tamamlama Boşluğu',
