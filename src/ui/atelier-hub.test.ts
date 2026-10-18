@@ -234,7 +234,7 @@ interface HubFixture {
   icons: [FakeElement, FakeElement, FakeElement];
   menuBtn: FakeElement;
   menuSheet: FakeElement;
-  menuCloseBtn: FakeElement;
+  menuPanel: FakeElement;
   menuNavBtns: Record<AtelierNavTarget, FakeElement>;
 }
 
@@ -341,9 +341,9 @@ function createFixture(): HubFixture {
   menuSheet.classList.add('hidden');
   root.appendChild(menuSheet);
 
-  const menuCloseBtn = new FakeElement('button');
-  menuCloseBtn.id = 'atelierMenuCloseBtn';
-  menuSheet.appendChild(menuCloseBtn);
+  const menuPanel = new FakeElement('div');
+  menuPanel.id = 'atelierMenuPanel';
+  menuSheet.appendChild(menuPanel);
 
   const menuNavBtns = {} as Record<AtelierNavTarget, FakeElement>;
   for (const nav of ['files', 'recents', 'tools-all', 'settings'] as const) {
@@ -370,7 +370,7 @@ function createFixture(): HubFixture {
     icons: [icon0, icon1, icon2],
     menuBtn,
     menuSheet,
-    menuCloseBtn,
+    menuPanel,
     menuNavBtns,
   };
 }
@@ -863,7 +863,6 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
         'atelier.menuAria',
         'atelier.menuLabel',
         'atelier.menuTitle',
-        'atelier.menuCloseAria',
         'atelier.menuAllTools',
         'atelier.menuRecents',
         'atelier.deskTitle',
@@ -947,17 +946,19 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
     });
 
-    it('closes the menu sheet via #atelierMenuCloseBtn, backdrop click, or Escape key without exiting Coverflow', () => {
+    it('drops the menu panel just below the menu button, measured from the tap-catcher', () => {
+      fixture.menuSheet.rect = { ...fixture.menuSheet.rect, top: 20 };
+      fixture.menuBtn.rect = { ...fixture.menuBtn.rect, bottom: 92 };
+      controller.openMenu();
+      expect(fixture.menuPanel.style.top).toBe('80px');
+    });
+
+    it('closes the menu via an outside tap or Escape key without exiting Coverflow', () => {
       controller.applyCoverflow(1);
+
+      // Close via a tap outside the pills (lands on the transparent tap-catcher)
       controller.openMenu();
       expect(controller.isMenuOpen()).toBe(true);
-
-      // Close via close button
-      fixture.menuCloseBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
-      expect(controller.isMenuOpen()).toBe(false);
-
-      // Reopen and close via backdrop click
-      controller.openMenu();
       fixture.menuSheet.dispatchEvent({ type: 'click', target: fixture.menuSheet });
       expect(controller.isMenuOpen()).toBe(false);
 

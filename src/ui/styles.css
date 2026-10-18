@@ -5352,7 +5352,7 @@ dialog.modal-sheet::backdrop {
   animation: tapRipple 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* 11. "One Door" Atelier Menu Button & Bottom Sheet */
+/* 11. "One Door" Atelier Menu — floating pills dropping from the menu button */
 .atelier-menu-btn {
   cursor: pointer;
   font-family: inherit;
@@ -5362,113 +5362,124 @@ dialog.modal-sheet::backdrop {
   fill: none;
 }
 
+.atelier-menu-btn[aria-expanded='true'] {
+  background: var(--atelier-ink-black);
+  border-color: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+}
+
+.atelier-menu-btn[aria-expanded='true'] .atelier-github-icon,
+.atelier-menu-btn[aria-expanded='true'] .atelier-github-text {
+  color: var(--atelier-bg);
+  opacity: 1;
+}
+
+/* Tap-catcher: an outside tap closes the menu instead of reaching the cards
+   underneath. A faint paper veil keeps the pills legible over the deck
+   without turning the menu into a modal. */
 .atelier-sheet-backdrop {
   position: absolute;
   inset: 0;
   z-index: 60;
-  background: rgba(20, 17, 14, 0.48);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  animation: fadeIn 160ms ease-out;
+  background: color-mix(in srgb, var(--atelier-bg) 55%, transparent);
+  /* Opacity only: the panel's top is measured against this element on open,
+     so it must not be mid-translate at that moment. */
+  animation: atelierVeilIn 160ms ease-out;
+}
+
+@keyframes atelierVeilIn {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The header (and its menu button) stays above the veil, so the open
+   button reads as the anchor the pills hang from — and a second tap on it
+   closes the menu. */
+.atelier-hub:has(#atelierMenuSheet:not(.hidden)) .atelier-header {
+  z-index: 61;
 }
 
 .atelier-sheet-panel {
-  width: 100%;
-  max-width: 430px;
-  max-height: 82vh;
-  overflow-y: auto;
-  background: var(--atelier-bg);
-  border-top: 1px solid var(--atelier-paper-edge);
-  border-radius: 20px 20px 0 0;
-  padding: 18px 18px calc(max(env(safe-area-inset-bottom, 16px), 16px) + 6px);
-  box-shadow: 0 -12px 36px rgba(20, 16, 12, 0.28);
+  position: absolute;
+  /* Overwritten on open with the measured button bottom + 8px. */
+  top: calc(env(safe-area-inset-top, 16px) + 64px);
+  right: max(1.5rem, calc((100% - 430px) / 2 + 1.5rem));
+  /* No overflow clipping here: it would cut the pills' shadows into a
+     visible rectangle. Six rows fit any phone height. */
+  width: 248px;
+  max-width: calc(100% - 3rem);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: stretch;
+  gap: 8px;
   box-sizing: border-box;
-}
-
-.atelier-sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px 8px;
-  border-bottom: 1px solid var(--atelier-border-hairline);
-}
-
-.atelier-sheet-title {
-  margin: 0;
-  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--atelier-ink-black);
-}
-
-.atelier-sheet-close {
-  appearance: none;
-  border: 1px solid var(--atelier-paper-edge);
-  background: var(--atelier-surface-cream);
-  color: var(--atelier-ink-black);
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .atelier-sheet-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .atelier-sheet-item {
   appearance: none;
-  width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--atelier-surface-cream);
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 18px 0 8px;
+  border-radius: 9999px;
+  background: var(--atelier-bg);
   border: 1px solid var(--atelier-paper-edge);
   color: var(--atelier-ink-black);
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
+  letter-spacing: 0.01em;
   text-align: left;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  box-shadow:
+    0 1px 2px rgba(40, 30, 20, 0.06),
+    0 8px 22px rgba(40, 30, 20, 0.14);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.12s ease;
   box-sizing: border-box;
+  transform-origin: top right;
+  animation: atelierPillDrop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.atelier-sheet-item:hover {
+.atelier-sheet-item:hover,
+.atelier-sheet-item:focus-visible {
   border-color: var(--atelier-primary);
+  background: var(--atelier-surface-cream);
+}
+
+.atelier-sheet-item:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
 }
 
 .atelier-sheet-item:active {
-  transform: scale(0.985);
+  transform: scale(0.97);
 }
 
 .atelier-sheet-icon {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: var(--atelier-surface-cream);
   color: var(--atelier-primary);
   flex-shrink: 0;
 }
 
 .atelier-sheet-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .atelier-sheet-label {
@@ -5476,25 +5487,123 @@ dialog.modal-sheet::backdrop {
   color: var(--atelier-ink-black);
 }
 
-.atelier-sheet-chevron {
-  font-size: 16px;
-  color: var(--atelier-ink-muted);
-  line-height: 1;
+/* Each pill lands a beat after the one above it. */
+.atelier-sheet-nav .atelier-sheet-item:nth-child(2) { animation-delay: 30ms; }
+.atelier-sheet-nav .atelier-sheet-item:nth-child(3) { animation-delay: 60ms; }
+.atelier-sheet-nav .atelier-sheet-item:nth-child(4) { animation-delay: 90ms; }
+.atelier-sheet-github { animation-delay: 120ms; }
+
+@keyframes atelierPillDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
+/* A short centred rule rather than a full-width line: it groups, it does not fence. */
 .atelier-sheet-divider {
-  border: none;
-  border-top: 1px solid var(--atelier-border-hairline);
-  margin: 4px 0;
+  align-self: center;
+  width: 28px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--atelier-paper-edge);
 }
 
+.atelier-sheet-github {
+  color: var(--atelier-ink-muted);
+}
+
+.atelier-sheet-github .atelier-sheet-icon {
+  color: var(--atelier-ink-black);
+}
+
+/* Install prompts keep their IDs (pwa-install.ts drives them) but take the
+   same rounded, floating shape as the pills. */
 .atelier-sheet-panel .pwa-banner,
 .atelier-sheet-panel .ios-pwa-card {
   margin: 0;
+  padding: 12px 12px 12px 14px;
+  border-radius: 22px;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-black);
+  white-space: normal;
+  box-shadow:
+    0 1px 2px rgba(40, 30, 20, 0.06),
+    0 8px 22px rgba(40, 30, 20, 0.14);
+  animation: atelierPillDrop 240ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+.atelier-sheet-panel .pwa-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+}
+
+.atelier-sheet-panel .pwa-banner-content {
+  gap: 10px;
+  align-items: center;
+}
+
+.atelier-sheet-panel .pwa-banner-text strong {
+  font-size: 13.5px;
+  color: var(--atelier-ink-black);
+}
+
+.atelier-sheet-panel .pwa-banner-text span {
+  font-size: 11.5px;
+  color: var(--atelier-ink-muted);
+}
+
+/* The two buttons already say what the card offers; the subtitle only
+   repeats it in a space this narrow. (The iOS card keeps its text — those
+   are the steps.) */
+.atelier-sheet-panel .pwa-banner-text span {
+  display: none;
+}
+
+.atelier-sheet-panel .pwa-banner-close {
+  color: var(--atelier-ink-muted);
+}
+
+.atelier-sheet-panel .pwa-banner-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atelier-sheet-panel .pwa-banner-actions .btn {
+  flex: 1 1 auto;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.atelier-sheet-panel .pwa-banner-actions .btn-primary {
+  background: var(--atelier-primary);
+  border: 1px solid var(--atelier-primary);
+  color: #fff8f5;
+}
+
+.atelier-sheet-panel .pwa-banner-actions .btn-tonal {
   background: var(--atelier-surface-cream);
   border: 1px solid var(--atelier-paper-edge);
   color: var(--atelier-ink-black);
 }
 
-
-
+@media (prefers-reduced-motion: reduce) {
+  .atelier-sheet-backdrop,
+  .atelier-sheet-item,
+  .atelier-sheet-panel .pwa-banner,
+  .atelier-sheet-panel .ios-pwa-card {
+    animation: none;
+  }
+}
