@@ -6975,7 +6975,10 @@ export function initApp(): void {
       return;
     }
     if (current === 'hub' || current === 'files' || current === 'settings') {
-      void App.exitApp();
+      // Back on a root screen sends the app to the background, as other
+      // Android apps do, rather than exiting: an open document is not lost
+      // and coming back is instant.
+      void App.minimizeApp();
     } else {
       backBtn.click();
     }
