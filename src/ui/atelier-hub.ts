@@ -125,8 +125,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     ind2 ?? doc.querySelectorAll<HTMLElement>('[data-atelier-indicator]')[2] ?? null,
   ];
 
-  const modeToggleBtn = doc.querySelector<HTMLElement>('#atelierModeToggleBtn');
-  const modeToggleLabel = doc.querySelector<HTMLElement>('#atelierModeToggleLabel');
   const modeHint = doc.querySelector<HTMLElement>('#atelierModeHint');
   const actionBtn = doc.querySelector<HTMLElement>('#atelierPrimaryActionBtn');
   const btnTitle = doc.querySelector<HTMLElement>('#atelierBtnActionTitle');
@@ -228,7 +226,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
 
   function applyFreeFloat(): void {
     isCoverflow = false;
-    if (modeToggleLabel) modeToggleLabel.textContent = deps.t('atelier.modeFree');
     if (modeHint) modeHint.textContent = deps.t('atelier.hintFree');
 
     cards.forEach((card, idx) => {
@@ -250,7 +247,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   function applyCoverflow(targetIdx: number, dragOffsetX = 0): void {
     isCoverflow = true;
     activeIndex = (((targetIdx % 3) + 3) % 3) as AtelierModuleIndex;
-    if (modeToggleLabel) modeToggleLabel.textContent = deps.t('atelier.modeCarousel');
     if (modeHint) modeHint.textContent = deps.t('atelier.hintCarousel');
 
     const normalizedDrag = Math.max(-140, Math.min(140, dragOffsetX));
@@ -300,12 +296,8 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   }
 
   function refreshTexts(): void {
-    if (isCoverflow) {
-      if (modeToggleLabel) modeToggleLabel.textContent = deps.t('atelier.modeCarousel');
-      if (modeHint) modeHint.textContent = deps.t('atelier.hintCarousel');
-    } else {
-      if (modeToggleLabel) modeToggleLabel.textContent = deps.t('atelier.modeFree');
-      if (modeHint) modeHint.textContent = deps.t('atelier.hintFree');
+    if (modeHint) {
+      modeHint.textContent = deps.t(isCoverflow ? 'atelier.hintCarousel' : 'atelier.hintFree');
     }
     updateBottomDock();
     updateIndicators();
@@ -324,7 +316,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
 
   const onPointerDown = (e: PointerEvent): void => {
     const targetEl = e.target as HTMLElement | null;
-    if (targetEl?.closest('#atelierModeToggleBtn')) return;
     if (isCoverflow && activeIndex === 1 && targetEl?.closest('#atelierCard1SavedCount')) return;
     pointerDown = true;
     hasDragged = false;
@@ -353,11 +344,7 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     pointerDown = false;
     cards.forEach((c) => c?.classList.remove('atelier-card-dragging'));
 
-    if (
-      (e.target as HTMLElement | null)?.closest(
-        '#atelierModeToggleBtn, #atelierPrimaryActionBtn, [data-atelier-indicator]',
-      )
-    ) {
+    if ((e.target as HTMLElement | null)?.closest('#atelierPrimaryActionBtn, [data-atelier-indicator]')) {
       return;
     }
 
@@ -415,15 +402,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     cards.forEach((c) => c?.classList.remove('atelier-card-dragging'));
     if (hasDragged && isCoverflow) {
       applyCoverflow(activeIndex, 0);
-    }
-  };
-
-  const onModeToggleClick = (e: MouseEvent): void => {
-    e.stopPropagation();
-    if (isCoverflow) {
-      applyFreeFloat();
-    } else {
-      applyCoverflow(activeIndex);
     }
   };
 
@@ -521,7 +499,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     window.addEventListener('keydown', onKeyDown);
   }
   viewport?.addEventListener('wheel', onWheel, { passive: true });
-  modeToggleBtn?.addEventListener('click', onModeToggleClick);
   actionBtn?.addEventListener('click', onActionBtnClick);
   savedCountEl?.addEventListener('click', onSavedCountClick);
   menuBtn?.addEventListener('click', onMenuBtnClick);
@@ -540,7 +517,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
       clearTimeout(wheelTimeoutId);
       wheelTimeoutId = null;
     }
-    modeToggleBtn?.removeEventListener('click', onModeToggleClick);
     actionBtn?.removeEventListener('click', onActionBtnClick);
     savedCountEl?.removeEventListener('click', onSavedCountClick);
     menuBtn?.removeEventListener('click', onMenuBtnClick);
