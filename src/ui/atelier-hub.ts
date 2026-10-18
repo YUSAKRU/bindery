@@ -121,7 +121,7 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
 
   const menuBtn = doc.querySelector<HTMLElement>('#atelierMenuBtn');
   const menuSheet = doc.querySelector<HTMLElement>('#atelierMenuSheet');
-  const menuCloseBtn = doc.querySelector<HTMLElement>('#atelierMenuCloseBtn');
+  const menuPanel = doc.querySelector<HTMLElement>('#atelierMenuPanel');
   const menuNavButtons = Array.from(doc.querySelectorAll<HTMLElement>('[data-atelier-nav]'));
 
   let isCoverflow = false;
@@ -132,9 +132,20 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     return Boolean(menuSheet && !menuSheet.classList.contains('hidden'));
   }
 
+  // The pills drop from just under the menu button, wherever the safe-area
+  // inset and header padding put it; CSS carries a fallback for when the
+  // layout cannot be measured.
+  function anchorMenuUnderButton(): void {
+    if (!menuSheet || !menuPanel || !menuBtn) return;
+    const gap = 8;
+    const top = menuBtn.getBoundingClientRect().bottom - menuSheet.getBoundingClientRect().top;
+    menuPanel.style.top = `${Math.round(top + gap)}px`;
+  }
+
   function openMenu(): void {
     if (!menuSheet) return;
     menuSheet.classList.remove('hidden');
+    anchorMenuUnderButton();
     menuBtn?.setAttribute('aria-expanded', 'true');
   }
 
@@ -421,11 +432,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     }
   };
 
-  const onMenuCloseClick = (e: MouseEvent): void => {
-    e.stopPropagation();
-    closeMenu();
-  };
-
   const onMenuBackdropClick = (e: MouseEvent): void => {
     if (e.target === menuSheet) {
       closeMenu();
@@ -505,7 +511,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   actionBtn?.addEventListener('click', onActionBtnClick);
   savedCountEl?.addEventListener('click', onSavedCountClick);
   menuBtn?.addEventListener('click', onMenuBtnClick);
-  menuCloseBtn?.addEventListener('click', onMenuCloseClick);
   menuSheet?.addEventListener('click', onMenuBackdropClick);
 
   function destroy(): void {
@@ -525,7 +530,6 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     actionBtn?.removeEventListener('click', onActionBtnClick);
     savedCountEl?.removeEventListener('click', onSavedCountClick);
     menuBtn?.removeEventListener('click', onMenuBtnClick);
-    menuCloseBtn?.removeEventListener('click', onMenuCloseClick);
     menuSheet?.removeEventListener('click', onMenuBackdropClick);
     menuNavCleanups.forEach((cleanup) => cleanup());
     indicatorCleanups.forEach((cleanup) => cleanup());
