@@ -4243,7 +4243,8 @@ dialog.modal-sheet::backdrop {
 /* ── Atelier Hub & Spatial Canvas ─────────────────────────────────────────── */
 
 /* 1. Shell Integration when #screen-hub is active */
-.app:has(#screen-hub:not(.hidden)) .top-bar {
+.app:has(#screen-hub:not(.hidden)) .top-bar,
+.app:has(#screen-hub:not(.hidden)) .bottom-nav {
   display: none;
 }
 
@@ -4251,6 +4252,7 @@ dialog.modal-sheet::backdrop {
   padding-top: 0;
   padding-left: 0;
   padding-right: 0;
+  padding-bottom: 0;
   overflow: hidden;
 }
 
@@ -4573,7 +4575,7 @@ dialog.modal-sheet::backdrop {
 .atelier-spatial-header,
 #atelierSpatialHeader {
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   pointer-events: none;
   transition: opacity 0.3s ease;
   z-index: 20;
@@ -4946,9 +4948,17 @@ dialog.modal-sheet::backdrop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
+  gap: 8px;
+  font-size: 9.25px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.atelier-saved-count-link {
+  text-decoration: underline;
+  text-decoration-color: rgba(115, 87, 50, 0.45);
+  text-underline-offset: 2px;
 }
 
 .atelier-card--terracotta .atelier-card-meta-row {
@@ -5340,4 +5350,148 @@ dialog.modal-sheet::backdrop {
   pointer-events: none;
   z-index: 50;
   animation: tapRipple 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 11. "One Door" Atelier Menu Button & Bottom Sheet */
+.atelier-menu-btn {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.atelier-menu-btn .atelier-github-icon {
+  fill: none;
+}
+
+.atelier-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(20, 17, 14, 0.48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 160ms ease-out;
+}
+
+.atelier-sheet-panel {
+  width: 100%;
+  max-width: 430px;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--atelier-bg);
+  border-top: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px 20px 0 0;
+  padding: 18px 18px calc(max(env(safe-area-inset-bottom, 16px), 16px) + 6px);
+  box-shadow: 0 -12px 36px rgba(20, 16, 12, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.atelier-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+}
+
+.atelier-sheet-title {
+  margin: 0;
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+.atelier-sheet-close {
+  appearance: none;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atelier-sheet-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.atelier-sheet-item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-black);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+  box-sizing: border-box;
+}
+
+.atelier-sheet-item:hover {
+  border-color: var(--atelier-primary);
+}
+
+.atelier-sheet-item:active {
+  transform: scale(0.985);
+}
+
+.atelier-sheet-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--atelier-primary);
+  flex-shrink: 0;
+}
+
+.atelier-sheet-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.atelier-sheet-label {
+  flex: 1;
+  color: var(--atelier-ink-black);
+}
+
+.atelier-sheet-chevron {
+  font-size: 16px;
+  color: var(--atelier-ink-muted);
+  line-height: 1;
+}
+
+.atelier-sheet-divider {
+  border: none;
+  border-top: 1px solid var(--atelier-border-hairline);
+  margin: 4px 0;
+}
+
+.atelier-sheet-panel .pwa-banner,
+.atelier-sheet-panel .ios-pwa-card {
+  margin: 0;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-black);
 }

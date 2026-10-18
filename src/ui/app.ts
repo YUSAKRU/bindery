@@ -1188,8 +1188,12 @@ export function initApp(): void {
     // there, and a button that can only fail is worse than no button.
     printPdfBtn.hidden = !isReader || !canPrint();
 
-    bottomNav.classList.toggle('hidden', !isTab);
-    if (isTab) {
+    if (id !== 'hub') {
+      atelierHub?.closeMenu();
+    }
+
+    bottomNav.classList.toggle('hidden', !isTab || id === 'hub');
+    if (isTab && id !== 'hub') {
       updateBottomNavActive(id);
     }
 
@@ -8302,6 +8306,9 @@ export function initApp(): void {
       getCurrentScreenId() === 'hub' &&
       modalStack.length === 0 &&
       onboardingOverlay.classList.contains('hidden'),
+    onNavigateScreen: (target) => {
+      showScreen(target);
+    },
     onSelectModule: (moduleIndex) => {
       if (moduleIndex === 0) {
         const entry = TOOL_ENTRY_SCREEN.booklet;
