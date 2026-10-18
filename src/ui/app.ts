@@ -376,17 +376,13 @@ export function initApp(): void {
   let openInToolRelPath: string | null = null;
 
   const bottomNav = byId<HTMLElement>('bottomNav');
-  const hubSearchInput = byId<HTMLInputElement>('hubSearchInput');
   const toast = byId<HTMLDivElement>('toast');
-  // Only the hub carousel and All-Tools rows use this navigate-or-"coming soon"
+  // Only the All-Tools rows use this navigate-or-"coming soon"
   // handler. The reader tools sheet and the files sort sheet reuse the .tool-row
   // styling but have their own dedicated click handlers, so exclude them here —
   // otherwise their rows also fire a spurious "coming soon" toast.
   const toolRows = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool-row')).filter(
     (row) => !row.closest('#readerToolsSheet') && !row.closest('#filesSortSheet'),
-  );
-  const carouselToolRows = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('.hub-carousel .tool-row'),
   );
 
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
@@ -542,9 +538,6 @@ export function initApp(): void {
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
-  // Hub hero brand-moment intro: assigned by the controller block below;
-  // showScreen('hub') and finishOnboarding() call it. No-op until set.
-  let requestHeroIntro: () => void = () => {};
   // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
   let bookletSignature = 'single';
   let bookletBinding: Binding = 'ltr';
@@ -826,10 +819,6 @@ export function initApp(): void {
   let coverResultPdf: Uint8Array | null = null;
   let coverSaveState: 'idle' | 'saving' | 'saved' = 'idle';
 
-  const hubOpenReaderBtn = byId<HTMLButtonElement>('hubOpenReaderBtn');
-  const recentsList = byId<HTMLDivElement>('recentsList');
-  const recentsViewAllBtn = byId<HTMLButtonElement>('recentsViewAllBtn');
-  const toolsViewAllBtn = byId<HTMLButtonElement>('toolsViewAllBtn');
   const readerPageIndicator = byId<HTMLButtonElement>('readerPageIndicator');
   const readerNightModeBtn = byId<HTMLButtonElement>('readerNightModeBtn');
   const readerScrubber = byId<HTMLDivElement>('readerScrubber');
@@ -1200,10 +1189,7 @@ export function initApp(): void {
     if (id === 'reader') {
       void ScreenOrientation.unlock().catch(() => {});
     } else if (id === 'hub') {
-      void renderHubRecentsGrid();
-      // Only after onboarding (on first run the hub sits behind the onboarding
-      // overlay; finishOnboarding() triggers the intro instead).
-      if (localStorage.getItem('bindery.onboarded') === 'true') requestHeroIntro();
+      void refreshHubSavedCount();
     } else if (id === 'recents') {
       void renderRecentsListLarge();
     } else if (id === 'files') {
@@ -1740,15 +1726,6 @@ export function initApp(): void {
     });
   });
 
-  hubSearchInput.addEventListener('input', () => {
-    const query = hubSearchInput.value.trim().toLowerCase();
-    for (const row of carouselToolRows) {
-      const title = row.querySelector('.tool-row-title')?.textContent?.toLowerCase() ?? '';
-      const matches = query === '' || title.includes(query);
-      row.classList.toggle('hidden', !matches);
-    }
-  });
-
   bottomNav.querySelectorAll<HTMLButtonElement>('.bottom-nav-item').forEach((item) => {
     item.addEventListener('click', () => {
       const nav = item.dataset.nav as ScreenId;
@@ -1756,14 +1733,6 @@ export function initApp(): void {
         showScreen(nav);
       }
     });
-  });
-
-  recentsViewAllBtn.addEventListener('click', () => {
-    showScreen('recents');
-  });
-
-  toolsViewAllBtn.addEventListener('click', () => {
-    showScreen('tools-all');
   });
 
   let currentPickerPath = '';
@@ -5738,9 +5707,9 @@ export function initApp(): void {
     }
   }
 
-  // First-page thumbnail cache shared by the hub recents grid and the files
-  // list. Keyed by `uri|size|lastModified` where metadata is known (files) or
-  // plain uri (recents); Map insertion order doubles as the eviction order.
+  // First-page thumbnail cache for the files list. Keyed by
+  // `uri|size|lastModified` where metadata is known, or plain uri otherwise;
+  // Map insertion order doubles as the eviction order.
   const pdfThumbnailCache = new Map<string, string>();
   const PDF_THUMBNAIL_CACHE_MAX = 50;
 
@@ -5767,7 +5736,7 @@ export function initApp(): void {
   /**
    * Renders page 1 of the PDF behind `uri` to a data URL, caching the result
    * under `cacheKey` in memory and, for a version-qualified key
-   * (`uri|size|mtime`, see loadHubRecentThumbnail/renderFilesList), on disk
+   * (`uri|size|mtime`, see renderFilesList), on disk
    * (Cache directory) too. A bare uri with no `|` is not safe to persist:
    * without size/mtime there is no way to tell a stale disk entry apart from
    * a fresh one if the file at that uri later changes, so those keys stay
@@ -5807,104 +5776,17 @@ export function initApp(): void {
     }
   }
 
-  /**
-   * Loads the first page of a recent entry as a real thumbnail and swaps it
-   * into `container`. Keeps the placeholder icon on any failure (missing uri,
-   * unreadable file) — never throws into the render path.
-   */
-  async function loadHubRecentThumbnail(entry: RecentEntry, container: HTMLElement): Promise<void> {
-    if (!entry.uri) return;
-    // A recent entry only stores a uri (see RecentEntry) — stat() at load time
-    // to build a version-qualified cache key, so a file overwritten at the
-    // same uri doesn't serve a stale thumbnail from the disk cache forever.
-    // On stat failure, fall back to the bare uri, which getPdfThumbnail keeps
-    // memory-only for exactly that reason.
-    const stat = await Filesystem.stat({ path: entry.uri }).catch(() => null);
-    const cacheKey = stat ? `${entry.uri}|${stat.size}|${stat.mtime}` : entry.uri;
-    const dataUrl = await getPdfThumbnail(entry.uri, cacheKey);
-    if (!dataUrl) return;
-    const img = document.createElement('img');
-    img.className = 'hub-recent-thumb-img';
-    img.alt = '';
-    img.src = dataUrl;
-    container.replaceChildren(img);
-  }
-
-  // Bumped by every hub render so a slow thumbnail fill from a previous one
-  // gives up instead of writing into containers that are no longer on screen.
-  let hubRecentsGeneration = 0;
-
-  async function renderHubRecentsGrid(): Promise<void> {
-    const allRecents = await getRecents();
-    atelierHub?.setSavedCount(allRecents.length);
-    const recents = allRecents.slice(0, 3);
-    const generation = ++hubRecentsGeneration;
-    const thumbTasks: { entry: RecentEntry; thumb: HTMLElement }[] = [];
-    recentsList.innerHTML = '';
-
-    for (const entry of recents) {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'hub-recent-card';
-
-      const thumb = document.createElement('span');
-      thumb.className = 'hub-recent-thumb';
-      const placeholder = document.createElement('span');
-      placeholder.className = 'hub-recent-thumb-placeholder';
-      placeholder.textContent = '📄';
-      placeholder.ariaHidden = 'true';
-      thumb.appendChild(placeholder);
-      card.appendChild(thumb);
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'hub-recent-name';
-      nameEl.textContent = entry.name;
-      card.appendChild(nameEl);
-
-      card.addEventListener('click', () => void openRecent(entry));
-      recentsList.appendChild(card);
-
-      thumbTasks.push({ entry, thumb });
-    }
-
-    // One at a time, like the files list. Each thumbnail holds the whole
-    // document in memory while it renders, so three at once meant three
-    // documents at once — on the screen the user sees first at launch.
-    void (async () => {
-      for (const task of thumbTasks) {
-        if (generation !== hubRecentsGeneration) return;
-        await loadHubRecentThumbnail(task.entry, task.thumb);
-      }
-    })();
-
-    const createCard = document.createElement('button');
-    createCard.type = 'button';
-    createCard.className = 'hub-recent-card hub-recent-card--create';
-
-    const createIcon = document.createElement('span');
-    createIcon.className = 'hub-recent-thumb hub-recent-thumb--create';
-    createIcon.ariaHidden = 'true';
-    createIcon.textContent = '+';
-    createCard.appendChild(createIcon);
-
-    const createLabel = document.createElement('span');
-    createLabel.className = 'hub-recent-name';
-    createLabel.dataset.i18n = 'hub.recents.createNew';
-    createLabel.textContent = t('hub.recents.createNew');
-    createCard.appendChild(createLabel);
-
-    createCard.addEventListener('click', () => {
-      const entryScreen = TOOL_ENTRY_SCREEN['image-to-pdf'];
-      if (entryScreen) showScreen(entryScreen);
-    });
-    recentsList.appendChild(createCard);
+  // The atelier's card-2 "N Fascicles Saved" line counts the recents list.
+  async function refreshHubSavedCount(): Promise<void> {
+    const recents = await getRecents();
+    atelierHub?.setSavedCount(recents.length);
   }
 
   async function openRecent(entry: RecentEntry): Promise<void> {
     if (!entry.uri) {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry);
-      await renderHubRecentsGrid();
+      await refreshHubSavedCount();
       return;
     }
     if (isOpeningReader) return;
@@ -5916,7 +5798,7 @@ export function initApp(): void {
       recordError('caught', error);
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry);
-      await renderHubRecentsGrid();
+      await refreshHubSavedCount();
     } finally {
       hideReaderOpening();
     }
@@ -6847,166 +6729,7 @@ export function initApp(): void {
     }
   });
 
-  byId<HTMLButtonElement>('hubCreateBookletBtn').addEventListener('click', () => {
-    const entry = TOOL_ENTRY_SCREEN.booklet; // same entry point as the Booklet tool-row
-    if (entry) showScreen(entry);
-  });
-
-  // ── Hub hero brand-moment: first-ever open flies in (A); later opens fold in
-  //    place (B); reduced-motion / same-session revisits show it resting. ──────
-  {
-    const BRAND_SEEN_KEY = 'bindery.brandIntroSeen';
-    // QC hooks: ?heroIntro=A|B|off force a path; =reset clears the persisted flag.
-    // ?heroPhase=load|settle|fold|rest freezes the booklet at one phase (static,
-    // no transition) so the fold geometry can be inspected on-device frame-by-frame.
-    const params = new URLSearchParams(location.search);
-    const forcedHero = params.get('heroIntro');
-    const forcedPhase = params.get('heroPhase');
-    if (forcedHero === 'reset') { try { localStorage.removeItem(BRAND_SEEN_KEY); } catch { /* ignore */ } }
-
-    const fly = byId<HTMLDivElement>('heroFly');
-    const booklet = byId<HTMLDivElement>('heroBooklet');
-    const deck = byId<HTMLDivElement>('heroDeck');
-    const stageEl = byId<HTMLDivElement>('heroStage');
-    const hubHero = byId<HTMLDivElement>('hubHero');
-    const hubScreen = byId<HTMLElement>('screen-hub');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const LEAVES = 4;
-    const INTRINSIC_W = 108;
-    const INTRINSIC_H = 74;
-    void fly; // layer referenced only for clarity; visibility follows #screen-hub
-
-    const cover = document.createElement('div');
-    cover.className = 'hero-cover';
-    cover.innerHTML = '<div class="emb"></div>';
-    deck.appendChild(cover);
-    for (let i = 0; i < LEAVES; i++) {
-      const leaf = document.createElement('div');
-      leaf.className = 'hero-leaf';
-      leaf.style.setProperty('--i', String(i));
-      leaf.innerHTML =
-        '<div class="hero-face l"><div class="hero-paper"></div></div>' +
-        '<div class="hero-face r"><div class="hero-paper"></div><div class="hero-paper back"></div><div class="hero-hinge"></div></div>';
-      deck.appendChild(leaf);
-    }
-
-    let homeScale = 1;
-    function homeTransform(): string {
-      const hub = hubScreen.getBoundingClientRect();
-      const st = stageEl.getBoundingClientRect();
-      homeScale = Math.max(0.6, (st.height * 0.62) / INTRINSIC_H);
-      const w = INTRINSIC_W * homeScale, h = INTRINSIC_H * homeScale;
-      const left = (st.left - hub.left) + (st.width - w) / 2;
-      const top = (st.top - hub.top) + (st.height - h) / 2;
-      return `translate(${left}px, ${top}px) scale(${homeScale})`;
-    }
-    function splashTransform(): string {
-      const hub = hubScreen.getBoundingClientRect();
-      const scale = homeScale * 1.8;
-      const w = INTRINSIC_W * scale;
-      const left = (window.innerWidth / 2 - hub.left) - w / 2;
-      const top = (window.innerHeight * 0.3 - hub.top);
-      return `translate(${left}px, ${top}px) scale(${scale})`;
-    }
-
-    let timers: ReturnType<typeof setTimeout>[] = [];
-    let armedSkip: (() => void) | null = null;
-    const clearTimers = (): void => { timers.forEach(clearTimeout); timers = []; };
-    const at = (ms: number, fn: () => void): void => { timers.push(setTimeout(fn, ms)); };
-    function disarmSkip(): void {
-      if (armedSkip) { hubScreen.removeEventListener('pointerdown', armedSkip); armedSkip = null; }
-    }
-    function revealCopy(): void { hubHero.classList.add('hero-revealed'); hubHero.classList.remove('hero-armed'); }
-
-    function settle(): void {
-      clearTimers(); disarmSkip();
-      booklet.classList.add('frozen', 'landed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', 'rest');
-      booklet.style.transform = homeTransform();
-      revealCopy();
-    }
-    function armSkip(): void {
-      disarmSkip();
-      armedSkip = () => settle();
-      hubScreen.addEventListener('pointerdown', armedSkip, { once: true });
-    }
-
-    function playA(): void { // splash → fold → fly into the hero stage
-      clearTimers();
-      booklet.classList.remove('frozen', 'landed');
-      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', 'settle');
-      booklet.style.transform = splashTransform();
-      void booklet.offsetWidth;
-      armSkip();
-      at(340, () => booklet.setAttribute('data-phase', 'fold'));
-      at(340 + 1150, () => {
-        booklet.style.transition = 'transform .92s cubic-bezier(.34,1.3,.5,1)';
-        booklet.classList.add('landed');
-        booklet.setAttribute('data-phase', 'rest');
-        booklet.style.transform = homeTransform();
-        at(200, revealCopy);
-        at(1000, () => { booklet.classList.add('frozen'); disarmSkip(); });
-      });
-      at(2600, settle); // hard fallback: never stay busy past ~2.6s
-    }
-
-    function playB(): void { // fold in place at the hero stage
-      clearTimers();
-      booklet.classList.remove('frozen', 'landed');
-      booklet.classList.add('landed'); // stays glued to the stage the whole time
-      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
-      booklet.style.transition = 'none';
-      booklet.style.transform = homeTransform();
-      booklet.setAttribute('data-phase', 'load');
-      void booklet.offsetWidth;
-      armSkip();
-      at(320, () => booklet.setAttribute('data-phase', 'settle'));
-      at(320 + 900, () => { booklet.setAttribute('data-phase', 'fold'); revealCopy(); });
-      at(320 + 900 + 1050, () => { booklet.setAttribute('data-phase', 'rest'); booklet.classList.add('frozen'); disarmSkip(); });
-      at(3200, disarmSkip);
-    }
-
-    function freezePhase(p: string): void { // QC freeze: static, no transition
-      clearTimers(); disarmSkip();
-      booklet.classList.add('frozen', 'landed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', p);
-      booklet.style.transform = homeTransform();
-      revealCopy();
-    }
-
-    let played = false;
-    function maybePlayHeroIntro(): void {
-      if (getCurrentScreenId() !== 'hub') return;
-      if (played && !forcedHero && !forcedPhase) { settle(); return; }
-      played = true;
-      requestAnimationFrame(() => {
-        booklet.style.transform = homeTransform();
-        if (forcedPhase) { freezePhase(forcedPhase); return; }
-        if (reduceMotion.matches || forcedHero === 'off') { settle(); return; }
-        let seen = false;
-        try { seen = localStorage.getItem(BRAND_SEEN_KEY) === 'true'; } catch { seen = false; }
-        if (forcedHero === 'B') { playB(); return; }
-        if (forcedHero === 'A' || !seen) {
-          try { localStorage.setItem(BRAND_SEEN_KEY, 'true'); } catch { /* ignore */ }
-          playA();
-        } else {
-          playB();
-        }
-      });
-    }
-    requestHeroIntro = maybePlayHeroIntro;
-
-    // keep the resting booklet glued to the stage on resize / theme change
-    window.addEventListener('resize', () => {
-      if (booklet.classList.contains('landed')) { booklet.style.transition = 'none'; booklet.style.transform = homeTransform(); }
-    });
-  }
-
-  hubOpenReaderBtn.addEventListener('click', async () => {
+  async function openReaderFromPicker(): Promise<void> {
     try {
       if (Capacitor.getPlatform() !== 'android') {
         const picked = await pickPdf();
@@ -7022,7 +6745,7 @@ export function initApp(): void {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, 'hub');
     }
-  });
+  }
 
   retryBtn.addEventListener('click', () => showScreen(returnScreenOnError));
 
@@ -7160,7 +6883,7 @@ export function initApp(): void {
       }
 
       closeModal(saveDocModal);
-      void renderHubRecentsGrid();
+      void refreshHubSavedCount();
     } catch (error) {
       const message = errorText(error);
       showToast(t('toast.saveError', { message }));
@@ -8107,8 +7830,6 @@ export function initApp(): void {
     localStorage.setItem('bindery.onboarded', 'true');
     onboardingOverlay.classList.add('hidden');
     seedQuickStartFile();
-    // hub is now actually visible for the first time → play the brand intro
-    requestHeroIntro();
   }
 
   onboardingNextBtn.addEventListener('click', () => {
@@ -8314,7 +8035,7 @@ export function initApp(): void {
         const entry = TOOL_ENTRY_SCREEN.booklet;
         if (entry) showScreen(entry);
       } else if (moduleIndex === 1) {
-        hubOpenReaderBtn.click();
+        void openReaderFromPicker();
       } else if (moduleIndex === 2) {
         const entry = TOOL_ENTRY_SCREEN.cover;
         if (entry) showScreen(entry);

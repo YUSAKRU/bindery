@@ -22,9 +22,6 @@
   --color-on-info-container: #1e3a5f;
   --color-scrim: rgba(0, 0, 0, 0.4);
 
-  --hub-hero-tint-a: 0.16;
-  --hub-hero-tint-b: 0.05;
-  --hub-hero-border-a: 0.28;
 
   --radius-lg: 12px;
   --radius-md: 8px;
@@ -55,9 +52,6 @@
     --color-on-error-container: #ffdad6;
     --color-success: #8fd9a4;
     --color-success-container: #0a3d1f;
-    --hub-hero-tint-a: 0.12;
-    --hub-hero-tint-b: 0.04;
-    --hub-hero-border-a: 0.22;
     --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
   }
@@ -83,9 +77,6 @@
   --color-on-error-container: #ffdad6;
   --color-success: #8fd9a4;
   --color-success-container: #0a3d1f;
-  --hub-hero-tint-a: 0.12;
-  --hub-hero-tint-b: 0.04;
-  --hub-hero-border-a: 0.22;
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
@@ -106,9 +97,6 @@
   --color-on-error-container: #410002;
   --color-success: #1e6b3c;
   --color-success-container: #d7f5e0;
-  --hub-hero-tint-a: 0.16;
-  --hub-hero-tint-b: 0.05;
-  --hub-hero-border-a: 0.28;
   --shadow-1: 0 1px 3px rgba(27, 27, 31, 0.12), 0 1px 2px rgba(27, 27, 31, 0.08);
   color-scheme: light;
 }
@@ -296,17 +284,6 @@ body {
 
 .btn-large {
   width: 100%;
-}
-
-.btn-lead-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  flex-shrink: 0;
 }
 
 .btn-primary {
@@ -593,59 +570,6 @@ body {
   outline-offset: -1px;
 }
 
-.hub-hero {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 24px 20px;
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(var(--color-primary-rgb), var(--hub-hero-border-a));
-  background: linear-gradient(
-    135deg,
-    rgba(var(--color-primary-rgb), var(--hub-hero-tint-a)),
-    rgba(var(--color-primary-rgb), var(--hub-hero-tint-b)) 60%,
-    rgba(var(--color-primary-rgb), var(--hub-hero-tint-a))
-  );
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.hub-hero::before {
-  content: '';
-  position: absolute;
-  top: -70px;
-  right: -50px;
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.3), transparent 70%);
-  pointer-events: none;
-}
-
-.hub-hero-title {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--color-on-surface);
-}
-
-.hub-carousel {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  margin: 0 -20px;
-  padding: 0 20px;
-}
-
-.hub-carousel::-webkit-scrollbar {
-  display: none;
-}
-
 /* The 480px column is right for forms and lists, and wrong for the reader.
    A document viewer's whole value on a large screen is reading surface: on a
    777px tablet the cap squeezes an A4 page into 480px and renders the text
@@ -660,30 +584,6 @@ body {
 @media (min-width: 600px) {
   .app:has(#screen-reader:not(.hidden)) {
     max-width: none;
-  }
-}
-
-/* On a phone the carousel's clipped last card is the scroll affordance — it is
-   supposed to be cut, that is what says "swipe for more". On a tablet the same
-   cut lands next to a wide empty margin, where it stops reading as a hint and
-   starts reading as a rendering fault. Wrap into a grid there instead: nothing
-   is sliced, and it uses some of the vertical space a large screen has spare.
-   `auto-fill` rather than `auto-fit` so a lone card on the last row keeps a
-   column's width instead of stretching across the whole row. Phones never see
-   this — `.app` is capped at 480px, so 600px only matches large screens. */
-@media (min-width: 600px) {
-  .hub-carousel {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    overflow-x: visible;
-    /* the negative margin exists to let the scroller bleed to the screen edge;
-       once it is a grid it should line up with the rest of the content. */
-    margin: 0;
-    padding: 0;
-  }
-
-  .hub-carousel .tool-row--carousel {
-    width: auto; /* let the grid size the column, not the fixed 130px */
   }
 }
 
@@ -808,35 +708,6 @@ body {
 .tool-row.is-soon .tool-row-title,
 .tool-row.is-soon .tool-row-desc {
   opacity: 0.6;
-}
-
-.tool-row--carousel {
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 130px;
-  gap: 10px;
-  padding: 12px;
-  background: var(--color-surface-variant);
-  border: none;
-  border-radius: var(--radius-lg);
-}
-
-/* Booklet is the app's headline action — flag it in the carousel (additive) */
-.tool-row--featured {
-  background: rgba(var(--color-primary-rgb), 0.1);
-  box-shadow: inset 0 0 0 1.5px var(--color-primary);
-}
-
-.tool-row--carousel .tool-row-meta {
-  width: 100%;
-}
-
-.tool-row--carousel .tool-row-title {
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .badge-soon {
@@ -1234,94 +1105,6 @@ body {
   max-width: 90%;
   text-align: center;
   animation: toastIn 0.18s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.recents-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hub-recents-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.hub-recents-viewall {
-  background: none;
-  border: none;
-  padding: 4px 0;
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  cursor: pointer;
-}
-
-.hub-recents-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.hub-recent-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  min-width: 0;
-  background: var(--color-surface-variant);
-  border: none;
-  border-radius: var(--radius-lg);
-  color: var(--color-on-surface);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.1s, transform 0.1s;
-}
-
-.hub-recent-card:active {
-  background: var(--color-primary-container);
-  transform: scale(0.985);
-}
-
-.hub-recent-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 110px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.hub-recent-thumb-placeholder {
-  font-size: 1.8rem;
-}
-
-.hub-recent-thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top;
-}
-
-.hub-recent-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hub-recent-thumb--create {
-  border: 1.5px dashed var(--color-outline);
-  background: transparent;
-  color: var(--color-primary);
-  font-size: 2rem;
-  font-weight: 300;
-  line-height: 1;
 }
 
 .reader-screen {
@@ -3701,135 +3484,6 @@ dialog.modal-sheet::backdrop {
   .info-btn::before { animation: none; }
   .imza-panel { animation: none; }
   .imza-rm-note { display: block; }
-}
-
-/* ============================================================
-   Hub hero brand-moment: overlay booklet that flies in (first
-   open "A") or folds in place ("B"); static resting otherwise.
-   Ported from approved prototypes; app tokens, both themes.
-   ============================================================ */
-#screen-hub { position: relative; }
-
-/* paper tones for the hero booklet (scoped; both themes, no color-mix) */
-#screen-hub {
-  --hero-paper: #f4efe3; --hero-paper-2: #ece5d4; --hero-paper-edge: #d8cdb4; --hero-paper-back: #e7dfcb;
-  --hero-crease: rgba(58,52,43,.28); --hero-stage-a: #efece3; --hero-stage-b: #e2ddd0; --hero-floor: rgba(58,52,43,.2);
-}
-@media (prefers-color-scheme: dark) {
-  #screen-hub {
-    --hero-paper: #efe7d5; --hero-paper-2: #e2d8bf; --hero-paper-edge: #cabd9d; --hero-paper-back: #ddd2b8;
-    --hero-crease: rgba(30,26,20,.32); --hero-stage-a: #211f1a; --hero-stage-b: #171611; --hero-floor: rgba(0,0,0,.45);
-  }
-}
-:root.dark-theme #screen-hub {
-  --hero-paper: #efe7d5; --hero-paper-2: #e2d8bf; --hero-paper-edge: #cabd9d; --hero-paper-back: #ddd2b8;
-  --hero-crease: rgba(30,26,20,.32); --hero-stage-a: #211f1a; --hero-stage-b: #171611; --hero-floor: rgba(0,0,0,.45);
-}
-:root.light-theme #screen-hub {
-  --hero-paper: #f4efe3; --hero-paper-2: #ece5d4; --hero-paper-edge: #d8cdb4; --hero-paper-back: #e7dfcb;
-  --hero-crease: rgba(58,52,43,.28); --hero-stage-a: #efece3; --hero-stage-b: #e2ddd0; --hero-floor: rgba(58,52,43,.2);
-}
-
-/* stage backdrop (booklet rests / lands here) */
-.hero-stage {
-  height: 148px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-outline);
-  background: radial-gradient(130% 120% at 50% 12%, var(--hero-stage-a), var(--hero-stage-b) 82%);
-}
-.hub-hero-sub {
-  margin: 6px 0 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--color-on-surface-variant);
-}
-/* title/sub reveal (base visible; JS arms→reveals during intro) */
-.hub-hero-title, .hub-hero-sub { transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1); }
-.hub-hero.hero-armed .hub-hero-title, .hub-hero.hero-armed .hub-hero-sub { opacity: 0; transform: translateY(8px); }
-.hub-hero.hero-revealed .hub-hero-title { opacity: 1; transform: none; }
-.hub-hero.hero-revealed .hub-hero-sub { opacity: 1; transform: none; transition-delay: 0.08s; }
-
-/* overlay layer (fixed within hub; never clipped by the hero's overflow) */
-.hero-fly { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-.hero-booklet {
-  position: absolute; left: 0; top: 0; width: 108px; height: 74px;
-  transform-origin: 0 0; will-change: transform;
-  --icenter: 1.5; --nest: 3deg;
-}
-.hero-scene { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 50% 44%; }
-.hero-floor {
-  position: absolute; left: 50%; top: 78%; width: 96px; height: 22px; transform: translate(-50%,-50%);
-  background: radial-gradient(50% 50% at 50% 50%, var(--hero-floor), transparent 72%);
-  filter: blur(2px); opacity: 0.55; transition: opacity 0.8s ease, transform 0.8s ease;
-}
-.hero-deck {
-  position: absolute; left: 50%; top: 50%; transform-style: preserve-3d;
-  transform: translate(-50%,-50%) rotateX(14deg) rotateY(-16deg);
-  transition: transform 1s cubic-bezier(0.5,0.05,0.2,1);
-}
-.hero-leaf {
-  --w: 54px; --h: 74px;
-  position: absolute; left: calc(var(--w) * -1); top: calc(var(--h) / -2);
-  width: calc(var(--w) * 2); height: var(--h); transform-style: preserve-3d;
-  transform: translate3d(var(--lx,0px), var(--ly,0px), calc(var(--i) * 2px)) rotateZ(var(--lz,0deg));
-  transition: transform 1s cubic-bezier(0.5,0.05,0.2,1);
-}
-.hero-face { position: absolute; top: 0; width: var(--w); height: var(--h); transform-style: preserve-3d; }
-.hero-paper {
-  position: absolute; inset: 0;
-  background: linear-gradient(115deg, var(--hero-paper), var(--hero-paper-2));
-  border: 1px solid var(--hero-paper-edge); box-shadow: inset 0 0 18px rgba(58,52,43,.05);
-  backface-visibility: hidden;
-}
-.hero-paper.back { transform: rotateY(180deg); background: linear-gradient(115deg, var(--hero-paper-back), var(--hero-paper-2)); }
-.hero-face.l { left: 0; transform-origin: right center; }
-.hero-face.r {
-  left: var(--w); transform-origin: left center;
-  /* translateZ FIRST so the lift is applied in world +z AFTER the fold —
-     each folding half stays clear above the stack (no coplanar intersection). */
-  transform: translateZ(var(--rz,0px)) rotateY(var(--rrot,0deg));
-  transition: transform 1.05s cubic-bezier(0.55,0.06,0.28,1);
-}
-.hero-face.l .hero-paper { border-right: 0; }
-.hero-face.r .hero-paper { border-left: 0; }
-.hero-hinge {
-  position: absolute; top: 3%; height: 94%; width: 1.5px; left: calc(var(--w) - 0.75px);
-  background: linear-gradient(var(--hero-crease), transparent 8%, transparent 92%, var(--hero-crease));
-  z-index: 2; pointer-events: none; opacity: 0.7; transition: opacity 0.6s ease;
-}
-.hero-cover {
-  position: absolute; left: calc(var(--w,54px) * -1); top: calc(var(--h,74px) / -2);
-  width: calc(var(--w,54px) + 8px); height: calc(var(--h,74px) + 8px); transform-style: preserve-3d;
-  background: linear-gradient(135deg, var(--color-primary), #241d63);
-  border-radius: 2px 5px 5px 2px; box-shadow: var(--shadow-2);
-  /* the cover sits at its final pose the whole time; it only FADES IN as the
-     pages fold onto it (during the second half of the fold), so no end-pop. */
-  opacity: 0; transform: translate3d(1px,-6px,-9px) rotateY(-2deg);
-  transition: opacity 0.55s ease 0.3s;
-}
-.hero-cover::after { content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 4px; border-radius: 2px; background: rgba(0,0,0,.28); }
-.hero-cover .emb { position: absolute; left: 11px; right: 10px; top: 15px; height: 2px; border-radius: 2px; background: rgba(255,255,255,.4); box-shadow: 0 15px 0 rgba(255,255,255,.26), 0 30px 0 rgba(255,255,255,.16); }
-
-/* phases: load -> settle -> fold -> rest (STOPS) */
-.hero-booklet[data-phase="load"] .hero-deck { transform: translate(-50%,-50%) rotateX(15deg) rotateY(-13deg); }
-.hero-booklet[data-phase="load"] .hero-leaf { --ly: -30px; opacity: 0; }
-.hero-booklet[data-phase="settle"] .hero-deck { transform: translate(-50%,-50%) rotateX(15deg) rotateY(-13deg); }
-.hero-booklet[data-phase="settle"] .hero-leaf { --lz: calc((var(--i) - var(--icenter)) * 0.2deg); transition-delay: calc(var(--i) * .07s); }
-.hero-booklet[data-phase="fold"] .hero-deck { transform: translate(-50%,-50%) rotateX(18deg) rotateY(-16deg); }
-.hero-booklet[data-phase="fold"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
-.hero-booklet[data-phase="fold"] .hero-face.r { --rrot: calc(-168deg - var(--i) * var(--nest)); --rz: calc((var(--i) + 1) * 2.6px); }
-.hero-booklet[data-phase="rest"] .hero-deck { transform: translate(-51%,-50%) rotateX(12deg) rotateY(-24deg); }
-.hero-booklet[data-phase="rest"] .hero-leaf { --lx: 20px; --ly: calc(var(--i) * -1px); }
-.hero-booklet[data-phase="rest"] .hero-face.r { --rrot: calc(-169deg - var(--i) * var(--nest)); --rz: calc((var(--i) + 1) * 2.6px); }
-.hero-booklet[data-phase="rest"] .hero-floor { transform: translate(-50%,-50%) scaleX(0.66); opacity: 0.7; }
-.hero-booklet[data-phase="fold"] .hero-cover, .hero-booklet[data-phase="rest"] .hero-cover { opacity: 1; }
-.hero-booklet[data-phase="fold"] .hero-hinge, .hero-booklet[data-phase="rest"] .hero-hinge { opacity: 0; }
-
-.hero-booklet.frozen .hero-deck, .hero-booklet.frozen .hero-leaf, .hero-booklet.frozen .hero-face.r,
-.hero-booklet.frozen .hero-cover, .hero-booklet.frozen .hero-floor, .hero-booklet.frozen .hero-hinge { transition: none !important; }
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-deck, .hero-leaf, .hero-face.r, .hero-cover, .hero-floor { transition: none !important; }
 }
 
 /* ==========================================================================
