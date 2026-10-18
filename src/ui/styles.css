@@ -144,6 +144,16 @@ body {
   margin: 0 auto;
 }
 
+/* In a mobile browser 100vh is the height with the address bar hidden, so
+   while the bar shows, the shell overhangs the screen and the whole page
+   scrolls. dvh tracks the visible height; in the native WebView it equals
+   vh, so the app is unaffected (and an old WebView keeps 100vh). */
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+  }
+}
+
 /* Shell bars: absolutely positioned inside `.app` (which is position:relative)
    rather than position:fixed, so they track the .app 480px column instead of
    the full viewport on wide screens. Glass until 0.4.7 — see .top-bar's
@@ -4262,6 +4272,15 @@ dialog.modal-sheet::backdrop {
   gap: 0;
 }
 
+/* The hub is a fixed desk, not a page: while it is shown the document
+   itself must not scroll, rubber-band or pull-to-refresh. Other screens keep
+   scrolling inside .screen-container as before. */
+html:has(#screen-hub:not(.hidden)),
+body:has(#screen-hub:not(.hidden)) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* 2. Scoped CSS Variables (Light Theme Default) */
 .atelier-hub,
 #hubAtelierView {
@@ -4605,7 +4624,9 @@ dialog.modal-sheet::backdrop {
   perspective: 1200px;
   perspective-origin: 50% 48%;
   transform-style: preserve-3d;
-  touch-action: pan-y;
+  /* Drags on the deck belong to the pointer handlers in atelier-hub.ts;
+     pan-y handed vertical drags to the browser, which scrolled the page. */
+  touch-action: none;
   position: relative;
   width: 100%;
   max-width: 390px;
