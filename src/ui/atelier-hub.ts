@@ -1,9 +1,11 @@
 export type AtelierModuleIndex = 0 | 1 | 2;
+export type AtelierNavTarget = 'files' | 'recents' | 'tools-all' | 'settings';
 
 export interface AtelierHubDeps {
   root?: ParentNode;
   t: (key: string, params?: Record<string, string | number>) => string;
   onSelectModule: (moduleIndex: AtelierModuleIndex) => void;
+  onNavigateScreen?: (target: AtelierNavTarget) => void;
   isHubVisible?: () => boolean;
 }
 
@@ -12,6 +14,9 @@ export interface AtelierHubController {
   setSavedCount: (count: number) => void;
   applyFreeFloat: () => void;
   applyCoverflow: (targetIdx: number, dragOffsetX?: number) => void;
+  openMenu: () => void;
+  closeMenu: () => void;
+  isMenuOpen: () => boolean;
   getState: () => { isCoverflow: boolean; activeIndex: AtelierModuleIndex; savedCount: number };
   destroy: () => void;
 }
@@ -28,8 +33,8 @@ export interface AtelierCardPosition {
 }
 
 export const FREE_POSITIONS: readonly [AtelierCardPosition, AtelierCardPosition, AtelierCardPosition] = [
-  { x: -84, y: -76, z: 60, rotZ: -8, rotY: 5, rotX: 2, scale: 0.65, floatClass: 'atelier-card-float-1' },
-  { x: 86, y: -44, z: 5, rotZ: 7, rotY: -5, rotX: 2, scale: 0.65, floatClass: 'atelier-card-float-2' },
+  { x: -84, y: -62, z: 60, rotZ: -8, rotY: 5, rotX: 2, scale: 0.65, floatClass: 'atelier-card-float-1' },
+  { x: 86, y: -36, z: 5, rotZ: 7, rotY: -5, rotX: 2, scale: 0.65, floatClass: 'atelier-card-float-2' },
   { x: -4, y: 94, z: -50, rotZ: -2.5, rotY: 3, rotX: 2, scale: 0.65, floatClass: 'atelier-card-float-3' },
 ] as const;
 
@@ -114,9 +119,30 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   const btnSub = doc.querySelector<HTMLElement>('#atelierBtnActionSub');
   const btnIcon = doc.querySelector<HTMLElement>('#atelierBtnIcon');
 
+  const menuBtn = doc.querySelector<HTMLElement>('#atelierMenuBtn');
+  const menuSheet = doc.querySelector<HTMLElement>('#atelierMenuSheet');
+  const menuCloseBtn = doc.querySelector<HTMLElement>('#atelierMenuCloseBtn');
+  const menuNavButtons = Array.from(doc.querySelectorAll<HTMLElement>('[data-atelier-nav]'));
+
   let isCoverflow = false;
   let activeIndex: AtelierModuleIndex = 0;
   let savedCount = 0;
+
+  function isMenuOpen(): boolean {
+    return Boolean(menuSheet && !menuSheet.classList.contains('hidden'));
+  }
+
+  function openMenu(): void {
+    if (!menuSheet) return;
+    menuSheet.classList.remove('hidden');
+    menuBtn?.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeMenu(): void {
+    if (!menuSheet) return;
+    menuSheet.classList.add('hidden');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+  }
 
   function findNearestCardIndex(clientX: number, clientY: number): AtelierModuleIndex {
     let nearestIdx: AtelierModuleIndex = 0;
@@ -272,7 +298,9 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   let hasDragged = false;
 
   const onPointerDown = (e: PointerEvent): void => {
-    if ((e.target as HTMLElement | null)?.closest('#atelierModeToggleBtn')) return;
+    const targetEl = e.target as HTMLElement | null;
+    if (targetEl?.closest('#atelierModeToggleBtn')) return;
+    if (isCoverflow && activeIndex === 1 && targetEl?.closest('#atelierCard1SavedCount')) return;
     pointerDown = true;
     hasDragged = false;
     startX = e.clientX;
@@ -378,6 +406,51 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     deps.onSelectModule(activeIndex);
   };
 
+  const onSavedCountClick = (e: MouseEvent): void => {
+    if (!isCoverflow || activeIndex !== 1) return;
+    e.stopPropagation();
+    deps.onNavigateScreen?.('recents');
+  };
+
+  const onMenuBtnClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    if (isMenuOpen()) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  };
+
+  const onMenuCloseClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    closeMenu();
+  };
+
+  const onMenuBackdropClick = (e: MouseEvent): void => {
+    if (e.target === menuSheet) {
+      closeMenu();
+    }
+  };
+
+  const menuNavCleanups: Array<() => void> = [];
+  menuNavButtons.forEach((btn) => {
+    const handler = (e: MouseEvent): void => {
+      e.stopPropagation();
+      const target = btn.getAttribute('data-atelier-nav') as AtelierNavTarget | null;
+      closeMenu();
+      if (
+        target === 'files' ||
+        target === 'recents' ||
+        target === 'tools-all' ||
+        target === 'settings'
+      ) {
+        deps.onNavigateScreen?.(target);
+      }
+    };
+    btn.addEventListener('click', handler);
+    menuNavCleanups.push(() => btn.removeEventListener('click', handler));
+  });
+
   const indicatorCleanups: Array<() => void> = [];
   indicators.forEach((dot, idx) => {
     if (!dot) return;
@@ -390,6 +463,10 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   });
 
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && isMenuOpen()) {
+      closeMenu();
+      return;
+    }
     if (deps.isHubVisible && !deps.isHubVisible()) return;
     if (e.key === 'ArrowRight') {
       applyCoverflow(isCoverflow ? activeIndex + 1 : activeIndex);
@@ -426,6 +503,10 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   viewport?.addEventListener('wheel', onWheel, { passive: true });
   modeToggleBtn?.addEventListener('click', onModeToggleClick);
   actionBtn?.addEventListener('click', onActionBtnClick);
+  savedCountEl?.addEventListener('click', onSavedCountClick);
+  menuBtn?.addEventListener('click', onMenuBtnClick);
+  menuCloseBtn?.addEventListener('click', onMenuCloseClick);
+  menuSheet?.addEventListener('click', onMenuBackdropClick);
 
   function destroy(): void {
     canvasContainer?.removeEventListener('pointerdown', onPointerDown);
@@ -442,6 +523,11 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     }
     modeToggleBtn?.removeEventListener('click', onModeToggleClick);
     actionBtn?.removeEventListener('click', onActionBtnClick);
+    savedCountEl?.removeEventListener('click', onSavedCountClick);
+    menuBtn?.removeEventListener('click', onMenuBtnClick);
+    menuCloseBtn?.removeEventListener('click', onMenuCloseClick);
+    menuSheet?.removeEventListener('click', onMenuBackdropClick);
+    menuNavCleanups.forEach((cleanup) => cleanup());
     indicatorCleanups.forEach((cleanup) => cleanup());
   }
 
@@ -473,6 +559,9 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     setSavedCount,
     applyFreeFloat,
     applyCoverflow,
+    openMenu,
+    closeMenu,
+    isMenuOpen,
     getState: () => ({ isCoverflow, activeIndex, savedCount }),
     destroy,
   };

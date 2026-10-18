@@ -3,6 +3,7 @@ import { getLanguage, setLanguage, t } from '../i18n';
 import {
   type AtelierHubController,
   type AtelierModuleIndex,
+  type AtelierNavTarget,
   createAtelierHub,
   DOCK_META,
   FREE_POSITIONS,
@@ -231,11 +232,22 @@ interface HubFixture {
   btnSub: FakeElement;
   btnIcon: FakeElement;
   icons: [FakeElement, FakeElement, FakeElement];
+  menuBtn: FakeElement;
+  menuSheet: FakeElement;
+  menuCloseBtn: FakeElement;
+  menuNavBtns: Record<AtelierNavTarget, FakeElement>;
 }
 
 function createFixture(): HubFixture {
   const root = new FakeElement('div');
   root.id = 'hubAtelierView';
+
+  const header = new FakeElement('header');
+  root.appendChild(header);
+  const menuBtn = new FakeElement('button');
+  menuBtn.id = 'atelierMenuBtn';
+  menuBtn.setAttribute('aria-expanded', 'false');
+  header.appendChild(menuBtn);
 
   const canvasContainer = new FakeElement('main');
   canvasContainer.id = 'atelierCanvasContainer';
@@ -324,6 +336,23 @@ function createFixture(): HubFixture {
   btnSub.id = 'atelierBtnActionSub';
   actionBtn.appendChild(btnSub);
 
+  const menuSheet = new FakeElement('div');
+  menuSheet.id = 'atelierMenuSheet';
+  menuSheet.classList.add('hidden');
+  root.appendChild(menuSheet);
+
+  const menuCloseBtn = new FakeElement('button');
+  menuCloseBtn.id = 'atelierMenuCloseBtn';
+  menuSheet.appendChild(menuCloseBtn);
+
+  const menuNavBtns = {} as Record<AtelierNavTarget, FakeElement>;
+  for (const nav of ['files', 'recents', 'tools-all', 'settings'] as const) {
+    const btn = new FakeElement('button');
+    btn.setAttribute('data-atelier-nav', nav);
+    menuSheet.appendChild(btn);
+    menuNavBtns[nav] = btn;
+  }
+
   return {
     root,
     canvasContainer,
@@ -339,6 +368,10 @@ function createFixture(): HubFixture {
     btnSub,
     btnIcon,
     icons: [icon0, icon1, icon2],
+    menuBtn,
+    menuSheet,
+    menuCloseBtn,
+    menuNavBtns,
   };
 }
 
@@ -349,6 +382,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
   let originalDocument: unknown;
   let fixture: HubFixture;
   let onSelectModuleMock: ReturnType<typeof vi.fn<(moduleIndex: AtelierModuleIndex) => void>>;
+  let onNavigateScreenMock: ReturnType<typeof vi.fn<(target: AtelierNavTarget) => void>>;
   let isHubVisibleMock: ReturnType<typeof vi.fn<() => boolean>>;
   let controller: AtelierHubController;
 
@@ -382,12 +416,14 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
 
     setLanguage('en');
     onSelectModuleMock = vi.fn<(moduleIndex: AtelierModuleIndex) => void>();
+    onNavigateScreenMock = vi.fn<(target: AtelierNavTarget) => void>();
     isHubVisibleMock = vi.fn<() => boolean>().mockReturnValue(true);
 
     controller = createAtelierHub({
       root: fixture.root as unknown as ParentNode,
       t,
       onSelectModule: onSelectModuleMock,
+      onNavigateScreen: onNavigateScreenMock,
       isHubVisible: isHubVisibleMock,
     });
   });
@@ -824,6 +860,12 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
         'atelier.brandSub',
         'atelier.starGithub',
         'atelier.starAria',
+        'atelier.menuAria',
+        'atelier.menuLabel',
+        'atelier.menuTitle',
+        'atelier.menuCloseAria',
+        'atelier.menuAllTools',
+        'atelier.menuRecents',
         'atelier.deskTitle',
         'atelier.hintFree',
         'atelier.hintCarousel',
@@ -862,6 +904,11 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
           expect(val).not.toBe(key);
         }
       }
+
+      // Brand compliance: EN card1.title must use 'Produce Booklet' (never 'create')
+      setLanguage('en');
+      expect(t('atelier.card1.title')).toBe('Produce Booklet');
+      expect(t('atelier.card1.title').toLowerCase()).not.toContain('create');
     });
   });
 
@@ -876,6 +923,82 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       // Primary action button click should no longer invoke callback
       fixture.actionBtn.dispatchEvent({ type: 'click' });
       expect(onSelectModuleMock).not.toHaveBeenCalled();
+
+      // Menu button click should no longer open menu
+      fixture.menuBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(controller.isMenuOpen()).toBe(false);
+    });
+  });
+
+  describe('8. One Door Menu Sheet & Saved Count Tap-Through', () => {
+    it('toggles the menu sheet open and closed via #atelierMenuBtn and updates aria-expanded', () => {
+      expect(controller.isMenuOpen()).toBe(false);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
+
+      fixture.menuBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(controller.isMenuOpen()).toBe(true);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(false);
+      expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('true');
+
+      fixture.menuBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(controller.isMenuOpen()).toBe(false);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('closes the menu sheet via #atelierMenuCloseBtn, backdrop click, or Escape key without exiting Coverflow', () => {
+      controller.applyCoverflow(1);
+      controller.openMenu();
+      expect(controller.isMenuOpen()).toBe(true);
+
+      // Close via close button
+      fixture.menuCloseBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(controller.isMenuOpen()).toBe(false);
+
+      // Reopen and close via backdrop click
+      controller.openMenu();
+      fixture.menuSheet.dispatchEvent({ type: 'click', target: fixture.menuSheet });
+      expect(controller.isMenuOpen()).toBe(false);
+
+      // Reopen and press Escape -> closes menu first while keeping Coverflow active
+      controller.openMenu();
+      fakeWindow.dispatchEvent({ type: 'keydown', key: 'Escape' });
+      expect(controller.isMenuOpen()).toBe(false);
+      expect(controller.getState().isCoverflow).toBe(true);
+    });
+
+    it('navigates to files, recents, tools-all, and settings from menu sheet items and closes the sheet', () => {
+      for (const target of ['files', 'recents', 'tools-all', 'settings'] as const) {
+        controller.openMenu();
+        expect(controller.isMenuOpen()).toBe(true);
+
+        fixture.menuNavBtns[target].dispatchEvent({
+          type: 'click',
+          stopPropagation: vi.fn(),
+        });
+
+        expect(controller.isMenuOpen()).toBe(false);
+        expect(onNavigateScreenMock).toHaveBeenLastCalledWith(target);
+      }
+      expect(onNavigateScreenMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('navigates to recents when tapping #atelierCard1SavedCount while Card 1 is focused in Coverflow mode', () => {
+      // In Free-Float mode, clicking savedCountEl does NOT navigate to recents
+      fixture.savedCountEl.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(onNavigateScreenMock).not.toHaveBeenCalled();
+
+      // In Coverflow mode with Card 0 focused, clicking savedCountEl does NOT navigate to recents
+      controller.applyCoverflow(0);
+      fixture.savedCountEl.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(onNavigateScreenMock).not.toHaveBeenCalled();
+
+      // In Coverflow mode with Card 1 focused, clicking savedCountEl navigates to 'recents'
+      controller.applyCoverflow(1);
+      fixture.savedCountEl.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(onNavigateScreenMock).toHaveBeenCalledTimes(1);
+      expect(onNavigateScreenMock).toHaveBeenCalledWith('recents');
     });
   });
 });
