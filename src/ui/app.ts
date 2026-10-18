@@ -1182,7 +1182,8 @@ export function initApp(): void {
     printPdfBtn.hidden = !isReader || !canPrint();
 
     if (id !== 'hub') {
-      atelierHub?.closeMenu();
+      // The hub is leaving the screen, so there is nothing to animate.
+      atelierHub?.closeMenu({ immediate: true });
     }
 
     bottomNav.classList.toggle('hidden', !isTab || id === 'hub');

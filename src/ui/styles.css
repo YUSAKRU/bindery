@@ -5226,11 +5226,55 @@ body:has(#screen-hub:not(.hidden)) {
   color: var(--atelier-ink-black);
 }
 
+/* Closing plays the opening in reverse: the pills lift back toward the menu
+   button, bottom one first, while the veil fades. atelier-hub.ts hides the
+   sheet after ATELIER_MENU_CLOSE_MS (220ms) — the longest delay + duration
+   here must stay within it. The sheet stops taking taps at once. */
+.atelier-sheet-backdrop.is-closing {
+  pointer-events: none;
+  animation: atelierVeilOut 200ms ease-in both;
+}
+
+@keyframes atelierVeilOut {
+  to {
+    opacity: 0;
+  }
+}
+
+.atelier-sheet-backdrop.is-closing .atelier-sheet-item,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card {
+  animation: atelierPillLift 110ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.atelier-sheet-backdrop.is-closing .atelier-sheet-github { animation-delay: 0ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card { animation-delay: 20ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(4) { animation-delay: 40ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(3) { animation-delay: 60ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(2) { animation-delay: 80ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(1) { animation-delay: 100ms; }
+
+@keyframes atelierPillLift {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.94);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .atelier-sheet-backdrop,
   .atelier-sheet-item,
   .atelier-sheet-panel .pwa-banner,
-  .atelier-sheet-panel .ios-pwa-card {
+  .atelier-sheet-panel .ios-pwa-card,
+  .atelier-sheet-backdrop.is-closing,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-item,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card {
     animation: none;
   }
 }
