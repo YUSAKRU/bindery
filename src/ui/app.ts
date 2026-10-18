@@ -42,7 +42,11 @@ import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { initMdFlow } from './md-flow';
-import { initAtelierHub, type AtelierHubController } from './atelier-hub';
+import {
+  initAtelierHub,
+  resolveAtelierBackAction,
+  type AtelierHubController,
+} from './atelier-hub';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
 import { canPrint } from '../native/print';
@@ -6948,6 +6952,20 @@ export function initApp(): void {
       return;
     }
     const current = getCurrentScreenId();
+    if (current === 'hub' && atelierHub) {
+      const action = resolveAtelierBackAction({
+        menuOpen: atelierHub.isMenuOpen(),
+        isCoverflow: atelierHub.getState().isCoverflow,
+      });
+      if (action === 'close-menu') {
+        atelierHub.closeMenu();
+        return;
+      }
+      if (action === 'free-float') {
+        atelierHub.applyFreeFloat();
+        return;
+      }
+    }
     if (current === 'files' && currentFolderPath !== '') {
       currentFolderPath = currentFolderPath.includes('/')
         ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))

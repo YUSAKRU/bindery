@@ -73,8 +73,8 @@
             <!-- 2. Central Spatial Canvas: 3D Perspective Floating Deck & Carousel -->
             <div class="atelier-main" id="atelierCanvasContainer">
               <div class="atelier-spatial-header" id="atelierSpatialHeader">
-                <p class="atelier-desk-title" data-i18n="atelier.deskTitle">Spatial Workshop Desk</p>
-                <p class="atelier-mode-hint" id="atelierModeHint" data-i18n="atelier.hintFree">Tap anywhere to enter carousel from the nearest card</p>
+                <p class="atelier-desk-title" data-i18n="atelier.deskTitle">What are we making today?</p>
+                <p class="atelier-mode-hint" id="atelierModeHint" data-i18n="atelier.hintFree">Tap a card</p>
               </div>
 
               <div class="atelier-viewport" id="atelierViewport3D">
@@ -97,7 +97,7 @@
                   </div>
                   <div class="atelier-card-footer">
                     <div class="atelier-card-title" data-i18n="atelier.card1.title">Produce Booklet</div>
-                    <p class="atelier-card-desc" data-i18n="atelier.card1.desc">Arrange &amp; stitch PDF signatures into eight-page folding order</p>
+                    <p class="atelier-card-desc" data-i18n="atelier.card1.desc">Arranges your PDF into booklet pages ready to fold</p>
                     <div class="atelier-card-meta-row">
                       <span data-i18n="atelier.card1.module">MODULE // 01</span>
                       <span data-i18n="atelier.card1.meta">A4 → A5 Signature</span>
@@ -112,7 +112,7 @@
                   <div class="atelier-card-header">
                     <div class="atelier-badge">
                       <span class="atelier-badge-dot" aria-hidden="true"></span>
-                      <span data-i18n="atelier.card2.badge">Local Library</span>
+                      <span data-i18n="atelier.card2.badge">My library</span>
                     </div>
                   </div>
                   <div class="atelier-card-motif">
@@ -124,10 +124,10 @@
                   </div>
                   <div class="atelier-card-footer">
                     <div class="atelier-card-title" data-i18n="atelier.card2.title">Read &amp; Archive</div>
-                    <p class="atelier-card-desc" data-i18n="atelier.card2.desc">Saved fascicles, digital preview and offline reading shelf</p>
+                    <p class="atelier-card-desc" data-i18n="atelier.card2.desc">Recent documents and offline reading</p>
                     <div class="atelier-card-meta-row">
                       <span data-i18n="atelier.card2.module">MODULE // 02</span>
-                      <span id="atelierCard1SavedCount" class="atelier-saved-count-link">0 Fascicles Saved</span>
+                      <span id="atelierCard1SavedCount" class="atelier-saved-count-link">Saved documents: 0</span>
                     </div>
                   </div>
                 </div>
@@ -152,23 +152,13 @@
                   </div>
                   <div class="atelier-card-footer">
                     <div class="atelier-card-title" data-i18n="atelier.card3.title">Design Cover</div>
-                    <p class="atelier-card-desc" data-i18n="atelier.card3.desc">Press stamp, hot foil and spine width calculator</p>
+                    <p class="atelier-card-desc" data-i18n="atelier.card3.desc">A print-ready cover with the spine width worked out</p>
                     <div class="atelier-card-meta-row">
                       <span data-i18n="atelier.card3.module">MODULE // 03</span>
-                      <span data-i18n="atelier.card3.meta">Foil &amp; Press</span>
+                      <span data-i18n="atelier.card3.meta">Spine width</span>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <!-- Mode Switcher Pill Indicator -->
-              <div class="atelier-mode-bar">
-                <button class="atelier-mode-btn" id="atelierModeToggleBtn" type="button">
-                  <span class="atelier-mode-icon" aria-hidden="true">
-                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
-                  </span>
-                  <span id="atelierModeToggleLabel" data-i18n="atelier.modeFree">Mode: Free Float (Active)</span>
-                </button>
               </div>
             </div>
 
@@ -191,9 +181,7 @@
                     <div class="atelier-action-title" id="atelierBtnActionTitle" data-i18n="atelier.card1.ctaTitle">
                       Start Booklet Production
                     </div>
-                    <div class="atelier-action-sub" id="atelierBtnActionSub" data-i18n="atelier.card1.ctaSub">
-                      Load a PDF and extract folding signatures
-                    </div>
+                    <div class="atelier-action-sub" id="atelierBtnActionSub" data-i18n="atelier.card1.ctaSub">Pick a PDF and let Bindery put the pages in order</div>
                   </div>
                 </div>
                 <div class="atelier-action-arrow" aria-hidden="true">
@@ -204,7 +192,7 @@
               <div class="atelier-privacy-row">
                 <div class="atelier-privacy-seal">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span data-i18n="atelier.privacySeal">Runs entirely on your device • Zero server transmission</span>
+                  <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
                 </div>
               </div>
             </footer>

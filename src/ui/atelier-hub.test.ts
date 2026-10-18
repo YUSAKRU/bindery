@@ -8,6 +8,7 @@ import {
   DOCK_META,
   FREE_POSITIONS,
   initAtelierHub,
+  resolveAtelierBackAction,
 } from './atelier-hub';
 
 interface FakeDomEvent {
@@ -224,8 +225,6 @@ interface HubFixture {
   cards: [FakeElement, FakeElement, FakeElement];
   savedCountEl: FakeElement;
   indicators: [FakeElement, FakeElement, FakeElement];
-  modeToggleBtn: FakeElement;
-  modeToggleLabel: FakeElement;
   modeHint: FakeElement;
   actionBtn: FakeElement;
   btnTitle: FakeElement;
@@ -279,13 +278,6 @@ function createFixture(): HubFixture {
   card2.setAttribute('data-atelier-index', '2');
   card2.rect = { left: 200, top: 500, width: 240, height: 310, right: 440, bottom: 810 }; // Center: (320, 655)
   viewport.appendChild(card2);
-
-  const modeToggleBtn = new FakeElement('button');
-  modeToggleBtn.id = 'atelierModeToggleBtn';
-  const modeToggleLabel = new FakeElement('span');
-  modeToggleLabel.id = 'atelierModeToggleLabel';
-  modeToggleBtn.appendChild(modeToggleLabel);
-  canvasContainer.appendChild(modeToggleBtn);
 
   const modeHint = new FakeElement('p');
   modeHint.id = 'atelierModeHint';
@@ -360,8 +352,6 @@ function createFixture(): HubFixture {
     cards: [card0, card1, card2],
     savedCountEl,
     indicators: [ind0, ind1, ind2],
-    modeToggleBtn,
-    modeToggleLabel,
     modeHint,
     actionBtn,
     btnTitle,
@@ -457,8 +447,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       });
     });
 
-    it('sets the mode label and mode hint text for free float mode', () => {
-      expect(fixture.modeToggleLabel.textContent).toBe(t('atelier.modeFree'));
+    it('sets the mode hint text for free float mode', () => {
       expect(fixture.modeHint.textContent).toBe(t('atelier.hintFree'));
     });
 
@@ -493,7 +482,6 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       const state = controller.getState();
       expect(state.isCoverflow).toBe(true);
       expect(state.activeIndex).toBe(0);
-      expect(fixture.modeToggleLabel.textContent).toBe(t('atelier.modeCarousel'));
       expect(fixture.modeHint.textContent).toBe(t('atelier.hintCarousel'));
     });
 
@@ -653,7 +641,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       });
 
       expect(controller.getState().isCoverflow).toBe(false);
-      expect(fixture.modeToggleLabel.textContent).toBe(t('atelier.modeFree'));
+      expect(fixture.modeHint.textContent).toBe(t('atelier.hintFree'));
     });
   });
 
@@ -791,22 +779,6 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       expect(controller.getState().isCoverflow).toBe(true);
     });
 
-    it('toggles between Free-Float and Carousel when clicking modeToggleBtn', () => {
-      expect(controller.getState().isCoverflow).toBe(false);
-
-      fixture.modeToggleBtn.dispatchEvent({
-        type: 'click',
-        stopPropagation: vi.fn(),
-      });
-      expect(controller.getState().isCoverflow).toBe(true);
-
-      fixture.modeToggleBtn.dispatchEvent({
-        type: 'click',
-        stopPropagation: vi.fn(),
-      });
-      expect(controller.getState().isCoverflow).toBe(false);
-    });
-
     it('switches to Coverflow on target card when clicking an indicator dot', () => {
       fixture.indicators[2].dispatchEvent({
         type: 'click',
@@ -834,7 +806,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       controller.setSavedCount(5);
       expect(controller.getState().savedCount).toBe(5);
       expect(fixture.savedCountEl.textContent).toBe(t('atelier.card2.meta', { count: 5 }));
-      expect(fixture.savedCountEl.textContent).toBe('5 Fascicles Saved');
+      expect(fixture.savedCountEl.textContent).toBe('Saved documents: 5');
 
       controller.setSavedCount(-2); // clamp to 0
       expect(controller.getState().savedCount).toBe(0);
@@ -846,11 +818,8 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       controller.refreshTexts();
 
       expect(getLanguage()).toBe('tr');
-      expect(fixture.modeToggleLabel.textContent).toBe('Mod: Serbest Salınım (Aktif)');
-      expect(fixture.modeHint.textContent).toBe(
-        'Herhangi bir noktaya dokunarak en yakın karttan karusele geçin',
-      );
-      expect(fixture.savedCountEl.textContent).toBe('4 Fasikül Kayıtlı');
+      expect(fixture.modeHint.textContent).toBe('Bir karta dokunun');
+      expect(fixture.savedCountEl.textContent).toBe('4 belge kayıtlı');
       expect(fixture.btnTitle.textContent).toBe('Kitapçık Üretimini Başlat');
       expect(fixture.indicators[0].getAttribute('aria-label')).toBe('1. Kart');
     });
@@ -868,8 +837,6 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
         'atelier.deskTitle',
         'atelier.hintFree',
         'atelier.hintCarousel',
-        'atelier.modeFree',
-        'atelier.modeCarousel',
         'atelier.card1.badge',
         'atelier.card1.title',
         'atelier.card1.desc',
@@ -1001,5 +968,20 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       expect(onNavigateScreenMock).toHaveBeenCalledTimes(1);
       expect(onNavigateScreenMock).toHaveBeenCalledWith('recents');
     });
+  });
+});
+
+describe('resolveAtelierBackAction', () => {
+  it('closes the menu first when it is open, even over the coverflow', () => {
+    expect(resolveAtelierBackAction({ menuOpen: true, isCoverflow: false })).toBe('close-menu');
+    expect(resolveAtelierBackAction({ menuOpen: true, isCoverflow: true })).toBe('close-menu');
+  });
+
+  it('returns the cards to free float when the menu is closed and the coverflow is shown', () => {
+    expect(resolveAtelierBackAction({ menuOpen: false, isCoverflow: true })).toBe('free-float');
+  });
+
+  it('leaves the hub alone when neither the menu nor the coverflow is shown', () => {
+    expect(resolveAtelierBackAction({ menuOpen: false, isCoverflow: false })).toBe('none');
   });
 });
