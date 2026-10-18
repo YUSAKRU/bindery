@@ -70,6 +70,20 @@ export const DOCK_META: readonly [AtelierDockMeta, AtelierDockMeta, AtelierDockM
   },
 ] as const;
 
+export type AtelierBackAction = 'close-menu' | 'free-float' | 'none';
+
+// What the Android back button should do on the hub: step back out of the
+// menu, then out of the coverflow, before the app is allowed to exit. Mirrors
+// the Escape handling in onKeyDown.
+export function resolveAtelierBackAction(state: {
+  menuOpen: boolean;
+  isCoverflow: boolean;
+}): AtelierBackAction {
+  if (state.menuOpen) return 'close-menu';
+  if (state.isCoverflow) return 'free-float';
+  return 'none';
+}
+
 function spawnTapRipple(clientX: number, clientY: number): void {
   if (typeof document === 'undefined' || !document.body) return;
   const ripple = document.createElement('div');

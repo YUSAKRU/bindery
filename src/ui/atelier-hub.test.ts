@@ -8,6 +8,7 @@ import {
   DOCK_META,
   FREE_POSITIONS,
   initAtelierHub,
+  resolveAtelierBackAction,
 } from './atelier-hub';
 
 interface FakeDomEvent {
@@ -1001,5 +1002,20 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       expect(onNavigateScreenMock).toHaveBeenCalledTimes(1);
       expect(onNavigateScreenMock).toHaveBeenCalledWith('recents');
     });
+  });
+});
+
+describe('resolveAtelierBackAction', () => {
+  it('closes the menu first when it is open, even over the coverflow', () => {
+    expect(resolveAtelierBackAction({ menuOpen: true, isCoverflow: false })).toBe('close-menu');
+    expect(resolveAtelierBackAction({ menuOpen: true, isCoverflow: true })).toBe('close-menu');
+  });
+
+  it('returns the cards to free float when the menu is closed and the coverflow is shown', () => {
+    expect(resolveAtelierBackAction({ menuOpen: false, isCoverflow: true })).toBe('free-float');
+  });
+
+  it('leaves the hub alone when neither the menu nor the coverflow is shown', () => {
+    expect(resolveAtelierBackAction({ menuOpen: false, isCoverflow: false })).toBe('none');
   });
 });
