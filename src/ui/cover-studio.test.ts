@@ -26,7 +26,7 @@ describe('Cover Studio - UI & DOM Invariants', () => {
     expect(htmlSource).toContain('id="screen-cover-result"');
   });
 
-  it('contains Cover Studio navigation in tools menu, hub carousel, and result screen', () => {
+  it('contains Cover Studio navigation in tools menu and result screen', () => {
     expect(htmlSource).toContain('data-tool="cover"');
     expect(htmlSource).toContain('id="resultOpenCoverStudioBtn"');
   });
