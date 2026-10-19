@@ -191,3 +191,21 @@ describe('"Print sheets" regenerates into the same record (D9–D11)', () => {
     expect(applied.has('creepSlider.value')).toBe(true);
   });
 });
+
+const css = readFileSync(fileURLToPath(new URL('./styles.css', import.meta.url)), 'utf-8');
+
+describe('library polish', () => {
+  it('the library hides only the top-bar title, not the back button or other screens\' titles', () => {
+    expect(css).toMatch(/\.app:has\(#screen-library:not\(\.hidden\)\) \.top-bar-title \{\s*visibility: hidden;/);
+    const hides = css.match(/[^}]*\.top-bar-title \{\s*visibility: hidden;/g) ?? [];
+    expect(hides).toHaveLength(1);
+  });
+
+  it('the shelf starts at the left gutter and snaps books to the start', () => {
+    const shelf = css.slice(css.indexOf('.library-shelf {'), css.indexOf('}', css.indexOf('.library-shelf {')));
+    expect(shelf).not.toContain('calc(50% - 60px)');
+    expect(shelf).toContain('scroll-padding-inline-start: 14px;');
+    const book = css.slice(css.indexOf('.library-book {'), css.indexOf('}', css.indexOf('.library-book {')));
+    expect(book).toContain('scroll-snap-align: start;');
+  });
+});

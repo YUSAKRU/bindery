@@ -63,10 +63,12 @@ describe('Atelier hub copy', () => {
     setLanguage('en');
     expect(t('atelier.card2.ctaTitle')).toBe('Open library');
     expect(t('atelier.card2.ctaSub')).toBe('Your booklets and PDFs');
+    expect(t('atelier.card2.desc')).toBe('Your booklets and PDFs in one place');
     expect(t('atelier.menuRecents')).toBe('My Library');
     setLanguage('tr');
     expect(t('atelier.card2.ctaTitle')).toBe('Kitaplığı aç');
     expect(t('atelier.card2.ctaSub')).toBe("Kitapçıklarınız ve PDF'leriniz");
+    expect(t('atelier.card2.desc')).toBe("Kitapçıklarınız ve PDF'leriniz bir arada");
     expect(t('atelier.menuRecents')).toBe('Kitaplığım');
   });
 

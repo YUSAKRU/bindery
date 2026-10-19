@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LibraryRecord } from '../native/library-store';
 import type { RecentEntry } from '../native/recents-store';
-import { createLibraryScreen, LIBRARY_TAB_STORAGE_KEY, type LibraryScreenDeps } from './library-screen';
+import { createLibraryScreen, LIBRARY_TAB_STORAGE_KEY, SHELF_FRONT_ZONE, type LibraryScreenDeps } from './library-screen';
 
 // Minimal DOM double (no jsdom in this suite, see app.dom.test.ts): enough
 // of Element for the controller — ids, classes, attributes, children, events.
@@ -170,9 +170,9 @@ class FakeObserver {
   observed: unknown[] = [];
   disconnect = vi.fn();
   callback: unknown;
-  options: { root?: unknown; threshold?: number };
+  options: { root?: unknown; rootMargin?: string; threshold?: number };
 
-  constructor(callback: unknown, options: { root?: unknown; threshold?: number } = {}) {
+  constructor(callback: unknown, options: { root?: unknown; rootMargin?: string; threshold?: number } = {}) {
     this.callback = callback;
     this.options = options;
     FakeObserver.instances.push(this);
@@ -392,5 +392,31 @@ describe('library screen controller', () => {
     expect(rows(els.libraryDeskList, 'library-desk-row')).toHaveLength(1);
     els.libraryOpenPdfBtn.click();
     expect(deps.onOpenPdf).toHaveBeenCalled();
+  });
+
+  it('the unreachable-source dot says what it means', async () => {
+    const { controller, els } = setup({ platform: 'web' }, [record('a', { source: { kind: 'none' } }), record('b')]);
+    await controller.show('books');
+    const dots = rows(els.libraryBookList, 'library-row-missing');
+    expect(dots).toHaveLength(1);
+    expect(dots[0].getAttribute('aria-label')).toBe('library.source.rowMissing');
+    expect(dots[0].getAttribute('title')).toBe('library.source.rowMissing');
+    expect(dots[0].getAttribute('role')).toBe('img');
+  });
+
+  it('the front book is the one filling the left slot, and only once it fills most of it', async () => {
+    const { controller, els } = setup({}, [record('a', { updatedAt: 3 }), record('b', { updatedAt: 2 }), record('c', { updatedAt: 1 })]);
+    await controller.show('books');
+    const observer = FakeObserver.instances.find((o) => o.options.root === els.libraryShelf)!;
+    expect(observer.options.rootMargin).toBe(SHELF_FRONT_ZONE);
+    const books = rows(els.libraryShelf, 'library-book');
+    expect(books[0].classList.contains('is-front')).toBe(true);
+    const fire = observer.callback as (e: { target: unknown; isIntersecting: boolean; intersectionRatio: number }[]) => void;
+    // Book b entering the zone a little does not make it the front book yet.
+    fire([{ target: books[1], isIntersecting: true, intersectionRatio: 0.3 }]);
+    expect(books[0].classList.contains('is-front')).toBe(true);
+    fire([{ target: books[1], isIntersecting: true, intersectionRatio: 0.9 }]);
+    expect(books[1].classList.contains('is-front')).toBe(true);
+    expect(books[0].classList.contains('is-before')).toBe(true);
   });
 });

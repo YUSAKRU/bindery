@@ -70,6 +70,9 @@ export interface LibraryScreenController {
 }
 
 export const LIBRARY_TAB_STORAGE_KEY = 'bindery.library.tab';
+/** The leftmost ~40% of the shelf: room for one book at the left gutter. */
+export const SHELF_FRONT_ZONE = '0px -60% 0px 0px';
+const SHELF_FRONT_RATIO = 0.6;
 
 const SVG_NS_ATTRS = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
 const ICON_DOC = `<svg ${SVG_NS_ATTRS}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
@@ -268,13 +271,15 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
         (entries) => {
           let best: { index: number; ratio: number } | null = null;
           for (const entry of entries) {
-            if (!entry.isIntersecting) continue;
+            if (!entry.isIntersecting || entry.intersectionRatio < SHELF_FRONT_RATIO) continue;
             const index = Number((entry.target as HTMLElement).dataset.index);
             if (!best || entry.intersectionRatio > best.ratio) best = { index, ratio: entry.intersectionRatio };
           }
           if (best) setFront(best.index);
         },
-        { root: shelf, threshold: 0.6 },
+        // The shelf starts at its left gutter, so the front book is the one
+        // filling the leftmost slot: the observed zone is that slot only.
+        { root: shelf, rootMargin: SHELF_FRONT_ZONE, threshold: SHELF_FRONT_RATIO },
       );
       shelf.querySelectorAll<HTMLElement>('.library-book').forEach((book) => shelfObserver?.observe(book));
     }
@@ -297,8 +302,9 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
       row.appendChild(text);
       if (!canReopen(record.source, deps.platform)) {
         const dot = el('span', 'library-row-missing');
-        dot.setAttribute('title', t('library.source.stateMissing'));
-        dot.setAttribute('aria-label', t('library.source.stateMissing'));
+        dot.setAttribute('role', 'img');
+        dot.setAttribute('title', t('library.source.rowMissing'));
+        dot.setAttribute('aria-label', t('library.source.rowMissing'));
         row.appendChild(dot);
       }
       row.addEventListener('click', () => openDetail(record, row));

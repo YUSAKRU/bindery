@@ -5207,6 +5207,11 @@ body:has(#screen-hub:not(.hidden)) {
   color: var(--atelier-ink-black);
 }
 
+/* The page's own serif heading names the screen; the bar keeps only back. */
+.app:has(#screen-library:not(.hidden)) .top-bar-title {
+  visibility: hidden;
+}
+
 .app:has(#screen-library:not(.hidden)) .top-bar .icon-btn {
   background: var(--atelier-surface-cream);
   color: var(--atelier-ink-black);
@@ -5423,7 +5428,11 @@ body:has(#screen-hub:not(.hidden)) {
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  padding: 18px calc(50% - 60px) 22px;
+  /* The first book starts at the left gutter. The wide end padding lets the
+     last book scroll into that same leftmost slot, where it becomes the
+     front book (library-screen.ts SHELF_FRONT_ZONE). */
+  padding: 18px calc(100% - 136px) 22px 14px;
+  scroll-padding-inline-start: 14px;
   perspective: 900px;
   border-radius: 20px;
   background:
@@ -5451,7 +5460,7 @@ body:has(#screen-hub:not(.hidden)) {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  scroll-snap-align: center;
+  scroll-snap-align: start;
   transform: rotateY(0) scale(0.9);
   transform-origin: center bottom;
   opacity: 0.85;
