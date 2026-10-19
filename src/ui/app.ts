@@ -1,6 +1,6 @@
 import pkg from '../../package.json';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
-import type { Binding, FlipEdge, PaperSize } from '../engine/types';
+import type { Binding, BookletOptions, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet, computeSignatureMappings, inspectPdf, resolveSheetSize } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
@@ -83,6 +83,16 @@ import {
   type ReaderDocument,
 } from '../native/pdf-reader-render';
 import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import {
+  clearOutputUnder,
+  newRecordId,
+  patchRecord,
+  rewritePrivatePaths,
+  upsertRecord,
+  type SourceRef,
+} from '../native/library-store';
+import { deleteLibraryThumb, writeLibraryThumb } from '../native/library-thumbs';
+import { buildRecordDraft, type BookletResultMeta } from './library-record';
 import {
   clearErrors,
   getErrors,
@@ -207,7 +217,10 @@ function formatBytes(bytes: number): string {
  * neither open nor account for. Shared by every list so the rule cannot drift
  * out of sync between them again.
  */
-function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): boolean {
+export function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): boolean {
+  // Dot-entries are app bookkeeping (the library's `.library/` thumbnails),
+  // never user documents.
+  if (item.name.startsWith('.')) return false;
   return item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf');
 }
 
@@ -526,6 +539,14 @@ export function initApp(): void {
   const mergeNewBtn = byId<HTMLButtonElement>('mergeNewBtn');
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
+  // Where the selected booklet source can be read again from — what lets a
+  // library record outlive this session.
+  let bookletSourceRef: SourceRef = { kind: 'none' };
+  // Library record the current booklet result belongs to. Set by its first
+  // save/share, so a later save or share updates it rather than adding another.
+  let currentLibraryRecordId: string | null = null;
+  // Options and counts of the last successful generation, for the library record.
+  let lastBookletResultMeta: BookletResultMeta | null = null;
   let booklet: {
     frontPdf: Uint8Array;
     backPdf: Uint8Array;
@@ -1217,6 +1238,9 @@ export function initApp(): void {
 
   function resetPicker(): void {
     selectedFile = null;
+    bookletSourceRef = { kind: 'none' };
+    currentLibraryRecordId = null;
+    lastBookletResultMeta = null;
     fileCard.classList.add('hidden');
     continueBtn.classList.add('hidden');
     pickFileBtn.classList.remove('hidden');
@@ -1742,7 +1766,9 @@ export function initApp(): void {
 
   let currentPickerPath = '';
   let selectedPickerFiles: { name: string; uri: string }[] = [];
-  let pickerResolve: ((value: PickedPdf | PickedPdf[] | null) => void) | null = null;
+  // A picked PDF plus, when the pick path can tell, where it can be read again.
+  type PickedWithSource = PickedPdf & { source?: SourceRef };
+  let pickerResolve: ((value: PickedWithSource | PickedWithSource[] | null) => void) | null = null;
 
   function renderBinderyPickerBreadcrumb(): void {
     binderyPickerBreadcrumb.innerHTML = '';
@@ -1842,8 +1868,9 @@ export function initApp(): void {
           } else {
             closeModal(binderyFilePickerModal);
             try {
+              const relPath = currentPickerPath ? `${currentPickerPath}/${item.name}` : item.name;
               const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
-              pickerResolve?.(picked);
+              pickerResolve?.({ ...picked, source: { kind: 'private', relPath } });
             } catch (err) {
               if (err instanceof FileTooLargeError) {
                 showToast(t('toast.fileTooLarge', { mb: Math.round(err.sizeBytes / 1048576) }), { type: 'error' });
@@ -1860,10 +1887,15 @@ export function initApp(): void {
     }
   }
 
+  // `persistentSource` (single pick only): on Android, pick from device through
+  // SAF so the grant survives a restart and the result carries a `saf` source.
   function promptAndPickPdfs(options: { allowMultiple: true }): Promise<PickedPdf[]>;
-  function promptAndPickPdfs(options: { allowMultiple: false }): Promise<PickedPdf | null>;
-  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<PickedPdf | PickedPdf[] | null> {
-    return new Promise<PickedPdf | PickedPdf[] | null>((resolve) => {
+  function promptAndPickPdfs(options: { allowMultiple: false; persistentSource?: boolean }): Promise<PickedWithSource | null>;
+  function promptAndPickPdfs(options: {
+    allowMultiple: boolean;
+    persistentSource?: boolean;
+  }): Promise<PickedWithSource | PickedWithSource[] | null> {
+    return new Promise<PickedWithSource | PickedWithSource[] | null>((resolve) => {
       pickerResolve = resolve;
 
       const handleDevice = async () => {
@@ -1873,6 +1905,15 @@ export function initApp(): void {
           if (options.allowMultiple) {
             const res = await pickPdfs();
             resolve(res);
+          } else if (options.persistentSource && Capacitor.getPlatform() === 'android') {
+            const picked = await pickPdfWithPersistentUri();
+            if (!picked) {
+              resolve(null);
+              return;
+            }
+            const file = await withBusyOverlay(() => readPdfFromUri(picked.uri));
+            const source: SourceRef = picked.persistent ? { kind: 'saf', uri: picked.uri } : { kind: 'none' };
+            resolve({ ...file, source });
           } else {
             const res = await pickPdf();
             resolve(res);
@@ -1952,8 +1993,9 @@ export function initApp(): void {
     }
   });
 
-  function loadBookletFile(bytes: Uint8Array, name: string): void {
+  function loadBookletFile(bytes: Uint8Array, name: string, source?: SourceRef): void {
     selectedFile = { name, bytes };
+    bookletSourceRef = source ?? { kind: 'none' };
     // Clear the previous document's page count immediately so the summary/hints
     // don't flash stale values while validatePdf() resolves for the new file.
     bookletOriginalPages = 0;
@@ -2010,11 +2052,11 @@ export function initApp(): void {
   pickFileBtn.addEventListener('click', async () => {
     showToast(t('toast.selectingSource'));
     try {
-      const picked = await promptAndPickPdfs({ allowMultiple: false });
+      const picked = await promptAndPickPdfs({ allowMultiple: false, persistentSource: true });
       if (!picked) {
         return;
       }
-      loadBookletFile(picked.bytes, picked.name);
+      loadBookletFile(picked.bytes, picked.name, picked.source);
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
@@ -2028,7 +2070,7 @@ export function initApp(): void {
       if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
       const bytes = new Uint8Array(await response.arrayBuffer());
       const name = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
-      loadBookletFile(bytes, name);
+      loadBookletFile(bytes, name, { kind: 'asset', path: `onboarding/quick-start-${lang}.pdf` });
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
@@ -2457,7 +2499,10 @@ export function initApp(): void {
     generateSpinner.classList.remove('hidden');
 
     try {
-      const result = await makeBooklet(selectedFile.bytes, {
+      // Assigned inside the call so the options literal stays at the call site
+      // (booklet-flow.test.ts reads it there); kept for the library record.
+      let bookletOptions: BookletOptions;
+      const result = await makeBooklet(selectedFile.bytes, (bookletOptions = {
         gutter: Number(gutterSlider.value),
         creep: Number(creepSlider.value),
         flipEdge: bookletFlipEdge,
@@ -2470,7 +2515,32 @@ export function initApp(): void {
         foldGuides: bookletMarks !== 'none',
         collationMarks: bookletMarks === 'full',
         insertBlankAfter,
-      });
+      }));
+      // A fresh generation is a new booklet, so its first save/share adds a new
+      // library record.
+      currentLibraryRecordId = null;
+      lastBookletResultMeta = {
+        options: bookletOptions,
+        originalPages: result.originalPages,
+        signaturesCount: result.signaturesCount,
+        sheetsCount: result.sheetsCount,
+        paddingApplied: result.paddingApplied,
+        blanksInserted: result.blanksInserted,
+        sheetSizePt: wrapCoverSheetSize(),
+        wrapCover: bookletWrapCover
+          ? {
+              format: wrapCoverFormat,
+              binding: wrapCoverBinding,
+              kind: wrapCoverKind,
+              boardMm: wrapCoverBoardMm,
+              gsm: wrapCoverGsm,
+              theme: wrapCoverTheme,
+              title: wrapCoverTitleInput.value,
+              author: wrapCoverAuthorInput.value,
+              synopsis: wrapCoverSynopsisInput.value,
+            }
+          : null,
+      };
 
       // The cover is measured from what the booklet ACTUALLY came out as, not
       // from the config screen's projection, so a padding or signature decision
@@ -2684,6 +2754,7 @@ export function initApp(): void {
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
           actionStatus.textContent = t('status.booklet.shared', { label });
+          void recordBookletInLibrary('share', null);
           void triggerReviewPromptIfEligible();
         }
       } catch (error) {
@@ -2762,6 +2833,7 @@ export function initApp(): void {
         count: savedFiles.length,
         files: savedFiles.join(', '),
       });
+      void recordBookletInLibrary('save', { relPath: `booklets/${docName}` });
       bookletSaveState = 'saved';
       refreshSaveLabel();
       bookletGoToLocationBtn.classList.remove('hidden');
@@ -5644,6 +5716,67 @@ export function initApp(): void {
     }
   }
 
+  /**
+   * Adds the current booklet result to the library, or updates its record when
+   * this result was already saved/shared once. Bookkeeping like rememberSaved:
+   * callers `void` it after the user-visible status is set, and it never throws.
+   */
+  async function recordBookletInLibrary(
+    // Which action succeeded; only `save` brings an output folder.
+    _trigger: 'save' | 'share',
+    output: { relPath: string } | null,
+  ): Promise<void> {
+    try {
+      const meta = lastBookletResultMeta;
+      const source = selectedFile;
+      if (!meta || !source) return;
+      const id = currentLibraryRecordId ?? newRecordId();
+      currentLibraryRecordId = id;
+      const draft = buildRecordDraft({
+        id,
+        // The save handler has just written docName back into this field; on
+        // a share it still holds the default (the source's stem) or the
+        // user's edit. Blank falls back to the source's stem.
+        title: safeBaseName(bookletFileNameInput.value),
+        sourceName: source.name,
+        sourceSize: source.bytes.length,
+        source: bookletSourceRef,
+        meta,
+        output,
+      });
+      const { record, evicted } = await upsertRecord(draft);
+      for (const old of evicted) {
+        if (old.thumb) void deleteLibraryThumb(old.thumb.relPath);
+      }
+      if (!record.thumb) void renderLibraryThumb(record.id, source.bytes);
+    } catch (error) {
+      console.warn('Booklet done, but could not add it to the library:', error);
+    }
+  }
+
+  // Page 1 of the source as a small JPEG, stored under the record. Skipped past
+  // the same size ceiling as the Files previews; the library then draws a
+  // typographic cover instead.
+  async function renderLibraryThumb(id: string, bytes: Uint8Array): Promise<void> {
+    if (bytes.length > PDF_THUMBNAIL_MAX_SOURCE_BYTES) return;
+    try {
+      const doc = await loadPdfForThumbnails(bytes);
+      let dataUrl: string;
+      try {
+        dataUrl = await renderPageThumbnail(doc, 1, 240, 'image/jpeg', 0.8);
+      } finally {
+        await destroyThumbnailDoc(doc);
+      }
+      const relPath = await writeLibraryThumb(id, dataUrl);
+      if (relPath && !(await patchRecord(id, { thumb: { relPath } }))) {
+        // The record went away meanwhile; do not leave its thumbnail behind.
+        await deleteLibraryThumb(relPath);
+      }
+    } catch (error) {
+      console.warn('Could not render the library thumbnail:', error);
+    }
+  }
+
   async function withBusyOverlay<T>(run: () => Promise<T>): Promise<T> {
     showReaderOpening();
     try {
@@ -6047,10 +6180,16 @@ export function initApp(): void {
           await addMergeFile(bytes, name);
           showScreen('merge-picker');
           break;
-        case 'booklet':
-          loadBookletFile(bytes, name);
+        case 'booklet': {
+          const source: SourceRef = readerRelPath
+            ? { kind: 'private', relPath: readerRelPath }
+            : readerUri
+              ? { kind: 'saf', uri: readerUri }
+              : { kind: 'none' };
+          loadBookletFile(bytes, name, source);
           showScreen('config');
           break;
+        }
         default:
           break;
       }
@@ -7203,9 +7342,9 @@ export function initApp(): void {
     reader: async (bytes, name, uri, relPath) => {
       await openReaderWithBytes(bytes, name, uri, 'files', 1, relPath);
     },
-    booklet: async (bytes, name) => {
+    booklet: async (bytes, name, uri, relPath) => {
       showScreen('picker');
-      loadBookletFile(bytes, name);
+      loadBookletFile(bytes, name, relPath ? { kind: 'private', relPath } : { kind: 'saf', uri });
     },
     organize: async (bytes, name) => {
       resetOrganizeScreen();
@@ -7313,6 +7452,9 @@ export function initApp(): void {
             // not in recents, ignore
           }
         }
+        void rewritePrivatePaths(oldPath, newPath).catch((error: unknown) => {
+          console.warn('Renamed, but could not update the library:', error);
+        });
         showToast(t('toast.renamed', { name: newName }));
         void renderFilesList();
       } catch (error) {
@@ -7331,6 +7473,9 @@ export function initApp(): void {
         const itemPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         await deletePrivateItem(itemPath, isDir);
         if (!isDir) await removeRecent(item);
+        void clearOutputUnder(itemPath).catch((error: unknown) => {
+          console.warn('Deleted, but could not update the library:', error);
+        });
         showToast(isDir ? t('toast.folderDeleted') : t('toast.fileDeleted'));
         void renderFilesList();
       } catch (error) {
@@ -7744,6 +7889,9 @@ export function initApp(): void {
       } catch {
         // not in recents, ignore
       }
+      void rewritePrivatePaths(sourceDir, destDir).catch((error: unknown) => {
+        console.warn('Moved, but could not update the library:', error);
+      });
       showToast(t('toast.moved', { name: moveSourceFile.name }));
       closeModal(moveDocModal);
       moveSourceFile = null;
@@ -8033,8 +8181,8 @@ export function initApp(): void {
       openReaderWithBytes(bytes, filename, uri, 'md-to-pdf'),
     savePdfPrivately,
     rememberSaved,
-    onBookletGenerated: async (bytes: Uint8Array, filename: string) => {
-      loadBookletFile(bytes, filename);
+    onBookletGenerated: async (bytes: Uint8Array, filename: string, _privateUri: string, relPath: string) => {
+      loadBookletFile(bytes, filename, { kind: 'private', relPath });
       showScreen('config');
       showToast(t('toast.mdCreated'));
     },
