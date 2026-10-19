@@ -120,7 +120,8 @@ describe('library screen replaces the recents screen (D1–D3)', () => {
     );
     const lib = extractBlock('libraryScreen = createLibraryScreen', '({');
     expect(lib).toContain("onOpenPdf: () => void openReaderFromPicker('library')");
-    expect(extractBlock('async function readLibraryRecord(')).toContain("'library', 1, relPath)");
+    // "Read as a book" opens the book reader now (Phase 3), not the reader.
+    expect(lib).toContain('onRead: (record) => void readLibraryRecordAsBook(record)');
   });
 
   it('leaving the library stops its observers', () => {
@@ -193,6 +194,55 @@ describe('"Print sheets" regenerates into the same record (D9–D11)', () => {
 });
 
 const css = readFileSync(fileURLToPath(new URL('./styles.css', import.meta.url)), 'utf-8');
+
+describe('book reader wiring (Phase 3)', () => {
+  it('ships #screen-book under the library', () => {
+    expect(html).toContain('id="screen-book"');
+    expect(extractBlock('const PARENT_SCREEN')).toContain("book: 'library',");
+    expect(extractBlock('const SCREEN_TITLES')).toContain("book: 'book.title',");
+  });
+
+  it('leaving the book closes its document and locks portrait; entering unlocks and opens the session', () => {
+    const body = extractBlock('function showScreen(id: ScreenId): void');
+    expect(body).toMatch(
+      /getCurrentScreenId\(\) === 'book' && id !== 'book'\) \{[^}]*void closeBookReader\(id === 'reader'\);\s*void ScreenOrientation\.lock\(\{ orientation: 'portrait' \}\)/,
+    );
+    expect(body).toMatch(/id === 'book'\) \{\s*void ScreenOrientation\.unlock\(\)\.catch\(\(\) => \{\}\);\s*void startBookSession\(\);/);
+  });
+
+  it('the book cancels the shared render map before it destroys its document', () => {
+    const deps = extractBlock('bookReader = createBookReader', '({');
+    expect(deps).toContain('cancelRenders: cancelAllReaderRenders,');
+    const close = extractBlock('async function closeBookReader(');
+    expect(close).toContain('bookReader?.close()');
+    expect(close).not.toContain('destroy(');
+  });
+
+  it('signature view only for library records: desk sessions carry no record', () => {
+    const start = extractBlock('async function startBookSession(');
+    expect(start).toContain('const options = session.record?.settings.options;');
+    expect(start).toContain('const forma = options ? computeFormaMap(proxy.numPages, options) : null;');
+    const desk = extractBlock('async function readDeskAsBook(');
+    expect(desk).toMatch(/record: null,/);
+    const lib = extractBlock('libraryScreen = createLibraryScreen', '({');
+    expect(lib).toContain('onReadDeskAsBook: (entry) => void readDeskAsBook(entry),');
+  });
+
+  it('back closes the signature view first, then leaves the book', () => {
+    const body = extractBlock("backBtn.addEventListener('click', async () =>");
+    expect(body).toMatch(
+      /current === 'book'\) \{\s*if \(bookReader\?\.isFormaOpen\(\)\) \{\s*bookReader\.setFormaOpen\(false\);\s*return;\s*\}\s*showScreen\(PARENT_SCREEN\.book/,
+    );
+    // Before the unsaved-result check, which belongs to the result screens.
+    expect(body.indexOf("current === 'book'")).toBeLessThan(body.indexOf('hasUnsavedResultPdf()'));
+  });
+
+  it('the book position is stored when the book closes', () => {
+    const close = extractBlock('async function closeBookReader(');
+    expect(close).toContain('patchRecord(session.record.id, { lastReadPage: position + 1 })');
+    expect(close).toContain('updateLastPage(session.desk, position + 1)');
+  });
+});
 
 describe('library polish', () => {
   it('the library hides only the top-bar title, not the back button or other screens\' titles', () => {

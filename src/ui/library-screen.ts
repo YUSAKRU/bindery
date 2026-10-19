@@ -42,6 +42,8 @@ export interface LibraryScreenDeps {
   formatDate: (timestamp: number) => string;
   onOpenPdf: () => void;
   onOpenDesk: (entry: RecentEntry) => void;
+  /** Desk entry in the book reader — spreads only, no signature view. */
+  onReadDeskAsBook: (entry: RecentEntry) => void;
   onProduce: () => void;
   onRead: (record: LibraryRecord) => void;
   onPrintSheet: (record: LibraryRecord) => void;
@@ -77,6 +79,7 @@ const SHELF_FRONT_RATIO = 0.6;
 const SVG_NS_ATTRS = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
 const ICON_DOC = `<svg ${SVG_NS_ATTRS}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
 const ICON_CLOSE = `<svg ${SVG_NS_ATTRS}><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+const ICON_BOOK = `<svg ${SVG_NS_ATTRS}><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>`;
 
 export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenController {
   const root = deps.root ?? document;
@@ -334,6 +337,14 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
       row.appendChild(text);
       row.addEventListener('click', () => deps.onOpenDesk(entry));
       li.appendChild(row);
+
+      const asBook = el('button', 'library-desk-book');
+      asBook.setAttribute('type', 'button');
+      asBook.setAttribute('aria-label', `${t('library.action.readDesk')}: ${entry.name}`);
+      asBook.setAttribute('title', t('library.action.readDesk'));
+      asBook.innerHTML = ICON_BOOK;
+      asBook.addEventListener('click', () => deps.onReadDeskAsBook(entry));
+      li.appendChild(asBook);
 
       const remove = el('button', 'library-desk-remove');
       remove.setAttribute('type', 'button');

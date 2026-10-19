@@ -1849,6 +1849,46 @@
           </div>
         </section>
 
+        <!-- Book reader: two facing pages, as the folded booklet opens -->
+        <section class="screen hidden book-screen" id="screen-book">
+          <div class="book-stage" id="bookStage">
+            <div class="book-spread">
+              <div class="book-slot is-left" id="bookPageLeft"></div>
+              <div class="book-slot is-right" id="bookPageRight"></div>
+              <div class="book-tag is-left hidden" id="bookTagLeft"></div>
+              <div class="book-tag is-right hidden" id="bookTagRight"></div>
+              <div class="book-leaf hidden" id="bookTurnLeaf" aria-hidden="true">
+                <div class="book-leaf-face is-front" id="bookLeafFront"></div>
+                <div class="book-leaf-face is-back" id="bookLeafBack"></div>
+              </div>
+            </div>
+          </div>
+
+          <section class="book-forma hidden" id="bookFormaPanel" aria-labelledby="bookFormaToggle">
+            <ul class="book-forma-pages" id="bookFormaPages"></ul>
+            <div class="book-forma-sheets" id="bookFormaSheets"></div>
+            <div class="book-forma-sigs" id="bookFormaSignatures"></div>
+            <div class="book-forma-notes hidden" id="bookFormaNotes"></div>
+          </section>
+
+          <footer class="book-bar">
+            <input type="range" class="book-scrubber" id="bookScrubber" min="0" max="0" step="1" value="0" data-i18n-aria-label="book.scrubber" aria-label="Go to spread" />
+            <div class="book-bar-row">
+              <button type="button" class="book-btn book-btn-dir" id="bookPrevBtn" data-i18n-aria-label="book.prev" aria-label="Previous">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+              </button>
+              <span class="book-page-label" id="bookPageLabel" aria-live="polite"></span>
+              <button type="button" class="book-btn book-forma-toggle hidden" id="bookFormaToggle" aria-pressed="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M12 5v14"/><path d="M6.5 9h3M14.5 9h3"/></svg>
+                <span data-i18n="book.formaToggle">Signature view</span>
+              </button>
+              <button type="button" class="book-btn book-btn-dir" id="bookNextBtn" data-i18n-aria-label="book.next" aria-label="Next">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </footer>
+        </section>
+
         <!-- Files Screen -->
         <section class="screen hidden" id="screen-files">
           <div class="files-explorer-header">

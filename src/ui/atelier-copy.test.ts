@@ -11,9 +11,11 @@ const cssSource = readFileSync(cssPath, 'utf-8');
 
 const i18nPath = fileURLToPath(new URL('../i18n/index.ts', import.meta.url));
 const i18nSource = readFileSync(i18nPath, 'utf-8');
-// Every library string, plus the card-2 copy and the library error.
+// Every library and book-reader string, plus the card-2 copy and the library error.
 const libraryKeys = [
-  ...new Set(Array.from(i18nSource.matchAll(/^\s*'((?:library\.|atelier\.card2\.|error\.LIBRARY_)[^']+)':/gm), (m) => m[1])),
+  ...new Set(
+    Array.from(i18nSource.matchAll(/^\s*'((?:library\.|book\.|atelier\.card2\.|error\.LIBRARY_)[^']+)':/gm), (m) => m[1]),
+  ),
 ];
 
 // The hub used to carry a "Mode: Free Float (Active)" pill that toggled the
@@ -83,6 +85,7 @@ describe('Atelier hub copy', () => {
 
   it('has every library string in both languages', () => {
     expect(libraryKeys.length).toBeGreaterThan(40);
+    expect(libraryKeys.filter((key) => key.startsWith('book.')).length).toBeGreaterThan(20);
     for (const key of libraryKeys) {
       const definitions = i18nSource.split('\n').filter((line) => line.trimStart().startsWith(`'${key}':`));
       expect(definitions, key).toHaveLength(2);
@@ -112,5 +115,17 @@ describe('Atelier hub copy', () => {
     expect(t('library.detail.heading')).toBe('Forma Tezgâhı');
     setLanguage('en');
     expect(t('library.detail.heading')).toBe('Booklet details');
+  });
+
+  it('names the book reader and its signature view in both languages', () => {
+    setLanguage('en');
+    expect(t('book.formaToggle')).toBe('Signature view');
+    expect(t('library.source.rowMissing')).toBe("Source can't be reached");
+    setLanguage('tr');
+    expect(t('book.formaToggle')).toBe('Forma görünümü');
+    expect(t('library.source.rowMissing')).toBe('Kaynak dosyaya ulaşılamıyor');
+    expect(t('book.forma.label', { sig: 2, sheet: 3, depth: 1, side: t('book.side.front'), slot: t('book.slot.right') })).toBe(
+      'Forma 2 · Tabaka 3 (dıştan 1.) · Ön · sağ',
+    );
   });
 });

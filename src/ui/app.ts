@@ -86,6 +86,7 @@ import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntr
 import {
   clearOutputUnder,
   getLibrary,
+  getRecord,
   newRecordId,
   patchRecord,
   probeSource,
@@ -100,6 +101,8 @@ import {
 import { deleteLibraryThumb, readLibraryThumb, writeLibraryThumb } from '../native/library-thumbs';
 import { buildRecordDraft, canReopen, type BookletResultMeta } from './library-record';
 import { createLibraryScreen, type LibraryScreenController } from './library-screen';
+import { createBookReader, type BookReaderController } from './book-reader';
+import { computeFormaMap, type PhysicalPage } from '../engine/forma-map';
 import {
   clearErrors,
   getErrors,
@@ -156,6 +159,7 @@ type ScreenId =
   | 'crop'
   | 'reader'
   | 'library'
+  | 'book'
   | 'tools-all'
   | 'files'
   | 'settings'
@@ -182,6 +186,7 @@ const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   crop: 'image-to-pdf',
   reader: 'hub',
   library: 'hub',
+  book: 'library',
   'tools-all': 'hub',
   files: 'hub',
   settings: 'hub',
@@ -273,6 +278,7 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   crop: 'screenTitle.crop',
   reader: 'screenTitle.brand',
   library: 'library.title',
+  book: 'book.title',
   'tools-all': 'tools.allTitle',
   files: 'screenTitle.files',
   settings: 'settings.title',
@@ -318,6 +324,7 @@ export function initApp(): void {
     crop: byId('screen-crop'),
     reader: byId('screen-reader'),
     library: byId('screen-library'),
+    book: byId('screen-book'),
     'tools-all': byId('screen-tools-all'),
     files: byId('screen-files'),
     settings: byId('screen-settings'),
@@ -1187,10 +1194,39 @@ export function initApp(): void {
   let mdFlow: { reset: () => void } | null = null;
   let atelierHub: AtelierHubController | null = null;
   let libraryScreen: LibraryScreenController | null = null;
+  let bookReader: BookReaderController | null = null;
+  interface BookSession {
+    bytes: Uint8Array;
+    name: string;
+    title: string;
+    /** Set for a library record (signature view); null for a desk PDF. */
+    record: LibraryRecord | null;
+    desk: RecentEntry | null;
+    uri: string | null;
+    relPath: string | null;
+    /** Index into the book's page sequence. */
+    page: number;
+  }
+  // What the book reader shows: the bytes stay here while the reader is
+  // opened on one of its pages, so back returns to the same spread.
+  let bookSession: BookSession | null = null;
+  // The session the book reader currently has open (null while closed).
+  let bookSessionShown: BookSession | null = null;
+  // Bumped whenever the book closes, so an open still in flight is dropped.
+  let bookOpenToken = 0;
 
   function showScreen(id: ScreenId): void {
     if (getCurrentScreenId() === 'library' && id !== 'library') {
       libraryScreen?.hide();
+    }
+    if (getCurrentScreenId() === 'book' && id !== 'book') {
+      // The book's document goes away with the screen (renders cancelled
+      // first, inside close). Only the reader, opened on one of its pages,
+      // keeps the session so back can return to the same spread.
+      void closeBookReader(id === 'reader');
+      void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
+    } else if (id !== 'book' && id !== 'reader') {
+      bookSession = null;
     }
     if (getCurrentScreenId() === 'reader' && id !== 'reader') {
       void closeReaderDocument();
@@ -1232,6 +1268,9 @@ export function initApp(): void {
 
     if (id === 'reader') {
       void ScreenOrientation.unlock().catch(() => {});
+    } else if (id === 'book') {
+      void ScreenOrientation.unlock().catch(() => {});
+      void startBookSession();
     } else if (id === 'hub') {
       void refreshHubSavedCount();
     } else if (id === 'library') {
@@ -7026,6 +7065,14 @@ export function initApp(): void {
       showScreen(readerReturnTo);
       return;
     }
+    if (current === 'book') {
+      if (bookReader?.isFormaOpen()) {
+        bookReader.setFormaOpen(false);
+        return;
+      }
+      showScreen(PARENT_SCREEN.book ?? 'library');
+      return;
+    }
     if (hasUnsavedResultPdf()) {
       const discard = await showConfirmDialog(t('confirm.discardResult'));
       if (!discard) return;
@@ -8006,6 +8053,7 @@ export function initApp(): void {
     refreshConfigSummary();
     atelierHub?.refreshTexts();
     libraryScreen?.refreshTexts();
+    bookReader?.refreshTexts();
   }
 
   function startOnboarding(): void {
@@ -8245,25 +8293,148 @@ export function initApp(): void {
     return session ? Promise.resolve(session) : readSource(record.source);
   }
 
-  // "Read as a book" until the book reader lands: the source in the reader.
-  async function readLibraryRecord(record: LibraryRecord): Promise<void> {
+  // "Read as a book": the record's source in the book reader, with the
+  // signature view worked out from the settings it was produced with.
+  async function readLibraryRecordAsBook(listed: LibraryRecord): Promise<void> {
     if (isOpeningReader) return;
-    showReaderOpening();
     let file: PickedPdf;
     let uri: string | null = null;
+    // The listed copy can trail a position saved since the list was drawn.
+    const record = (await getRecord(listed.id).catch(() => null)) ?? listed;
     try {
-      file = await readLibrarySource(record);
+      file = await withBusyOverlay(() => readLibrarySource(record));
       if (record.source.kind === 'saf') uri = record.source.uri;
       if (record.source.kind === 'private') {
         uri = (await Filesystem.getUri({ path: record.source.relPath, directory: Directory.Data })).uri;
       }
     } catch (error) {
-      hideReaderOpening();
       showToast(errorText(error), { type: 'error' });
       return;
     }
-    const relPath = record.source.kind === 'private' ? record.source.relPath : null;
-    await openReaderWithBytes(file.bytes, file.name, uri, 'library', 1, relPath);
+    bookSession = {
+      bytes: file.bytes,
+      name: file.name,
+      title: record.title,
+      record,
+      desk: null,
+      uri,
+      relPath: record.source.kind === 'private' ? record.source.relPath : null,
+      page: Math.max(0, (record.lastReadPage ?? 1) - 1),
+    };
+    showScreen('book');
+  }
+
+  // A desk PDF as a book: spreads only — a plain PDF has no booklet settings,
+  // so there is no signature view to show.
+  async function readDeskAsBook(entry: RecentEntry): Promise<void> {
+    if (!entry.uri) {
+      showToast(t('toast.fileNoLongerAccessible'));
+      return;
+    }
+    if (isOpeningReader) return;
+    let file: PickedPdf;
+    try {
+      file = await withBusyOverlay(() => readPdfFromUri(entry.uri!));
+    } catch (error) {
+      recordError('caught', error);
+      showToast(t('toast.fileNoLongerAccessible'));
+      return;
+    }
+    bookSession = {
+      bytes: file.bytes,
+      name: file.name,
+      title: entry.name,
+      record: null,
+      desk: entry,
+      uri: entry.uri,
+      relPath: null,
+      page: Math.max(0, entry.lastPage - 1),
+    };
+    showScreen('book');
+  }
+
+  // Opens the current session's document in the book reader. Runs on every
+  // entry to the book screen; a session already shown is left alone.
+  async function startBookSession(): Promise<void> {
+    const session = bookSession;
+    if (!bookReader || bookSessionShown === session) return;
+    if (!session) {
+      // Nothing to show (e.g. back through an error screen): return to the library.
+      showScreen('library');
+      return;
+    }
+    bookSessionShown = session;
+    const token = ++bookOpenToken;
+    topBarTitle.textContent = session.title;
+    showReaderOpening();
+    let handle: ReaderDocument;
+    try {
+      handle = await openReaderDocument(session.bytes);
+    } catch (error) {
+      hideReaderOpening();
+      if (token !== bookOpenToken) return;
+      bookSessionShown = null;
+      bookSession = null;
+      goToError(t('error.pdfOpenFailed'), errorText(error), 'library');
+      return;
+    }
+    try {
+      if (token !== bookOpenToken) {
+        await handle.destroy().catch(() => {});
+        return;
+      }
+      const proxy = handle.proxy;
+      const firstPage = await proxy.getPage(1);
+      const viewport = firstPage.getViewport({ scale: 1 });
+      firstPage.cleanup();
+      if (token !== bookOpenToken) {
+        await handle.destroy().catch(() => {});
+        return;
+      }
+      const options = session.record?.settings.options;
+      // Worked out for the file as it is now; a source that changed so much
+      // that the stored options no longer apply simply has no signature view.
+      const forma = options ? computeFormaMap(proxy.numPages, options) : null;
+      const sequence: PhysicalPage[] =
+        forma?.sequence ?? Array.from({ length: proxy.numPages }, (_, i) => ({ src: i, kind: 'page' as const }));
+      if (session.bytes.length >= READER_LARGE_FILE_WARN_BYTES) {
+        showToast(t('reader.largeFileWarning', { mb: Math.round(session.bytes.length / 1048576) }), { type: 'info' });
+      }
+      bookReader.open({
+        sequence,
+        binding: options?.binding === 'rtl' ? 'rtl' : 'ltr',
+        forma,
+        printNotes: options ? { reverseSheetOrder: options.reverseSheetOrder, flipEdge: options.flipEdge } : undefined,
+        startPage: Math.min(Math.max(0, session.page), sequence.length - 1),
+        pageAspect: viewport.height / viewport.width,
+        renderPage: (src, widthPx) => renderReaderPage(proxy, src + 1, widthPx, false),
+        destroy: () => handle.destroy(),
+      });
+    } finally {
+      hideReaderOpening();
+    }
+  }
+
+  // Closes the book's document (renders cancelled first) and stores where
+  // the reader was. `keepSession` holds the bytes for a return from the reader.
+  async function closeBookReader(keepSession: boolean): Promise<void> {
+    bookOpenToken++;
+    const session = bookSessionShown;
+    bookSessionShown = null;
+    const closing = bookReader?.close();
+    if (!keepSession) bookSession = null;
+    const position = closing ? await closing.catch(() => null) : null;
+    if (!session || position === null) return;
+    session.page = position;
+    try {
+      if (session.record) {
+        await patchRecord(session.record.id, { lastReadPage: position + 1 });
+      } else if (session.desk) {
+        await updateLastPage(session.desk, position + 1);
+      }
+    } catch (error) {
+      console.warn('Could not keep the book position:', error);
+    }
   }
 
   // "Print sheets" (D9): the source goes back through the booklet flow with
@@ -8349,6 +8520,7 @@ export function initApp(): void {
     probeSource: probeLibrarySource,
     formatDate: formatRelativeDate,
     onOpenPdf: () => void openReaderFromPicker('library'),
+    onReadDeskAsBook: (entry) => void readDeskAsBook(entry),
     onOpenDesk: (entry) => {
       void openRecent(entry).then(() => {
         // A file that could not be opened was dropped from the desk.
@@ -8359,7 +8531,7 @@ export function initApp(): void {
       resetPicker();
       showScreen('picker');
     },
-    onRead: (record) => void readLibraryRecord(record),
+    onRead: (record) => void readLibraryRecordAsBook(record),
     onPrintSheet: (record) => void printLibraryRecord(record),
     onRelink: relinkLibraryRecord,
     onOpenOutput: (record) => {
@@ -8377,6 +8549,31 @@ export function initApp(): void {
       getItem: (key) => localStorage.getItem(key),
       setItem: (key, value) => localStorage.setItem(key, value),
     },
+  });
+
+  bookReader = createBookReader({
+    t,
+    cancelRenders: cancelAllReaderRenders,
+    matchMedia: (query) => window.matchMedia(query),
+    onPositionChange: (seqIndex) => {
+      if (bookSessionShown) bookSessionShown.page = seqIndex;
+    },
+    // Double tap: that page in the full reader (zoom, search); back returns here.
+    onOpenPage: (src) => {
+      const session = bookSessionShown;
+      if (!session) return;
+      void openReaderWithBytes(session.bytes, session.name, session.uri, 'book', src + 1, session.relPath);
+    },
+  });
+
+  let bookResizeTimer: ReturnType<typeof setTimeout> | null = null;
+  window.addEventListener('resize', () => {
+    if (getCurrentScreenId() !== 'book') return;
+    if (bookResizeTimer) clearTimeout(bookResizeTimer);
+    bookResizeTimer = setTimeout(() => {
+      bookResizeTimer = null;
+      bookReader?.relayout();
+    }, 150);
   });
 
   atelierHub = initAtelierHub({

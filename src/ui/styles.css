@@ -582,7 +582,8 @@ body {
    (Android 7's permanent ceiling), so every device that matches the 600px
    query also supports the selector. */
 @media (min-width: 600px) {
-  .app:has(#screen-reader:not(.hidden)) {
+  .app:has(#screen-reader:not(.hidden)),
+  .app:has(#screen-book:not(.hidden)) {
     max-width: none;
   }
 }
@@ -3844,7 +3845,9 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-library,
 #screen-book,
 .app:has(#screen-library:not(.hidden)) .top-bar,
-.app:has(#screen-library:not(.hidden)) .screen-container {
+.app:has(#screen-library:not(.hidden)) .screen-container,
+.app:has(#screen-book:not(.hidden)) .top-bar,
+.app:has(#screen-book:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3873,7 +3876,9 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-library,
   :root:not(.light-theme) #screen-book,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3897,7 +3902,9 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-library,
 :root.dark-theme #screen-book,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-book:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -5722,7 +5729,8 @@ body:has(#screen-hub:not(.hidden)) {
   height: 20px;
 }
 
-.library-desk-remove {
+.library-desk-remove,
+.library-desk-book {
   appearance: none;
   flex: 0 0 44px;
   height: 44px;
@@ -5739,6 +5747,20 @@ body:has(#screen-hub:not(.hidden)) {
 .library-desk-remove svg {
   width: 16px;
   height: 16px;
+}
+
+.library-desk-book {
+  color: var(--atelier-primary);
+}
+
+.library-desk-book svg {
+  width: 18px;
+  height: 18px;
+}
+
+.library-desk-book:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
 }
 
 /* ── Empty state & pills ─────────────────────────────────────────────────── */
@@ -6058,6 +6080,544 @@ body:has(#screen-hub:not(.hidden)) {
 
   .library-sheet-backdrop,
   .library-sheet-panel {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   13. Book reader — two facing pages as the folded booklet opens, and the
+   signature view. One leaf turns per page turn (transform only, 320 ms,
+   book-reader.ts BOOK_TURN_MS); nothing moves while the book sits open.
+   ========================================================================== */
+
+.app:has(#screen-book:not(.hidden)) .top-bar {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+  color: var(--atelier-ink-black);
+}
+
+.app:has(#screen-book:not(.hidden)) .top-bar .icon-btn {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+}
+
+.app:has(#screen-book:not(.hidden)) .top-bar-title {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app:has(#screen-book:not(.hidden)) .screen-container {
+  padding-left: 12px;
+  padding-right: 12px;
+  overflow: hidden;
+  background: var(--atelier-bg);
+}
+
+.book-screen {
+  --book-paper: #fffdf8;
+  color: var(--atelier-ink-black);
+  gap: 10px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.book-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Vertical gestures stay the browser's; horizontal swipes turn pages. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.book-stage:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.book-spread {
+  position: relative;
+  display: flex;
+  width: calc(var(--book-page-w, 0px) * 2);
+  height: var(--book-page-h, 0px);
+  perspective: 1800px;
+}
+
+/* The spine: a faint fold where the two pages meet. */
+.book-spread::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(40, 30, 20, 0.28) 12%, rgba(40, 30, 20, 0.28) 88%, transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.book-slot {
+  position: relative;
+  flex: 0 0 var(--book-page-w, 0px);
+  height: 100%;
+}
+
+.book-paper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--book-paper);
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.12), 0 6px 18px rgba(40, 30, 20, 0.14);
+}
+
+.book-paper .pdf-page-wrapper {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Shade toward the spine, painted over the page. */
+.book-paper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.book-slot.is-left .book-paper::after,
+.book-leaf.turn-rightward .book-leaf-face.is-front .book-paper::after,
+.book-leaf.turn-leftward .book-leaf-face.is-back .book-paper::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(40, 30, 20, 0.12), transparent);
+}
+
+.book-slot.is-right .book-paper::after,
+.book-leaf.turn-leftward .book-leaf-face.is-front .book-paper::after,
+.book-leaf.turn-rightward .book-leaf-face.is-back .book-paper::after {
+  left: 0;
+  background: linear-gradient(to right, rgba(40, 30, 20, 0.12), transparent);
+}
+
+.book-paper.is-loading {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 14px, rgba(40, 30, 20, 0.05) 14px 16px) 16% 14% / 68% 62% no-repeat,
+    var(--book-paper);
+}
+
+/* No facing page here (inside the first or last cover): nothing to show. */
+.book-slot.is-empty {
+  visibility: hidden;
+}
+
+.book-leaf {
+  position: absolute;
+  top: 0;
+  width: var(--book-page-w, 0px);
+  height: 100%;
+  transform-style: preserve-3d;
+  z-index: 5;
+  will-change: transform;
+}
+
+.book-leaf.turn-leftward {
+  left: 50%;
+  transform-origin: left center;
+  animation: book-turn-leftward 320ms cubic-bezier(0.3, 0.1, 0.25, 1) forwards;
+}
+
+.book-leaf.turn-rightward {
+  left: 0;
+  transform-origin: right center;
+  animation: book-turn-rightward 320ms cubic-bezier(0.3, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes book-turn-leftward {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-180deg); }
+}
+
+@keyframes book-turn-rightward {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(180deg); }
+}
+
+.book-leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.book-leaf-face.is-back {
+  transform: rotateY(180deg);
+}
+
+.book-leaf-face.is-empty {
+  background: var(--book-paper);
+}
+
+.book-stage.is-crossfade .book-spread {
+  animation: book-crossfade 120ms ease-out;
+}
+
+@keyframes book-crossfade {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+/* Signature-view tag over each page. */
+.book-tag {
+  position: absolute;
+  top: 6px;
+  width: calc(var(--book-page-w, 0px) - 12px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--atelier-ink-black) 86%, transparent);
+  color: var(--atelier-bg);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.book-tag.is-left {
+  left: 6px;
+}
+
+.book-tag.is-right {
+  left: calc(50% + 6px);
+}
+
+.book-tag-blank {
+  color: var(--atelier-gold-foil);
+}
+
+/* ── Signature view panel ─────────────────────────────────────────────────── */
+
+.book-forma {
+  flex: 0 1 auto;
+  max-height: 44%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  min-width: 0;
+}
+
+.book-forma-pages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.book-forma-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.book-forma-page-num {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.book-forma-page-slot {
+  color: var(--atelier-ink-muted);
+}
+
+.book-forma-page-blank {
+  color: var(--atelier-primary);
+}
+
+.book-forma-sheets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.book-sheet {
+  flex: 1 1 150px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.book-sheet-caption {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--atelier-ink-muted);
+}
+
+.book-sheet-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.book-sheet-side-label {
+  flex: 0 0 34px;
+  font-size: 0.72rem;
+  color: var(--atelier-ink-muted);
+}
+
+/* A sheet drawn as a landscape rectangle with its fold down the middle. */
+.book-sheet-halves {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 38px;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 3px;
+  background: var(--book-paper);
+  color: #1c1a18;
+}
+
+.book-sheet-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px 2px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.book-sheet-cell + .book-sheet-cell {
+  border-left: 1px dashed rgba(40, 30, 20, 0.35);
+}
+
+.book-sheet-cell.is-current {
+  background: color-mix(in srgb, var(--atelier-primary) 16%, transparent);
+  font-weight: 700;
+}
+
+.book-sheet-src {
+  font-size: 0.62rem;
+  color: #5c5650;
+}
+
+.book-forma-sigs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.book-sig-chip {
+  appearance: none;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.book-sig-chip.is-current {
+  background: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+  border-color: var(--atelier-ink-black);
+}
+
+.book-forma-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--atelier-ink-muted);
+}
+
+/* ── Bar ──────────────────────────────────────────────────────────────────── */
+
+.book-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.book-scrubber {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--atelier-primary);
+}
+
+.book-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.book-screen.is-rtl .book-bar-row {
+  flex-direction: row-reverse;
+}
+
+.book-screen.is-rtl .book-btn-dir svg {
+  transform: scaleX(-1);
+}
+
+.book-btn {
+  appearance: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.book-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.book-btn-dir {
+  flex: 0 0 44px;
+  width: 44px;
+}
+
+.book-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.book-btn:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+.book-forma-toggle {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 14px;
+}
+
+.book-forma-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-forma-toggle[aria-pressed='true'] {
+  background: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+  border-color: var(--atelier-ink-black);
+}
+
+.book-page-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--atelier-ink-muted);
+}
+
+/* The narrowest phones keep the toggle's icon; its name stays for screen readers. */
+@media (max-width: 359px) {
+  .book-forma-toggle {
+    padding: 0 12px;
+  }
+
+  .book-forma-toggle span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* Landscape: the signature view sits beside the book, not under it. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .book-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .book-screen.is-forma {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
+  }
+
+  .book-screen .book-stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .book-screen .book-bar {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .book-screen .book-forma {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-leaf.turn-leftward,
+  .book-leaf.turn-rightward {
     animation: none;
   }
 }

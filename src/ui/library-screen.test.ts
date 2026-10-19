@@ -209,6 +209,7 @@ function setup(overrides: Partial<LibraryScreenDeps> = {}, books: LibraryRecord[
     formatDate: (ts) => `@${ts}`,
     onOpenPdf: vi.fn(),
     onOpenDesk: vi.fn(),
+    onReadDeskAsBook: vi.fn(),
     onProduce: vi.fn(),
     onRead: vi.fn(),
     onPrintSheet: vi.fn(),
@@ -392,6 +393,17 @@ describe('library screen controller', () => {
     expect(rows(els.libraryDeskList, 'library-desk-row')).toHaveLength(1);
     els.libraryOpenPdfBtn.click();
     expect(deps.onOpenPdf).toHaveBeenCalled();
+  });
+
+  it('desk rows offer "read as a book" as a second action', async () => {
+    const { controller, els, deps } = setup();
+    await controller.show('desk');
+    const buttons = rows(els.libraryDeskList, 'library-desk-book');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[1].getAttribute('aria-label')).toBe('library.action.readDesk: b.pdf');
+    buttons[1].click();
+    expect(deps.onReadDeskAsBook).toHaveBeenCalledWith(desk[1]);
+    expect(deps.onOpenDesk).not.toHaveBeenCalled();
   });
 
   it('the unreachable-source dot says what it means', async () => {
