@@ -20,15 +20,17 @@ describe('Hub — legacy home page removed', () => {
     expect(htmlSource).not.toContain('class="hub-carousel"');
   });
 
-  it('opens the reader from atelier card 2 without clicking a hidden button', () => {
+  // Card 2 used to open the PDF picker directly; it now opens the library,
+  // whose desk tab carries "Open PDF".
+  it('opens the library from atelier card 2 without clicking a hidden button', () => {
     expect(appSource).not.toContain('hubOpenReaderBtn');
     expect(appSource).not.toContain('requestHeroIntro');
-    expect(appSource).toMatch(/moduleIndex === 1\)\s*\{\s*void openReaderFromPicker\(\);/);
+    expect(appSource).toMatch(/moduleIndex === 1\)\s*\{\s*showScreen\('library'\);/);
   });
 
-  it('keeps the "Fascicles Saved" count fed from the recents list', () => {
+  it('keeps the card-2 count fed from the library records', () => {
     expect(appSource).toMatch(
-      /async function refreshHubSavedCount\(\): Promise<void> \{\s*const recents = await getRecents\(\);\s*atelierHub\?\.setSavedCount\(recents\.length\);/,
+      /async function refreshHubSavedCount\(\): Promise<void> \{\s*try \{\s*const books = await getLibrary\(\);\s*atelierHub\?\.setSavedCount\(books\.length\);/,
     );
   });
 

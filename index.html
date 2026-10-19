@@ -1748,16 +1748,105 @@
           <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
         </section>
 
-        <!-- Recents Screen -->
-        <section class="screen hidden" id="screen-recents">
-          <div class="hero">
-            <div class="hero-icon" aria-hidden="true">🕘</div>
-            <h2 data-i18n="hub.recentlyOpened">Recently Opened</h2>
-            <p class="hero-subtitle" data-i18n="recents.subtitle">Documents you opened or edited most recently.</p>
+        <!-- Library Screen: My Books (produced booklets) and My Desk (opened PDFs) -->
+        <section class="screen hidden library-screen" id="screen-library">
+          <header class="library-head">
+            <div class="library-head-text">
+              <h2 id="libraryTitle" data-i18n="library.title">My Library</h2>
+              <p id="librarySubtitle" data-i18n="library.subtitle">Booklets you produced, and the PDFs on your desk.</p>
+            </div>
+            <span class="library-count" id="libraryCount"></span>
+          </header>
+
+          <div class="library-tabs" id="libraryTabs" role="tablist" aria-labelledby="libraryTitle">
+            <button type="button" class="library-tab is-active" id="libraryTabBooks" role="tab" aria-selected="true" aria-controls="libraryBooksPanel">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>
+              <span data-i18n="library.tab.books">My Books</span>
+              <span class="library-tab-badge" id="libraryBooksBadge">0</span>
+            </button>
+            <button type="button" class="library-tab" id="libraryTabDesk" role="tab" aria-selected="false" aria-controls="libraryDeskPanel" tabindex="-1">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span data-i18n="library.tab.desk">My Desk</span>
+              <span class="library-tab-badge" id="libraryDeskBadge">0</span>
+            </button>
           </div>
 
-          <div class="recents-list-large" id="recentsListLarge"></div>
-          <p class="empty-hint hidden" id="recentsEmptyHint" data-i18n="recents.emptyHint">No documents opened yet.</p>
+          <label class="library-search">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+            <input type="search" id="librarySearch" autocomplete="off" enterkeyhint="search" data-i18n-placeholder="library.searchPlaceholder" data-i18n-aria-label="library.searchPlaceholder" placeholder="Search by title or file name" aria-label="Search by title or file name" aria-controls="libraryBooksPanel" />
+          </label>
+          <p class="library-no-match hidden" id="libraryNoMatch" role="status"></p>
+
+          <section class="library-panel" id="libraryBooksPanel" role="tabpanel" aria-labelledby="libraryTabBooks">
+            <div class="library-shelf-section" id="libraryShelfSection">
+              <h3 class="library-section-title" data-i18n="library.shelfTitle">On the shelf</h3>
+              <div class="library-shelf" id="libraryShelf"></div>
+            </div>
+            <div class="library-all-section" id="libraryAllSection">
+              <h3 class="library-section-title" data-i18n="library.allTitle">All booklets</h3>
+              <ul class="library-list" id="libraryBookList"></ul>
+            </div>
+            <div class="library-empty hidden" id="libraryBooksEmpty">
+              <p data-i18n="library.booksEmpty">Booklets you save or share appear here.</p>
+              <button type="button" class="library-pill library-pill-primary" id="libraryProduceBtn" data-i18n="library.produceCta">Produce a booklet</button>
+            </div>
+          </section>
+
+          <section class="library-panel hidden" id="libraryDeskPanel" role="tabpanel" aria-labelledby="libraryTabDesk">
+            <button type="button" class="library-pill library-pill-primary library-open-pdf" id="libraryOpenPdfBtn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14h6"/></svg>
+              <span data-i18n="library.openPdf">Open PDF</span>
+            </button>
+            <ul class="library-list" id="libraryDeskList"></ul>
+            <p class="library-empty-text hidden" id="libraryDeskEmpty" data-i18n="library.deskEmpty">PDFs you open appear here.</p>
+          </section>
+
+          <div class="library-sheet-backdrop hidden" id="libraryDetailSheet" role="dialog" aria-modal="true" aria-labelledby="libraryDetailTitle">
+            <div class="library-sheet-panel">
+              <header class="library-sheet-head">
+                <svg class="library-sheet-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>
+                <span class="library-sheet-heading" data-i18n="library.detail.heading">Booklet details</span>
+                <button type="button" class="library-sheet-close" id="libraryDetailCloseBtn" aria-label="Close" data-i18n-aria-label="common.close">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+              </header>
+              <div class="library-sheet-body">
+                <div class="library-detail-top">
+                  <div class="library-detail-cover">
+                    <img class="hidden" id="libraryDetailThumb" alt="" />
+                    <div class="library-cover-type" id="libraryDetailCoverFallback" aria-hidden="true"></div>
+                  </div>
+                  <div class="library-detail-heading">
+                    <p class="library-detail-format" id="libraryDetailFormat"></p>
+                    <h3 class="library-detail-title" id="libraryDetailTitle"></h3>
+                  </div>
+                </div>
+                <dl class="library-detail-specs" id="libraryDetailSpecs"></dl>
+                <p class="library-detail-source-state hidden" id="libraryDetailSourceState" role="status"></p>
+                <div class="library-detail-actions">
+                  <button type="button" class="library-pill library-pill-primary" id="libraryReadBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>
+                    <span data-i18n="library.action.read">Read as a book</span>
+                  </button>
+                  <button type="button" class="library-pill" id="libraryPrintSheetBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>
+                    <span data-i18n="library.action.printSheet">Print sheets</span>
+                  </button>
+                  <button type="button" class="library-pill hidden" id="libraryRelinkBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+                    <span data-i18n="library.action.relink">Link source again</span>
+                  </button>
+                  <button type="button" class="library-pill hidden" id="libraryOpenOutputBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <span data-i18n="library.action.openOutput">Show saved files</span>
+                  </button>
+                  <button type="button" class="library-pill library-pill-quiet" id="libraryRemoveBtn">
+                    <span data-i18n="library.action.remove">Remove from library</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- Files Screen -->
