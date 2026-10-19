@@ -149,3 +149,28 @@ describe('refreshConfigSummary sheets-per-signature breakdown (bonus)', () => {
     expect(guardIndex).toBeLessThan(keyIndex);
   });
 });
+
+// Same source-level approach: the Android back handler is a closure inside
+// initApp(). On a root screen it must send the app to the background rather
+// than exit, while the first onboarding page still exits.
+describe('Android back button on a root screen', () => {
+  const body = extractFunctionBody("App.addListener('backButton', ");
+
+  it('minimizes the app on hub, files and settings instead of exiting', () => {
+    const rootIndex = body.indexOf(
+      "if (current === 'hub' || current === 'files' || current === 'settings') {",
+    );
+    expect(rootIndex, 'expected the root-screen branch in the back handler').toBeGreaterThanOrEqual(0);
+    const rootBranch = body.slice(rootIndex, body.indexOf('} else {', rootIndex));
+    expect(rootBranch).toContain('App.minimizeApp()');
+    expect(rootBranch).not.toContain('App.exitApp()');
+  });
+
+  it('still exits from the first onboarding page', () => {
+    const onboardingIndex = body.indexOf('if (onboardingIndex > 0) {');
+    const currentIndex = body.indexOf('const current = getCurrentScreenId();');
+    expect(onboardingIndex).toBeGreaterThanOrEqual(0);
+    const onboardingBranch = body.slice(onboardingIndex, currentIndex);
+    expect(onboardingBranch).toContain('App.exitApp()');
+  });
+});

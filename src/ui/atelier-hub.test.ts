@@ -4,6 +4,7 @@ import {
   type AtelierHubController,
   type AtelierModuleIndex,
   type AtelierNavTarget,
+  ATELIER_MENU_CLOSE_MS,
   createAtelierHub,
   DOCK_META,
   FREE_POSITIONS,
@@ -806,7 +807,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       controller.setSavedCount(5);
       expect(controller.getState().savedCount).toBe(5);
       expect(fixture.savedCountEl.textContent).toBe(t('atelier.card2.meta', { count: 5 }));
-      expect(fixture.savedCountEl.textContent).toBe('Saved documents: 5');
+      expect(fixture.savedCountEl.textContent).toBe('Booklets in library: 5');
 
       controller.setSavedCount(-2); // clamp to 0
       expect(controller.getState().savedCount).toBe(0);
@@ -819,7 +820,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
 
       expect(getLanguage()).toBe('tr');
       expect(fixture.modeHint.textContent).toBe('Bir karta dokunun');
-      expect(fixture.savedCountEl.textContent).toBe('4 belge kayıtlı');
+      expect(fixture.savedCountEl.textContent).toBe('Kitaplıkta 4 kitapçık');
       expect(fixture.btnTitle.textContent).toBe('Kitapçık Üretimini Başlat');
       expect(fixture.indicators[0].getAttribute('aria-label')).toBe('1. Kart');
     });
@@ -898,6 +899,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
 
   describe('8. One Door Menu Sheet & Saved Count Tap-Through', () => {
     it('toggles the menu sheet open and closed via #atelierMenuBtn and updates aria-expanded', () => {
+      vi.useFakeTimers();
       expect(controller.isMenuOpen()).toBe(false);
       expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
       expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
@@ -909,8 +911,10 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
 
       fixture.menuBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
       expect(controller.isMenuOpen()).toBe(false);
-      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
       expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
+      vi.advanceTimersByTime(ATELIER_MENU_CLOSE_MS);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      vi.useRealTimers();
     });
 
     it('drops the menu panel just below the menu button, measured from the tap-catcher', () => {
@@ -967,6 +971,84 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       fixture.savedCountEl.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
       expect(onNavigateScreenMock).toHaveBeenCalledTimes(1);
       expect(onNavigateScreenMock).toHaveBeenCalledWith('recents');
+    });
+  });
+
+  describe('9. Menu closing animation', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('marks the sheet as closing first and hides it only after the close duration', () => {
+      controller.openMenu();
+      controller.closeMenu();
+
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(true);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(false);
+      expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('false');
+
+      vi.advanceTimersByTime(ATELIER_MENU_CLOSE_MS - 1);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(false);
+
+      vi.advanceTimersByTime(1);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(false);
+    });
+
+    it('reports the menu as closed while it is closing, and a second close does not restart the timer', () => {
+      controller.openMenu();
+      controller.closeMenu();
+      expect(controller.isMenuOpen()).toBe(false);
+
+      vi.advanceTimersByTime(ATELIER_MENU_CLOSE_MS - 50);
+      controller.closeMenu();
+      vi.advanceTimersByTime(50);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+    });
+
+    it('reopening during the close cancels it and shows the menu again', () => {
+      controller.openMenu();
+      controller.closeMenu();
+      vi.advanceTimersByTime(ATELIER_MENU_CLOSE_MS / 2);
+
+      fixture.menuBtn.dispatchEvent({ type: 'click', stopPropagation: vi.fn() });
+      expect(controller.isMenuOpen()).toBe(true);
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(false);
+      expect(fixture.menuBtn.getAttribute('aria-expanded')).toBe('true');
+
+      vi.advanceTimersByTime(ATELIER_MENU_CLOSE_MS * 2);
+      expect(controller.isMenuOpen()).toBe(true);
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(false);
+    });
+
+    it('hides at once when asked to close immediately, also mid-close', () => {
+      controller.openMenu();
+      controller.closeMenu({ immediate: true });
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(false);
+
+      controller.openMenu();
+      controller.closeMenu();
+      controller.closeMenu({ immediate: true });
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(false);
+    });
+
+    it('closes at once when the user prefers reduced motion', () => {
+      const matchMedia = vi.fn((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+      }));
+      (fakeWindow as unknown as { matchMedia: typeof matchMedia }).matchMedia = matchMedia;
+
+      controller.openMenu();
+      controller.closeMenu();
+      expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)');
+      expect(fixture.menuSheet.classList.contains('hidden')).toBe(true);
+      expect(fixture.menuSheet.classList.contains('is-closing')).toBe(false);
     });
   });
 });

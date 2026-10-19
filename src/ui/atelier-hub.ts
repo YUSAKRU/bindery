@@ -9,13 +9,18 @@ export interface AtelierHubDeps {
   isHubVisible?: () => boolean;
 }
 
+export interface AtelierMenuCloseOptions {
+  // Skip the closing animation, e.g. when the hub itself is leaving the screen.
+  immediate?: boolean;
+}
+
 export interface AtelierHubController {
   refreshTexts: () => void;
   setSavedCount: (count: number) => void;
   applyFreeFloat: () => void;
   applyCoverflow: (targetIdx: number, dragOffsetX?: number) => void;
   openMenu: () => void;
-  closeMenu: () => void;
+  closeMenu: (options?: AtelierMenuCloseOptions) => void;
   isMenuOpen: () => boolean;
   getState: () => { isCoverflow: boolean; activeIndex: AtelierModuleIndex; savedCount: number };
   destroy: () => void;
@@ -69,6 +74,11 @@ export const DOCK_META: readonly [AtelierDockMeta, AtelierDockMeta, AtelierDockM
     shadow: '0 8px 20px -4px rgba(20, 23, 28, 0.45)',
   },
 ] as const;
+
+// How long the menu plays its closing animation before it is hidden. The
+// timer, not animationend, decides when the sheet is hidden; keep the CSS
+// close animations (.atelier-sheet-backdrop.is-closing) within this budget.
+export const ATELIER_MENU_CLOSE_MS = 220;
 
 export type AtelierBackAction = 'close-menu' | 'free-float' | 'none';
 
@@ -140,8 +150,27 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   let activeIndex: AtelierModuleIndex = 0;
   let savedCount = 0;
 
+  let menuCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // A menu that is playing its closing animation already counts as closed.
   function isMenuOpen(): boolean {
-    return Boolean(menuSheet && !menuSheet.classList.contains('hidden'));
+    return Boolean(
+      menuSheet &&
+        !menuSheet.classList.contains('hidden') &&
+        !menuSheet.classList.contains('is-closing'),
+    );
+  }
+
+  function prefersReducedMotion(): boolean {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      );
+    } catch {
+      return false;
+    }
   }
 
   // The pills drop from just under the menu button, wherever the safe-area
@@ -154,17 +183,41 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     menuPanel.style.top = `${Math.round(top + gap)}px`;
   }
 
+  function cancelPendingClose(): void {
+    if (menuCloseTimer) {
+      clearTimeout(menuCloseTimer);
+      menuCloseTimer = null;
+    }
+    menuSheet?.classList.remove('is-closing');
+  }
+
   function openMenu(): void {
     if (!menuSheet) return;
+    cancelPendingClose();
     menuSheet.classList.remove('hidden');
     anchorMenuUnderButton();
     menuBtn?.setAttribute('aria-expanded', 'true');
   }
 
-  function closeMenu(): void {
+  function hideMenuNow(): void {
+    cancelPendingClose();
+    menuSheet?.classList.add('hidden');
+  }
+
+  // Closing plays the opening in reverse (see .is-closing in styles.css) and
+  // only then hides the sheet. The sheet stops taking taps as soon as the
+  // close starts, so the user can act on what is underneath right away.
+  function closeMenu(options: AtelierMenuCloseOptions = {}): void {
     if (!menuSheet) return;
-    menuSheet.classList.add('hidden');
     menuBtn?.setAttribute('aria-expanded', 'false');
+    if (menuSheet.classList.contains('hidden')) return;
+    if (options.immediate || prefersReducedMotion()) {
+      hideMenuNow();
+      return;
+    }
+    if (menuSheet.classList.contains('is-closing')) return;
+    menuSheet.classList.add('is-closing');
+    menuCloseTimer = setTimeout(hideMenuNow, ATELIER_MENU_CLOSE_MS);
   }
 
   function findNearestCardIndex(clientX: number, clientY: number): AtelierModuleIndex {
@@ -505,6 +558,7 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   menuSheet?.addEventListener('click', onMenuBackdropClick);
 
   function destroy(): void {
+    closeMenu({ immediate: true });
     canvasContainer?.removeEventListener('pointerdown', onPointerDown);
     if (typeof window !== 'undefined') {
       window.removeEventListener('pointermove', onPointerMove);

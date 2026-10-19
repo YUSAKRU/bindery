@@ -660,11 +660,15 @@ describe('Booklet pipeline - Wrap cover vs separate cover', () => {
     }
   });
 
-  it('the raw preference is only ever written by the user’s own click, the reset, and the too-short rule', () => {
+  it('the raw preference is only ever written by the user’s own click, the reset, a library record, and the too-short rule', () => {
     // If anything else assigned it, "remember" would quietly become "erase".
+    // The library's "Print sheets" restores the value a stored booklet was
+    // produced with (applyStoredBookletSettings), which is the user's own
+    // earlier choice, not an erasure.
     const assignments = appSource.split('\n').filter((line) => /^\s*bookletSeparateCover =/.test(line));
-    expect(assignments).toHaveLength(3);
+    expect(assignments).toHaveLength(4);
     expect(assignments.some((l) => l.includes("cover === 'separate'"))).toBe(true);
+    expect(assignments.filter((l) => l.trim() === 'bookletSeparateCover = options.separateCover === true;')).toHaveLength(1);
     expect(assignments.filter((l) => l.trim() === 'bookletSeparateCover = false;')).toHaveLength(2);
   });
 

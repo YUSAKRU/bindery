@@ -582,7 +582,8 @@ body {
    (Android 7's permanent ceiling), so every device that matches the 600px
    query also supports the selector. */
 @media (min-width: 600px) {
-  .app:has(#screen-reader:not(.hidden)) {
+  .app:has(#screen-reader:not(.hidden)),
+  .app:has(#screen-book:not(.hidden)) {
     max-width: none;
   }
 }
@@ -2252,14 +2253,7 @@ dialog.modal-sheet::backdrop {
   color: var(--color-on-primary);
 }
 
-/* Files & Recents dedicated styling */
-.recents-list-large {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 16px;
-}
-
+/* Files dedicated styling */
 .empty-hint {
   text-align: center;
   font-size: 0.9rem;
@@ -2328,96 +2322,6 @@ dialog.modal-sheet::backdrop {
 
 .error-log-actions .btn {
   flex: 1;
-}
-
-/* Premium Compact Recent Items Styling */
-.recent-item-compact {
-  background: var(--color-surface-variant);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  cursor: pointer;
-  position: relative;
-  transition: background-color 0.2s, transform 0.15s;
-}
-
-.recent-item-compact:active {
-  background: rgba(var(--color-primary-rgb), 0.1);
-  transform: scale(0.99);
-}
-
-.recent-icon-wrapper {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(var(--color-primary-rgb), 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.recent-item-details {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex-grow: 1;
-  gap: 2px;
-}
-
-.recent-item-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-on-surface);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recent-item-meta {
-  font-size: 0.75rem;
-  color: var(--color-on-surface-variant);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.recent-page-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(var(--color-primary-rgb), 0.1);
-  color: var(--color-primary);
-  display: inline-block;
-}
-
-.recent-remove-btn {
-  appearance: none;
-  background: none;
-  border: none;
-  color: var(--color-on-surface-variant);
-  font-size: 0.9rem;
-  padding: 6px;
-  cursor: pointer;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-.recent-remove-btn:active {
-  background: rgba(var(--color-primary-rgb), 0.15);
-  color: var(--color-on-surface);
 }
 
 /* ==========================================================================
@@ -3937,7 +3841,13 @@ body:has(#screen-hub:not(.hidden)) {
 
 /* 2. Scoped CSS Variables (Light Theme Default) */
 .atelier-hub,
-#hubAtelierView {
+#hubAtelierView,
+#screen-library,
+#screen-book,
+.app:has(#screen-library:not(.hidden)) .top-bar,
+.app:has(#screen-library:not(.hidden)) .screen-container,
+.app:has(#screen-book:not(.hidden)) .top-bar,
+.app:has(#screen-book:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3962,7 +3872,13 @@ body:has(#screen-hub:not(.hidden)) {
 /* Scoped Dark Mode Overrides */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-theme) .atelier-hub,
-  :root:not(.light-theme) #hubAtelierView {
+  :root:not(.light-theme) #hubAtelierView,
+  :root:not(.light-theme) #screen-library,
+  :root:not(.light-theme) #screen-book,
+  :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3982,7 +3898,13 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 :root.dark-theme .atelier-hub,
-:root.dark-theme #hubAtelierView {
+:root.dark-theme #hubAtelierView,
+:root.dark-theme #screen-library,
+:root.dark-theme #screen-book,
+:root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-book:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -5226,11 +5148,1476 @@ body:has(#screen-hub:not(.hidden)) {
   color: var(--atelier-ink-black);
 }
 
+/* Closing plays the opening in reverse: the pills lift back toward the menu
+   button, bottom one first, while the veil fades. atelier-hub.ts hides the
+   sheet after ATELIER_MENU_CLOSE_MS (220ms) — the longest delay + duration
+   here must stay within it. The sheet stops taking taps at once. */
+.atelier-sheet-backdrop.is-closing {
+  pointer-events: none;
+  animation: atelierVeilOut 200ms ease-in both;
+}
+
+@keyframes atelierVeilOut {
+  to {
+    opacity: 0;
+  }
+}
+
+.atelier-sheet-backdrop.is-closing .atelier-sheet-item,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card {
+  animation: atelierPillLift 110ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.atelier-sheet-backdrop.is-closing .atelier-sheet-github { animation-delay: 0ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+.atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card { animation-delay: 20ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(4) { animation-delay: 40ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(3) { animation-delay: 60ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(2) { animation-delay: 80ms; }
+.atelier-sheet-backdrop.is-closing .atelier-sheet-nav .atelier-sheet-item:nth-child(1) { animation-delay: 100ms; }
+
+@keyframes atelierPillLift {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.94);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .atelier-sheet-backdrop,
   .atelier-sheet-item,
   .atelier-sheet-panel .pwa-banner,
-  .atelier-sheet-panel .ios-pwa-card {
+  .atelier-sheet-panel .ios-pwa-card,
+  .atelier-sheet-backdrop.is-closing,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-item,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-panel .pwa-banner,
+  .atelier-sheet-backdrop.is-closing .atelier-sheet-panel .ios-pwa-card {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   12. Library — "My Books" shelf + list, "My Desk", and the details sheet.
+   Built on the atelier tokens (scoped to #screen-library above). Nothing here
+   moves on its own: the shelf tilts only as it is scrolled, and the sheet
+   slides once on open.
+   ========================================================================== */
+
+.app:has(#screen-library:not(.hidden)) .top-bar {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+  color: var(--atelier-ink-black);
+}
+
+/* The page's own serif heading names the screen; the bar keeps only back. */
+.app:has(#screen-library:not(.hidden)) .top-bar-title {
+  visibility: hidden;
+}
+
+.app:has(#screen-library:not(.hidden)) .top-bar .icon-btn {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+}
+
+.app:has(#screen-library:not(.hidden)) .screen-container {
+  padding-left: 16px;
+  padding-right: 16px;
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.library-screen {
+  color: var(--atelier-ink-black);
+  gap: 14px;
+  min-width: 0;
+}
+
+.library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.library-head-text {
+  min-width: 0;
+}
+
+.library-head h2 {
+  margin: 0;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--atelier-ink-black);
+}
+
+.library-head p {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--atelier-ink-muted);
+}
+
+.library-count {
+  flex-shrink: 0;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 9999px;
+  background: var(--atelier-surface-cream);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--atelier-ink-black);
+}
+
+/* Tabs: one rounded tray, the chosen tab inked in. */
+.library-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 9999px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+}
+
+.library-tab {
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--atelier-ink-muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.library-tab svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.library-tab.is-active {
+  background: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.12), 0 4px 12px rgba(40, 30, 20, 0.18);
+}
+
+.library-tab:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+.library-tab-badge {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05);
+}
+
+.library-search:focus-within {
+  border-color: var(--atelier-primary);
+}
+
+.library-search svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.library-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--atelier-ink-black);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.library-search input::placeholder {
+  color: var(--atelier-ink-muted);
+  opacity: 0.85;
+}
+
+.library-no-match,
+.library-empty-text {
+  margin: 8px 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--atelier-ink-muted);
+}
+
+.library-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.library-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--atelier-ink-black);
+}
+
+.library-section-title::before {
+  content: '';
+  width: 6px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--atelier-primary);
+}
+
+/* ── Shelf ───────────────────────────────────────────────────────────────── */
+
+.library-shelf-section {
+  min-width: 0;
+}
+
+/* The row scrolls inside itself (never the page); the centred book snaps
+   to the front. The ledge under it is static paint. */
+.library-shelf {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* The first book starts at the left gutter. The wide end padding lets the
+     last book scroll into that same leftmost slot, where it becomes the
+     front book (library-screen.ts SHELF_FRONT_ZONE). */
+  padding: 18px calc(100% - 136px) 22px 14px;
+  scroll-padding-inline-start: 14px;
+  perspective: 900px;
+  border-radius: 20px;
+  background:
+    linear-gradient(to top, #5a3a26 0, #6e4a30 10px, transparent 10px),
+    linear-gradient(to bottom, var(--atelier-surface-cream), var(--atelier-card2-bg));
+  border: 1px solid var(--atelier-paper-edge);
+  box-shadow: inset 0 2px 8px rgba(40, 30, 20, 0.08);
+}
+
+.library-shelf::-webkit-scrollbar {
+  display: none;
+}
+
+.library-book {
+  appearance: none;
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transform: rotateY(0) scale(0.9);
+  transform-origin: center bottom;
+  opacity: 0.85;
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease;
+}
+
+.library-book.is-near {
+  will-change: transform;
+}
+
+.library-book.is-before {
+  transform: rotateY(18deg) scale(0.9);
+}
+
+.library-book.is-after {
+  transform: rotateY(-18deg) scale(0.9);
+}
+
+.library-book.is-front {
+  transform: none;
+  opacity: 1;
+}
+
+.library-book:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.library-book-body {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1.414;
+  border-radius: 2px 6px 6px 2px;
+  overflow: hidden;
+  background: var(--atelier-bg);
+  box-shadow:
+    0 1px 2px rgba(40, 30, 20, 0.12),
+    0 10px 22px rgba(40, 30, 20, 0.2);
+}
+
+/* Spine edge: a static band down the binding side. */
+.library-book-body::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 9px;
+  z-index: 2;
+  background: linear-gradient(to right, var(--atelier-terracotta-deep), var(--atelier-primary) 70%, rgba(0, 0, 0, 0.15));
+}
+
+.library-book-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--atelier-ink-black);
+}
+
+.library-book-meta {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--atelier-ink-muted);
+}
+
+.library-shelf.is-static .library-book,
+.library-shelf.is-static .library-book.is-before,
+.library-shelf.is-static .library-book.is-after {
+  transform: none;
+  opacity: 1;
+  transition: none;
+}
+
+/* ── Covers (thumbnail, or typographic when there is none) ───────────────── */
+
+.library-cover {
+  position: absolute;
+  inset: 0;
+}
+
+.library-cover-type {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 10px 12px 16px;
+  background:
+    linear-gradient(135deg, var(--atelier-surface-cream), var(--atelier-card2-bg));
+  color: var(--atelier-ink-black);
+  overflow: hidden;
+}
+
+.library-cover-initials {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--atelier-primary);
+}
+
+.library-cover-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  border-top: 1px solid var(--atelier-paper-edge);
+  padding-top: 6px;
+}
+
+.library-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  background: #fff;
+}
+
+/* ── Lists ───────────────────────────────────────────────────────────────── */
+
+.library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.library-row,
+.library-desk-row {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05), 0 6px 16px rgba(40, 30, 20, 0.07);
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.library-row:active,
+.library-desk-row:active {
+  transform: scale(0.99);
+}
+
+.library-row:focus-visible,
+.library-desk-row:focus-visible,
+.library-desk-remove:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+.library-row .library-cover {
+  position: relative;
+  inset: auto;
+  flex: 0 0 46px;
+  height: 64px;
+  border-radius: 2px 5px 5px 2px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.15), 0 4px 10px rgba(40, 30, 20, 0.12);
+}
+
+.library-row .library-cover-type {
+  padding: 5px 4px 5px 7px;
+  justify-content: center;
+  border-left: 4px solid var(--atelier-primary);
+}
+
+.library-row .library-cover-initials {
+  font-size: 1.05rem;
+}
+
+.library-row .library-cover-title {
+  display: none;
+}
+
+.library-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.library-row-title {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--atelier-ink-black);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-row-meta {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--atelier-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-row-date {
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+}
+
+.library-row-missing {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--atelier-gold-foil);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--atelier-gold-foil) 25%, transparent);
+}
+
+.library-desk-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.library-desk-icon {
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-primary);
+}
+
+.library-desk-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.library-desk-remove,
+.library-desk-book {
+  appearance: none;
+  flex: 0 0 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.library-desk-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+.library-desk-book {
+  color: var(--atelier-primary);
+}
+
+.library-desk-book svg {
+  width: 18px;
+  height: 18px;
+}
+
+.library-desk-book:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+/* ── Empty state & pills ─────────────────────────────────────────────────── */
+
+.library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 18px;
+  border-radius: 22px;
+  border: 1px dashed var(--atelier-paper-edge);
+  background: color-mix(in srgb, var(--atelier-surface-cream) 70%, transparent);
+  text-align: center;
+}
+
+.library-empty p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--atelier-ink-muted);
+}
+
+.library-pill {
+  appearance: none;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(40, 30, 20, 0.06),
+    0 8px 22px rgba(40, 30, 20, 0.12);
+  transition: border-color 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
+}
+
+.library-pill svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.library-pill:active {
+  transform: scale(0.98);
+}
+
+.library-pill:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+.library-pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+}
+
+.library-pill-primary {
+  background: var(--atelier-primary);
+  border-color: var(--atelier-primary);
+  color: #fff8f5;
+}
+
+.library-pill-quiet {
+  background: transparent;
+  box-shadow: none;
+  color: var(--atelier-ink-muted);
+}
+
+.library-open-pdf {
+  align-self: stretch;
+}
+
+/* ── Details sheet ───────────────────────────────────────────────────────── */
+
+.library-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, #1c1a18 45%, transparent);
+  animation: atelierVeilIn 160ms ease-out;
+}
+
+.library-sheet-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 26px 26px 0 0;
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-bottom: none;
+  box-shadow: 0 -10px 40px rgba(20, 14, 10, 0.25);
+  animation: librarySheetUp 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes librarySheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.library-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px 20px;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  background: var(--atelier-surface-cream);
+}
+
+.library-sheet-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--atelier-primary);
+  flex-shrink: 0;
+}
+
+.library-sheet-heading {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.library-sheet-close {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.library-sheet-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.library-sheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px max(env(safe-area-inset-bottom), 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.library-detail-top {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.library-detail-cover {
+  position: relative;
+  flex: 0 0 96px;
+  aspect-ratio: 1 / 1.414;
+  border-radius: 2px 6px 6px 2px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.15), 0 10px 22px rgba(40, 30, 20, 0.2);
+  border-left: 6px solid var(--atelier-primary);
+}
+
+.library-detail-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  background: #fff;
+}
+
+.library-detail-cover .library-cover-type {
+  padding: 8px 6px 8px 8px;
+}
+
+.library-detail-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.library-detail-format {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--atelier-primary) 40%, transparent);
+  background: color-mix(in srgb, var(--atelier-primary) 8%, transparent);
+  color: var(--atelier-primary);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.library-detail-title {
+  margin: 0;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.library-detail-specs {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+}
+
+.library-spec {
+  min-width: 0;
+}
+
+.library-spec-cover,
+.library-spec-source,
+.library-spec-saved {
+  grid-column: 1 / -1;
+}
+
+.library-spec dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--atelier-ink-muted);
+}
+
+.library-spec dd {
+  margin: 3px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  color: var(--atelier-ink-black);
+}
+
+.library-detail-source-state {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--atelier-gold-foil) 60%, transparent);
+  background: color-mix(in srgb, var(--atelier-gold-foil) 12%, transparent);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.library-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.library-detail-actions .library-pill {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.library-detail-actions .library-pill span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-detail-actions #libraryRelinkBtn,
+.library-detail-actions #libraryOpenOutputBtn,
+.library-detail-actions #libraryRemoveBtn {
+  grid-column: 1 / -1;
+}
+
+/* Two pills side by side would cut their labels on the narrowest phones. */
+@media (max-width: 359px) {
+  .library-detail-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-book,
+  .library-book.is-before,
+  .library-book.is-after {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .library-sheet-backdrop,
+  .library-sheet-panel {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   13. Book reader — two facing pages as the folded booklet opens, and the
+   signature view. One leaf turns per page turn (transform only, 320 ms,
+   book-reader.ts BOOK_TURN_MS); nothing moves while the book sits open.
+   ========================================================================== */
+
+.app:has(#screen-book:not(.hidden)) .top-bar {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+  color: var(--atelier-ink-black);
+}
+
+.app:has(#screen-book:not(.hidden)) .top-bar .icon-btn {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+}
+
+.app:has(#screen-book:not(.hidden)) .top-bar-title {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app:has(#screen-book:not(.hidden)) .screen-container {
+  padding-left: 12px;
+  padding-right: 12px;
+  overflow: hidden;
+  background: var(--atelier-bg);
+}
+
+.book-screen {
+  --book-paper: #fffdf8;
+  color: var(--atelier-ink-black);
+  gap: 10px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.book-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Vertical gestures stay the browser's; horizontal swipes turn pages. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.book-stage:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.book-spread {
+  position: relative;
+  display: flex;
+  width: calc(var(--book-page-w, 0px) * 2);
+  height: var(--book-page-h, 0px);
+  perspective: 1800px;
+}
+
+/* The spine: a faint fold where the two pages meet. */
+.book-spread::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(40, 30, 20, 0.28) 12%, rgba(40, 30, 20, 0.28) 88%, transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.book-slot {
+  position: relative;
+  flex: 0 0 var(--book-page-w, 0px);
+  height: 100%;
+}
+
+.book-paper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--book-paper);
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.12), 0 6px 18px rgba(40, 30, 20, 0.14);
+}
+
+.book-paper .pdf-page-wrapper {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Shade toward the spine, painted over the page. */
+.book-paper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.book-slot.is-left .book-paper::after,
+.book-leaf.turn-rightward .book-leaf-face.is-front .book-paper::after,
+.book-leaf.turn-leftward .book-leaf-face.is-back .book-paper::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(40, 30, 20, 0.12), transparent);
+}
+
+.book-slot.is-right .book-paper::after,
+.book-leaf.turn-leftward .book-leaf-face.is-front .book-paper::after,
+.book-leaf.turn-rightward .book-leaf-face.is-back .book-paper::after {
+  left: 0;
+  background: linear-gradient(to right, rgba(40, 30, 20, 0.12), transparent);
+}
+
+.book-paper.is-loading {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 14px, rgba(40, 30, 20, 0.05) 14px 16px) 16% 14% / 68% 62% no-repeat,
+    var(--book-paper);
+}
+
+/* No facing page here (inside the first or last cover): nothing to show. */
+.book-slot.is-empty {
+  visibility: hidden;
+}
+
+.book-leaf {
+  position: absolute;
+  top: 0;
+  width: var(--book-page-w, 0px);
+  height: 100%;
+  transform-style: preserve-3d;
+  z-index: 5;
+  will-change: transform;
+}
+
+.book-leaf.turn-leftward {
+  left: 50%;
+  transform-origin: left center;
+  animation: book-turn-leftward 320ms cubic-bezier(0.3, 0.1, 0.25, 1) forwards;
+}
+
+.book-leaf.turn-rightward {
+  left: 0;
+  transform-origin: right center;
+  animation: book-turn-rightward 320ms cubic-bezier(0.3, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes book-turn-leftward {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-180deg); }
+}
+
+@keyframes book-turn-rightward {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(180deg); }
+}
+
+.book-leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.book-leaf-face.is-back {
+  transform: rotateY(180deg);
+}
+
+.book-leaf-face.is-empty {
+  background: var(--book-paper);
+}
+
+.book-stage.is-crossfade .book-spread {
+  animation: book-crossfade 120ms ease-out;
+}
+
+@keyframes book-crossfade {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+/* Signature-view tag over each page. */
+.book-tag {
+  position: absolute;
+  top: 6px;
+  width: calc(var(--book-page-w, 0px) - 12px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--atelier-ink-black) 86%, transparent);
+  color: var(--atelier-bg);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.book-tag.is-left {
+  left: 6px;
+}
+
+.book-tag.is-right {
+  left: calc(50% + 6px);
+}
+
+.book-tag-blank {
+  color: var(--atelier-gold-foil);
+}
+
+/* ── Signature view panel ─────────────────────────────────────────────────── */
+
+.book-forma {
+  flex: 0 1 auto;
+  max-height: 44%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  min-width: 0;
+}
+
+.book-forma-pages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.book-forma-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.book-forma-page-num {
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.book-forma-page-slot {
+  color: var(--atelier-ink-muted);
+}
+
+.book-forma-page-blank {
+  color: var(--atelier-primary);
+}
+
+.book-forma-sheets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.book-sheet {
+  flex: 1 1 150px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.book-sheet-caption {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--atelier-ink-muted);
+}
+
+.book-sheet-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.book-sheet-side-label {
+  flex: 0 0 34px;
+  font-size: 0.72rem;
+  color: var(--atelier-ink-muted);
+}
+
+/* A sheet drawn as a landscape rectangle with its fold down the middle. */
+.book-sheet-halves {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 38px;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 3px;
+  background: var(--book-paper);
+  color: #1c1a18;
+}
+
+.book-sheet-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px 2px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.book-sheet-cell + .book-sheet-cell {
+  border-left: 1px dashed rgba(40, 30, 20, 0.35);
+}
+
+.book-sheet-cell.is-current {
+  background: color-mix(in srgb, var(--atelier-primary) 16%, transparent);
+  font-weight: 700;
+}
+
+.book-sheet-src {
+  font-size: 0.62rem;
+  color: #5c5650;
+}
+
+.book-forma-sigs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.book-sig-chip {
+  appearance: none;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.book-sig-chip.is-current {
+  background: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+  border-color: var(--atelier-ink-black);
+}
+
+.book-forma-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--atelier-ink-muted);
+}
+
+/* ── Bar ──────────────────────────────────────────────────────────────────── */
+
+.book-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.book-scrubber {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--atelier-primary);
+}
+
+.book-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.book-screen.is-rtl .book-bar-row {
+  flex-direction: row-reverse;
+}
+
+.book-screen.is-rtl .book-btn-dir svg {
+  transform: scaleX(-1);
+}
+
+.book-btn {
+  appearance: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9999px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.book-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.book-btn-dir {
+  flex: 0 0 44px;
+  width: 44px;
+}
+
+.book-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.book-btn:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+.book-forma-toggle {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 14px;
+}
+
+.book-forma-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-forma-toggle[aria-pressed='true'] {
+  background: var(--atelier-ink-black);
+  color: var(--atelier-bg);
+  border-color: var(--atelier-ink-black);
+}
+
+.book-page-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--atelier-ink-muted);
+}
+
+/* The narrowest phones keep the toggle's icon; its name stays for screen readers. */
+@media (max-width: 359px) {
+  .book-forma-toggle {
+    padding: 0 12px;
+  }
+
+  .book-forma-toggle span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* Landscape: the signature view sits beside the book, not under it. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .book-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .book-screen.is-forma {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
+  }
+
+  .book-screen .book-stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .book-screen .book-bar {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .book-screen .book-forma {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-leaf.turn-leftward,
+  .book-leaf.turn-rightward {
     animation: none;
   }
 }
