@@ -1245,6 +1245,7 @@ export function initApp(): void {
       el.classList.toggle('hidden', key !== id);
     }
     topBarTitle.textContent = t(SCREEN_TITLES[id]);
+    topBarTitle.title = id === 'reader' ? (readerName || '') : '';
 
     const isTab = id === 'hub' || id === 'files' || id === 'settings';
     backBtn.hidden = isTab;
@@ -2919,19 +2920,14 @@ export function initApp(): void {
     bookletSaveSpinner.classList.remove('hidden');
 
     try {
-      const frontUri = await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
-      await rememberSaved(frontUri, `${docName} — Front Side.pdf`);
-      const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
-      await rememberSaved(backUri, `${docName} — Back Side.pdf`);
-      const combinedUri = await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
-      await rememberSaved(combinedUri, `${docName} — Combined Booklet.pdf`);
+      await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
+      await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
+      await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
       if (booklet.coverPdf) {
-        const coverUri = await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
-        await rememberSaved(coverUri, `${docName} — Cover.pdf`);
+        await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
       }
       if (booklet.instructionsPdf) {
-        const instrUri = await savePdfPrivately(booklet.instructionsPdf, `booklets/${docName}/Instructions.pdf`);
-        await rememberSaved(instrUri, `${docName} — Instructions.pdf`);
+        await savePdfPrivately(booklet.instructionsPdf, `booklets/${docName}/Instructions.pdf`);
       }
       // Wrap cover lands in the same booklet folder as the block it belongs to,
       // one file per printed sheet.
@@ -2941,8 +2937,7 @@ export function initApp(): void {
         [booklet.wrapCoverPdf, 'Cover Wrap.pdf'],
       ] as const) {
         if (!pdf) continue;
-        const uri = await savePdfPrivately(pdf, `booklets/${docName}/${fileName}`);
-        await rememberSaved(uri, `${docName} — ${fileName}`);
+        await savePdfPrivately(pdf, `booklets/${docName}/${fileName}`);
       }
       bookletFileNameInput.value = docName;
       const savedFiles = [
@@ -5951,6 +5946,7 @@ export function initApp(): void {
       screens.reader.classList.toggle('night-mode', readerNightMode);
       showScreen('reader');
       topBarTitle.textContent = readerName;
+      topBarTitle.title = readerName;
       // Warn before the heavy per-page rendering work in renderReaderList
       // starts, not after — the user should see this while pages are still
       // loading, not once the memory pressure has already happened.
@@ -7149,6 +7145,7 @@ export function initApp(): void {
         readerName = newName;
         readerUri = newUri;
         topBarTitle.textContent = readerName;
+        topBarTitle.title = readerName;
 
         await rememberSaved(newUri, newName);
         showToast(t('toast.savedToBindery'));
@@ -7159,6 +7156,7 @@ export function initApp(): void {
         readerUri = publicUri;
         readerRelPath = null;
         topBarTitle.textContent = readerName;
+        topBarTitle.title = readerName;
 
         await recordOpened({ uri: publicUri, name: newName });
         showToast(t('toast.savedToDevice'));
@@ -8011,6 +8009,7 @@ export function initApp(): void {
     const current = getCurrentScreenId();
     if (current !== 'reader') {
       topBarTitle.textContent = t(SCREEN_TITLES[current]);
+      topBarTitle.title = '';
     }
   }
 
