@@ -373,8 +373,8 @@ describe('Booklet pipeline - Result screen', () => {
     expect(save).toContain("[booklet.wrapCoverSheet2Pdf, 'Cover Sheet 2.pdf']");
     expect(save).toContain("[booklet.wrapCoverPdf, 'Cover Wrap.pdf']");
     expect(save).toContain('savePdfPrivately(pdf, `booklets/${docName}/${fileName}`)');
-    // Every saved file has to be registered, or it never shows in Files/Recents.
-    expect(save).toContain('rememberSaved(uri, `${docName} — ${fileName}`)');
+    // Decoupled from recents (Masam) — split sheets are saved to disk and recorded in library, not in recents pool
+    expect(save).not.toContain('rememberSaved');
   });
 
   it('renders a preview for each cover sheet', () => {
