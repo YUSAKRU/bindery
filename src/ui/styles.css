@@ -5243,21 +5243,24 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-head {
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 44px;
   padding-top: 4px;
 }
 
 .library-head-text {
   min-width: 0;
+  flex: 1;
 }
 
 .library-head h2 {
   margin: 0;
   font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 2rem;
+  font-size: 2.1rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.01em;
@@ -5271,101 +5274,107 @@ body:has(#screen-hub:not(.hidden)) {
   color: var(--atelier-ink-muted);
 }
 
-.library-count {
-  flex-shrink: 0;
-  margin-top: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--atelier-paper-edge);
-  border-radius: 9999px;
-  background: var(--atelier-surface-cream);
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--atelier-ink-black);
-}
-
-/* Tabs: one rounded tray, the chosen tab inked in. */
-.library-tabs {
+.library-head-actions {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 9999px;
-  background: var(--atelier-surface-cream);
-  border: 1px solid var(--atelier-paper-edge);
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.library-tab {
-  appearance: none;
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 44px;
+/* 0 KAYIT rozeti Atelier Zen anlayışında gizlenir; DOM uyumu korunur */
+.library-count {
+  display: none !important;
+}
+
+/* ── Minimalist Arama Butonu & Yumuşakça Açılan Arama Alanı ──────────────── */
+.library-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.library-search-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--atelier-ink-muted);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 
-.library-tab svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
+.library-search-toggle:active {
+  transform: scale(0.96);
 }
 
-.library-tab.is-active {
-  background: var(--atelier-ink-black);
-  color: var(--atelier-bg);
-  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.12), 0 4px 12px rgba(40, 30, 20, 0.18);
+.library-search-toggle svg {
+  width: 19px;
+  height: 19px;
+  color: var(--atelier-ink-muted);
+  transition: color 0.15s ease;
 }
 
-.library-tab:focus-visible {
-  outline: 2px solid var(--atelier-primary);
-  outline-offset: 2px;
+.library-search-toggle:hover svg {
+  color: var(--atelier-ink-black);
 }
 
-.library-tab-badge {
-  min-width: 22px;
-  padding: 1px 7px;
-  border-radius: 9999px;
-  background: color-mix(in srgb, currentColor 16%, transparent);
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
+/* Kompakt arama alanı */
 .library-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 0 16px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) scale(0.96);
+  transform-origin: right center;
+  width: 40px;
+  height: 42px;
+  padding: 0 10px 0 14px;
   border-radius: 9999px;
   background: var(--atelier-bg);
   border: 1px solid var(--atelier-paper-edge);
   color: var(--atelier-ink-muted);
-  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05);
+  box-shadow: 0 2px 10px rgba(40, 30, 20, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition:
+    width 0.28s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.25s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.2s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s ease;
+  z-index: 20;
 }
 
-.library-search:focus-within {
+.library-search-wrap.is-open .library-search,
+.library-search-wrap:focus-within .library-search {
+  width: min(calc(100vw - 48px), 340px);
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
   border-color: var(--atelier-primary);
+  box-shadow: 0 4px 18px rgba(154, 64, 29, 0.12), 0 1px 3px rgba(40, 30, 20, 0.06);
 }
 
+.library-search-wrap.is-open .library-search-toggle,
+.library-search-wrap:focus-within .library-search-toggle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.library-search svg.library-search-icon,
 .library-search svg {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+  color: var(--atelier-primary);
 }
 
 .library-search input {
@@ -5376,12 +5385,161 @@ body:has(#screen-hub:not(.hidden)) {
   background: transparent;
   color: var(--atelier-ink-black);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  padding: 6px 0;
+}
+
+.library-search input[type="search"]::-webkit-search-cancel-button,
+.library-search input[type="search"]::-webkit-search-decoration,
+.library-search input[type="search"]::-webkit-search-results-button,
+.library-search input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 .library-search input::placeholder {
   color: var(--atelier-ink-muted);
-  opacity: 0.85;
+  opacity: 0.8;
+  font-size: 0.88rem;
+}
+
+.library-search-close {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--atelier-ink-muted);
+  border-radius: 50%;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.library-search-close:hover {
+  color: var(--atelier-ink-black);
+  background: color-mix(in srgb, var(--atelier-surface-cream) 70%, transparent);
+}
+
+.library-search-close svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+/* ── Zarif Tipografik Sekmeler (Atelier Hub Estetiği) ─────────────────────── */
+.library-tabs {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  background: transparent;
+  border-radius: 0;
+}
+
+.library-tab {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 4px 12px 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--atelier-ink-muted);
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: none;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+
+.library-tab:hover {
+  color: var(--atelier-ink-black);
+}
+
+.library-tab svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.18s ease, stroke 0.18s ease;
+}
+
+.library-tab:hover svg {
+  opacity: 1;
+}
+
+.library-tab.is-active {
+  background: transparent;
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.library-tab.is-active svg {
+  opacity: 1;
+  stroke: var(--atelier-primary);
+}
+
+.library-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: background-color 0.2s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.library-tab.is-active::after {
+  background: var(--atelier-primary);
+  transform: scaleX(1);
+}
+
+.library-tab:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.library-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--atelier-ink-muted) 12%, transparent);
+  color: var(--atelier-ink-muted);
+  font-family: 'Space Mono', ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  transition: all 0.18s ease;
+}
+
+.library-tab.is-active .library-tab-badge {
+  background: color-mix(in srgb, var(--atelier-primary) 14%, transparent);
+  color: var(--atelier-primary);
+  font-weight: 600;
 }
 
 .library-no-match,
@@ -5763,23 +5921,62 @@ body:has(#screen-hub:not(.hidden)) {
   outline-offset: 2px;
 }
 
-/* ── Empty state & pills ─────────────────────────────────────────────────── */
+/* ── Empty state (Atelier Zen Card) & pills ──────────────────────────────── */
 
 .library-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 28px 18px;
-  border-radius: 22px;
-  border: 1px dashed var(--atelier-paper-edge);
-  background: color-mix(in srgb, var(--atelier-surface-cream) 70%, transparent);
   text-align: center;
+  padding: 38px 22px 34px 22px;
+  gap: 18px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, var(--atelier-surface-cream), var(--atelier-card2-bg));
+  border: 1px solid var(--atelier-paper-edge);
+  box-shadow:
+    0 1px 2px rgba(40, 30, 20, 0.04),
+    0 10px 24px rgba(40, 30, 20, 0.06);
+  margin-top: 8px;
 }
 
-.library-empty p {
+.library-empty-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-primary);
+  box-shadow: 0 2px 6px rgba(40, 30, 20, 0.05);
+}
+
+.library-empty-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.library-empty-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.library-empty-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--atelier-ink-black);
+}
+
+.library-empty-desc {
+  margin: 0;
+  font-size: 0.92rem;
   line-height: 1.45;
   color: var(--atelier-ink-muted);
 }

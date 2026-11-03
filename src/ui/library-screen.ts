@@ -97,7 +97,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   const tabDesk = q<HTMLButtonElement>('libraryTabDesk');
   const booksBadge = q('libraryBooksBadge');
   const deskBadge = q('libraryDeskBadge');
+  const searchWrap = root.querySelector<HTMLElement>('#librarySearchWrap');
+  const searchToggle = root.querySelector<HTMLButtonElement>('#librarySearchToggle');
   const searchInput = q<HTMLInputElement>('librarySearch');
+  const searchClose = root.querySelector<HTMLButtonElement>('#librarySearchClose');
   const noMatch = q('libraryNoMatch');
   const booksPanel = q('libraryBooksPanel');
   const deskPanel = q('libraryDeskPanel');
@@ -546,6 +549,43 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     renderBooks();
     renderDesk();
   };
+  function openSearch(): void {
+    searchWrap?.classList.add('is-open');
+    searchToggle?.setAttribute('aria-expanded', 'true');
+    searchInput.focus?.();
+  }
+  function closeSearch(): void {
+    if (searchInput.value) {
+      searchInput.value = '';
+      applySearch();
+    } else {
+      searchWrap?.classList.remove('is-open');
+      searchToggle?.setAttribute('aria-expanded', 'false');
+    }
+  }
+  const onSearchToggleClick = (): void => {
+    if (searchWrap?.classList.contains('is-open')) {
+      closeSearch();
+    } else {
+      openSearch();
+    }
+  };
+  const onSearchCloseClick = (): void => {
+    closeSearch();
+  };
+  const onSearchKeydown = (event: Event): void => {
+    const key = (event as KeyboardEvent).key;
+    if (key === 'Escape') {
+      if (searchInput.value) {
+        searchInput.value = '';
+        applySearch();
+      } else {
+        searchWrap?.classList.remove('is-open');
+        searchToggle?.setAttribute('aria-expanded', 'false');
+        searchToggle?.focus?.();
+      }
+    }
+  };
   const onSearchInput = (): void => {
     const wait = deps.searchDebounceMs ?? 120;
     if (searchTimer) clearTimeout(searchTimer);
@@ -572,7 +612,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   tabDesk.addEventListener('click', onTabDesk);
   tabBooks.addEventListener('keydown', onTabKey);
   tabDesk.addEventListener('keydown', onTabKey);
+  searchToggle?.addEventListener('click', onSearchToggleClick);
+  searchClose?.addEventListener('click', onSearchCloseClick);
   searchInput.addEventListener('input', onSearchInput);
+  searchInput.addEventListener('keydown', onSearchKeydown);
   produceBtn.addEventListener('click', onProduceClick);
   openPdfBtn.addEventListener('click', onOpenPdfClick);
   detailCloseBtn.addEventListener('click', onCloseClick);
@@ -605,6 +648,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     pendingThumbs.clear();
     if (searchTimer) clearTimeout(searchTimer);
     searchTimer = null;
+    if (!searchInput.value) {
+      searchWrap?.classList.remove('is-open');
+      searchToggle?.setAttribute('aria-expanded', 'false');
+    }
   }
 
   function refreshTexts(): void {
@@ -620,7 +667,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     tabDesk.removeEventListener('click', onTabDesk);
     tabBooks.removeEventListener('keydown', onTabKey);
     tabDesk.removeEventListener('keydown', onTabKey);
+    searchToggle?.removeEventListener('click', onSearchToggleClick);
+    searchClose?.removeEventListener('click', onSearchCloseClick);
     searchInput.removeEventListener('input', onSearchInput);
+    searchInput.removeEventListener('keydown', onSearchKeydown);
     produceBtn.removeEventListener('click', onProduceClick);
     openPdfBtn.removeEventListener('click', onOpenPdfClick);
     detailCloseBtn.removeEventListener('click', onCloseClick);

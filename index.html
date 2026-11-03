@@ -1753,9 +1753,22 @@
           <header class="library-head">
             <div class="library-head-text">
               <h2 id="libraryTitle" data-i18n="library.title">My Library</h2>
-              <p id="librarySubtitle" data-i18n="library.subtitle">Booklets you produced, and the PDFs on your desk.</p>
             </div>
-            <span class="library-count" id="libraryCount"></span>
+            <div class="library-head-actions">
+              <span class="library-count" id="libraryCount" aria-hidden="true" hidden></span>
+              <div class="library-search-wrap" id="librarySearchWrap">
+                <button type="button" class="library-search-toggle" id="librarySearchToggle" aria-label="Search" data-i18n-aria-label="library.searchToggle" aria-expanded="false" title="Search">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+                </button>
+                <label class="library-search" id="librarySearchBox">
+                  <svg class="library-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+                  <input type="search" id="librarySearch" autocomplete="off" enterkeyhint="search" data-i18n-placeholder="library.searchPlaceholder" data-i18n-aria-label="library.searchPlaceholder" placeholder="Search by title or file name" aria-label="Search by title or file name" aria-controls="libraryBooksPanel" />
+                  <button type="button" class="library-search-close" id="librarySearchClose" aria-label="Close search" data-i18n-aria-label="common.close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                  </button>
+                </label>
+              </div>
+            </div>
           </header>
 
           <div class="library-tabs" id="libraryTabs" role="tablist" aria-labelledby="libraryTitle">
@@ -1771,10 +1784,6 @@
             </button>
           </div>
 
-          <label class="library-search">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
-            <input type="search" id="librarySearch" autocomplete="off" enterkeyhint="search" data-i18n-placeholder="library.searchPlaceholder" data-i18n-aria-label="library.searchPlaceholder" placeholder="Search by title or file name" aria-label="Search by title or file name" aria-controls="libraryBooksPanel" />
-          </label>
           <p class="library-no-match hidden" id="libraryNoMatch" role="status"></p>
 
           <section class="library-panel" id="libraryBooksPanel" role="tabpanel" aria-labelledby="libraryTabBooks">
@@ -1787,7 +1796,13 @@
               <ul class="library-list" id="libraryBookList"></ul>
             </div>
             <div class="library-empty hidden" id="libraryBooksEmpty">
-              <p data-i18n="library.booksEmpty">Booklets you save or share appear here.</p>
+              <div class="library-empty-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>
+              </div>
+              <div class="library-empty-text">
+                <h3 class="library-empty-title" id="librarySubtitle" data-i18n="library.subtitle">Booklets you produced, and the PDFs on your desk.</h3>
+                <p class="library-empty-desc" data-i18n="library.booksEmpty">Booklets you save or share appear here.</p>
+              </div>
               <button type="button" class="library-pill library-pill-primary" id="libraryProduceBtn" data-i18n="library.produceCta">Produce a booklet</button>
             </div>
           </section>
