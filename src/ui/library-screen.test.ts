@@ -111,7 +111,10 @@ const IDS = [
   'libraryTabDesk',
   'libraryBooksBadge',
   'libraryDeskBadge',
+  'librarySearchWrap',
+  'librarySearchToggle',
   'librarySearch',
+  'librarySearchClose',
   'libraryNoMatch',
   'libraryBooksPanel',
   'libraryDeskPanel',
@@ -380,6 +383,42 @@ describe('library screen controller', () => {
     els.librarySearch.dispatch('input');
     expect(els.libraryNoMatch.classList.contains('hidden')).toBe(true);
     expect(rows(els.libraryBookList, 'library-row')).toHaveLength(1);
+  });
+
+  it('toggles search pill and handles close and Escape', async () => {
+    const { controller, els } = setup();
+    await controller.show('books');
+
+    // Clicking toggle opens search
+    els.librarySearchToggle.click();
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(true);
+    expect(els.librarySearchToggle.getAttribute('aria-expanded')).toBe('true');
+
+    // Typing query and clicking close clears input but leaves wrap open
+    els.librarySearch.value = 'Book a';
+    els.librarySearch.dispatch('input');
+    expect(rows(els.libraryBookList, 'library-row')).toHaveLength(1);
+
+    els.librarySearchClose.click();
+    expect(els.librarySearch.value).toBe('');
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(true);
+
+    // Clicking close when empty closes wrap
+    els.librarySearchClose.click();
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(false);
+    expect(els.librarySearchToggle.getAttribute('aria-expanded')).toBe('false');
+
+    // Open again, press Escape with input
+    els.librarySearchToggle.click();
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(true);
+    els.librarySearch.value = 'abc';
+    els.librarySearch.dispatch('keydown', { key: 'Escape' });
+    expect(els.librarySearch.value).toBe('');
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(true);
+
+    // Press Escape when empty closes wrap
+    els.librarySearch.dispatch('keydown', { key: 'Escape' });
+    expect(els.librarySearchWrap.classList.contains('is-open')).toBe(false);
   });
 
   it('desk rows open the entry and the remove button drops it', async () => {
