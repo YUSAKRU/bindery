@@ -5247,8 +5247,21 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-screen {
+  /* Type scale for this screen (root 16px): 24 / 14.4 / 13.4 / 11.2 / 10.9 /
+     12.8. The serif is a *title* voice only — the screen heading, a book's
+     title, the letterform on a generated cover. Counts, section kickers and
+     technical metadata speak in the mono "job ticket" voice; controls and
+     running copy use the system sans so they read as UI, not as paper. */
+  --lib-display: 1.5rem; /* 24px  screen title */
+  --lib-title: 0.9rem; /* 14.4px book title (shelf caption, list row, desk row) */
+  --lib-control: 0.84rem; /* 13.4px tabs and pills */
+  --lib-label: 0.7rem; /* 11.2px section kicker */
+  --lib-meta: 0.68rem; /* 10.9px counts, dates, page/sheet specs */
+  --lib-support: 0.8rem; /* 12.8px empty-state and status copy */
+  --lib-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --lib-mono: ui-monospace, Menlo, monospace;
   color: var(--atelier-ink-black);
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -5258,8 +5271,7 @@ body:has(#screen-hub:not(.hidden)) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 44px;
-  padding-top: 4px;
+  min-height: 40px;
 }
 
 .library-head-text {
@@ -5267,20 +5279,24 @@ body:has(#screen-hub:not(.hidden)) {
   flex: 1;
 }
 
+/* 24px, not 33.6px: the heading names the screen, it does not shout it. Weight
+   drops to 500 so a fallback serif renders as a medium roman instead of a
+   synthetic bold. */
 .library-head h2 {
   margin: 0;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 2.1rem;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-family: var(--lib-serif);
+  font-size: var(--lib-display);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0;
   color: var(--atelier-ink-black);
 }
 
 .library-head p {
-  margin: 6px 0 0;
-  font-size: 0.92rem;
-  line-height: 1.4;
+  margin: 4px 0 0;
+  font-family: inherit;
+  font-size: var(--lib-support);
+  line-height: 1.45;
   color: var(--atelier-ink-muted);
 }
 
@@ -5444,7 +5460,7 @@ body:has(#screen-hub:not(.hidden)) {
 .library-tabs {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   padding: 0 2px;
   border-bottom: 1px solid var(--atelier-border-hairline);
   background: transparent;
@@ -5456,19 +5472,20 @@ body:has(#screen-hub:not(.hidden)) {
   position: relative;
   flex: 0 0 auto;
   min-width: 0;
-  min-height: 42px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  padding: 8px 4px 12px 4px;
+  gap: 6px;
+  padding: 4px 2px 10px 2px;
   border: none;
   border-radius: 0;
   background: transparent;
   color: var(--atelier-ink-muted);
   font-family: inherit;
-  font-size: 0.98rem;
+  font-size: var(--lib-control);
   font-weight: 500;
+  letter-spacing: 0.005em;
   cursor: pointer;
   box-shadow: none;
   transition: color 0.18s ease;
@@ -5480,8 +5497,8 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-tab svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
   opacity: 0.7;
   transition: opacity 0.18s ease, stroke 0.18s ease;
@@ -5532,14 +5549,14 @@ body:has(#screen-hub:not(.hidden)) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--atelier-ink-muted) 12%, transparent);
   color: var(--atelier-ink-muted);
-  font-family: 'Space Mono', ui-monospace, Menlo, monospace;
-  font-size: 0.72rem;
+  font-family: var(--lib-mono);
+  font-size: 0.66rem;
   font-weight: 500;
   line-height: 1;
   text-align: center;
@@ -5556,35 +5573,49 @@ body:has(#screen-hub:not(.hidden)) {
 .library-empty-text {
   margin: 8px 0;
   text-align: center;
-  font-size: 0.92rem;
+  font-size: var(--lib-support);
+  line-height: 1.5;
   color: var(--atelier-ink-muted);
 }
 
 .library-panel {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   min-width: 0;
 }
 
+/* A kicker, not a second heading: mono, upper-case, tracked, muted, with the
+   terracotta reduced to a 5px dot and the rule continuing as a hairline. */
 .library-section-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 10px;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 1.15rem;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-family: var(--lib-mono);
+  font-size: var(--lib-label);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--atelier-ink-black);
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--atelier-ink-muted);
 }
 
 .library-section-title::before {
   content: '';
-  width: 6px;
-  height: 18px;
-  border-radius: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
   background: var(--atelier-primary);
+}
+
+.library-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  min-width: 12px;
+  background: var(--atelier-border-hairline);
 }
 
 /* ── Shelf ───────────────────────────────────────────────────────────────── */
@@ -5606,7 +5637,7 @@ body:has(#screen-hub:not(.hidden)) {
   /* The first book starts at the left gutter. The wide end padding lets the
      last book scroll into that same leftmost slot, where it becomes the
      front book (library-screen.ts SHELF_FRONT_ZONE). */
-  padding: 18px calc(100% - 136px) 22px 14px;
+  padding: 14px calc(100% - 136px) 18px 14px;
   scroll-padding-inline-start: 14px;
   perspective: 900px;
   border-radius: 20px;
@@ -5627,7 +5658,7 @@ body:has(#screen-hub:not(.hidden)) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   padding: 0;
   border: none;
   background: transparent;
@@ -5692,17 +5723,20 @@ body:has(#screen-hub:not(.hidden)) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 0.98rem;
-  font-weight: 600;
-  line-height: 1.2;
+  /* Two lines are always reserved so the page counts line up across books,
+     whatever the length of a title. */
+  min-height: 2.6em;
+  font-family: var(--lib-serif);
+  font-size: var(--lib-title);
+  font-weight: 500;
+  line-height: 1.3;
   color: var(--atelier-ink-black);
 }
 
 .library-book-meta {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font-family: var(--lib-mono);
+  font-size: var(--lib-meta);
+  letter-spacing: 0.04em;
   color: var(--atelier-ink-muted);
 }
 
@@ -5735,9 +5769,9 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-cover-initials {
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 1.6rem;
-  font-weight: 600;
+  font-family: var(--lib-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
   line-height: 1;
   color: var(--atelier-primary);
 }
@@ -5747,9 +5781,10 @@ body:has(#screen-hub:not(.hidden)) {
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 0.78rem;
-  line-height: 1.2;
+  font-family: var(--lib-serif);
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.25;
   overflow-wrap: anywhere;
   border-top: 1px solid var(--atelier-paper-edge);
   padding-top: 6px;
@@ -5773,7 +5808,7 @@ body:has(#screen-hub:not(.hidden)) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .library-row,
@@ -5783,8 +5818,8 @@ body:has(#screen-hub:not(.hidden)) {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 11px;
+  padding: 9px 12px;
   border-radius: 18px;
   border: 1px solid var(--atelier-paper-edge);
   background: var(--atelier-bg);
@@ -5811,8 +5846,8 @@ body:has(#screen-hub:not(.hidden)) {
 .library-row .library-cover {
   position: relative;
   inset: auto;
-  flex: 0 0 46px;
-  height: 64px;
+  flex: 0 0 42px;
+  height: 59px;
   border-radius: 2px 5px 5px 2px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(40, 30, 20, 0.15), 0 4px 10px rgba(40, 30, 20, 0.12);
@@ -5825,7 +5860,7 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-row .library-cover-initials {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 .library-row .library-cover-title {
@@ -5837,14 +5872,14 @@ body:has(#screen-hub:not(.hidden)) {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .library-row-title {
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1.2;
+  font-family: var(--lib-serif);
+  font-size: var(--lib-title);
+  font-weight: 500;
+  line-height: 1.25;
   color: var(--atelier-ink-black);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5852,9 +5887,9 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-row-meta {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.03em;
+  font-family: var(--lib-mono);
+  font-size: var(--lib-meta);
+  letter-spacing: 0.02em;
   color: var(--atelier-ink-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5862,7 +5897,9 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-row-date {
-  font-size: 0.78rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
   color: var(--atelier-ink-muted);
 }
 
@@ -5938,20 +5975,20 @@ body:has(#screen-hub:not(.hidden)) {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 38px 22px 34px 22px;
-  gap: 18px;
+  padding: 30px 20px 28px 20px;
+  gap: 14px;
   border-radius: 24px;
   background: linear-gradient(145deg, var(--atelier-surface-cream), var(--atelier-card2-bg));
   border: 1px solid var(--atelier-paper-edge);
   box-shadow:
     0 1px 2px rgba(40, 30, 20, 0.04),
     0 10px 24px rgba(40, 30, 20, 0.06);
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .library-empty-icon {
-  width: 54px;
-  height: 54px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -5963,49 +6000,51 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-empty-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 
 .library-empty-text {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   max-width: 320px;
 }
 
 .library-empty-title {
   margin: 0;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1.25;
+  font-family: var(--lib-serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.3;
   color: var(--atelier-ink-black);
 }
 
 .library-empty-desc {
   margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-family: inherit;
+  font-size: var(--lib-support);
+  line-height: 1.5;
   color: var(--atelier-ink-muted);
 }
 
 .library-pill {
   appearance: none;
-  min-height: 48px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 0 18px;
   border-radius: 9999px;
   border: 1px solid var(--atelier-paper-edge);
   background: var(--atelier-bg);
   color: var(--atelier-ink-black);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  letter-spacing: 0.005em;
   cursor: pointer;
   box-shadow:
     0 1px 2px rgba(40, 30, 20, 0.06),
@@ -6014,8 +6053,8 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-pill svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
 }
 
@@ -6105,8 +6144,8 @@ body:has(#screen-hub:not(.hidden)) {
 .library-sheet-heading {
   flex: 1;
   min-width: 0;
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.85rem;
+  font-family: var(--lib-mono);
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -6177,14 +6216,14 @@ body:has(#screen-hub:not(.hidden)) {
 
 .library-detail-format {
   display: inline-block;
-  margin: 0 0 8px;
-  padding: 4px 10px;
+  margin: 0 0 6px;
+  padding: 3px 9px;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--atelier-primary) 40%, transparent);
   background: color-mix(in srgb, var(--atelier-primary) 8%, transparent);
   color: var(--atelier-primary);
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 0.78rem;
+  font-family: var(--lib-mono);
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -6192,10 +6231,10 @@ body:has(#screen-hub:not(.hidden)) {
 
 .library-detail-title {
   margin: 0;
-  font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-  font-size: 1.55rem;
-  font-weight: 600;
-  line-height: 1.15;
+  font-family: var(--lib-serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
@@ -6219,8 +6258,8 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .library-spec dt {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.66rem;
+  font-family: var(--lib-mono);
+  font-size: 0.64rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -6229,10 +6268,12 @@ body:has(#screen-hub:not(.hidden)) {
 
 .library-spec dd {
   margin: 2px 0 0;
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.08rem;
-  font-weight: 600;
-  line-height: 1.25;
+  /* The label above is the mono "ticket" voice; the value is UI text, so it
+     stays in the system sans rather than becoming a third serif. */
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.3;
   overflow-wrap: anywhere;
   color: var(--atelier-ink-black);
 }
@@ -6259,8 +6300,8 @@ body:has(#screen-hub:not(.hidden)) {
 .library-spec-source dd {
   margin: 0;
   min-width: 0;
-  font-family: 'Space Mono', monospace;
-  font-size: 0.76rem;
+  font-family: var(--lib-mono);
+  font-size: 0.72rem;
   font-weight: 500;
   color: var(--atelier-ink-muted);
   overflow: hidden;
@@ -6271,12 +6312,12 @@ body:has(#screen-hub:not(.hidden)) {
 
 .library-detail-source-state {
   margin: 0;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--atelier-gold-foil) 60%, transparent);
   background: color-mix(in srgb, var(--atelier-gold-foil) 12%, transparent);
-  font-size: 0.88rem;
-  line-height: 1.4;
+  font-size: var(--lib-support);
+  line-height: 1.45;
 }
 
 .library-detail-actions {
@@ -6311,7 +6352,7 @@ body:has(#screen-hub:not(.hidden)) {
 .library-detail-actions #libraryRemoveBtn {
   grid-column: span 1;
   min-height: 38px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .library-detail-actions #libraryRemoveBtn {
