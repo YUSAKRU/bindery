@@ -1226,6 +1226,7 @@ export function initApp(): void {
       void closeBookReader(id === 'reader');
       void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
       stopBookResizeWatch();
+      appShell.classList.remove('book-chrome-hidden');
     } else if (id !== 'book' && id !== 'reader') {
       bookSession = null;
     }
@@ -5607,7 +5608,32 @@ export function initApp(): void {
     goToPageInput.focus();
   });
 
+  const bookPageLabel = byId<HTMLElement>('bookPageLabel');
+  bookPageLabel.addEventListener('click', () => {
+    if (!bookReader || !bookReader.isOpen()) return;
+    const total = bookReader.totalPages();
+    goToPageInput.value = '';
+    goToPageInput.classList.remove('input-shake');
+    goToPageInput.placeholder = `1–${total}`;
+    openModal(goToPageModal, bookPageLabel);
+    goToPageInput.focus();
+  });
+
   function confirmGoToPage(): void {
+    if (getCurrentScreenId() === 'book') {
+      if (!bookReader || !bookReader.isOpen()) return;
+      const total = bookReader.totalPages();
+      const page = Number.parseInt(goToPageInput.value.trim(), 10);
+      if (!Number.isFinite(page) || page < 1 || page > total) {
+        goToPageInput.classList.remove('input-shake');
+        void goToPageInput.offsetWidth;
+        goToPageInput.classList.add('input-shake');
+        return;
+      }
+      closeModal(goToPageModal);
+      bookReader.goToPage(page - 1);
+      return;
+    }
     if (!readerDoc) return;
     const page = Number.parseInt(goToPageInput.value.trim(), 10);
     if (!Number.isFinite(page) || page < 1 || page > readerDoc.proxy.numPages) {
@@ -7998,6 +8024,9 @@ export function initApp(): void {
   function applyThemePreference(active: boolean): void {
     document.documentElement.classList.toggle('dark-theme', active);
     document.documentElement.classList.toggle('light-theme', !active);
+    if (bookReader && bookReader.isOpen()) {
+      bookReader.relayout();
+    }
   }
 
   const isDarkMode = localStorage.getItem('bindery.darkmode') === 'true';
@@ -8415,7 +8444,13 @@ export function initApp(): void {
         printNotes: options ? { reverseSheetOrder: options.reverseSheetOrder, flipEdge: options.flipEdge } : undefined,
         startPage: Math.min(Math.max(0, session.page), sequence.length - 1),
         pageAspect: viewport.height / viewport.width,
-        renderPage: (src, widthPx) => renderReaderPage(proxy, src + 1, widthPx, false),
+        renderPage: (src, widthPx) => {
+          const isDark =
+            document.documentElement.classList.contains('dark-theme') ||
+            (window.matchMedia('(prefers-color-scheme: dark)').matches &&
+              !document.documentElement.classList.contains('light-theme'));
+          return renderReaderPage(proxy, src + 1, widthPx, isDark);
+        },
         destroy: () => handle.destroy(),
       });
     } finally {
@@ -8571,6 +8606,11 @@ export function initApp(): void {
       const session = bookSessionShown;
       if (!session) return;
       void openReaderWithBytes(session.bytes, session.name, session.uri, 'book', src + 1, session.relPath);
+    },
+    onToggleChrome: () => {
+      if (getCurrentScreenId() !== 'book') return;
+      appShell.classList.toggle('book-chrome-hidden');
+      bookReader?.relayout();
     },
   });
 

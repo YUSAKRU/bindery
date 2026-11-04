@@ -35,7 +35,15 @@ class FakeElement {
   disabled = false;
   value = '';
   max = '';
-  style = { props: new Map<string, string>(), setProperty(k: string, v: string) { this.props.set(k, v); } };
+  style = {
+    props: new Map<string, string>(),
+    setProperty(k: string, v: string) {
+      this.props.set(k, v);
+    },
+    getPropertyValue(k: string) {
+      return this.props.get(k) ?? '';
+    },
+  };
   private text = '';
   private listeners = new Map<string, Set<(e: unknown) => void>>();
   tagName: string;
@@ -112,6 +120,7 @@ const IDS = [
   'bookPrevBtn',
   'bookNextBtn',
   'bookFormaToggle',
+  'bookModeToggle',
   'bookPageLabel',
   'bookScrubber',
   'bookFormaPanel',
@@ -393,5 +402,86 @@ describe('book reader controller', () => {
     reader.next();
     runTimers();
     expect(onPositionChange).toHaveBeenLastCalledWith(11);
+  });
+
+  it('supports single-page 1-Up mode: doubles layout width, builds single spreads, crossfades', () => {
+    const { reader, els, runTimers } = setup({
+      measureStage: () => ({ width: 400, height: 600 }),
+    });
+    const { doc } = makeDoc(plainSequence(10), { pageAspect: 1.5 });
+    reader.open(doc);
+    // In 2-Up mode: maxW = 400 / 2 = 200. With aspect 1.5: 200 * 1.5 = 300 <= 600. So pageWidth = 200.
+    expect(reader.isSinglePage()).toBe(false);
+    expect(els.bookStage.style.getPropertyValue('--book-page-w')).toBe('200px');
+    expect(reader.currentSpread()).toBe(0);
+
+    // Toggle to 1-Up mode
+    reader.setSinglePage(true);
+    expect(reader.isSinglePage()).toBe(true);
+    expect(els['screen-book'].classList.contains('is-single-page')).toBe(true);
+    expect(els.bookModeToggle.getAttribute('aria-pressed')).toBe('true');
+    // In 1-Up mode: maxW = 400. 400 * 1.5 = 600 <= 600. So pageWidth = 400 (doubled!)
+    expect(els.bookStage.style.getPropertyValue('--book-page-w')).toBe('400px');
+    expect(reader.totalPages()).toBe(10);
+
+    // Moves page by page in 1-Up mode
+    reader.next();
+    expect(reader.currentSpread()).toBe(1);
+    expect(reader.currentPage()).toBe(1);
+    expect(els.bookStage.classList.contains('is-crossfade')).toBe(true);
+    runTimers();
+    expect(els.bookStage.classList.contains('is-crossfade')).toBe(false);
+
+    // Direct page navigation
+    reader.goToPage(5);
+    expect(reader.currentPage()).toBe(5);
+
+    // Toggle back to 2-Up mode
+    reader.setSinglePage(false);
+    expect(reader.isSinglePage()).toBe(false);
+    expect(els['screen-book'].classList.contains('is-single-page')).toBe(false);
+    expect(els.bookStage.style.getPropertyValue('--book-page-w')).toBe('200px');
+    // Page 5 is on spread 3 (pages 5|6 in LTR: pair [5, 6])
+    expect(reader.currentPage()).toBe(5);
+  });
+
+  it('single tap in center stage toggles chrome after debounce', () => {
+    const onToggleChrome = vi.fn();
+    const { reader, els, runTimers } = setup({ onToggleChrome });
+    reader.open(makeDoc(plainSequence(8)).doc);
+
+    // Center tap at x = 200 of 400
+    els.bookStage.dispatch('pointerdown', { clientX: 200, clientY: 100 });
+    els.bookStage.dispatch('pointerup', { clientX: 200, clientY: 100 });
+    expect(onToggleChrome).not.toHaveBeenCalled();
+
+    // After debounce (320ms timer runs), onToggleChrome is invoked
+    runTimers();
+    expect(onToggleChrome).toHaveBeenCalledTimes(1);
+  });
+
+  it('button clicks and mode toggle cancel pending tap timer and fire onPositionChange', () => {
+    const onToggleChrome = vi.fn();
+    const onPositionChange = vi.fn();
+    const { reader, els, runTimers } = setup({ onToggleChrome, onPositionChange });
+    reader.open(makeDoc(plainSequence(8)).doc);
+
+    // Tap stage to initiate pending tap timer
+    els.bookStage.dispatch('pointerdown', { clientX: 200, clientY: 100 });
+    els.bookStage.dispatch('pointerup', { clientX: 200, clientY: 100 });
+
+    // Click next button before timer fires
+    els.bookNextBtn.click();
+    runTimers();
+    // Chrome toggle was cancelled by button interaction!
+    expect(onToggleChrome).not.toHaveBeenCalled();
+
+    // Tap stage again, then toggle layout mode
+    els.bookStage.dispatch('pointerdown', { clientX: 200, clientY: 100 });
+    els.bookStage.dispatch('pointerup', { clientX: 200, clientY: 100 });
+    els.bookModeToggle.click();
+    runTimers();
+    expect(onToggleChrome).not.toHaveBeenCalled();
+    expect(onPositionChange).toHaveBeenCalled();
   });
 });
