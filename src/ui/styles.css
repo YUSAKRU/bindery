@@ -3822,6 +3822,7 @@ dialog.modal-sheet::backdrop {
 
 /* 1. Shell Integration when #screen-hub is active */
 .app:has(#screen-hub:not(.hidden)) .top-bar,
+.app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-hub:not(.hidden)) .bottom-nav {
   display: none;
 }
@@ -4101,7 +4102,8 @@ body:has(#screen-hub:not(.hidden)) {
   margin-left: 6px;
 }
 
-.atelier-github-btn {
+.atelier-github-btn,
+.library-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -4115,12 +4117,14 @@ body:has(#screen-hub:not(.hidden)) {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.atelier-github-btn:hover {
+.atelier-github-btn:hover,
+.library-back-btn:hover {
   border-color: rgba(186, 88, 50, 0.5);
   color: var(--atelier-ink-black);
 }
 
-.atelier-github-btn:active {
+.atelier-github-btn:active,
+.library-back-btn:active {
   transform: scale(0.95);
 }
 
@@ -5218,24 +5222,8 @@ body:has(#screen-hub:not(.hidden)) {
    slides once on open.
    ========================================================================== */
 
-.app:has(#screen-library:not(.hidden)) .top-bar {
-  background: var(--atelier-bg);
-  border-bottom-color: var(--atelier-border-hairline);
-  color: var(--atelier-ink-black);
-}
-
-/* The page's own serif heading names the screen; the bar keeps only back. */
-.app:has(#screen-library:not(.hidden)) .top-bar-title {
-  visibility: hidden;
-}
-
-.app:has(#screen-library:not(.hidden)) .top-bar .icon-btn {
-  background: var(--atelier-surface-cream);
-  color: var(--atelier-ink-black);
-  border: 1px solid var(--atelier-paper-edge);
-}
-
 .app:has(#screen-library:not(.hidden)) .screen-container {
+  padding-top: max(env(safe-area-inset-top), 16px);
   padding-left: 16px;
   padding-right: 16px;
   background-color: var(--atelier-bg);
@@ -5271,7 +5259,13 @@ body:has(#screen-hub:not(.hidden)) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 40px;
+  min-height: 44px;
+  padding: 6px 0 2px;
+}
+
+.library-back-btn {
+  flex-shrink: 0;
+  min-height: 32px;
 }
 
 .library-head-text {

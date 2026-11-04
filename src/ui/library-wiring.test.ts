@@ -245,10 +245,20 @@ describe('book reader wiring (Phase 3)', () => {
 });
 
 describe('library polish', () => {
-  it('the library hides only the top-bar title, not the back button or other screens\' titles', () => {
-    expect(css).toMatch(/\.app:has\(#screen-library:not\(\.hidden\)\) \.top-bar-title \{\s*visibility: hidden;/);
-    const hides = css.match(/[^}]*\.top-bar-title \{\s*visibility: hidden;/g) ?? [];
-    expect(hides).toHaveLength(1);
+  it('the top-bar is hidden when #screen-library is active', () => {
+    expect(css).toMatch(/\.app:has\(#screen-library:not\(\.hidden\)\) \.top-bar/);
+    const topBarRules = css.slice(
+      css.indexOf('.app:has(#screen-hub:not(.hidden)) .top-bar'),
+      css.indexOf('}', css.indexOf('.app:has(#screen-hub:not(.hidden)) .top-bar')),
+    );
+    expect(topBarRules).toContain('.app:has(#screen-library:not(.hidden)) .top-bar');
+    expect(topBarRules).toContain('display: none;');
+  });
+
+  it('#libraryBackBtn exists in index.html and triggers back navigation in app.ts', () => {
+    expect(html).toContain('id="libraryBackBtn"');
+    expect(source).toContain("const libraryBackBtn = byId<HTMLButtonElement>('libraryBackBtn');");
+    expect(source).toMatch(/libraryBackBtn\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*backBtn\.click\(\);\s*\}\);/);
   });
 
   it('the shelf starts at the left gutter and snaps books to the start', () => {
