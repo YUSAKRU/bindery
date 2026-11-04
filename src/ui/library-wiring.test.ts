@@ -268,4 +268,10 @@ describe('library polish', () => {
     const book = css.slice(css.indexOf('.library-book {'), css.indexOf('}', css.indexOf('.library-book {')));
     expect(book).toContain('scroll-snap-align: start;');
   });
+
+  it('guards against ghost-clicks during screen transitions', () => {
+    expect(css).toMatch(
+      /\.app\.is-screen-transitioning\s+\.screen-container\s*\{[^}]*pointer-events:\s*none\s*!important;/,
+    );
+  });
 });

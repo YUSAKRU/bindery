@@ -224,6 +224,12 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Ghost-Click Shield: prevents mobile synthetic touch-clicks from penetrating
+   newly exposed screens immediately after navigation. */
+.app.is-screen-transitioning .screen-container {
+  pointer-events: none !important;
+}
+
 /* Only reserve bottom-nav space while the nav is actually shown (it is
    display:none on non-tab screens such as the reader and result screens). */
 .app:has(.bottom-nav:not(.hidden)) .screen-container {

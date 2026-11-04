@@ -436,6 +436,15 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
         const clickedIdx =
           rawIdx !== null && rawIdx !== undefined ? (Number(rawIdx) as AtelierModuleIndex) : null;
         if (clickedIdx === activeIndex) {
+          const absorbClick = (evt: MouseEvent): void => {
+            evt.stopPropagation();
+            evt.preventDefault();
+          };
+          window.addEventListener('click', absorbClick, { capture: true, once: true });
+          setTimeout(() => {
+            window.removeEventListener('click', absorbClick, { capture: true });
+          }, 350);
+
           deps.onSelectModule(activeIndex);
         } else if (
           clickedIdx !== null &&
