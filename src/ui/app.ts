@@ -414,13 +414,16 @@ export function initApp(): void {
     (row) => !row.closest('#readerToolsSheet') && !row.closest('#filesSortSheet'),
   );
 
+  const dropzoneCard = byId<HTMLDivElement>('dropzoneCard');
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
   const pickerSampleBtn = byId<HTMLButtonElement>('pickerSampleBtn');
   const fileCard = byId<HTMLDivElement>('fileCard');
   const fileNameLabel = byId<HTMLSpanElement>('fileNameLabel');
   const fileSizeLabel = byId<HTMLSpanElement>('fileSizeLabel');
   const clearFileBtn = byId<HTMLButtonElement>('clearFileBtn');
+  const continueWrap = byId<HTMLDivElement>('continueWrap');
   const continueBtn = byId<HTMLButtonElement>('continueBtn');
+  const btnSwitchFile = byId<HTMLButtonElement>('btnSwitchFile');
 
   const gutterSlider = byId<HTMLInputElement>('gutterSlider');
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
@@ -1317,7 +1320,9 @@ export function initApp(): void {
     pendingLibraryRecordId = null;
     pendingLibraryTitle = null;
     bookletResultReturnTo = 'hub';
+    dropzoneCard.classList.remove('hidden');
     fileCard.classList.add('hidden');
+    continueWrap.classList.add('hidden');
     continueBtn.classList.add('hidden');
     pickFileBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
@@ -2137,8 +2142,10 @@ export function initApp(): void {
     refreshConfigSummary();
     fileNameLabel.textContent = name;
     fileSizeLabel.textContent = formatBytes(bytes.length);
+    dropzoneCard.classList.add('hidden');
     fileCard.classList.remove('hidden');
     pickFileBtn.classList.add('hidden');
+    continueWrap.classList.remove('hidden');
     continueBtn.classList.remove('hidden');
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
@@ -2212,6 +2219,42 @@ export function initApp(): void {
   });
 
   clearFileBtn.addEventListener('click', () => resetPicker());
+
+  btnSwitchFile.addEventListener('click', () => {
+    pickFileBtn.click();
+  });
+
+  dropzoneCard.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('#pickerSampleBtn') || target?.closest('#pickFileBtn')) {
+      return;
+    }
+    pickFileBtn.click();
+  });
+
+  dropzoneCard.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzoneCard.classList.add('drag-over');
+  });
+
+  dropzoneCard.addEventListener('dragleave', () => {
+    dropzoneCard.classList.remove('drag-over');
+  });
+
+  dropzoneCard.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropzoneCard.classList.remove('drag-over');
+    const file = e.dataTransfer?.files?.[0];
+    if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        loadBookletFile(bytes, file.name);
+      } catch (error) {
+        const message = errorText(error);
+        goToError(t('error.fileSelectFailed'), message, 'picker');
+      }
+    }
+  });
 
   continueBtn.addEventListener('click', () => {
     updateCoverAvailability();
