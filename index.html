@@ -478,95 +478,111 @@
 
         </section>
 
-        <section class="screen hidden" id="screen-picker">
-          <!-- Craft Dropzone Card -->
-          <div class="atelier-craft-card" id="dropzoneCard">
-            <div class="craft-icon-squircle" aria-hidden="true">
-              <svg class="craft-illustration-svg" viewBox="0 0 48 48" fill="none">
-                <rect x="6" y="8" width="36" height="32" rx="4" fill="#FAF5EE" stroke="#D8CDB4" stroke-width="1.5" />
-                <line x1="24" y1="8" x2="24" y2="40" stroke="#9a401d" stroke-width="2" stroke-dasharray="2 1.5" />
-                <circle cx="24" cy="14" r="2" fill="#9a401d" />
-                <circle cx="24" cy="24" r="2" fill="#9a401d" />
-                <circle cx="24" cy="34" r="2" fill="#9a401d" />
-                <path d="M24 14 C 27 18, 27 20, 24 24 C 21 28, 21 30, 24 34" stroke="#c89d53" stroke-width="1.5" fill="none" />
-                <line x1="10" y1="16" x2="19" y2="16" stroke="#DCD5C9" stroke-width="1.5" stroke-linecap="round" />
-                <line x1="10" y1="22" x2="19" y2="22" stroke="#DCD5C9" stroke-width="1.5" stroke-linecap="round" />
-                <line x1="29" y1="16" x2="38" y2="16" stroke="#DCD5C9" stroke-width="1.5" stroke-linecap="round" />
-                <line x1="29" y1="22" x2="38" y2="22" stroke="#DCD5C9" stroke-width="1.5" stroke-linecap="round" />
-              </svg>
-            </div>
-
-            <h2 class="picker-title" data-i18n="picker.title">Create your booklet</h2>
-            <p class="picker-subtitle" data-i18n="picker.subtitle">Pick a PDF and Bindery will turn it into a printable booklet.</p>
-
-            <div class="actions-stack" id="initialActions">
-              <button class="btn-atelier-primary" id="pickFileBtn" data-i18n="common.pickPdf">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
+        <section class="screen hidden" id="screen-picker" data-state="empty">
+          <div class="picker-stage">
+            <!-- 1. Craft Dropzone Card -->
+            <div class="atelier-craft-card" id="dropzoneCard">
+              <div class="craft-icon-squircle" aria-hidden="true">
+                <svg class="craft-illustration-svg" viewBox="0 0 48 48" fill="none">
+                  <rect x="6" y="8" width="36" height="32" rx="4" fill="var(--atelier-card2-bg)" stroke="var(--atelier-paper-edge)" stroke-width="1.5" />
+                  <line x1="24" y1="8" x2="24" y2="40" stroke="var(--atelier-primary)" stroke-width="2" stroke-dasharray="2 1.5" />
+                  <circle cx="24" cy="14" r="2" fill="var(--atelier-primary)" />
+                  <circle cx="24" cy="24" r="2" fill="var(--atelier-primary)" />
+                  <circle cx="24" cy="34" r="2" fill="var(--atelier-primary)" />
+                  <path d="M24 14 C 27 18, 27 20, 24 24 C 21 28, 21 30, 24 34" stroke="var(--atelier-gold-foil)" stroke-width="1.5" fill="none" />
+                  <line x1="10" y1="16" x2="19" y2="16" stroke="var(--atelier-border-hairline)" stroke-width="1.5" stroke-linecap="round" />
+                  <line x1="10" y1="22" x2="19" y2="22" stroke="var(--atelier-border-hairline)" stroke-width="1.5" stroke-linecap="round" />
+                  <line x1="29" y1="16" x2="38" y2="16" stroke="var(--atelier-border-hairline)" stroke-width="1.5" stroke-linecap="round" />
+                  <line x1="29" y1="22" x2="38" y2="22" stroke="var(--atelier-border-hairline)" stroke-width="1.5" stroke-linecap="round" />
                 </svg>
-                <span>Select PDF</span>
-              </button>
+              </div>
 
-              <button class="btn-atelier-ghost" id="pickerSampleBtn" data-i18n="picker.trySample">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-                <span>Try with sample content</span>
-              </button>
+              <div class="picker-kicker" data-i18n="picker.kicker">FOLIO I · MANUSCRIPT</div>
+              <h2 class="picker-title" data-i18n="picker.title">Assemble your booklet</h2>
+              <p class="picker-subtitle" data-i18n="picker.subtitle">Pick a PDF and Bindery will turn it into a printable booklet.</p>
 
-              <div class="drag-instruction-text" id="dragHint" data-i18n="picker.dropHint">
-                or drag and drop your file here
+              <div class="actions-stack" id="initialActions">
+                <button class="btn-atelier-primary" id="pickFileBtn" type="button">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span data-i18n="common.pickPdf">Select PDF</span>
+                </button>
+
+                <button class="btn-atelier-ghost" id="pickerSampleBtn" type="button">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                  <span data-i18n="picker.trySample">Try with sample content</span>
+                </button>
+
+                <div class="drag-instruction-text" id="dragHint" data-i18n="picker.dropHint">
+                  or drag and drop your file here
+                </div>
               </div>
             </div>
+
+            <!-- 2. File Card: Manuscript Folio Card -->
+            <div class="file-card" id="fileCard">
+              <div class="file-card-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <span class="pdf-pill">PDF</span>
+              </div>
+
+              <div class="file-card-meta">
+                <span class="file-card-name" id="fileNameLabel"></span>
+                <span class="file-card-size" id="fileSizeLabel"></span>
+              </div>
+
+              <button class="btn-clear-file" id="clearFileBtn" aria-label="Remove" data-i18n-aria-label="common.remove" title="Remove" type="button">✕</button>
+            </div>
           </div>
 
-          <!-- File Card: Manuscript Folio Card -->
-          <div class="file-card hidden" id="fileCard">
-            <div class="file-card-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-              <span class="pdf-pill">PDF</span>
+          <!-- Inline Error Banner -->
+          <div class="warning-banner warning-banner-terracotta hidden" id="pickerInlineError" role="alert">
+            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+            <div class="picker-error-content">
+              <strong class="picker-error-title" data-i18n="picker.errorTitle">Could not read PDF</strong>
+              <span class="picker-error-desc" id="pickerInlineErrorText" data-i18n="picker.errorDesc">Please choose a valid PDF file.</span>
+            </div>
+          </div>
+
+          <!-- Warning Banners Wrap -->
+          <div class="picker-warnings-wrap" id="pickerWarningsWrap">
+            <div class="warning-banner warning-banner-amber hidden" id="mixedSizeWarning" role="status">
+              <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+              <span data-i18n="picker.mixedSizeWarning">This document has mixed page sizes; scaling may look inconsistent in the booklet.</span>
             </div>
 
-            <div class="file-card-meta">
-              <span class="file-card-name" id="fileNameLabel"></span>
-              <span class="file-card-size" id="fileSizeLabel"></span>
+            <div class="warning-banner warning-banner-sage hidden" id="trimBoxNotice" role="status">
+              <span class="warning-banner-icon" aria-hidden="true">ℹ️</span>
+              <span data-i18n="picker.trimBoxNotice">This PDF defines a trim box. Pages are imposed at their trimmed size, without bleed or printer's marks.</span>
             </div>
 
-            <button class="btn-clear-file" id="clearFileBtn" aria-label="Remove" data-i18n-aria-label="common.remove" title="Remove">✕</button>
-          </div>
-
-          <!-- Warning Banners -->
-          <div class="warning-banner warning-banner-amber hidden" id="mixedSizeWarning" role="status">
-            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
-            <span data-i18n="picker.mixedSizeWarning">This document has mixed page sizes; scaling may look inconsistent in the booklet.</span>
-          </div>
-
-          <div class="warning-banner warning-banner-sage hidden" id="trimBoxNotice" role="status">
-            <span class="warning-banner-icon" aria-hidden="true">ℹ️</span>
-            <span data-i18n="picker.trimBoxNotice">This PDF defines a trim box. Pages are imposed at their trimmed size, without bleed or printer's marks.</span>
-          </div>
-
-          <div class="warning-banner warning-banner-terracotta hidden" id="preflightLargeFileWarning" role="status">
-            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
-            <span id="preflightLargeFileWarningText" data-i18n="picker.largeFileWarning">Large document detected (&gt;150 pages or &gt;50 MB). Processing may take longer and use more memory.</span>
+            <div class="warning-banner warning-banner-terracotta hidden" id="preflightLargeFileWarning" role="status">
+              <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+              <span id="preflightLargeFileWarningText" data-i18n="picker.largeFileWarning">Large document detected (&gt;150 pages or &gt;50 MB). Processing may take longer and use more memory.</span>
+            </div>
           </div>
 
           <!-- Continue Action & Switch File Block -->
           <div class="continue-wrap hidden" id="continueWrap">
-            <button class="btn-continue" id="continueBtn" data-i18n="common.continue">
-              <span>Continue</span>
+            <button class="btn-continue" id="continueBtn" type="button">
+              <span data-i18n="common.continue">Continue</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
               </svg>
             </button>
-            <button class="btn-switch-file" id="btnSwitchFile" data-i18n="picker.changeFile">Choose a different file</button>
+            <button class="btn-switch-file" id="btnSwitchFile" type="button">
+              <span data-i18n="picker.changeFile">Choose a different file</span>
+            </button>
           </div>
 
           <!-- Workshop Privacy Guarantee -->

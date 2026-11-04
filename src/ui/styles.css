@@ -3861,10 +3861,13 @@ body:has(#screen-hub:not(.hidden)) {
 #hubAtelierView,
 #screen-library,
 #screen-book,
+#screen-picker,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
-.app:has(#screen-book:not(.hidden)) .screen-container {
+.app:has(#screen-book:not(.hidden)) .screen-container,
+.app:has(#screen-picker:not(.hidden)) .top-bar,
+.app:has(#screen-picker:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3892,10 +3895,13 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #hubAtelierView,
   :root:not(.light-theme) #screen-library,
   :root:not(.light-theme) #screen-book,
+  :root:not(.light-theme) #screen-picker,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-picker:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-picker:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3918,10 +3924,13 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #hubAtelierView,
 :root.dark-theme #screen-library,
 :root.dark-theme #screen-book,
+:root.dark-theme #screen-picker,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-book:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-book:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-picker:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-picker:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -5228,7 +5237,8 @@ body:has(#screen-hub:not(.hidden)) {
    slides once on open.
    ========================================================================== */
 
-.app:has(#screen-library:not(.hidden)) .screen-container {
+.app:has(#screen-library:not(.hidden)) .screen-container,
+.app:has(#screen-picker:not(.hidden)) .screen-container {
   padding-top: max(env(safe-area-inset-top), 16px);
   padding-left: 16px;
   padding-right: 16px;
@@ -7107,14 +7117,14 @@ button.book-page-label:active {
 }
 
 /* ==========================================================================
-   14. Atelier Screen Picker ("Kitapçığını Oluştur")
+   14. Atelier Screen Picker ("Kitapçığını Hazırla" / "Assemble Your Booklet")
    Tactile workshop craft card, centered dropzone, and imposition folio preview.
    Scoped to #screen-picker and its parent container.
    ========================================================================== */
 
 .app:has(#screen-picker:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
-  border-bottom-color: var(--atelier-border-hairline);
+  border-bottom: 1px solid var(--atelier-border-hairline);
   color: var(--atelier-ink-black);
 }
 
@@ -7129,20 +7139,64 @@ button.book-page-label:active {
   background: var(--atelier-surface-cream);
   color: var(--atelier-ink-black);
   border: 1px solid var(--atelier-paper-edge);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.04);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) {
+  .app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:hover {
+    background: #eae0d0;
+    border-color: #c9bea3;
+  }
+}
+
+.app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:active {
+  transform: scale(0.96);
 }
 
 #screen-picker {
   display: flex;
   flex-direction: column;
-  padding: 24px 20px 36px;
-  max-width: 520px;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 100%;
+  padding: 20px 16px 28px;
+  max-width: 480px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
+  z-index: 2;
 }
 
 #screen-picker.hidden {
   display: none !important;
+}
+
+/* Card Stage: Dropzone & File Card share 1 grid cell for pure CSS crossfade */
+#screen-picker .picker-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
+  width: 100%;
+  position: relative;
+  margin: 0 auto;
+}
+
+#screen-picker .atelier-craft-card,
+#screen-picker .file-card {
+  grid-area: 1 / 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* The Bookbinder's Craft Card Dropzone */
@@ -7150,23 +7204,30 @@ button.book-page-label:active {
   background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
   border: 1px solid var(--atelier-paper-edge);
   border-radius: var(--radius-xl);
-  padding: 34px 24px 30px;
+  padding: 34px 22px 28px;
   box-shadow:
     0 12px 34px rgba(154, 64, 29, 0.07),
     0 2px 6px rgba(40, 30, 20, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   position: relative;
   text-align: center;
-  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
   cursor: pointer;
+  transition:
+    opacity 0.22s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    visibility 0.22s;
 }
 
-#screen-picker .atelier-craft-card:hover {
-  border-color: #c4b59b;
-  box-shadow:
-    0 14px 38px rgba(154, 64, 29, 0.1),
-    0 2px 6px rgba(40, 30, 20, 0.05);
+@media (hover: hover) {
+  #screen-picker .atelier-craft-card:hover {
+    border-color: #c4b59b;
+    box-shadow:
+      0 14px 38px rgba(154, 64, 29, 0.11),
+      0 2px 6px rgba(40, 30, 20, 0.05);
+  }
 }
 
 #screen-picker .atelier-craft-card.drag-over {
@@ -7180,10 +7241,10 @@ button.book-page-label:active {
 
 /* Bespoke Squircle Illustration Container */
 #screen-picker .craft-icon-squircle {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-  border-radius: 22px;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
   background: var(--atelier-surface-cream);
   border: 1px solid var(--atelier-paper-edge);
   display: flex;
@@ -7192,19 +7253,31 @@ button.book-page-label:active {
   box-shadow:
     0 4px 14px rgba(28, 26, 24, 0.05),
     inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  transition: transform 0.25s ease;
+  transition: transform 0.22s ease;
 }
 
-#screen-picker .atelier-craft-card:hover .craft-icon-squircle {
-  transform: translateY(-2px);
+@media (hover: hover) {
+  #screen-picker .atelier-craft-card:hover .craft-icon-squircle {
+    transform: translateY(-2px);
+  }
 }
 
 #screen-picker .craft-illustration-svg {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
 }
 
-/* Typography */
+/* Typography Hierarchy */
+#screen-picker .picker-kicker {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--atelier-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
 #screen-picker .picker-title {
   font-family: 'EB Garamond', Georgia, serif;
   font-size: 2.15rem;
@@ -7216,10 +7289,10 @@ button.book-page-label:active {
 }
 
 #screen-picker .picker-subtitle {
-  margin: 0 auto 26px;
+  margin: 0 auto 24px;
   color: var(--atelier-ink-muted);
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 0.94rem;
+  line-height: 1.48;
   max-width: 320px;
 }
 
@@ -7242,6 +7315,7 @@ button.book-page-label:active {
   font-size: 1.02rem;
   font-weight: 600;
   padding: 15px 36px;
+  min-height: 48px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   width: 100%;
@@ -7253,18 +7327,23 @@ button.book-page-label:active {
   box-shadow:
     0 6px 18px var(--atelier-terracotta-glow),
     0 1px 3px rgba(154, 64, 29, 0.2);
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s ease;
   position: relative;
 }
 
-#screen-picker .btn-atelier-primary:hover {
-  background: var(--atelier-terracotta-deep);
-  transform: translateY(-1.5px);
-  box-shadow: 0 8px 22px rgba(154, 64, 29, 0.35);
+@media (hover: hover) {
+  #screen-picker .btn-atelier-primary:hover {
+    background: var(--atelier-terracotta-deep);
+    transform: translateY(-1.5px);
+    box-shadow: 0 8px 22px rgba(154, 64, 29, 0.35);
+  }
 }
 
 #screen-picker .btn-atelier-primary:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
   box-shadow: 0 2px 8px rgba(154, 64, 29, 0.2);
 }
 
@@ -7279,30 +7358,39 @@ button.book-page-label:active {
   cursor: pointer;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-#screen-picker .btn-atelier-ghost:hover {
-  background: rgba(154, 64, 29, 0.08);
-  color: var(--atelier-terracotta-deep);
-  text-decoration: underline;
+@media (hover: hover) {
+  #screen-picker .btn-atelier-ghost:hover {
+    background: rgba(154, 64, 29, 0.08);
+    color: var(--atelier-terracotta-deep);
+    text-decoration: underline;
+  }
+}
+
+#screen-picker .btn-atelier-ghost:active {
+  transform: scale(0.98);
 }
 
 #screen-picker .drag-instruction-text {
-  margin-top: 14px;
-  font-size: 0.8rem;
+  display: none;
+  margin-top: 12px;
+  font-size: 0.78rem;
   color: var(--atelier-ink-muted);
-  opacity: 0.8;
+  opacity: 0.82;
   font-family: 'Space Mono', monospace;
   letter-spacing: 0.01em;
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (pointer: fine) {
   #screen-picker .drag-instruction-text {
-    display: none !important;
+    display: block;
   }
 }
 
@@ -7310,39 +7398,26 @@ button.book-page-label:active {
 #screen-picker .file-card {
   background: var(--atelier-surface-cream);
   border: 1px solid var(--atelier-paper-edge);
-  border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  border-radius: var(--radius-xl);
+  padding: 20px 20px;
   display: flex;
   align-items: center;
   gap: 14px;
   box-shadow:
-    0 4px 14px rgba(28, 26, 24, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  margin: 16px 0;
+    0 8px 24px rgba(28, 26, 24, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
   position: relative;
   text-align: left;
-  animation: pickerFadeInUp 0.25s ease forwards;
-}
-
-@keyframes pickerFadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-#screen-picker .file-card.hidden {
-  display: none !important;
+  transition:
+    opacity 0.22s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    visibility 0.22s;
 }
 
 #screen-picker .file-card-icon {
   width: 44px;
   height: 48px;
-  border-radius: 10px;
+  border-radius: 11px;
   background: #faf4eb;
   border: 1px solid var(--atelier-paper-edge);
   display: flex;
@@ -7392,8 +7467,8 @@ button.book-page-label:active {
 }
 
 #screen-picker .btn-clear-file {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid var(--atelier-border-hairline);
   background: var(--atelier-bg);
@@ -7403,16 +7478,99 @@ button.book-page-label:active {
   justify-content: center;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
   flex-shrink: 0;
   padding: 0;
 }
 
-#screen-picker .btn-clear-file:hover {
-  background: #fff;
-  color: var(--atelier-primary);
-  border-color: var(--atelier-primary);
-  transform: scale(1.06);
+@media (hover: hover) {
+  #screen-picker .btn-clear-file:hover {
+    background: #fff;
+    color: var(--atelier-primary);
+    border-color: var(--atelier-primary);
+    transform: scale(1.06);
+  }
+}
+
+#screen-picker .btn-clear-file:active {
+  transform: scale(0.95);
+}
+
+/* ── Explicit Data-State Machine Orchestration ───────────────────────────── */
+#screen-picker[data-state="empty"] .atelier-craft-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#screen-picker[data-state="empty"] .file-card {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+#screen-picker[data-state="empty"] .continue-wrap {
+  display: none !important;
+}
+
+#screen-picker[data-state="reading"] .atelier-craft-card {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+#screen-picker[data-state="reading"] .file-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#screen-picker[data-state="reading"] .continue-wrap {
+  display: flex;
+  opacity: 0.65;
+  pointer-events: none;
+}
+#screen-picker[data-state="reading"] .btn-continue {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+#screen-picker[data-state="ready"] .atelier-craft-card {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+#screen-picker[data-state="ready"] .file-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#screen-picker[data-state="ready"] .continue-wrap {
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#screen-picker[data-state="error"] .atelier-craft-card {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#screen-picker[data-state="error"] .file-card {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#screen-picker[data-state="error"] .continue-wrap {
+  display: none !important;
 }
 
 /* Continue Action & Switch File Block */
@@ -7420,11 +7578,8 @@ button.book-page-label:active {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
-}
-
-#screen-picker .continue-wrap.hidden {
-  display: none !important;
+  margin-top: 14px;
+  width: 100%;
 }
 
 #screen-picker .btn-continue {
@@ -7435,27 +7590,33 @@ button.book-page-label:active {
   font-size: 1.05rem;
   font-weight: 600;
   padding: 16px 24px;
+  min-height: 48px;
   border-radius: var(--radius-pill);
   border: none;
   cursor: pointer;
   box-shadow:
     0 6px 20px var(--atelier-terracotta-glow),
     0 2px 4px rgba(154, 64, 29, 0.18);
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
-#screen-picker .btn-continue:hover {
-  background: var(--atelier-terracotta-deep);
-  transform: translateY(-1.5px);
-  box-shadow: 0 8px 24px rgba(154, 64, 29, 0.32);
+@media (hover: hover) {
+  #screen-picker .btn-continue:hover {
+    background: var(--atelier-terracotta-deep);
+    transform: translateY(-1.5px);
+    box-shadow: 0 8px 24px rgba(154, 64, 29, 0.32);
+  }
 }
 
 #screen-picker .btn-continue:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 #screen-picker .btn-switch-file {
@@ -7472,12 +7633,22 @@ button.book-page-label:active {
   text-align: center;
 }
 
-#screen-picker .btn-switch-file:hover {
-  color: var(--atelier-primary);
-  text-decoration: underline;
+@media (hover: hover) {
+  #screen-picker .btn-switch-file:hover {
+    color: var(--atelier-primary);
+    text-decoration: underline;
+  }
 }
 
-/* Warning Banners */
+/* Warnings Wrap & Banners */
+#screen-picker .picker-warnings-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 #screen-picker .warning-banner {
   display: flex;
   align-items: flex-start;
@@ -7488,7 +7659,6 @@ button.book-page-label:active {
   line-height: 1.45;
   text-align: left;
   box-shadow: 0 1px 3px rgba(28, 26, 24, 0.03);
-  margin: 10px 0;
 }
 
 #screen-picker .warning-banner.hidden {
@@ -7519,19 +7689,34 @@ button.book-page-label:active {
   margin-top: -1px;
 }
 
+#screen-picker .picker-error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#screen-picker .picker-error-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+#screen-picker .picker-error-desc {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
 /* Workshop Privacy Guarantee Footer */
 #screen-picker .workshop-privacy-footer {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 18px 20px;
+  padding: 20px 20px 8px;
   font-size: 0.78rem;
   color: var(--atelier-ink-muted);
-  border-top: 1px solid var(--atelier-border-hairline);
   font-family: 'Space Mono', monospace;
   letter-spacing: 0.01em;
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 #screen-picker .workshop-privacy-footer svg {
@@ -7539,4 +7724,12 @@ button.book-page-label:active {
   height: 14px;
   color: var(--atelier-tertiary);
   flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen-picker,
+  #screen-picker * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }
