@@ -417,13 +417,35 @@ export function initApp(): void {
   const dropzoneCard = byId<HTMLDivElement>('dropzoneCard');
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
   const pickerSampleBtn = byId<HTMLButtonElement>('pickerSampleBtn');
-  const fileCard = byId<HTMLDivElement>('fileCard');
   const fileNameLabel = byId<HTMLSpanElement>('fileNameLabel');
   const fileSizeLabel = byId<HTMLSpanElement>('fileSizeLabel');
   const clearFileBtn = byId<HTMLButtonElement>('clearFileBtn');
-  const continueWrap = byId<HTMLDivElement>('continueWrap');
   const continueBtn = byId<HTMLButtonElement>('continueBtn');
   const btnSwitchFile = byId<HTMLButtonElement>('btnSwitchFile');
+  const screenPicker = byId<HTMLElement>('screen-picker');
+  const pickerInlineError = byId<HTMLDivElement>('pickerInlineError');
+  const pickerInlineErrorText = byId<HTMLSpanElement>('pickerInlineErrorText');
+
+  type PickerState = 'empty' | 'reading' | 'ready' | 'error';
+  function setPickerState(state: PickerState, errorText?: string): void {
+    screenPicker.dataset.state = state;
+    if (state === 'empty') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = false;
+    } else if (state === 'reading') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = true;
+    } else if (state === 'ready') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = false;
+    } else if (state === 'error') {
+      if (errorText) {
+        pickerInlineErrorText.textContent = errorText;
+      }
+      pickerInlineError.classList.remove('hidden');
+      continueBtn.disabled = false;
+    }
+  }
 
   const gutterSlider = byId<HTMLInputElement>('gutterSlider');
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
@@ -1320,11 +1342,7 @@ export function initApp(): void {
     pendingLibraryRecordId = null;
     pendingLibraryTitle = null;
     bookletResultReturnTo = 'hub';
-    dropzoneCard.classList.remove('hidden');
-    fileCard.classList.add('hidden');
-    continueWrap.classList.add('hidden');
-    continueBtn.classList.add('hidden');
-    pickFileBtn.classList.remove('hidden');
+    setPickerState('empty');
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
@@ -2127,7 +2145,12 @@ export function initApp(): void {
 
   // Resolves once the document has been inspected (page count, source sheet
   // size); callers that only show the picker need not wait for it.
-  function loadBookletFile(bytes: Uint8Array, name: string, source?: SourceRef): Promise<void> {
+  let isPickingBookletFile = false;
+
+  async function loadBookletFile(bytes: Uint8Array, name: string, source?: SourceRef): Promise<void> {
+    if (isPickingBookletFile) return;
+    isPickingBookletFile = true;
+
     selectedFile = { name, bytes };
     bookletSourceRef = source ?? { kind: 'none' };
     // A newly loaded document is a new booklet; "Print sheets" sets these
@@ -2141,52 +2164,60 @@ export function initApp(): void {
     bookletSourceSheetSize = null;
     refreshConfigSummary();
     fileNameLabel.textContent = name;
-    fileSizeLabel.textContent = formatBytes(bytes.length);
-    dropzoneCard.classList.add('hidden');
-    fileCard.classList.remove('hidden');
-    pickFileBtn.classList.add('hidden');
-    continueWrap.classList.remove('hidden');
-    continueBtn.classList.remove('hidden');
+    fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${t('picker.reading')}`;
+
+    setPickerState('reading');
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
     configPreflightWarning.classList.add('hidden');
-    return showMixedSizeWarningIfNeeded(bytes);
+
+    try {
+      await showMixedSizeWarningIfNeeded(bytes);
+      if (selectedFile?.bytes === bytes) {
+        setPickerState('ready');
+      }
+    } catch (err) {
+      if (selectedFile?.bytes === bytes) {
+        const msg = err instanceof Error ? err.message : t('picker.errorDesc');
+        setPickerState('error', msg);
+      }
+    } finally {
+      isPickingBookletFile = false;
+    }
   }
 
   // Non-blocking heads-up: if the document mixes page sizes (beyond a small
   // tolerance), the booklet's per-slot scaling will differ page to page. Also
   // captures the page count for the live summary and cover availability.
   async function showMixedSizeWarningIfNeeded(bytes: Uint8Array): Promise<void> {
-    try {
-      // One parse, on the PDF worker: page count, displayed page sizes and the
-      // 'source' sheet size (resolved once here rather than on every keystroke
-      // in the cover section's live spine readout).
-      const { pageCount, pageSizes, sourceSheetSize, trimmedPages } = await inspectPdf(bytes);
-      const TOL = 0.5;
-      const distinct = pageSizes.filter(
-        ([w, h], i) =>
-          pageSizes.findIndex(
-            ([w0, h0]) => Math.abs(w0 - w) <= TOL && Math.abs(h0 - h) <= TOL,
-          ) === i,
-      );
-      // Guard against a race where the user cleared/replaced the file meanwhile.
-      if (selectedFile?.bytes === bytes) {
-        mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
-        trimBoxNotice.classList.toggle('hidden', trimmedPages === 0);
-        bookletOriginalPages = pageCount;
-        const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
-        preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
-        configPreflightWarning.classList.toggle('hidden', !isLarge);
-        // Null when the document's own page size is outside the engine's
-        // printable bounds; the cover section then falls back to A4 rather
-        // than blocking the booklet itself, which does not need this value.
-        bookletSourceSheetSize = sourceSheetSize;
-        updateCoverAvailability();
-        refreshConfigSummary();
-      }
-    } catch {
-      // Validation errors surface later on generate; don't block the warning path.
+    // One parse, on the PDF worker: page count, displayed page sizes and the
+    // 'source' sheet size (resolved once here rather than on every keystroke
+    // in the cover section's live spine readout).
+    const { pageCount, pageSizes, sourceSheetSize, trimmedPages } = await inspectPdf(bytes);
+    const TOL = 0.5;
+    const distinct = pageSizes.filter(
+      ([w, h], i) =>
+        pageSizes.findIndex(
+          ([w0, h0]) => Math.abs(w0 - w) <= TOL && Math.abs(h0 - h) <= TOL,
+        ) === i,
+    );
+    // Guard against a race where the user cleared/replaced the file meanwhile.
+    if (selectedFile?.bytes === bytes) {
+      mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
+      trimBoxNotice.classList.toggle('hidden', trimmedPages === 0);
+      bookletOriginalPages = pageCount;
+      const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
+      preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
+      configPreflightWarning.classList.toggle('hidden', !isLarge);
+      // Null when the document's own page size is outside the engine's
+      // printable bounds; the cover section then falls back to A4 rather
+      // than blocking the booklet itself, which does not need this value.
+      bookletSourceSheetSize = sourceSheetSize;
+      const pagesLabel = pageCount === 1 ? t('common.pageWord') : `${t('common.pageWord')}s`;
+      fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${pageCount} ${pagesLabel}`;
+      updateCoverAvailability();
+      refreshConfigSummary();
     }
   }
 
