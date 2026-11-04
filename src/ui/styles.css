@@ -156,6 +156,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: max(env(safe-area-inset-top), 20px) 20px 16px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   /* Opaque, not the rgba(…, 0.8) + blur(20px) glass this was until 0.4.7:
      Android WebView reports backdrop-filter as supported but does not composite
      it for a bar layered over a scrolling container, so the blur never landed
@@ -6378,6 +6379,23 @@ body:has(#screen-hub:not(.hidden)) {
   padding-right: 12px;
   overflow: hidden;
   background: var(--atelier-bg);
+  transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Auto-hide chrome in book screen */
+.app.book-chrome-hidden .top-bar {
+  transform: translateY(-110%);
+  pointer-events: none;
+}
+
+.app.book-chrome-hidden .book-bar {
+  transform: translateY(150%);
+  pointer-events: none;
+}
+
+.app.book-chrome-hidden:has(#screen-book:not(.hidden)) .screen-container {
+  padding-top: max(env(safe-area-inset-top), 8px);
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
 }
 
 .book-screen {
@@ -6386,6 +6404,57 @@ body:has(#screen-hub:not(.hidden)) {
   gap: 10px;
   min-height: 0;
   min-width: 0;
+}
+
+:root.dark-theme .book-screen {
+  --book-paper: #1c1a18;
+  color: var(--atelier-paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) .book-screen {
+    --book-paper: #1c1a18;
+    color: var(--atelier-paper);
+  }
+}
+
+/* Single-page (1-Up) mode */
+.book-screen.is-single-page .book-spread {
+  width: var(--book-page-w, 0px);
+}
+
+.book-screen.is-single-page .book-spread::after {
+  display: none;
+}
+
+.book-screen.is-single-page .book-slot.is-left {
+  display: none;
+}
+
+.book-screen.is-single-page .book-slot.is-right {
+  flex: 0 0 var(--book-page-w, 0px);
+}
+
+.book-screen.is-single-page .book-paper::after {
+  display: none;
+}
+
+.book-screen.is-single-page .book-tag.is-left {
+  display: none;
+}
+
+.book-screen.is-single-page .book-tag.is-right {
+  left: 6px;
+  right: 6px;
+  width: auto;
+}
+
+.book-screen.is-single-page .icon-single-page {
+  display: none;
+}
+
+.book-screen.is-single-page .icon-two-page {
+  display: block;
 }
 
 .book-stage {
@@ -6741,6 +6810,7 @@ body:has(#screen-hub:not(.hidden)) {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .book-scrubber {
@@ -6831,6 +6901,39 @@ body:has(#screen-hub:not(.hidden)) {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--atelier-ink-muted);
+}
+
+button.book-page-label {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+button.book-page-label:hover,
+button.book-page-label:focus-visible {
+  background: var(--atelier-hover);
+  border-color: var(--atelier-paper-edge);
+}
+
+button.book-page-label:active {
+  background: var(--atelier-active);
+}
+
+.book-mode-toggle {
+  flex: 0 0 44px;
+  width: 44px;
+  padding: 0;
+}
+
+.book-mode-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* The narrowest phones keep the toggle's icon; its name stays for screen readers. */

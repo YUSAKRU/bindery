@@ -51,6 +51,8 @@ export interface BookReaderDeps {
   onPositionChange?: (seqIndex: number) => void;
   /** Double-tap on a page: open that source page (0-based) somewhere roomier. */
   onOpenPage?: (src: number) => void;
+  /** Single-tap on the center stage toggles immersive chrome (top/bottom bars). */
+  onToggleChrome?: () => void;
 }
 
 export interface BookReaderController {
@@ -64,6 +66,9 @@ export interface BookReaderController {
   goToPage(seqIndex: number): void;
   currentSpread(): number;
   currentPage(): number | null;
+  totalPages(): number;
+  isSinglePage(): boolean;
+  setSinglePage(single: boolean): void;
   isFormaOpen(): boolean;
   setFormaOpen(open: boolean): void;
   relayout(): void;
@@ -74,7 +79,7 @@ export interface BookReaderController {
 /** One leaf, transform only. Matches the CSS animation length. */
 export const BOOK_TURN_MS = 320;
 export const BOOK_FADE_MS = 120;
-const SWIPE_PX = 40;
+const SWIPE_PX = 45;
 const EDGE_ZONE = 0.22;
 const DOUBLE_TAP_MS = 320;
 
@@ -117,6 +122,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   const prevBtn = q<HTMLButtonElement>('bookPrevBtn');
   const nextBtn = q<HTMLButtonElement>('bookNextBtn');
   const formaToggle = q<HTMLButtonElement>('bookFormaToggle');
+  const modeToggle = root.querySelector<HTMLButtonElement>('#bookModeToggle');
   const pageLabel = q('bookPageLabel');
   const scrubber = q<HTMLInputElement>('bookScrubber');
   const formaPanel = q('bookFormaPanel');
@@ -129,6 +135,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   let spreads: Spread[] = [];
   let current = 0;
   let formaOpen = false;
+  let isSinglePage = false;
   let pageWidth = 0;
   // Bumped on open, close and relayout: a render that finishes after its
   // document or size is gone is dropped.
@@ -136,6 +143,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   const pages = new Map<number, PageEntry>();
   let turn: Turn | null = null;
   let fadeTimer: unknown = null;
+  let tapTimer: unknown = null;
   let pointer: { x: number; y: number } | null = null;
   let lastTap: { seq: number; at: number } | null = null;
 
@@ -280,14 +288,14 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     const step = target - current;
     current = target;
     const to = spreads[current];
-    if (animate && step !== 0 && Math.abs(step) === 1 && !reducedMotion() && pageWidth > 0) {
+    if (animate && step !== 0 && Math.abs(step) === 1 && !reducedMotion() && pageWidth > 0 && !isSinglePage) {
       const forward = step > 0;
       const leftward = doc.binding === 'rtl' ? !forward : forward;
       startTurn(from, to, leftward ? 'leftward' : 'rightward');
     } else {
       place(to);
       if (animate && step !== 0) {
-        // Reduced motion: a short crossfade instead of a moving leaf.
+        // Reduced motion or single page: a short crossfade instead of a moving leaf.
         stage.classList.add('is-crossfade');
         fadeTimer = later(finishFade, BOOK_FADE_MS);
       }
@@ -466,7 +474,8 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     if (!doc) return false;
     const { width, height } = measure();
     const aspect = doc.pageAspect > 0 ? doc.pageAspect : Math.SQRT2;
-    const w = Math.max(0, Math.floor(Math.min(width / 2, height / aspect)));
+    const maxW = isSinglePage ? width : width / 2;
+    const w = Math.max(0, Math.floor(Math.min(maxW, height / aspect)));
     const h = Math.floor(w * aspect);
     const changed = w !== pageWidth;
     pageWidth = w;
@@ -480,6 +489,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   const onPrev = (): void => show(current - 1, true);
   const onNext = (): void => show(current + 1, true);
   const onToggle = (): void => setFormaOpen(!formaOpen);
+  const onModeToggle = (): void => setSinglePage(!isSinglePage);
   const onScrub = (): void => show(Number(scrubber.value), false);
   // Arrow keys anywhere on the screen turn pages — except on the scrubber,
   // which moves by itself.
@@ -510,6 +520,10 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
       if (dx < 0) turnLeftward();
       else turnRightward();
       lastTap = null;
+      if (tapTimer !== null) {
+        cancelLater(tapTimer);
+        tapTimer = null;
+      }
       return;
     }
     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) return;
@@ -519,24 +533,41 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     if (fx < EDGE_ZONE) {
       turnRightward();
       lastTap = null;
+      if (tapTimer !== null) {
+        cancelLater(tapTimer);
+        tapTimer = null;
+      }
       return;
     }
     if (fx > 1 - EDGE_ZONE) {
       turnLeftward();
       lastTap = null;
+      if (tapTimer !== null) {
+        cancelLater(tapTimer);
+        tapTimer = null;
+      }
       return;
     }
     const spread = spreads[current];
-    const seq = fx < 0.5 ? spread?.left : spread?.right;
+    const seq = isSinglePage ? (spread?.right ?? spread?.left) : (fx < 0.5 ? spread?.left : spread?.right);
     if (seq === null || seq === undefined) return;
     const at = now();
     if (lastTap && lastTap.seq === seq && at - lastTap.at <= DOUBLE_TAP_MS) {
+      if (tapTimer !== null) {
+        cancelLater(tapTimer);
+        tapTimer = null;
+      }
       lastTap = null;
       const src = doc.sequence[seq].src;
       if (src !== null) deps.onOpenPage?.(src);
       return;
     }
     lastTap = { seq, at };
+    if (tapTimer !== null) cancelLater(tapTimer);
+    tapTimer = later(() => {
+      tapTimer = null;
+      deps.onToggleChrome?.();
+    }, DOUBLE_TAP_MS);
   };
   const onPointerCancel = (): void => {
     pointer = null;
@@ -545,6 +576,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   prevBtn.addEventListener('click', onPrev);
   nextBtn.addEventListener('click', onNext);
   formaToggle.addEventListener('click', onToggle);
+  modeToggle?.addEventListener('click', onModeToggle);
   scrubber.addEventListener('input', onScrub);
   screenEl.addEventListener('keydown', onKey);
   stage.addEventListener('pointerdown', onPointerDown);
@@ -557,13 +589,25 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     if (doc) evictAll();
     finishTurn();
     finishFade();
+    if (tapTimer !== null) {
+      cancelLater(tapTimer);
+      tapTimer = null;
+    }
     generation++;
     doc = next;
-    spreads = buildSpreads(next.sequence.length, next.binding);
-    current = spreadIndexOfPage(spreads, next.startPage);
+    spreads = isSinglePage
+      ? Array.from({ length: next.sequence.length }, (_, i) => ({ left: null, right: i }))
+      : buildSpreads(next.sequence.length, next.binding);
+    current = isSinglePage
+      ? Math.min(next.startPage, Math.max(0, spreads.length - 1))
+      : spreadIndexOfPage(spreads, next.startPage);
     formaOpen = false;
     lastTap = null;
     screenEl.classList.toggle('is-rtl', next.binding === 'rtl');
+    screenEl.classList.toggle('is-single-page', isSinglePage);
+    if (modeToggle) {
+      modeToggle.setAttribute('aria-pressed', String(isSinglePage));
+    }
     scrubber.setAttribute('dir', next.binding === 'rtl' ? 'rtl' : 'ltr');
     layout();
     place(spreads[current]);
@@ -577,6 +621,10 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     const position = currentPage();
     finishTurn();
     finishFade();
+    if (tapTimer !== null) {
+      cancelLater(tapTimer);
+      tapTimer = null;
+    }
     generation++;
     doc = null;
     // Renders first: the render map is shared app-wide, and a task left
@@ -601,6 +649,27 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     const spread = spreads[current];
     if (!spread) return null;
     return pagesOf(spread)[0] ?? null;
+  }
+
+  function setSinglePage(value: boolean): void {
+    if (value === isSinglePage) return;
+    const currentP = currentPage() ?? 0;
+    isSinglePage = value;
+    screenEl.classList.toggle('is-single-page', isSinglePage);
+    if (modeToggle) {
+      modeToggle.setAttribute('aria-pressed', String(isSinglePage));
+    }
+    if (!doc) return;
+    spreads = isSinglePage
+      ? Array.from({ length: doc.sequence.length }, (_, i) => ({ left: null, right: i }))
+      : buildSpreads(doc.sequence.length, doc.binding);
+    current = isSinglePage ? currentP : spreadIndexOfPage(spreads, currentP);
+    layout();
+    generation++;
+    evictAll();
+    place(spreads[current]);
+    keepWindow();
+    renderChrome();
   }
 
   function setFormaOpen(value: boolean): void {
@@ -628,11 +697,16 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     prevBtn.removeEventListener('click', onPrev);
     nextBtn.removeEventListener('click', onNext);
     formaToggle.removeEventListener('click', onToggle);
+    modeToggle?.removeEventListener('click', onModeToggle);
     scrubber.removeEventListener('input', onScrub);
     screenEl.removeEventListener('keydown', onKey);
     stage.removeEventListener('pointerdown', onPointerDown);
     stage.removeEventListener('pointerup', onPointerUp);
     stage.removeEventListener('pointercancel', onPointerCancel);
+    if (tapTimer !== null) {
+      cancelLater(tapTimer);
+      tapTimer = null;
+    }
   }
 
   return {
@@ -645,6 +719,9 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     goToPage,
     currentSpread: () => current,
     currentPage,
+    totalPages: () => (doc ? doc.sequence.length : 0),
+    isSinglePage: () => isSinglePage,
+    setSinglePage,
     isFormaOpen: () => formaOpen,
     setFormaOpen,
     relayout,
