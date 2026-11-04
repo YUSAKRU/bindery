@@ -484,22 +484,46 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     return changed;
   }
 
+  function cancelTap(): void {
+    if (tapTimer !== null) {
+      cancelLater(tapTimer);
+      tapTimer = null;
+    }
+  }
+
   // ── Input ─────────────────────────────────────────────────────────────────
 
-  const onPrev = (): void => show(current - 1, true);
-  const onNext = (): void => show(current + 1, true);
-  const onToggle = (): void => setFormaOpen(!formaOpen);
-  const onModeToggle = (): void => setSinglePage(!isSinglePage);
-  const onScrub = (): void => show(Number(scrubber.value), false);
+  const onPrev = (): void => {
+    cancelTap();
+    show(current - 1, true);
+  };
+  const onNext = (): void => {
+    cancelTap();
+    show(current + 1, true);
+  };
+  const onToggle = (): void => {
+    cancelTap();
+    setFormaOpen(!formaOpen);
+  };
+  const onModeToggle = (): void => {
+    cancelTap();
+    setSinglePage(!isSinglePage);
+  };
+  const onScrub = (): void => {
+    cancelTap();
+    show(Number(scrubber.value), false);
+  };
   // Arrow keys anywhere on the screen turn pages — except on the scrubber,
   // which moves by itself.
   const onKey = (event: Event): void => {
     if (event.target === scrubber) return;
     const key = (event as KeyboardEvent).key;
     if (key === 'ArrowLeft') {
+      cancelTap();
       event.preventDefault?.();
       turnRightward();
     } else if (key === 'ArrowRight') {
+      cancelTap();
       event.preventDefault?.();
       turnLeftward();
     }
@@ -654,6 +678,9 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
   function setSinglePage(value: boolean): void {
     if (value === isSinglePage) return;
     const currentP = currentPage() ?? 0;
+    finishTurn();
+    finishFade();
+    cancelTap();
     isSinglePage = value;
     screenEl.classList.toggle('is-single-page', isSinglePage);
     if (modeToggle) {
@@ -670,6 +697,7 @@ export function createBookReader(deps: BookReaderDeps): BookReaderController {
     place(spreads[current]);
     keepWindow();
     renderChrome();
+    deps.onPositionChange?.(currentPage() ?? 0);
   }
 
   function setFormaOpen(value: boolean): void {

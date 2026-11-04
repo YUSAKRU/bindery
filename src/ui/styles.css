@@ -6449,13 +6449,13 @@ body:has(#screen-hub:not(.hidden)) {
 
 :root.dark-theme .book-screen {
   --book-paper: #1c1a18;
-  color: var(--atelier-paper);
+  color: var(--atelier-surface-cream, #fffdf8);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light-theme) .book-screen {
     --book-paper: #1c1a18;
-    color: var(--atelier-paper);
+    color: var(--atelier-surface-cream, #fffdf8);
   }
 }
 
@@ -6491,11 +6491,11 @@ body:has(#screen-hub:not(.hidden)) {
 }
 
 .book-screen.is-single-page .icon-single-page {
-  display: none;
+  display: none !important;
 }
 
 .book-screen.is-single-page .icon-two-page {
-  display: block;
+  display: block !important;
 }
 
 .book-stage {
@@ -6780,7 +6780,7 @@ body:has(#screen-hub:not(.hidden)) {
   border: 1px solid var(--atelier-paper-edge);
   border-radius: 3px;
   background: var(--book-paper);
-  color: #1c1a18;
+  color: var(--atelier-ink-black);
 }
 
 .book-sheet-cell {

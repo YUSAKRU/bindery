@@ -459,4 +459,29 @@ describe('book reader controller', () => {
     runTimers();
     expect(onToggleChrome).toHaveBeenCalledTimes(1);
   });
+
+  it('button clicks and mode toggle cancel pending tap timer and fire onPositionChange', () => {
+    const onToggleChrome = vi.fn();
+    const onPositionChange = vi.fn();
+    const { reader, els, runTimers } = setup({ onToggleChrome, onPositionChange });
+    reader.open(makeDoc(plainSequence(8)).doc);
+
+    // Tap stage to initiate pending tap timer
+    els.bookStage.dispatch('pointerdown', { clientX: 200, clientY: 100 });
+    els.bookStage.dispatch('pointerup', { clientX: 200, clientY: 100 });
+
+    // Click next button before timer fires
+    els.bookNextBtn.click();
+    runTimers();
+    // Chrome toggle was cancelled by button interaction!
+    expect(onToggleChrome).not.toHaveBeenCalled();
+
+    // Tap stage again, then toggle layout mode
+    els.bookStage.dispatch('pointerdown', { clientX: 200, clientY: 100 });
+    els.bookStage.dispatch('pointerup', { clientX: 200, clientY: 100 });
+    els.bookModeToggle.click();
+    runTimers();
+    expect(onToggleChrome).not.toHaveBeenCalled();
+    expect(onPositionChange).toHaveBeenCalled();
+  });
 });
