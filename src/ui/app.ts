@@ -7114,6 +7114,11 @@ export function initApp(): void {
     showScreen(current === 'result' ? bookletResultReturnTo : (PARENT_SCREEN[current] ?? 'hub'));
   });
 
+  const libraryBackBtn = byId<HTMLButtonElement>('libraryBackBtn');
+  libraryBackBtn.addEventListener('click', () => {
+    backBtn.click();
+  });
+
   savePdfBtn.addEventListener('click', () => {
     if (!readerBytes) return;
     saveDocNameInput.value = readerName;
