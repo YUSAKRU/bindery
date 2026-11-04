@@ -6879,6 +6879,82 @@ body:has(#screen-hub:not(.hidden)) {
   }
 }
 
+/* Phone landscape, compact shell. The 600px query above only reshapes the
+   grid; what actually limits the book is height, because book-reader.ts fits
+   the two pages to the stage height (w = min(stageW / 2, stageH / aspect)).
+   The shell used to cost 182px of a 390px viewport — 84px container top
+   padding, 24px bottom padding, 8px gap, 66px bar — so the spread was squeezed
+   to ~35% of the width while the screen was twice as wide as in portrait.
+   Under 500px of viewport height the chrome is cut to the bars themselves. */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 40px tall instead of 76px: 6px + 28px button + 6px. */
+  .app:has(#screen-book:not(.hidden)) .top-bar {
+    padding: max(env(safe-area-inset-top), 6px) max(env(safe-area-inset-right), 16px) 6px
+      max(env(safe-area-inset-left), 16px);
+  }
+
+  .app:has(#screen-book:not(.hidden)) .top-bar .icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .app:has(#screen-book:not(.hidden)) .top-bar-title {
+    font-size: 0.95rem;
+  }
+
+  /* Reserves the 40px bar plus 6px of air, and keeps the book clear of the
+     notch and the home indicator on a phone held sideways. */
+  .app:has(#screen-book:not(.hidden)) .screen-container {
+    padding-top: calc(max(env(safe-area-inset-top), 6px) + 40px);
+    padding-bottom: max(env(safe-area-inset-bottom), 6px);
+    padding-left: max(env(safe-area-inset-left), 12px);
+    padding-right: max(env(safe-area-inset-right), 12px);
+  }
+
+  .book-screen {
+    gap: 4px;
+  }
+
+  .book-screen .book-btn {
+    min-height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .book-screen .book-btn-dir {
+    flex-basis: 38px;
+    width: 38px;
+  }
+
+  .book-screen .book-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .book-screen .book-scrubber {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 420px;
+    min-width: 72px;
+    height: 16px;
+  }
+
+  /* One row instead of two: stacked, the scrubber plus the button row cost
+     52px of a 390px viewport, which is the same order as the whole top bar.
+     Sideways there is width to spare, so they share the row. */
+  .book-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .book-screen .book-bar-row {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .book-leaf.turn-leftward,
   .book-leaf.turn-rightward {

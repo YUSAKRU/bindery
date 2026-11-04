@@ -1225,6 +1225,7 @@ export function initApp(): void {
       // keeps the session so back can return to the same spread.
       void closeBookReader(id === 'reader');
       void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
+      stopBookResizeWatch();
     } else if (id !== 'book' && id !== 'reader') {
       bookSession = null;
     }
@@ -1272,6 +1273,7 @@ export function initApp(): void {
     } else if (id === 'book') {
       void ScreenOrientation.unlock().catch(() => {});
       void startBookSession();
+      startBookResizeWatch();
     } else if (id === 'hub') {
       void refreshHubSavedCount();
     } else if (id === 'library') {
@@ -6985,6 +6987,13 @@ export function initApp(): void {
 
   // Auto-open fullscreen reader when device rotates to landscape while in reader screen
   screen.orientation.addEventListener('change', () => {
+    // The book has no immersive mode to fall back on: it just refits its pages
+    // to the new stage height. The ResizeObserver usually gets there first;
+    // this covers engines where the orientation event lands before layout.
+    if (getCurrentScreenId() === 'book') {
+      scheduleBookRelayout();
+      return;
+    }
     if (getCurrentScreenId() !== 'reader') return;
     if (window.innerWidth > window.innerHeight) {
       if (!isFullscreenReaderActive) {
@@ -8566,6 +8575,44 @@ export function initApp(): void {
   });
 
   let bookResizeTimer: ReturnType<typeof setTimeout> | null = null;
+  // The book's layout is measured off #bookStage itself, and that box changes
+  // with no window resize at all: the address bar sliding away, a rotation
+  // settling, the keyboard. A ResizeObserver on the stage follows the thing
+  // layout() actually measures; the window resize listener stays as the
+  // fallback for engines without ResizeObserver (pre-64 WebView).
+  let bookStageObserver: ResizeObserver | null = null;
+  let bookStageRaf = 0;
+
+  function scheduleBookRelayout(): void {
+    if (getCurrentScreenId() !== 'book' || !bookReader?.isOpen()) return;
+    if (bookStageRaf) return;
+    bookStageRaf = requestAnimationFrame(() => {
+      bookStageRaf = 0;
+      const stage = document.getElementById('bookStage');
+      // A hidden or mid-transition stage measures 0, and relayout() would then
+      // write --book-page-w: 0px and evict every rendered page.
+      if (!stage || stage.clientWidth <= 0 || stage.clientHeight <= 0) return;
+      bookReader?.relayout();
+    });
+  }
+
+  function startBookResizeWatch(): void {
+    if (bookStageObserver || typeof ResizeObserver === 'undefined') return;
+    const stage = document.getElementById('bookStage');
+    if (!stage) return;
+    bookStageObserver = new ResizeObserver(() => scheduleBookRelayout());
+    bookStageObserver.observe(stage);
+  }
+
+  function stopBookResizeWatch(): void {
+    bookStageObserver?.disconnect();
+    bookStageObserver = null;
+    if (bookStageRaf) {
+      cancelAnimationFrame(bookStageRaf);
+      bookStageRaf = 0;
+    }
+  }
+
   window.addEventListener('resize', () => {
     if (getCurrentScreenId() !== 'book') return;
     if (bookResizeTimer) clearTimeout(bookResizeTimer);
