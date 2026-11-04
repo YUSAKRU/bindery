@@ -21,6 +21,7 @@ interface FakeDomEvent {
   key?: string;
   target?: FakeElement;
   stopPropagation?: () => void;
+  preventDefault?: () => void;
   cancelBubble?: boolean;
 }
 
@@ -197,21 +198,39 @@ class FakeWindow {
   private listeners: Map<string, Set<(e: FakeDomEvent) => void>> = new Map();
   location = { search: '' };
 
-  addEventListener(type: string, listener: (e: FakeDomEvent) => void): void {
+  addEventListener(
+    type: string,
+    listener: (e: FakeDomEvent) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
+    }
+    const isOnce = typeof options === 'object' && options?.once;
+    if (isOnce) {
+      const onceWrapper = (e: FakeDomEvent) => {
+        this.removeEventListener(type, onceWrapper);
+        this.removeEventListener(type, listener);
+        listener(e);
+      };
+      this.listeners.get(type)!.add(onceWrapper);
+      return;
     }
     this.listeners.get(type)!.add(listener);
   }
 
-  removeEventListener(type: string, listener: (e: FakeDomEvent) => void): void {
+  removeEventListener(
+    type: string,
+    listener: (e: FakeDomEvent) => void,
+    _options?: boolean | EventListenerOptions,
+  ): void {
     this.listeners.get(type)?.delete(listener);
   }
 
   dispatchEvent(event: FakeDomEvent): boolean {
     const handlers = this.listeners.get(event.type);
     if (handlers) {
-      for (const h of handlers) {
+      for (const h of Array.from(handlers)) {
         h(event);
       }
     }
@@ -600,6 +619,37 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       });
 
       expect(onSelectModuleMock).toHaveBeenCalledWith(1);
+    });
+
+    it('absorbs trailing synthetic click event after tapping the active card', () => {
+      controller.applyCoverflow(1);
+
+      fixture.canvasContainer.dispatchEvent({
+        type: 'pointerdown',
+        clientX: 520,
+        clientY: 255,
+        target: fixture.cards[1],
+      });
+      fakeWindow.dispatchEvent({
+        type: 'pointerup',
+        clientX: 520,
+        clientY: 255,
+        target: fixture.cards[1],
+      });
+
+      expect(onSelectModuleMock).toHaveBeenCalledWith(1);
+
+      const stopPropagation = vi.fn();
+      const preventDefault = vi.fn();
+      const trailingClick: FakeDomEvent = {
+        type: 'click',
+        stopPropagation,
+        preventDefault,
+      };
+
+      fakeWindow.dispatchEvent(trailingClick);
+      expect(stopPropagation).toHaveBeenCalled();
+      expect(preventDefault).toHaveBeenCalled();
     });
 
     it('focuses a wing card without calling onSelectModule when tapping a non-active card in Carousel mode', () => {

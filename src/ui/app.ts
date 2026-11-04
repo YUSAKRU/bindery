@@ -1215,7 +1215,19 @@ export function initApp(): void {
   // Bumped whenever the book closes, so an open still in flight is dropped.
   let bookOpenToken = 0;
 
+  let screenTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function triggerScreenTransitionGuard(): void {
+    appShell.classList.add('is-screen-transitioning');
+    if (screenTransitionTimer) clearTimeout(screenTransitionTimer);
+    screenTransitionTimer = setTimeout(() => {
+      appShell.classList.remove('is-screen-transitioning');
+      screenTransitionTimer = null;
+    }, 280);
+  }
+
   function showScreen(id: ScreenId): void {
+    triggerScreenTransitionGuard();
     if (getCurrentScreenId() === 'library' && id !== 'library') {
       libraryScreen?.hide();
     }
