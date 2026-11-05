@@ -416,12 +416,10 @@ export function initApp(): void {
 
   const dropzoneCard = byId<HTMLDivElement>('dropzoneCard');
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
-  const pickerSampleBtn = byId<HTMLButtonElement>('pickerSampleBtn');
   const fileNameLabel = byId<HTMLSpanElement>('fileNameLabel');
   const fileSizeLabel = byId<HTMLSpanElement>('fileSizeLabel');
   const clearFileBtn = byId<HTMLButtonElement>('clearFileBtn');
   const continueBtn = byId<HTMLButtonElement>('continueBtn');
-  const btnSwitchFile = byId<HTMLButtonElement>('btnSwitchFile');
   const screenPicker = byId<HTMLElement>('screen-picker');
   const pickerInlineError = byId<HTMLDivElement>('pickerInlineError');
   const pickerInlineErrorText = byId<HTMLSpanElement>('pickerInlineErrorText');
@@ -2235,29 +2233,11 @@ export function initApp(): void {
     }
   });
 
-  pickerSampleBtn.addEventListener('click', async () => {
-    const lang = getLanguage();
-    try {
-      const response = await fetch(`onboarding/quick-start-${lang}.pdf`);
-      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      const name = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
-      loadBookletFile(bytes, name, { kind: 'asset', path: `onboarding/quick-start-${lang}.pdf` });
-    } catch (error) {
-      const message = errorText(error);
-      goToError(t('error.fileSelectFailed'), message, 'picker');
-    }
-  });
-
   clearFileBtn.addEventListener('click', () => resetPicker());
-
-  btnSwitchFile.addEventListener('click', () => {
-    pickFileBtn.click();
-  });
 
   dropzoneCard.addEventListener('click', (e) => {
     const target = e.target as HTMLElement | null;
-    if (target?.closest('#pickerSampleBtn') || target?.closest('#pickFileBtn')) {
+    if (target?.closest('#pickFileBtn')) {
       return;
     }
     pickFileBtn.click();
