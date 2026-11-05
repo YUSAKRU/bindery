@@ -1471,19 +1471,12 @@
                 </div>
               </div>
 
-              <!-- Primary Generation & Advanced Action Group -->
+              <!-- Step 1 Navigation Action Group -->
               <div class="config-step-action-group" id="configStepActionGroup">
-                <button type="button" class="btn btn-primary btn-large stitch-btn-primary atelier-generate-cta" id="step1GenerateBtn">
-                  <span id="step1GenerateBtnLabel" data-i18n="config.generateBooklet">Kitapçığı Üret</span>
+                <button type="button" class="btn btn-primary btn-large stitch-btn-primary atelier-step-next-cta" id="step1NextBtn">
+                  <span id="step1NextBtnLabel" data-i18n="config.step1Next">Sonraki: Baskı Parametreleri</span>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                  <span class="spinner hidden" id="step1GenerateSpinner"></span>
-                </button>
-                <button type="button" class="stitch-advanced-link" id="step1AdvancedLink">
-                  <span data-i18n="config.advancedSettingsLink">Gelişmiş Baskı Ayarları (Gutter, Creep)</span>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M9 5l7 7-7 7"/>
                   </svg>
                 </button>
                 <div class="stitch-privacy-note">
@@ -1572,6 +1565,24 @@
 
             <!-- Step 3: Print -->
             <div class="config-step-panel hidden" id="configStepPrint" role="tabpanel" aria-labelledby="configStepPrint">
+              <!-- Smart Print Preset Selector Card -->
+              <div class="setting-card stitch-card print-mode-card" id="printModeSelectorCard">
+                <div class="setting-row stitch-card-head">
+                  <span class="stitch-card-title" data-i18n="config.printPresetModeTitle">Baskı Ayar Modu</span>
+                </div>
+                <div class="segmented-group stitch-segmented stitch-grid-2" id="printPresetModeGroup" style="margin-top: 6px;">
+                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-preset="recommended" id="presetRecommendedBtn" data-i18n="config.presetRecommended">Önerilen (Standart)</button>
+                  <button type="button" class="segmented-btn stitch-pill-btn" data-preset="custom" id="presetCustomBtn" data-i18n="config.presetCustom">Özel Ayarlar</button>
+                </div>
+                <p class="setting-hint setting-live-hint stitch-card-desc" id="printPresetHint" data-i18n="config.presetRecommendedHint">Standart ofset ve ev yazıcısı ayarları: Sıfır pay (0 pt), katlama/sırt işaretleri kapalı, standart yaprak sırası.</p>
+                <button type="button" class="stitch-advanced-link" id="toggleDetailedSettingsBtn" style="margin-top: 6px;">
+                  <span id="toggleDetailedSettingsText" data-i18n="config.viewSettingsDetails">Ayar Detaylarını İncele</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+              </div>
+
               <!-- Compatibility anchor for accordion references & test slicing -->
               <button type="button" class="advanced-toggle hidden" id="advancedToggle" aria-expanded="true" aria-controls="advancedPanel">
                 <span class="advanced-toggle-label">
@@ -1581,7 +1592,7 @@
                 <span class="advanced-chevron" aria-hidden="true">▸</span>
               </button>
 
-              <section class="advanced-panel" id="advancedPanel" aria-labelledby="advancedToggle">
+              <section class="advanced-panel hidden" id="advancedPanel" aria-labelledby="advancedToggle">
                 <!-- Gutter Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
@@ -1671,6 +1682,72 @@
                   <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
                 </div>
               </section>
+
+              <!-- Step 2 Navigation Action Group -->
+              <div class="config-step-action-group" id="step2ActionGroup">
+                <button type="button" class="btn btn-primary btn-large stitch-btn-primary atelier-step-next-cta" id="step2NextBtn">
+                  <span id="step2NextBtnLabel" data-i18n="config.step2Next">İleri: Özet ve Üretim</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn-text stitch-back-link" id="step2BackLink">
+                  <span data-i18n="config.backToLayout">⬅ 1. Düzen Ayarlarına Dön</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 3: Summary & Production -->
+            <div class="config-step-panel hidden" id="configStepSummary" role="tabpanel" aria-labelledby="configStepSummary">
+              <div class="setting-card stitch-card summary-spec-card" id="summarySpecCard">
+                <div class="setting-row stitch-card-head">
+                  <span class="stitch-card-title" data-i18n="config.summarySpecTitle">Kitapçık Üretim Özeti</span>
+                  <span class="stitch-badge-pill" id="summaryLogicalPagesBadge">0 Sayfa</span>
+                </div>
+                <div class="summary-spec-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                  <div class="summary-spec-cell">
+                    <div class="summary-spec-label" style="font-size: 0.72rem; color: var(--stitch-text-muted);" data-i18n="config.summaryPaper">Kağıt Boyutu</div>
+                    <div class="summary-spec-val" id="summaryPaperVal" style="font-size: 0.95rem; font-weight: 600;">A4</div>
+                  </div>
+                  <div class="summary-spec-cell">
+                    <div class="summary-spec-label" style="font-size: 0.72rem; color: var(--stitch-text-muted);" data-i18n="config.summaryForma">Forma Yapısı</div>
+                    <div class="summary-spec-val" id="summaryFormaVal" style="font-size: 0.95rem; font-weight: 600;">4 Sayfa</div>
+                  </div>
+                  <div class="summary-spec-cell">
+                    <div class="summary-spec-label" style="font-size: 0.72rem; color: var(--stitch-text-muted);" data-i18n="config.summaryBinding">Cilt & Çevirme</div>
+                    <div class="summary-spec-val" id="summaryBindingVal" style="font-size: 0.95rem; font-weight: 600;">Soldan · Kısa Kenar</div>
+                  </div>
+                  <div class="summary-spec-cell">
+                    <div class="summary-spec-label" style="font-size: 0.72rem; color: var(--stitch-text-muted);" data-i18n="config.summaryPrint">Baskı Modu</div>
+                    <div class="summary-spec-val" id="summaryPrintVal" style="font-size: 0.95rem; font-weight: 600;">Önerilen (Standart)</div>
+                  </div>
+                </div>
+                <div class="stitch-card-divider" style="margin-top: 10px;"></div>
+                <div class="setting-row" style="margin-top: 8px;">
+                  <span class="stitch-card-desc" id="summaryTotalMetricsLabel" style="font-weight: 500;">Toplam: 0 Yaprak · 0 Forma</span>
+                </div>
+              </div>
+
+              <!-- Primary Generation CTA on Step 3 -->
+              <div class="config-step-action-group" id="step3ActionGroup">
+                <button type="button" class="btn btn-primary btn-large stitch-btn-primary atelier-generate-cta" id="step3GenerateBtn">
+                  <span id="step3GenerateBtnLabel" data-i18n="config.generateBooklet">Kitapçığı Oluştur</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                  <span class="spinner hidden" id="step3GenerateSpinner"></span>
+                </button>
+                <button type="button" class="btn btn-text stitch-back-link" id="step3BackLink">
+                  <span data-i18n="config.backToPrint">⬅ 2. Baskı Parametrelerine Dön</span>
+                </button>
+                <div class="stitch-privacy-note">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <span data-i18n="picker.privacy">Her şey cihazınızda kalır, hiçbir dosya yüklenmez</span>
+                </div>
+              </div>
             </div>
           </div>
 

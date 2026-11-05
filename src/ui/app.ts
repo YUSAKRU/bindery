@@ -546,10 +546,26 @@ export function initApp(): void {
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
-  const step1GenerateBtn = byId<HTMLButtonElement>('step1GenerateBtn');
-  const step1GenerateBtnLabel = byId<HTMLSpanElement>('step1GenerateBtnLabel');
-  const step1GenerateSpinner = byId<HTMLSpanElement>('step1GenerateSpinner');
-  const step1AdvancedLink = byId<HTMLButtonElement>('step1AdvancedLink');
+  const step1NextBtn = byId<HTMLButtonElement>('step1NextBtn');
+
+  const printPresetModeGroup = byId<HTMLDivElement>('printPresetModeGroup');
+  const printPresetHint = byId<HTMLParagraphElement>('printPresetHint');
+  const toggleDetailedSettingsBtn = byId<HTMLButtonElement>('toggleDetailedSettingsBtn');
+  const toggleDetailedSettingsText = byId<HTMLSpanElement>('toggleDetailedSettingsText');
+  const step2NextBtn = byId<HTMLButtonElement>('step2NextBtn');
+  const step2BackLink = byId<HTMLButtonElement>('step2BackLink');
+
+  const configStepSummary = byId<HTMLDivElement>('configStepSummary');
+  const summaryLogicalPagesBadge = byId<HTMLSpanElement>('summaryLogicalPagesBadge');
+  const summaryPaperVal = byId<HTMLDivElement>('summaryPaperVal');
+  const summaryFormaVal = byId<HTMLDivElement>('summaryFormaVal');
+  const summaryBindingVal = byId<HTMLDivElement>('summaryBindingVal');
+  const summaryPrintVal = byId<HTMLDivElement>('summaryPrintVal');
+  const summaryTotalMetricsLabel = byId<HTMLSpanElement>('summaryTotalMetricsLabel');
+  const step3GenerateBtn = byId<HTMLButtonElement>('step3GenerateBtn');
+  const step3GenerateBtnLabel = byId<HTMLSpanElement>('step3GenerateBtnLabel');
+  const step3GenerateSpinner = byId<HTMLSpanElement>('step3GenerateSpinner');
+  const step3BackLink = byId<HTMLButtonElement>('step3BackLink');
 
   const statOriginal = byId<HTMLSpanElement>('statOriginal');
   const statPaddingCard = byId<HTMLDivElement>('statPaddingCard');
@@ -1596,14 +1612,39 @@ export function initApp(): void {
     );
   }
 
-  let currentConfigTab: 'layout' | 'cover' | 'print' = 'layout';
+  let currentConfigTab: 'layout' | 'cover' | 'print' | 'summary' = 'layout';
 
-  function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {
-    const effectiveTab: 'layout' | 'print' = tab === 'cover' ? 'print' : tab;
+  function renderConfigSummarySpec(): void {
+    if (!summaryPaperVal || !summaryFormaVal || !summaryBindingVal || !summaryPrintVal) return;
+
+    summaryPaperVal.textContent = paperSummaryLabel(bookletPaperSize);
+
+    const sigText = bookletSignature === 'single'
+      ? t('config.sigSingle')
+      : `${bookletSignature} ${t('config.signaturePagesSuffix')}`;
+    summaryFormaVal.textContent = sigText;
+
+    const bindingLabel = bookletBinding === 'rtl' ? t('config.bindingRtl') : t('config.bindingLtr');
+    const flipLabel = bookletFlipEdge === 'long' ? t('config.flipEdgeLong') : t('config.flipEdgeShort');
+    summaryBindingVal.textContent = `${bindingLabel} · ${flipLabel}`;
+
+    const isModified = isAdvancedModified();
+    summaryPrintVal.textContent = isModified ? t('config.summaryCustom') : t('config.summaryStandard');
+
+    const metrics = bookletBlockMetrics();
+    if (metrics) {
+      summaryLogicalPagesBadge.textContent = `${metrics.logical} ${t('config.signaturePagesSuffix')}`;
+      summaryTotalMetricsLabel.textContent = `${t('stat.totalSheets')}: ${metrics.sheets} · ${metrics.sigLengths.length} ${t('stat.signatures')}`;
+    }
+  }
+
+  function updateStitchDock(tab: 'layout' | 'cover' | 'print' | 'summary'): void {
+    const effectiveTab: 'layout' | 'print' | 'summary' = tab === 'cover' ? 'print' : tab;
     currentConfigTab = effectiveTab;
-    const stepMap: Record<'layout' | 'print', { step: number; subKey: string; hintKey: string }> = {
+    const stepMap: Record<'layout' | 'print' | 'summary', { step: number; subKey: string; hintKey: string }> = {
       layout: { step: 1, subKey: 'config.stitchStepSubtitle1', hintKey: 'config.stitchNextHint1' },
-      print: { step: 2, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
+      print: { step: 2, subKey: 'config.stitchStepSubtitle2', hintKey: 'config.stitchNextHint2' },
+      summary: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
     };
 
     const current = stepMap[effectiveTab];
@@ -1613,7 +1654,7 @@ export function initApp(): void {
     }
 
     if (stitchNextHint) {
-      if (current.step === 2) {
+      if (current.step === 3 || current.step === 2) {
         stitchNextHint.classList.add('hidden');
       } else {
         stitchNextHint.classList.remove('hidden');
@@ -1625,7 +1666,7 @@ export function initApp(): void {
     }
 
     if (generateBtn) {
-      if (current.step === 2) {
+      if (current.step === 3 || current.step === 2) {
         generateBtn.classList.remove('hidden');
       } else {
         generateBtn.classList.add('hidden');
@@ -1644,19 +1685,24 @@ export function initApp(): void {
     }
   }
 
-  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {
-    const effectiveTab: 'layout' | 'print' = tab === 'cover' ? 'print' : tab;
+  function switchConfigTab(tab: 'layout' | 'cover' | 'print' | 'summary'): void {
+    const effectiveTab: 'layout' | 'print' | 'summary' = tab === 'cover' ? 'print' : tab;
     currentConfigTab = effectiveTab;
-    const panels: Array<{ panel: HTMLElement | null; name: 'layout' | 'cover' | 'print' }> = [
+    const panels: Array<{ panel: HTMLElement | null; name: 'layout' | 'cover' | 'print' | 'summary' }> = [
       { panel: configStepLayout, name: 'layout' },
       { panel: configStepCover, name: 'cover' },
       { panel: configStepPrint, name: 'print' },
+      { panel: configStepSummary, name: 'summary' },
     ];
 
     for (const item of panels) {
       if (!item.panel) continue;
       const isActive = item.name === effectiveTab;
       item.panel.classList.toggle('hidden', !isActive);
+    }
+
+    if (effectiveTab === 'summary') {
+      renderConfigSummarySpec();
     }
 
     updateStitchDock(tab);
@@ -2819,9 +2865,9 @@ export function initApp(): void {
     }
   });
 
-  // ── Stitch 2-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
+  // ── Stitch 3-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
   if (stitchStepNav) {
-    const stepTabs: Array<'layout' | 'print'> = ['layout', 'print'];
+    const stepTabs: Array<'layout' | 'print' | 'summary'> = ['layout', 'print', 'summary'];
     const dots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
     dots.forEach((dot, idx) => {
       dot.addEventListener('click', () => {
@@ -2836,13 +2882,17 @@ export function initApp(): void {
     stitchNextHint.addEventListener('click', () => {
       if (currentConfigTab === 'layout') {
         switchConfigTab('print');
+      } else if (currentConfigTab === 'print') {
+        switchConfigTab('summary');
       }
     });
   }
 
   if (configBackBtn) {
     configBackBtn.addEventListener('click', () => {
-      if (currentConfigTab === 'print') {
+      if (currentConfigTab === 'summary') {
+        switchConfigTab('print');
+      } else if (currentConfigTab === 'print') {
         switchConfigTab('layout');
       } else {
         showScreen('picker');
@@ -2850,14 +2900,72 @@ export function initApp(): void {
     });
   }
 
-  if (step1GenerateBtn) {
-    step1GenerateBtn.addEventListener('click', () => {
+  if (step1NextBtn) {
+    step1NextBtn.addEventListener('click', () => {
+      switchConfigTab('print');
+    });
+  }
+
+  if (printPresetModeGroup) {
+    const presetBtns = printPresetModeGroup.querySelectorAll<HTMLButtonElement>('.segmented-btn');
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        presetBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const mode = btn.dataset.preset;
+        if (mode === 'recommended') {
+          printPresetHint.textContent = t('config.presetRecommendedHint');
+          printPresetHint.dataset.i18n = 'config.presetRecommendedHint';
+          advancedPanel.classList.add('hidden');
+          if (toggleDetailedSettingsText) {
+            toggleDetailedSettingsText.textContent = t('config.viewSettingsDetails');
+            toggleDetailedSettingsText.dataset.i18n = 'config.viewSettingsDetails';
+          }
+        } else {
+          printPresetHint.textContent = t('config.presetCustomHint');
+          printPresetHint.dataset.i18n = 'config.presetCustomHint';
+          advancedPanel.classList.remove('hidden');
+          if (toggleDetailedSettingsText) {
+            toggleDetailedSettingsText.textContent = t('config.hideSettingsDetails');
+            toggleDetailedSettingsText.dataset.i18n = 'config.hideSettingsDetails';
+          }
+        }
+      });
+    });
+  }
+
+  if (toggleDetailedSettingsBtn) {
+    toggleDetailedSettingsBtn.addEventListener('click', () => {
+      const isHidden = advancedPanel.classList.contains('hidden');
+      advancedPanel.classList.toggle('hidden', !isHidden);
+      if (toggleDetailedSettingsText) {
+        const key = isHidden ? 'config.hideSettingsDetails' : 'config.viewSettingsDetails';
+        toggleDetailedSettingsText.textContent = t(key);
+        toggleDetailedSettingsText.dataset.i18n = key;
+      }
+    });
+  }
+
+  if (step2NextBtn) {
+    step2NextBtn.addEventListener('click', () => {
+      switchConfigTab('summary');
+    });
+  }
+
+  if (step2BackLink) {
+    step2BackLink.addEventListener('click', () => {
+      switchConfigTab('layout');
+    });
+  }
+
+  if (step3GenerateBtn) {
+    step3GenerateBtn.addEventListener('click', () => {
       generateBtn.click();
     });
   }
 
-  if (step1AdvancedLink) {
-    step1AdvancedLink.addEventListener('click', () => {
+  if (step3BackLink) {
+    step3BackLink.addEventListener('click', () => {
       switchConfigTab('print');
     });
   }
@@ -2920,8 +3028,10 @@ export function initApp(): void {
 
         if (dx < 0) {
           if (currentConfigTab === 'layout') switchConfigTab('print');
+          else if (currentConfigTab === 'print') switchConfigTab('summary');
         } else {
-          if (currentConfigTab === 'print') switchConfigTab('layout');
+          if (currentConfigTab === 'summary') switchConfigTab('print');
+          else if (currentConfigTab === 'print') switchConfigTab('layout');
         }
       }
     }, { passive: true });
@@ -3021,9 +3131,9 @@ export function initApp(): void {
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');
     generateSpinner.classList.remove('hidden');
-    if (step1GenerateBtn) step1GenerateBtn.disabled = true;
-    if (step1GenerateBtnLabel) step1GenerateBtnLabel.classList.add('hidden');
-    if (step1GenerateSpinner) step1GenerateSpinner.classList.remove('hidden');
+    if (step3GenerateBtn) step3GenerateBtn.disabled = true;
+    if (step3GenerateBtnLabel) step3GenerateBtnLabel.classList.add('hidden');
+    if (step3GenerateSpinner) step3GenerateSpinner.classList.remove('hidden');
 
     try {
       // Assigned inside the call so the options literal stays at the call site
@@ -3143,9 +3253,9 @@ export function initApp(): void {
       generateBtn.disabled = false;
       generateBtnLabel.classList.remove('hidden');
       generateSpinner.classList.add('hidden');
-      if (step1GenerateBtn) step1GenerateBtn.disabled = false;
-      if (step1GenerateBtnLabel) step1GenerateBtnLabel.classList.remove('hidden');
-      if (step1GenerateSpinner) step1GenerateSpinner.classList.add('hidden');
+      if (step3GenerateBtn) step3GenerateBtn.disabled = false;
+      if (step3GenerateBtnLabel) step3GenerateBtnLabel.classList.remove('hidden');
+      if (step3GenerateSpinner) step3GenerateSpinner.classList.add('hidden');
     }
   });
 

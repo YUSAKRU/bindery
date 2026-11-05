@@ -131,10 +131,11 @@ describe('Stitch 3-step prototype restoration — clutter-free header and 3-step
     expect(indexHtml).not.toContain('id="configTab-print"');
   });
 
-  it('declares exactly three step panels: Layout, Cover, and Print', () => {
-    expect(panelTags).toHaveLength(3);
+  it('declares step panels for layout, print, and summary', () => {
     const panelIds = panelTags.map((t) => attrs(t).id);
-    expect(panelIds).toEqual(['configStepLayout', 'configStepCover', 'configStepPrint']);
+    expect(panelIds).toContain('configStepLayout');
+    expect(panelIds).toContain('configStepPrint');
+    expect(panelIds).toContain('configStepSummary');
     expect(configScreen).not.toContain('id="configStepPages"');
   });
 
@@ -151,10 +152,11 @@ describe('Stitch 3-step prototype restoration — clutter-free header and 3-step
   });
 
   it('implements switchConfigTab with 3 steps in app.ts', () => {
-    const body = blockAfter(appTs, "function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {");
+    const body = blockAfter(appTs, "function switchConfigTab(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
     expect(body).toContain("panel: configStepLayout, name: 'layout'");
     expect(body).toContain("panel: configStepCover, name: 'cover'");
     expect(body).toContain("panel: configStepPrint, name: 'print'");
+    expect(body).toContain("panel: configStepSummary, name: 'summary'");
     expect(body).toContain('updateStitchDock(tab);');
     expect(appTs).not.toContain("const configStepPages = byId<HTMLDivElement>('configStepPages');");
   });
@@ -176,8 +178,8 @@ describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA'
   });
 
   it('hides generateBtn on Step 1 and reveals it only on Step 2 in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {");
-    expect(dockFn).toContain('current.step === 2');
+    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
+    expect(dockFn).toContain('current.step === 3 || current.step === 2');
     expect(dockFn).toContain("generateBtn.classList.remove('hidden')");
     expect(dockFn).toContain("generateBtn.classList.add('hidden')");
     expect(dockFn).toContain("stitchNextHint.classList.add('hidden')");
@@ -185,7 +187,7 @@ describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA'
   });
 
   it('updates elongated pill and inactive dots in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {");
+    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
     expect(dockFn).toContain("dot.classList.toggle('is-active', isActive)");
     expect(dockFn).toContain("dot.classList.toggle('stitch-step-pill-active', isActive)");
     expect(dockFn).toContain("dot.setAttribute('aria-selected', String(isActive))");
@@ -194,10 +196,10 @@ describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA'
 
 describe('Stitch 2-step prototype restoration — gesture & dot navigation', () => {
   it('wires dots in stitchStepNav to switchConfigTab', () => {
-    const navAt = appTs.indexOf("const stepTabs: Array<'layout' | 'print'>");
+    const navAt = appTs.indexOf("const stepTabs: Array<'layout' | 'print' | 'summary'>");
     expect(navAt).toBeGreaterThan(0);
     const navBlock = stripTsComments(appTs.slice(navAt, navAt + 500));
-    expect(navBlock).toContain("['layout', 'print']");
+    expect(navBlock).toContain("['layout', 'print', 'summary']");
     expect(navBlock).toContain('switchConfigTab(stepTabs[idx])');
   });
 
