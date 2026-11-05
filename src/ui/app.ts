@@ -2236,7 +2236,7 @@ export function initApp(): void {
       // printable bounds; the cover section then falls back to A4 rather
       // than blocking the booklet itself, which does not need this value.
       bookletSourceSheetSize = sourceSheetSize;
-      const pagesLabel = pageCount === 1 ? t('common.pageWord') : `${t('common.pageWord')}s`;
+      const pagesLabel = pageCount === 1 ? t('common.pageWord') : t('common.pageWordPlural');
       fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${pageCount} ${pagesLabel}`;
       updateCoverAvailability();
       refreshConfigSummary();

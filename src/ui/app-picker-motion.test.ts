@@ -145,5 +145,22 @@ describe('Picker Fluid Motion & Dynamic Sizing (feat/atelier-picker)', () => {
       const setPickerStateBlock = appTs.slice(setPickerStateIdx, setPickerStateIdx + 400);
       expect(setPickerStateBlock).toContain('screenPicker.dataset.state = state');
     });
+
+    it('uses i18n plural key common.pageWordPlural instead of naive english "+s" concatenation', () => {
+      expect(appTs).toContain("pageCount === 1 ? t('common.pageWord') : t('common.pageWordPlural')");
+      expect(appTs).not.toContain("`${t('common.pageWord')}s`");
+      expect(appTs).not.toContain("t('common.pageWord') + 's'");
+
+      const i18nTsPath = fileURLToPath(new URL('../i18n/index.ts', import.meta.url));
+      const i18nTs = readFileSync(i18nTsPath, 'utf-8');
+
+      // English contract: Page / Pages
+      expect(i18nTs).toContain("'common.pageWord': 'Page'");
+      expect(i18nTs).toContain("'common.pageWordPlural': 'Pages'");
+
+      // Turkish contract: Sayfa / Sayfa (no plural suffix after numeral)
+      expect(i18nTs).toContain("'common.pageWord': 'Sayfa'");
+      expect(i18nTs).toContain("'common.pageWordPlural': 'Sayfa'");
+    });
   });
 });

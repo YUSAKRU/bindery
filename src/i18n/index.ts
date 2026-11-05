@@ -465,6 +465,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.saveDoc.hint': '💡 To save to a different folder or to Google Drive, use the Share (📤) button in the reader.',
 
     'common.pageWord': 'Page',
+    'common.pageWordPlural': 'Pages',
     'common.folder': 'Folder',
     'common.moveUp': 'Move up',
     'common.moveDown': 'Move down',
@@ -1287,6 +1288,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.saveDoc.hint': "💡 Farklı klasörler veya Google Drive'a kaydetmek için okuyucudaki Paylaş (📤) butonunu kullanabilirsiniz.",
 
     'common.pageWord': 'Sayfa',
+    'common.pageWordPlural': 'Sayfa',
     'common.folder': 'Klasör',
     'common.moveUp': 'Yukarı taşı',
     'common.moveDown': 'Aşağı taşı',
