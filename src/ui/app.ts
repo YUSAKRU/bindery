@@ -518,10 +518,8 @@ export function initApp(): void {
   const wrapCoverMiniSpineText = byId<HTMLSpanElement>('wrapCoverMiniSpineText');
   const wrapCoverMiniTitle = byId<HTMLHeadingElement>('wrapCoverMiniTitle');
   const wrapCoverMiniAuthor = byId<HTMLParagraphElement>('wrapCoverMiniAuthor');
-  const configTabButtons = Array.from(byId('screen-config').querySelectorAll<HTMLButtonElement>('.config-tab'));
   const configStepLayout = byId<HTMLDivElement>('configStepLayout');
   const configStepCover = byId<HTMLDivElement>('configStepCover');
-  const configStepPages = byId<HTMLDivElement>('configStepPages');
   const configStepPrint = byId<HTMLDivElement>('configStepPrint');
   const configTooltipPopover = byId<HTMLDivElement>('configTooltipPopover');
   const configBackBtn = byId<HTMLButtonElement>('configBackBtn');
@@ -1593,15 +1591,14 @@ export function initApp(): void {
     );
   }
 
-  let currentConfigTab: 'layout' | 'cover' | 'pages' | 'print' = 'layout';
+  let currentConfigTab: 'layout' | 'cover' | 'print' = 'layout';
 
-  function updateStitchDock(tab: 'layout' | 'cover' | 'pages' | 'print'): void {
+  function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {
     currentConfigTab = tab;
-    const stepMap: Record<'layout' | 'cover' | 'pages' | 'print', { step: number; subKey: string; hintKey: string }> = {
+    const stepMap: Record<'layout' | 'cover' | 'print', { step: number; subKey: string; hintKey: string }> = {
       layout: { step: 1, subKey: 'config.stitchStepSubtitle1', hintKey: 'config.stitchNextHint1' },
       cover: { step: 2, subKey: 'config.stitchStepSubtitle2', hintKey: 'config.stitchNextHint2' },
-      pages: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
-      print: { step: 4, subKey: 'config.stitchStepSubtitle4', hintKey: 'config.stitchNextHint4' },
+      print: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
     };
 
     const current = stepMap[tab];
@@ -1609,9 +1606,25 @@ export function initApp(): void {
       stitchStepSubtitle.textContent = t(current.subKey);
       stitchStepSubtitle.dataset.i18n = current.subKey;
     }
-    if (stitchNextHintText) {
-      stitchNextHintText.textContent = t(current.hintKey);
-      stitchNextHintText.dataset.i18n = current.hintKey;
+
+    if (stitchNextHint) {
+      if (current.step === 3) {
+        stitchNextHint.classList.add('hidden');
+      } else {
+        stitchNextHint.classList.remove('hidden');
+        if (stitchNextHintText) {
+          stitchNextHintText.textContent = t(current.hintKey);
+          stitchNextHintText.dataset.i18n = current.hintKey;
+        }
+      }
+    }
+
+    if (generateBtn) {
+      if (current.step === 3) {
+        generateBtn.classList.remove('hidden');
+      } else {
+        generateBtn.classList.add('hidden');
+      }
     }
 
     if (stitchStepNav) {
@@ -1626,24 +1639,16 @@ export function initApp(): void {
     }
   }
 
-  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void;
-  function switchConfigTab(tab: 'layout' | 'cover' | 'pages' | 'print'): void;
-  function switchConfigTab(tab: 'layout' | 'cover' | 'pages' | 'print'): void {
-    const tabs: Array<{ id: string; panel: HTMLElement; name: 'layout' | 'cover' | 'pages' | 'print' }> = [
-      { id: 'configTab-layout', panel: configStepLayout, name: 'layout' },
-      { id: 'configTab-cover', panel: configStepCover, name: 'cover' },
-      { id: 'configTab-pages', panel: configStepPages, name: 'pages' },
-      { id: 'configTab-print', panel: configStepPrint, name: 'print' },
+  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {
+    currentConfigTab = tab;
+    const panels: Array<{ panel: HTMLElement; name: 'layout' | 'cover' | 'print' }> = [
+      { panel: configStepLayout, name: 'layout' },
+      { panel: configStepCover, name: 'cover' },
+      { panel: configStepPrint, name: 'print' },
     ];
 
-    for (const item of tabs) {
-      const tabEl = byId<HTMLButtonElement>(item.id);
+    for (const item of panels) {
       const isActive = item.name === tab;
-
-      tabEl.classList.toggle('is-active', isActive);
-      tabEl.setAttribute('aria-selected', String(isActive));
-      tabEl.setAttribute('tabindex', isActive ? '0' : '-1');
-
       item.panel.classList.toggle('hidden', !isActive);
     }
 
@@ -1651,32 +1656,7 @@ export function initApp(): void {
   }
 
   function updateConfigTabDots(): void {
-    const layoutTab = byId<HTMLElement>('configTab-layout');
-    const coverTab = byId<HTMLElement>('configTab-cover');
-    const pagesTab = document.getElementById('configTab-pages');
-    const printTab = byId<HTMLElement>('configTab-print');
-
-    const layoutDot = layoutTab?.querySelector('.config-tab-dot');
-    const coverDot = coverTab?.querySelector('.config-tab-dot');
-    const pagesDot = pagesTab?.querySelector('.config-tab-dot');
-    const printDot = printTab?.querySelector('.config-tab-dot');
-
-    if (layoutDot) {
-      const isLayoutModified = bookletFlipEdge !== 'short' || bookletBinding !== 'ltr' || bookletPaperSize !== 'A4' || bookletSignature !== 'single';
-      layoutDot.classList.toggle('hidden', !isLayoutModified);
-    }
-    if (coverDot) {
-      const isCoverModified = effectiveSeparateCover() || Boolean(bookletWrapCover);
-      coverDot.classList.toggle('hidden', !isCoverModified);
-    }
-    if (pagesDot) {
-      const isPagesModified = bookletIncludeInstructions || bookletReverseSheetOrder || insertBlankInput.value.trim() !== '';
-      pagesDot.classList.toggle('hidden', !isPagesModified);
-    }
-    if (printDot) {
-      const isPrintModified = Number(gutterSlider.value) !== 0 || Number(creepSlider.value) !== 0 || bookletMarks !== 'none';
-      printDot.classList.toggle('hidden', !isPrintModified);
-    }
+    // Top tabs were completely removed; keep function as a safe no-op.
   }
 
   function updateAdvancedBadge(): void {
@@ -2832,38 +2812,9 @@ export function initApp(): void {
     }
   });
 
-  // ── Config Stepper Navigation & Micro-interactions ────────────────────────
-  const configTabNames: Array<'layout' | 'cover' | 'pages' | 'print'> = ['layout', 'cover', 'pages', 'print'];
-  configTabButtons.forEach((tabBtn, index) => {
-    const tabName = tabBtn.getAttribute('data-tab') as 'layout' | 'cover' | 'pages' | 'print';
-    tabBtn.addEventListener('click', () => {
-      switchConfigTab(tabName);
-    });
-
-    tabBtn.addEventListener('keydown', (e) => {
-      let targetIndex = -1;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        targetIndex = (index + 1) % configTabNames.length;
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        targetIndex = (index - 1 + configTabNames.length) % configTabNames.length;
-      } else if (e.key === 'Home') {
-        targetIndex = 0;
-      } else if (e.key === 'End') {
-        targetIndex = configTabNames.length - 1;
-      }
-
-      if (targetIndex !== -1) {
-        e.preventDefault();
-        const targetTabName = configTabNames[targetIndex];
-        switchConfigTab(targetTabName);
-        configTabButtons[targetIndex].focus();
-      }
-    });
-  });
-
-  // ── Stitch 4-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
+  // ── Stitch 3-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
   if (stitchStepNav) {
-    const stepTabs: Array<'layout' | 'cover' | 'pages' | 'print'> = ['layout', 'cover', 'pages', 'print'];
+    const stepTabs: Array<'layout' | 'cover' | 'print'> = ['layout', 'cover', 'print'];
     const dots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
     dots.forEach((dot, idx) => {
       dot.addEventListener('click', () => {
@@ -2879,11 +2830,7 @@ export function initApp(): void {
       if (currentConfigTab === 'layout') {
         switchConfigTab('cover');
       } else if (currentConfigTab === 'cover') {
-        switchConfigTab('pages');
-      } else if (currentConfigTab === 'pages') {
         switchConfigTab('print');
-      } else if (currentConfigTab === 'print') {
-        generateBtn.click();
       }
     });
   }
@@ -2891,8 +2838,6 @@ export function initApp(): void {
   if (configBackBtn) {
     configBackBtn.addEventListener('click', () => {
       if (currentConfigTab === 'print') {
-        switchConfigTab('pages');
-      } else if (currentConfigTab === 'pages') {
         switchConfigTab('cover');
       } else if (currentConfigTab === 'cover') {
         switchConfigTab('layout');
@@ -2936,11 +2881,9 @@ export function initApp(): void {
       if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (dx < 0) {
           if (currentConfigTab === 'layout') switchConfigTab('cover');
-          else if (currentConfigTab === 'cover') switchConfigTab('pages');
-          else if (currentConfigTab === 'pages') switchConfigTab('print');
+          else if (currentConfigTab === 'cover') switchConfigTab('print');
         } else {
-          if (currentConfigTab === 'print') switchConfigTab('pages');
-          else if (currentConfigTab === 'pages') switchConfigTab('cover');
+          if (currentConfigTab === 'print') switchConfigTab('cover');
           else if (currentConfigTab === 'cover') switchConfigTab('layout');
         }
       }
@@ -3022,7 +2965,7 @@ export function initApp(): void {
     // engine, which surfaces them through the normal error flow.
     const insertBlankAfter = parseInsertBlank();
     if (insertBlankAfter === null) {
-      switchConfigTab('pages'); // Formerly switchConfigTab('print') in 3-tab layout
+      switchConfigTab('print');
       insertBlankError.textContent = t('config.insertBlankError');
       insertBlankError.classList.remove('hidden');
       insertBlankInput.setAttribute('aria-invalid', 'true');

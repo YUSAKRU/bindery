@@ -1388,41 +1388,13 @@
 
             <!-- Pinned Header -->
             <header class="stitch-header">
-              <h2 class="screen-title stitch-header-title" data-i18n="config.stitchTitle">Folding Settings</h2>
-              <p class="stitch-header-sub" id="stitchStepSubtitle" data-i18n="config.stitchStepSubtitle1">Adım 1 / 4 · Sayfa Düzeni</p>
+              <h2 class="screen-title stitch-header-title" data-i18n="config.stitchTitle">Booklet Settings</h2>
+              <p class="stitch-header-sub" id="stitchStepSubtitle" data-i18n="config.stitchStepSubtitle">Baskı ve sayfa düzeni yapılandırması</p>
             </header>
-
-            <!-- Non-linear Segmented Stepper Navigation (Pinned) -->
-            <nav class="config-stepper" role="tablist" aria-label="Booklet Settings Steps" data-i18n-aria-label="config.stepperLabel">
-              <button type="button" role="tab" class="config-tab is-active" id="configTab-layout"
-                      aria-selected="true" aria-controls="configStepLayout" tabindex="0" data-tab="layout">
-                <span class="config-tab-num">1</span>
-                <span class="config-tab-label" data-i18n="config.tabLayout">Layout</span>
-                <span class="config-tab-dot hidden" aria-hidden="true"></span>
-              </button>
-              <button type="button" role="tab" class="config-tab" id="configTab-cover"
-                      aria-selected="false" aria-controls="configStepCover" tabindex="-1" data-tab="cover">
-                <span class="config-tab-num">2</span>
-                <span class="config-tab-label" data-i18n="config.tabCover">Cover</span>
-                <span class="config-tab-dot hidden" aria-hidden="true"></span>
-              </button>
-              <button type="button" role="tab" class="config-tab" id="configTab-pages"
-                      aria-selected="false" aria-controls="configStepPages" tabindex="-1" data-tab="pages">
-                <span class="config-tab-num">3</span>
-                <span class="config-tab-label" data-i18n="config.tabPages">Pages &amp; Flow</span>
-                <span class="config-tab-dot hidden" aria-hidden="true"></span>
-              </button>
-              <button type="button" role="tab" class="config-tab" id="configTab-print"
-                      aria-selected="false" aria-controls="configStepPrint" tabindex="-1" data-tab="print">
-                <span class="config-tab-num">4</span>
-                <span class="config-tab-label" data-i18n="config.tabPrint">Print</span>
-                <span class="config-tab-dot hidden" aria-hidden="true"></span>
-              </button>
-            </nav>
 
           <div class="config-body">
             <!-- Step 1: Layout -->
-            <div class="config-step-panel" id="configStepLayout" role="tabpanel" aria-labelledby="configTab-layout">
+            <div class="config-step-panel" id="configStepLayout" role="tabpanel" aria-labelledby="configStepLayout">
               <!-- Kağıt Boyutu Card -->
               <div class="setting-card stitch-card">
                 <div class="setting-row stitch-card-head">
@@ -1512,7 +1484,7 @@
             </div>
 
             <!-- Step 2: Cover -->
-            <div class="config-step-panel hidden" id="configStepCover" role="tabpanel" aria-labelledby="configTab-cover">
+            <div class="config-step-panel hidden" id="configStepCover" role="tabpanel" aria-labelledby="configStepCover">
               <!-- Sarma Kapak Ekle Toggle Card -->
               <div class="setting-card stitch-card">
                 <div class="setting-row stitch-card-head stitch-switch-wrap">
@@ -1696,60 +1668,8 @@
               </div>
             </div>
 
-            <!-- Step 3: Pages & Flow (New Partitioned Step) -->
-            <div class="config-step-panel hidden" id="configStepPages" role="tabpanel" aria-labelledby="configTab-pages">
-              <!-- Boş Sayfa Ekle Card -->
-              <div class="setting-card stitch-card">
-                <div class="setting-row stitch-card-head">
-                  <div class="setting-title-wrap stitch-card-title-group">
-                    <label for="insertBlankInput" class="stitch-card-title" data-i18n="config.insertBlank">Insert blank pages</label>
-                    <button type="button" class="config-info-btn" aria-label="Insert blank pages info" data-i18n-aria-label="config.insertBlankInfo" data-tooltip="config.insertBlankHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
-                  </div>
-                </div>
-                <input type="text" id="insertBlankInput" class="number-input modal-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
-                <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
-                <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
-              </div>
-
-              <!-- Yaprak Sırası Card -->
-              <div class="setting-card stitch-card">
-                <div class="setting-row stitch-card-head">
-                  <div class="setting-title-wrap stitch-card-title-group">
-                    <span class="stitch-card-title" data-i18n="config.sheetOrder">Sheet order</span>
-                    <button type="button" class="config-info-btn" aria-label="Sheet order info" data-i18n-aria-label="config.sheetOrderInfo" data-tooltip="config.sheetOrderHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="segmented-group stitch-segmented stitch-grid-2" id="sheetOrderGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
-                </div>
-                <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.sheetOrderHint">Reverses each signature's own sheet print order (innermost sheet first); the order of the signatures themselves is unchanged. Corrects feed-order mismatches on printers with an automatic folding unit.</p>
-              </div>
-
-              <!-- Talimat Sayfası Card -->
-              <div class="setting-card stitch-card">
-                <div class="setting-row stitch-card-head">
-                  <div class="setting-title-wrap stitch-card-title-group">
-                    <span class="stitch-card-title" data-i18n="config.instructions">Instructions page</span>
-                    <button type="button" class="config-info-btn" aria-label="Instructions info" data-i18n-aria-label="config.instructionsInfo" data-tooltip="config.instructionsHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="segmented-group stitch-segmented stitch-grid-2" id="instructionsGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
-                </div>
-                <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.instructionsHint">Generates a one-page PDF with the printing and folding steps, in the app's current language.</p>
-              </div>
-            </div>
-
-            <!-- Step 4: Print & Calibration -->
-            <div class="config-step-panel hidden" id="configStepPrint" role="tabpanel" aria-labelledby="configTab-print">
+            <!-- Step 3: Print & Flow -->
+            <div class="config-step-panel hidden" id="configStepPrint" role="tabpanel" aria-labelledby="configStepPrint">
               <!-- Compatibility anchor for accordion references & test slicing -->
               <button type="button" class="advanced-toggle hidden" id="advancedToggle" aria-expanded="true" aria-controls="advancedPanel">
                 <span class="advanced-toggle-label">
@@ -1829,6 +1749,55 @@
                   </div>
                   <p class="setting-hint setting-live-hint stitch-card-desc" id="marksHintText" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also steps a bar down the spine, one step per section, so a missing or misordered section shows up as you stack them &mdash; the bar prints on the front side only.</p>
                 </div>
+
+                <!-- Talimat Sayfası Card -->
+                <div class="setting-card stitch-card">
+                  <div class="setting-row stitch-card-head">
+                    <div class="setting-title-wrap stitch-card-title-group">
+                      <span class="stitch-card-title" data-i18n="config.instructions">Instructions page</span>
+                      <button type="button" class="config-info-btn" aria-label="Instructions info" data-i18n-aria-label="config.instructionsInfo" data-tooltip="config.instructionsHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group stitch-segmented stitch-grid-2" id="instructionsGroup">
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
+                  </div>
+                  <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.instructionsHint">Generates a one-page PDF with the printing and folding steps, in the app's current language.</p>
+                </div>
+
+                <!-- Yaprak Sırası Card -->
+                <div class="setting-card stitch-card">
+                  <div class="setting-row stitch-card-head">
+                    <div class="setting-title-wrap stitch-card-title-group">
+                      <span class="stitch-card-title" data-i18n="config.sheetOrder">Sheet order</span>
+                      <button type="button" class="config-info-btn" aria-label="Sheet order info" data-i18n-aria-label="config.sheetOrderInfo" data-tooltip="config.sheetOrderHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group stitch-segmented stitch-grid-2" id="sheetOrderGroup">
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
+                  </div>
+                  <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.sheetOrderHint">Reverses each signature's own sheet print order (innermost sheet first); the order of the signatures themselves is unchanged. Corrects feed-order mismatches on printers with an automatic folding unit.</p>
+                </div>
+
+                <!-- Boş Sayfa Ekle Card -->
+                <div class="setting-card stitch-card">
+                  <div class="setting-row stitch-card-head">
+                    <div class="setting-title-wrap stitch-card-title-group">
+                      <label for="insertBlankInput" class="stitch-card-title" data-i18n="config.insertBlank">Insert blank pages</label>
+                      <button type="button" class="config-info-btn" aria-label="Insert blank pages info" data-i18n-aria-label="config.insertBlankInfo" data-tooltip="config.insertBlankHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <input type="text" id="insertBlankInput" class="number-input modal-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
+                  <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
+                  <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+                </div>
               </section>
             </div>
           </div>
@@ -1838,17 +1807,16 @@
             <!-- Live Summary Capsule -->
             <div class="config-summary stitch-summary-capsule hidden" id="configSummary" aria-live="polite"></div>
 
-            <!-- 4-Step Pill Navigation -->
+            <!-- 3-Step Pill Navigation -->
             <div class="stitch-step-nav" id="stitchStepNav" role="tablist" aria-label="Adım Göstergesi">
               <button type="button" class="stitch-step-dot is-active stitch-step-pill-active" data-step="1" title="1. Düzen"></button>
               <button type="button" class="stitch-step-dot" data-step="2" title="2. Kapak"></button>
-              <button type="button" class="stitch-step-dot" data-step="3" title="3. Sayfa & Akış"></button>
-              <button type="button" class="stitch-step-dot" data-step="4" title="4. Baskı & Ayar"></button>
+              <button type="button" class="stitch-step-dot" data-step="3" title="3. Baskı"></button>
             </div>
 
             <!-- Next Step Hint -->
             <button type="button" class="stitch-step-hint" id="stitchNextHint">
-              <span id="stitchNextHintText" data-i18n="config.stitchNextHint1">Kapak için dokunun veya kaydırın</span>
+              <span id="stitchNextHintText" data-i18n="config.stitchNextHint1">Kapak için kaydırın</span>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 
@@ -1859,7 +1827,7 @@
             </div>
 
             <!-- Primary Generation Button -->
-            <button class="btn btn-primary btn-large stitch-btn-primary" id="generateBtn">
+            <button class="btn btn-primary btn-large stitch-btn-primary hidden" id="generateBtn">
               <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
               <span class="spinner hidden" id="generateSpinner"></span>
             </button>
