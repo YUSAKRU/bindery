@@ -7895,18 +7895,7 @@ button.book-page-label:active {
 }
 
 #screen-result .result-icon {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  background: #F2F7F4;
-  border: 2px solid #C8DFD2;
-  color: #2D5540;
-  font-size: 1.8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(45, 85, 64, 0.12);
+  display: none !important;
 }
 
 :root:not(.light-theme) #screen-result .result-icon,
@@ -8138,11 +8127,7 @@ button.book-page-label:active {
 }
 
 #screen-result #resultOpenCoverStudioBtn {
-  background: var(--atelier-surface-cream, #F3ECE1);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  color: var(--atelier-ink-black, #1C1A18);
-  border-radius: var(--radius-full);
-  font-weight: 600;
+  display: none !important;
 }
 
 #screen-result #newFileBtn {
