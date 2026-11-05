@@ -1620,12 +1620,12 @@ export function initApp(): void {
     summaryPaperVal.textContent = paperSummaryLabel(bookletPaperSize);
 
     const sigText = bookletSignature === 'single'
-      ? t('config.sigSingle')
+      ? t('config.signature.single')
       : `${bookletSignature} ${t('config.signaturePagesSuffix')}`;
     summaryFormaVal.textContent = sigText;
 
-    const bindingLabel = bookletBinding === 'rtl' ? t('config.bindingRtl') : t('config.bindingLtr');
-    const flipLabel = bookletFlipEdge === 'long' ? t('config.flipEdgeLong') : t('config.flipEdgeShort');
+    const bindingLabel = bookletBinding === 'rtl' ? t('config.binding.rtl') : t('config.binding.ltr');
+    const flipLabel = bookletFlipEdge === 'long' ? t('config.flipEdge.long') : t('config.flipEdge.short');
     summaryBindingVal.textContent = `${bindingLabel} · ${flipLabel}`;
 
     const isModified = isAdvancedModified();
