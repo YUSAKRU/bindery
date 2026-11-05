@@ -32,6 +32,11 @@
   --shadow-2: 0 4px 8px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
   --shadow-3: 0 8px 24px rgba(0,0,0,0.16), 0 4px 8px rgba(0,0,0,0.10);
 
+  --ease-out-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --motion-slot: 420ms;
+  --motion-slot-delay: 120ms;
+
   color-scheme: light;
 }
 
@@ -7186,19 +7191,47 @@ button.book-page-label:active {
   display: none !important;
 }
 
-/* Card Stage: Dropzone & File Card share 1 grid cell for pure CSS crossfade */
+/* 14a. Card Stage & Content-Aware Fluid Slot Sizing */
 #screen-picker .picker-stage {
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: auto;
   width: 100%;
-  position: relative;
   margin: 0 auto;
+  position: relative;
+}
+
+#screen-picker .picker-slot-featured,
+#screen-picker .picker-slot-file {
+  grid-area: 1 / 1;
+  align-self: start;
+}
+
+#screen-picker .picker-slot {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  width: 100%;
+  pointer-events: none;
+  transition:
+    grid-template-rows var(--motion-slot) var(--ease-out-spring),
+    opacity 240ms var(--ease-out);
+}
+
+#screen-picker .picker-slot-clip {
+  min-height: 0;
+  overflow: clip;
+  margin: -16px -16px -24px;
+  padding: 16px 16px 24px;
+  visibility: hidden;
+  contain: paint;
+  box-sizing: border-box;
+  transition: visibility 0s linear var(--motion-slot);
 }
 
 #screen-picker .atelier-craft-card,
 #screen-picker .file-card {
-  grid-area: 1 / 1;
   width: 100%;
   box-sizing: border-box;
 }
@@ -7284,7 +7317,7 @@ button.book-page-label:active {
 
 #screen-picker .picker-title {
   font-family: 'EB Garamond', Georgia, serif;
-  font-size: 2.15rem;
+  font-size: clamp(1.75rem, 5vw + 0.4rem, 2.15rem);
   font-weight: 600;
   line-height: 1.15;
   margin: 0 0 10px;
@@ -7411,6 +7444,7 @@ button.book-page-label:active {
     0 8px 24px rgba(28, 26, 24, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
   position: relative;
+  overflow: hidden;
   text-align: left;
   transition:
     opacity 0.22s cubic-bezier(0.2, 0, 0, 1),
@@ -7468,6 +7502,9 @@ button.book-page-label:active {
   font-size: 0.8rem;
   color: var(--atelier-ink-muted);
   font-family: 'Space Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #screen-picker .btn-clear-file {
@@ -7504,77 +7541,105 @@ button.book-page-label:active {
   transform: scale(0.95);
 }
 
-/* ── Explicit Data-State Machine Orchestration ───────────────────────────── */
-#screen-picker[data-state="empty"] .atelier-craft-card {
-  opacity: 1;
+/* ── Explicit Data-State Machine Slot Orchestration ───────────────────────── */
+#screen-picker[data-state="empty"]   .picker-slot-featured { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+#screen-picker[data-state="error"]   .picker-slot-featured,
+#screen-picker[data-state="error"]   .picker-slot-error    { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+#screen-picker[data-state="reading"] .picker-slot-file     { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+#screen-picker[data-state="ready"]   .picker-slot-file     { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+#screen-picker[data-state="reading"] .picker-slot-continue { grid-template-rows: 1fr; opacity: 0.65; pointer-events: none; }
+#screen-picker[data-state="ready"]   .picker-slot-continue { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+
+#screen-picker[data-state="empty"] .picker-slot-featured .picker-slot-clip,
+#screen-picker[data-state="error"] .picker-slot-featured .picker-slot-clip,
+#screen-picker[data-state="error"] .picker-slot-error .picker-slot-clip,
+#screen-picker[data-state="reading"] .picker-slot-file .picker-slot-clip,
+#screen-picker[data-state="ready"] .picker-slot-file .picker-slot-clip,
+#screen-picker[data-state="reading"] .picker-slot-continue .picker-slot-clip,
+#screen-picker[data-state="ready"] .picker-slot-continue .picker-slot-clip,
+#screen-picker[data-state="ready"] .picker-slot-warnings .picker-slot-clip {
   visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-#screen-picker[data-state="empty"] .file-card {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(8px);
-  pointer-events: none;
-}
-#screen-picker[data-state="empty"] .continue-wrap {
-  display: none !important;
+  transition-delay: 0s;
 }
 
-#screen-picker[data-state="reading"] .atelier-craft-card {
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(0.97);
-  pointer-events: none;
-}
-#screen-picker[data-state="reading"] .file-card {
+#screen-picker[data-state="ready"] .picker-slot-warnings:has(.warning-banner:not(.hidden)) {
+  grid-template-rows: 1fr;
   opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
   pointer-events: auto;
-}
-#screen-picker[data-state="reading"] .continue-wrap {
-  display: flex;
-  opacity: 0.65;
-  pointer-events: none;
-}
-#screen-picker[data-state="reading"] .btn-continue {
-  pointer-events: none;
-  cursor: not-allowed;
-  opacity: 0.65;
-  box-shadow: none;
+  margin-top: 10px;
 }
 
-#screen-picker[data-state="ready"] .atelier-craft-card {
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(0.97);
-  pointer-events: none;
-}
-#screen-picker[data-state="ready"] .file-card {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-#screen-picker[data-state="ready"] .continue-wrap {
-  display: flex;
-  opacity: 1;
-  pointer-events: auto;
+#screen-picker[data-state="reading"] .picker-slot-continue,
+#screen-picker[data-state="ready"]   .picker-slot-continue {
+  margin-top: 14px;
 }
 
-#screen-picker[data-state="error"] .atelier-craft-card {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+#screen-picker[data-state="error"] .picker-slot-error {
+  margin-top: 10px;
 }
-#screen-picker[data-state="error"] .file-card {
-  opacity: 0;
-  visibility: hidden;
+
+/* Staggered unfold delays */
+#screen-picker[data-state="ready"] .picker-slot-warnings { transition-delay: var(--motion-slot-delay); }
+#screen-picker[data-state="ready"] .picker-slot-continue { transition-delay: 200ms; }
+
+/* Micro-Interactions (Compositor Optimized) */
+#screen-picker .picker-stage.is-intake .atelier-craft-card {
+  animation: pickerIntakePress 240ms var(--ease-out);
+}
+@keyframes pickerIntakePress {
+  35%  { transform: scale(0.98); opacity: 0.94; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Reading state spine calibration scan beam */
+#screen-picker[data-state="reading"] .file-card::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0.9;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(154, 64, 29, 0) 10%,
+    var(--atelier-primary) 35%,
+    var(--atelier-gold-foil) 50%,
+    var(--atelier-primary) 65%,
+    rgba(154, 64, 29, 0) 90%,
+    transparent 100%
+  );
+  transform: translateX(-16%);
+  will-change: transform;
+  animation: pickerSpineScan 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
   pointer-events: none;
 }
-#screen-picker[data-state="error"] .continue-wrap {
-  display: none !important;
+@keyframes pickerSpineScan {
+  from { transform: translateX(-16%); }
+  to   { transform: translateX( 16%); }
+}
+
+/* Reading state ink pulse (100% GPU composited via opacity) */
+#screen-picker .file-card-icon {
+  position: relative;
+  overflow: visible;
+}
+#screen-picker[data-state="reading"] .file-card-icon::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 2px 14px rgba(154, 64, 29, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  animation: pickerInkBreathe 1.6s ease-in-out infinite;
+}
+@keyframes pickerInkBreathe {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
 }
 
 /* Continue Action & Switch File Block */
@@ -7582,12 +7647,15 @@ button.book-page-label:active {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 14px;
   width: 100%;
 }
 
 #screen-picker .btn-continue {
   width: 100%;
+  max-width: 320px;
+  margin-inline: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   background: var(--atelier-primary);
   color: #ffffff;
   font-family: 'Hanken Grotesk', sans-serif;
@@ -7609,6 +7677,29 @@ button.book-page-label:active {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+#screen-picker[data-state="reading"] .btn-continue {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+#screen-picker[data-state="ready"] .btn-continue {
+  animation: pickerPillSettle 480ms 180ms var(--ease-out-spring) both;
+}
+@keyframes pickerPillSettle {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+#screen-picker[data-state="error"] .picker-slot-error .warning-banner {
+  animation: pickerErrorArrive 360ms var(--ease-out-spring);
+}
+@keyframes pickerErrorArrive {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
 }
 
 @media (hover: hover) {
@@ -7714,5 +7805,7 @@ button.book-page-label:active {
   #screen-picker * {
     animation: none !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    animation-delay: 0s !important;
   }
 }

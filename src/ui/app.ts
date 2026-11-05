@@ -423,6 +423,29 @@ export function initApp(): void {
   const screenPicker = byId<HTMLElement>('screen-picker');
   const pickerInlineError = byId<HTMLDivElement>('pickerInlineError');
   const pickerInlineErrorText = byId<HTMLSpanElement>('pickerInlineErrorText');
+  const pickerStage = screenPicker.querySelector<HTMLElement>('.picker-stage');
+  let intakeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function stopPickerIntake(): void {
+    if (intakeTimer) {
+      clearTimeout(intakeTimer);
+      intakeTimer = null;
+    }
+    pickerStage?.classList.remove('is-intake');
+  }
+
+  /** Tactile paper-press micro-interaction, ~240 ms, 100% non-blocking. */
+  function runPickerIntake(): void {
+    if (!pickerStage) return;
+    stopPickerIntake();
+    requestAnimationFrame(() => {
+      pickerStage?.classList.add('is-intake');
+      intakeTimer = setTimeout(() => {
+        pickerStage?.classList.remove('is-intake');
+        intakeTimer = null;
+      }, 260);
+    });
+  }
 
   type PickerState = 'empty' | 'reading' | 'ready' | 'error';
   function setPickerState(state: PickerState, errorText?: string): void {
@@ -1333,6 +1356,7 @@ export function initApp(): void {
   }
 
   function resetPicker(): void {
+    stopPickerIntake();
     selectedFile = null;
     bookletSourceRef = { kind: 'none' };
     currentLibraryRecordId = null;
@@ -2226,6 +2250,7 @@ export function initApp(): void {
       if (!picked) {
         return;
       }
+      runPickerIntake();
       loadBookletFile(picked.bytes, picked.name, picked.source);
     } catch (error) {
       const message = errorText(error);
@@ -2257,6 +2282,7 @@ export function initApp(): void {
     dropzoneCard.classList.remove('drag-over');
     const file = e.dataTransfer?.files?.[0];
     if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+      runPickerIntake();
       try {
         const bytes = new Uint8Array(await file.arrayBuffer());
         loadBookletFile(bytes, file.name);
