@@ -259,17 +259,17 @@ describe('Stitch prototype restoration — Stitch card classes & indigo palette'
     expect(configScreen).toContain('stitch-back-btn');
   });
 
-  it('defines the indigo token set from Stitch prototype', () => {
+  it('defines the orange brand token set from Bindery theme', () => {
     const stitchSection = stylesCss.slice(
       stylesCss.indexOf('Stitch Design Language Tokens'),
       stylesCss.indexOf('Container enclosing the entire configuration flow'),
     );
     expect(stitchSection.length).toBeGreaterThan(1000);
-    expect(stitchSection).toContain('--stitch-primary: #4f46e5;');
-    expect(stitchSection).toContain('--stitch-primary-hover: #4338ca;');
-    expect(stitchSection).toContain('--stitch-primary-tint-50: #f5f3ff;');
-    expect(stitchSection).toContain('--stitch-primary-glow: rgba(79, 70, 229, 0.35);');
-    expect(stitchSection).toContain('--stitch-step-dot-active: #4f46e5;');
+    expect(stitchSection).toContain('--stitch-primary: #ea580c;');
+    expect(stitchSection).toContain('--stitch-primary-hover: #c2410c;');
+    expect(stitchSection).toContain('--stitch-primary-tint-50: #fff7ed;');
+    expect(stitchSection).toContain('--stitch-primary-glow: rgba(234, 88, 12, 0.35);');
+    expect(stitchSection).toContain('--stitch-step-dot-active: #ea580c;');
   });
 
   it('paints from the Stitch tokens', () => {
@@ -277,7 +277,7 @@ describe('Stitch prototype restoration — Stitch card classes & indigo palette'
       stylesCss.indexOf('Stitch Design Language Tokens'),
       stylesCss.indexOf('Container enclosing the entire configuration flow'),
     );
-    expect(stitchSection).toContain('--stitch-primary: #4f46e5;');
+    expect(stitchSection).toContain('--stitch-primary: #ea580c;');
     const cta = cssRule(stylesCss, '#configStickyFooter #generateBtn');
     expect(cta).toContain('background: var(--stitch-primary)');
   });

@@ -7938,15 +7938,15 @@ button.book-page-label:active {
    ========================================================================== */
 
 :root {
-  /* Brand Accents - Stitch Modern Indigo (#4f46e5) */
-  --stitch-primary: #4f46e5;
-  --stitch-primary-hover: #4338ca;
-  --stitch-primary-active: #3730a3;
-  --stitch-primary-tint-50: #f5f3ff;
-  --stitch-primary-tint-100: #ede9fe;
-  --stitch-primary-glow: rgba(79, 70, 229, 0.35);
-  --stitch-primary-shadow: 0 4px 14px rgba(79, 70, 229, 0.22);
-  --stitch-primary-shadow-hover: 0 6px 20px rgba(79, 70, 229, 0.35);
+  /* Brand Accents - Bindery Terracotta / Orange Theme (#ea580c) */
+  --stitch-primary: #ea580c;
+  --stitch-primary-hover: #c2410c;
+  --stitch-primary-active: #9a3412;
+  --stitch-primary-tint-50: #fff7ed;
+  --stitch-primary-tint-100: #ffedd5;
+  --stitch-primary-glow: rgba(234, 88, 12, 0.35);
+  --stitch-primary-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+  --stitch-primary-shadow-hover: 0 6px 20px rgba(234, 88, 12, 0.38);
 
   /* Surfaces & Backgrounds */
   --stitch-viewport-bg: #f8fafc;
@@ -7957,36 +7957,36 @@ button.book-page-label:active {
   --stitch-card-divider: #f1f5f9;
 
   /* Spine Estimation Card */
-  --stitch-spine-card-bg: linear-gradient(135deg, rgba(238, 242, 255, 0.6) 0%, rgba(245, 243, 255, 0.6) 100%);
-  --stitch-spine-card-border: #ede9fe;
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(255, 237, 213, 0.6) 100%);
+  --stitch-spine-card-border: #fed7aa;
   --stitch-spine-icon-bg: #ffffff;
-  --stitch-spine-icon-color: #4f46e5;
+  --stitch-spine-icon-color: #ea580c;
 
   /* Typography */
   --stitch-text-title: #0f172a;
   --stitch-text-body: #334155;
   --stitch-text-muted: #64748b;
   --stitch-text-subtle: #94a3b8;
-  --stitch-text-brand: #4f46e5;
+  --stitch-text-brand: #ea580c;
 
   /* Segmented Pill Controls */
   --stitch-segmented-track: #f1f5f9;
   --stitch-segmented-border: transparent;
   --stitch-pill-active-bg: #ffffff;
-  --stitch-pill-active-text: #4f46e5;
-  --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(79, 70, 229, 0.08);
+  --stitch-pill-active-text: #ea580c;
+  --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(234, 88, 12, 0.08);
   --stitch-pill-inactive-text: #475569;
   --stitch-pill-hover-text: #0f172a;
 
   /* Slider & Controls */
   --stitch-slider-track: #e2e8f0;
-  --stitch-slider-thumb-bg: #4f46e5;
+  --stitch-slider-thumb-bg: #ea580c;
   --stitch-slider-thumb-border: #ffffff;
-  --stitch-slider-thumb-glow: 0 2px 6px rgba(79, 70, 229, 0.35);
+  --stitch-slider-thumb-glow: 0 2px 6px rgba(234, 88, 12, 0.35);
 
   /* Toggle Switch */
   --stitch-switch-track-off: #e2e8f0;
-  --stitch-switch-track-on: #4f46e5;
+  --stitch-switch-track-on: #ea580c;
   --stitch-switch-thumb: #ffffff;
 
   /* Bottom Floating Dock */
@@ -7997,7 +7997,7 @@ button.book-page-label:active {
   --stitch-summary-border: rgba(226, 232, 240, 0.8);
   --stitch-summary-text: #475569;
   --stitch-step-dot-inactive: #cbd5e1;
-  --stitch-step-dot-active: #4f46e5;
+  --stitch-step-dot-active: #ea580c;
 
   /* Status Indicators */
   --stitch-live-dot: #10b981;
@@ -8027,31 +8027,31 @@ button.book-page-label:active {
   --stitch-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
   --stitch-card-divider: rgba(255, 255, 255, 0.06);
 
-  --stitch-spine-card-bg: linear-gradient(135deg, rgba(79, 70, 229, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%);
-  --stitch-spine-card-border: rgba(99, 102, 241, 0.35);
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(120, 53, 15, 0.32) 0%, rgba(154, 64, 29, 0.22) 100%);
+  --stitch-spine-card-border: rgba(234, 88, 12, 0.35);
   --stitch-spine-icon-bg: #232832;
-  --stitch-spine-icon-color: #818cf8;
+  --stitch-spine-icon-color: #fb923c;
 
   --stitch-text-title: #f8fafc;
   --stitch-text-body: #e2e8f0;
   --stitch-text-muted: #94a3b8;
   --stitch-text-subtle: #64748b;
-  --stitch-text-brand: #818cf8;
+  --stitch-text-brand: #fb923c;
 
   --stitch-segmented-track: #11141a;
   --stitch-pill-active-bg: #262c37;
-  --stitch-pill-active-text: #818cf8;
+  --stitch-pill-active-text: #fb923c;
   --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --stitch-pill-inactive-text: #94a3b8;
   --stitch-pill-hover-text: #f8fafc;
 
   --stitch-slider-track: #262e3d;
-  --stitch-slider-thumb-bg: #6366f1;
+  --stitch-slider-thumb-bg: #ea580c;
   --stitch-slider-thumb-border: #181d26;
-  --stitch-slider-thumb-glow: 0 2px 6px rgba(99, 102, 241, 0.35);
+  --stitch-slider-thumb-glow: 0 2px 6px rgba(234, 88, 12, 0.35);
 
   --stitch-switch-track-off: #262e3d;
-  --stitch-switch-track-on: #6366f1;
+  --stitch-switch-track-on: #ea580c;
 
   --stitch-dock-bg: rgba(24, 29, 38, 0.92);
   --stitch-dock-border: rgba(255, 255, 255, 0.08);
@@ -8059,7 +8059,7 @@ button.book-page-label:active {
   --stitch-summary-border: rgba(255, 255, 255, 0.08);
   --stitch-summary-text: #94a3b8;
   --stitch-step-dot-inactive: #334155;
-  --stitch-step-dot-active: #6366f1;
+  --stitch-step-dot-active: #ea580c;
 
   --stitch-badge-recommended-bg: rgba(16, 185, 129, 0.15);
   --stitch-badge-recommended-text: #34d399;
