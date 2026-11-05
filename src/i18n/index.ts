@@ -438,6 +438,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.sheetOrderInfo': 'Learn more about sheet order',
     'config.instructionsInfo': 'Learn more about instructions page',
     'config.insertBlankInfo': 'Learn more about inserting blank pages',
+    'config.advancedSettingsLink': 'Advanced Print Settings (Gutter, Creep)',
     'picker.mixedSizeWarning': 'This document has mixed page sizes; scaling may look inconsistent in the booklet.',
     'picker.trimBoxNotice':
       "This PDF defines a trim box. Pages are imposed at their trimmed size, without bleed or printer's marks.",
@@ -1298,6 +1299,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.sheetOrderInfo': 'Yaprak sırası hakkında bilgi al',
     'config.instructionsInfo': 'Talimat sayfası hakkında bilgi al',
     'config.insertBlankInfo': 'Boş sayfa ekleme hakkında bilgi al',
+    'config.advancedSettingsLink': 'Gelişmiş Baskı Ayarları (Gutter, Creep)',
     'picker.mixedSizeWarning': 'Bu belgede farklı boyutlarda sayfalar var; kitapçıkta ölçekleme tutarsız görünebilir.',
     'picker.trimBoxNotice':
       'Bu PDF\'te kesim kutusu (TrimBox) tanımlı. Sayfalar taşma payı ve kesim işaretleri olmadan, kesilmiş boyutlarıyla yerleştirilir.',

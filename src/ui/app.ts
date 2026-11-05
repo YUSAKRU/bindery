@@ -546,6 +546,10 @@ export function initApp(): void {
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
+  const step1GenerateBtn = byId<HTMLButtonElement>('step1GenerateBtn');
+  const step1GenerateBtnLabel = byId<HTMLSpanElement>('step1GenerateBtnLabel');
+  const step1GenerateSpinner = byId<HTMLSpanElement>('step1GenerateSpinner');
+  const step1AdvancedLink = byId<HTMLButtonElement>('step1AdvancedLink');
 
   const statOriginal = byId<HTMLSpanElement>('statOriginal');
   const statPaddingCard = byId<HTMLDivElement>('statPaddingCard');
@@ -2846,6 +2850,18 @@ export function initApp(): void {
     });
   }
 
+  if (step1GenerateBtn) {
+    step1GenerateBtn.addEventListener('click', () => {
+      generateBtn.click();
+    });
+  }
+
+  if (step1AdvancedLink) {
+    step1AdvancedLink.addEventListener('click', () => {
+      switchConfigTab('print');
+    });
+  }
+
   if (coverToggle) {
     coverToggle.addEventListener('change', () => {
       bookletWrapCover = coverToggle.checked;
@@ -3005,6 +3021,9 @@ export function initApp(): void {
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');
     generateSpinner.classList.remove('hidden');
+    if (step1GenerateBtn) step1GenerateBtn.disabled = true;
+    if (step1GenerateBtnLabel) step1GenerateBtnLabel.classList.add('hidden');
+    if (step1GenerateSpinner) step1GenerateSpinner.classList.remove('hidden');
 
     try {
       // Assigned inside the call so the options literal stays at the call site
@@ -3124,6 +3143,9 @@ export function initApp(): void {
       generateBtn.disabled = false;
       generateBtnLabel.classList.remove('hidden');
       generateSpinner.classList.add('hidden');
+      if (step1GenerateBtn) step1GenerateBtn.disabled = false;
+      if (step1GenerateBtnLabel) step1GenerateBtnLabel.classList.remove('hidden');
+      if (step1GenerateSpinner) step1GenerateSpinner.classList.add('hidden');
     }
   });
 

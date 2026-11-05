@@ -8654,6 +8654,64 @@ button.book-page-label:active {
   animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
 }
 
+/* Step 1 centered layout & action group */
+#screen-config:has(#configStepLayout:not(.hidden)) #configStickyFooter {
+  display: none;
+}
+
+#configStepLayout {
+  margin-block: auto;
+  justify-content: center;
+}
+
+.config-step-action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stitch-advanced-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--stitch-text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--stitch-radius-pill);
+  transition: color 150ms ease;
+}
+
+.stitch-advanced-link:hover {
+  color: var(--stitch-primary);
+}
+
+.stitch-privacy-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--stitch-text-muted);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+.stitch-privacy-note svg {
+  flex-shrink: 0;
+}
+
 /* Cards within #screen-config */
 .stitch-card,
 #screen-config .setting-card {
