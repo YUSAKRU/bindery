@@ -303,6 +303,8 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
     if (modeHint) modeHint.textContent = deps.t('atelier.hintCarousel');
 
     const normalizedDrag = Math.max(-140, Math.min(140, dragOffsetX));
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 390;
+    const baseShift = Math.min(116, Math.max(72, Math.round((screenWidth - 236) / 2 + 10)));
 
     cards.forEach((card, idx) => {
       if (!card) return;
@@ -321,14 +323,14 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
         card.style.opacity = '1';
         card.style.filter = 'drop-shadow(0 24px 44px rgba(35,25,15,0.34))';
       } else if (diff === 1) {
-        const shiftX = 116 + normalizedDrag * 0.35;
+        const shiftX = baseShift + normalizedDrag * 0.35;
         const rotY = -28 + normalizedDrag * 0.06;
         card.style.transform = `translate3d(${shiftX}px, 8px, -45px) rotateY(${rotY}deg) rotateX(0deg) rotateZ(2deg) scale(0.83)`;
         card.style.zIndex = normalizedDrag < 0 ? '18' : '15';
         card.style.opacity = '0.82';
         card.style.filter = 'drop-shadow(0 10px 20px rgba(35,25,15,0.16))';
       } else {
-        const shiftX = -116 + normalizedDrag * 0.35;
+        const shiftX = -baseShift + normalizedDrag * 0.35;
         const rotY = 28 + normalizedDrag * 0.06;
         card.style.transform = `translate3d(${shiftX}px, 8px, -45px) rotateY(${rotY}deg) rotateX(0deg) rotateZ(-2deg) scale(0.83)`;
         card.style.zIndex = normalizedDrag > 0 ? '18' : '15';
