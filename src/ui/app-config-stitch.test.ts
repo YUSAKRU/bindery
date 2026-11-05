@@ -216,12 +216,15 @@ describe('Stitch 2-step prototype restoration — gesture & dot navigation', () 
     expect(backBlock).toContain("showScreen('picker')");
   });
 
-  it('supports horizontal swipe gestures between 2 steps', () => {
+  it('supports horizontal swipe gestures between 2 steps starting over cards and buttons while excluding sliders', () => {
     const bodySwipe = stripTsComments(blockAfter(appTs, 'if (configBody) {'));
     expect(bodySwipe).toContain("currentConfigTab === 'layout'");
     expect(bodySwipe).toContain("switchConfigTab('print')");
     expect(bodySwipe).toContain("currentConfigTab === 'print'");
     expect(bodySwipe).toContain("switchConfigTab('layout')");
+    expect(bodySwipe).toContain('input[type="range"]');
+    expect(bodySwipe).not.toContain("target.closest('input, textarea, select, button");
+    expect(bodySwipe).toContain("window.addEventListener('click'");
   });
 });
 

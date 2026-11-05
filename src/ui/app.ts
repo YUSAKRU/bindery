@@ -2860,14 +2860,26 @@ export function initApp(): void {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
+    let isSwiping = false;
 
     configBody.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
       const target = e.target as HTMLElement;
-      if (target.closest('input, textarea, select, button, .segmented-btn, .stitch-pill-btn')) return;
+      // Do not initiate swipe on sliders (range inputs) or text fields where horizontal drag/selection is native
+      if (target.closest('input[type="range"], input[type="text"], input[type="number"], textarea, select')) return;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchStartTime = performance.now();
+      isSwiping = false;
+    }, { passive: true });
+
+    configBody.addEventListener('touchmove', (e) => {
+      if (touchStartTime === 0 || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dx) > 15 && Math.abs(dx) > Math.abs(dy)) {
+        isSwiping = true;
+      }
     }, { passive: true });
 
     configBody.addEventListener('touchend', (e) => {
@@ -2877,13 +2889,30 @@ export function initApp(): void {
       const dt = performance.now() - touchStartTime;
       touchStartTime = 0;
 
-      if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const isHorizontalFlick = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2;
+      const swiped = (isSwiping || isHorizontalFlick) && dt < 500 && isHorizontalFlick;
+      isSwiping = false;
+
+      if (swiped) {
+        // Prevent accidental button clicks when ending a swipe gesture
+        const blockClick = (evt: MouseEvent) => {
+          evt.stopPropagation();
+          evt.preventDefault();
+        };
+        window.addEventListener('click', blockClick, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', blockClick, { capture: true }), 350);
+
         if (dx < 0) {
           if (currentConfigTab === 'layout') switchConfigTab('print');
         } else {
           if (currentConfigTab === 'print') switchConfigTab('layout');
         }
       }
+    }, { passive: true });
+
+    configBody.addEventListener('touchcancel', () => {
+      touchStartTime = 0;
+      isSwiping = false;
     }, { passive: true });
   }
 
