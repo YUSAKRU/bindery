@@ -8639,14 +8639,6 @@ button.book-page-label:active {
   animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
 }
 
-/* 3-Step Centered Layout */
-#configStepLayout,
-#configStepPrint,
-#configStepSummary {
-  margin-block: auto;
-  justify-content: center;
-}
-
 .config-step-action-group {
   display: flex;
   flex-direction: column;
@@ -8766,51 +8758,118 @@ button.book-page-label:active {
   border-radius: var(--stitch-radius-card);
 }
 
-/* Step 3 Summary & Spec Card */
-.summary-spec-card {
+/* Step 3 Atelier Colophon Ticket */
+.atelier-colophon-ticket {
   background: var(--atelier-surface-cream, #F3ECE1);
   border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-}
-
-.summary-spec-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.summary-spec-cell {
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: var(--stitch-radius-card);
+  padding: 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 12px;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
-.summary-spec-label {
-  font-size: 0.70rem;
-  color: var(--stitch-text-muted, #78716c);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.colophon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--atelier-border-hairline, #DCD5C9);
 }
 
-.summary-spec-val {
-  font-size: 0.92rem;
+.colophon-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colophon-craft-icon {
+  color: var(--atelier-primary, #9a401d);
+  flex-shrink: 0;
+}
+
+.colophon-title {
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--stitch-text-title, #1C1A18);
+  color: var(--atelier-ink-black, #1C1A18);
+  letter-spacing: -0.01em;
 }
 
-#summaryLogicalPagesBadge {
+.colophon-badge {
   padding: 3px 10px;
-  border-radius: 6px;
+  border-radius: var(--stitch-radius-pill);
   background: var(--stitch-primary-tint-50, #FAF0EC);
   color: var(--stitch-primary, #9a401d);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
-  border: 1px solid rgba(154, 64, 29, 0.15);
+  border: 1px solid rgba(154, 64, 29, 0.2);
+}
+
+.colophon-spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.colophon-spec-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.colophon-spec-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.80rem;
+  color: var(--atelier-ink-muted, #78716c);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.colophon-spec-label svg {
+  color: var(--atelier-primary, #9a401d);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.colophon-spec-dots {
+  flex: 1 1 0%;
+  border-bottom: 1px dashed var(--atelier-paper-edge, #D8CDB4);
+  margin-bottom: 3px;
+  opacity: 0.65;
+}
+
+.colophon-spec-val {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black, #1C1A18);
+  white-space: nowrap;
+}
+
+.colophon-yield-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(154, 64, 29, 0.08);
+  border: 1px solid rgba(154, 64, 29, 0.16);
+  color: var(--atelier-primary, #9a401d);
+  margin-top: 4px;
+}
+
+.colophon-yield-banner svg {
+  flex-shrink: 0;
+}
+
+.colophon-yield-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 /* Cards within #screen-config */

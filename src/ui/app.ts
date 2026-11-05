@@ -549,6 +549,8 @@ export function initApp(): void {
   const step1NextBtn = byId<HTMLButtonElement>('step1NextBtn');
 
   const printPresetModeGroup = byId<HTMLDivElement>('printPresetModeGroup');
+  const presetRecommendedBtn = byId<HTMLButtonElement>('presetRecommendedBtn');
+  const presetCustomBtn = byId<HTMLButtonElement>('presetCustomBtn');
   const printPresetHint = byId<HTMLParagraphElement>('printPresetHint');
   const toggleDetailedSettingsBtn = byId<HTMLButtonElement>('toggleDetailedSettingsBtn');
   const toggleDetailedSettingsText = byId<HTMLSpanElement>('toggleDetailedSettingsText');
@@ -1718,11 +1720,26 @@ export function initApp(): void {
   }
 
   function setAdvancedOpen(open: boolean): void {
-    // In the 3-step non-linear stepper, advancedPanel resides inside #configStepPrint
-    // and must never be hidden so that Step 3 options are immediately accessible.
-    advancedPanel.classList.remove('hidden');
+    advancedPanel.classList.toggle('hidden', !open);
     advancedToggle.classList.toggle('is-open', open);
     advancedToggle.setAttribute('aria-expanded', String(open));
+    if (presetRecommendedBtn && presetCustomBtn) {
+      presetRecommendedBtn.classList.toggle('is-active', !open);
+      presetCustomBtn.classList.toggle('is-active', open);
+    }
+    if (printPresetHint) {
+      const hintKey = open ? 'config.presetCustomHint' : 'config.presetRecommendedHint';
+      printPresetHint.textContent = t(hintKey);
+      printPresetHint.dataset.i18n = hintKey;
+    }
+    if (toggleDetailedSettingsBtn) {
+      toggleDetailedSettingsBtn.classList.toggle('is-open', open);
+    }
+    if (toggleDetailedSettingsText) {
+      const key = open ? 'config.hideSettingsDetails' : 'config.viewSettingsDetails';
+      toggleDetailedSettingsText.textContent = t(key);
+      toggleDetailedSettingsText.dataset.i18n = key;
+    }
   }
 
   /**
@@ -2907,42 +2924,22 @@ export function initApp(): void {
   }
 
   if (printPresetModeGroup) {
-    const presetBtns = printPresetModeGroup.querySelectorAll<HTMLButtonElement>('.segmented-btn');
-    presetBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        presetBtns.forEach((b) => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        const mode = btn.dataset.preset;
-        if (mode === 'recommended') {
-          printPresetHint.textContent = t('config.presetRecommendedHint');
-          printPresetHint.dataset.i18n = 'config.presetRecommendedHint';
-          advancedPanel.classList.add('hidden');
-          if (toggleDetailedSettingsText) {
-            toggleDetailedSettingsText.textContent = t('config.viewSettingsDetails');
-            toggleDetailedSettingsText.dataset.i18n = 'config.viewSettingsDetails';
-          }
-        } else {
-          printPresetHint.textContent = t('config.presetCustomHint');
-          printPresetHint.dataset.i18n = 'config.presetCustomHint';
-          advancedPanel.classList.remove('hidden');
-          if (toggleDetailedSettingsText) {
-            toggleDetailedSettingsText.textContent = t('config.hideSettingsDetails');
-            toggleDetailedSettingsText.dataset.i18n = 'config.hideSettingsDetails';
-          }
-        }
+    if (presetRecommendedBtn) {
+      presetRecommendedBtn.addEventListener('click', () => {
+        setAdvancedOpen(false);
       });
-    });
+    }
+    if (presetCustomBtn) {
+      presetCustomBtn.addEventListener('click', () => {
+        setAdvancedOpen(true);
+      });
+    }
   }
 
   if (toggleDetailedSettingsBtn) {
     toggleDetailedSettingsBtn.addEventListener('click', () => {
-      const isHidden = advancedPanel.classList.contains('hidden');
-      advancedPanel.classList.toggle('hidden', !isHidden);
-      if (toggleDetailedSettingsText) {
-        const key = isHidden ? 'config.hideSettingsDetails' : 'config.viewSettingsDetails';
-        toggleDetailedSettingsText.textContent = t(key);
-        toggleDetailedSettingsText.dataset.i18n = key;
-      }
+      const isCurrentlyHidden = advancedPanel.classList.contains('hidden');
+      setAdvancedOpen(isCurrentlyHidden);
     });
   }
 
