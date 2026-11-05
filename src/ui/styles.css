@@ -3834,11 +3834,13 @@ dialog.modal-sheet::backdrop {
 /* 1. Shell Integration when #screen-hub is active */
 .app:has(#screen-hub:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .top-bar,
+.app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-hub:not(.hidden)) .bottom-nav {
   display: none;
 }
 
-.app:has(#screen-hub:not(.hidden)) .screen-container {
+.app:has(#screen-hub:not(.hidden)) .screen-container,
+.app:has(#screen-config:not(.hidden)) .screen-container {
   padding-top: 0;
   padding-left: 0;
   padding-right: 0;
@@ -7922,6 +7924,134 @@ button.book-page-label:active {
   --hub-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
+/* ==========================================================================
+   Stitch Design Language Tokens & Warm Orange Palette
+   ========================================================================== */
+
+:root {
+  /* Brand Accents */
+  --stitch-primary: #ea580c;
+  --stitch-primary-hover: #c2410c;
+  --stitch-primary-active: #9a3412;
+  --stitch-primary-tint-50: #fff7ed;
+  --stitch-primary-tint-100: #ffedd5;
+  --stitch-primary-glow: rgba(234, 88, 12, 0.35);
+  --stitch-primary-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+  --stitch-primary-shadow-hover: 0 6px 20px rgba(234, 88, 12, 0.45);
+
+  /* Surfaces & Backgrounds */
+  --stitch-viewport-bg: #f8fafc;
+  --stitch-card-bg: #ffffff;
+  --stitch-card-border: #f1f5f9;
+  --stitch-card-border-hover: #e2e8f0;
+  --stitch-card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  --stitch-card-divider: #f1f5f9;
+
+  /* Spine Estimation Card */
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(255, 237, 213, 0.6) 100%);
+  --stitch-spine-card-border: #fed7aa;
+  --stitch-spine-icon-bg: #ffffff;
+  --stitch-spine-icon-color: #ea580c;
+
+  /* Typography */
+  --stitch-text-title: #0f172a;
+  --stitch-text-body: #334155;
+  --stitch-text-muted: #64748b;
+  --stitch-text-subtle: #94a3b8;
+  --stitch-text-brand: #ea580c;
+
+  /* Segmented Pill Controls */
+  --stitch-segmented-track: #f1f5f9;
+  --stitch-segmented-border: transparent;
+  --stitch-pill-active-bg: #ffffff;
+  --stitch-pill-active-text: #ea580c;
+  --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(234, 88, 12, 0.08);
+  --stitch-pill-inactive-text: #475569;
+  --stitch-pill-hover-text: #0f172a;
+
+  /* Slider & Controls */
+  --stitch-slider-track: #e2e8f0;
+  --stitch-slider-thumb-bg: #ea580c;
+  --stitch-slider-thumb-border: #ffffff;
+  --stitch-slider-thumb-glow: 0 2px 6px rgba(234, 88, 12, 0.35);
+
+  /* Toggle Switch */
+  --stitch-switch-track-off: #e2e8f0;
+  --stitch-switch-track-on: #ea580c;
+  --stitch-switch-thumb: #ffffff;
+
+  /* Bottom Floating Dock */
+  --stitch-dock-bg: rgba(255, 255, 255, 0.90);
+  --stitch-dock-border: rgba(241, 245, 249, 0.85);
+  --stitch-dock-blur: blur(16px);
+  --stitch-summary-bg: rgba(248, 250, 252, 0.9);
+  --stitch-summary-border: rgba(226, 232, 240, 0.8);
+  --stitch-summary-text: #475569;
+  --stitch-step-dot-inactive: #cbd5e1;
+  --stitch-step-dot-active: #ea580c;
+
+  /* Status Indicators */
+  --stitch-live-dot: #10b981;
+  --stitch-badge-recommended-bg: #ecfdf5;
+  --stitch-badge-recommended-text: #059669;
+
+  /* Geometry & Radii */
+  --stitch-radius-card: 1.25rem;    /* 20px */
+  --stitch-radius-panel: 1.75rem;   /* 28px */
+  --stitch-radius-dock: 1.5rem;     /* 24px */
+  --stitch-radius-btn: 0.875rem;    /* 14px */
+  --stitch-radius-segmented: 0.75rem; /* 12px */
+  --stitch-radius-pill: 0.5rem;     /* 8px */
+  --stitch-radius-full: 9999px;
+
+  /* Motion */
+  --stitch-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --stitch-duration: 200ms;
+}
+
+:root:not(.light-theme),
+.dark-theme {
+  --stitch-viewport-bg: #0f172a;
+  --stitch-card-bg: #181d26;
+  --stitch-card-border: rgba(255, 255, 255, 0.07);
+  --stitch-card-border-hover: rgba(255, 255, 255, 0.12);
+  --stitch-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  --stitch-card-divider: rgba(255, 255, 255, 0.06);
+
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(120, 53, 15, 0.32) 0%, rgba(154, 64, 29, 0.22) 100%);
+  --stitch-spine-card-border: rgba(234, 88, 12, 0.35);
+  --stitch-spine-icon-bg: #232832;
+  --stitch-spine-icon-color: #fb923c;
+
+  --stitch-text-title: #f8fafc;
+  --stitch-text-body: #e2e8f0;
+  --stitch-text-muted: #94a3b8;
+  --stitch-text-subtle: #64748b;
+  --stitch-text-brand: #fb923c;
+
+  --stitch-segmented-track: #11141a;
+  --stitch-pill-active-bg: #262c37;
+  --stitch-pill-active-text: #fb923c;
+  --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --stitch-pill-inactive-text: #94a3b8;
+  --stitch-pill-hover-text: #f8fafc;
+
+  --stitch-slider-track: #262e3d;
+  --stitch-slider-thumb-border: #181d26;
+
+  --stitch-switch-track-off: #262e3d;
+
+  --stitch-dock-bg: rgba(24, 29, 38, 0.92);
+  --stitch-dock-border: rgba(255, 255, 255, 0.08);
+  --stitch-summary-bg: rgba(17, 20, 26, 0.85);
+  --stitch-summary-border: rgba(255, 255, 255, 0.08);
+  --stitch-summary-text: #94a3b8;
+  --stitch-step-dot-inactive: #334155;
+
+  --stitch-badge-recommended-bg: rgba(16, 185, 129, 0.15);
+  --stitch-badge-recommended-text: #34d399;
+}
+
 /* Container enclosing the entire configuration flow */
 #screen-config {
   display: flex;
@@ -7930,52 +8060,81 @@ button.book-page-label:active {
   max-height: 100%;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 0 16px 12px;
-  gap: 10px;
+  padding: 0;
+  gap: 0;
+  position: relative;
+  background-color: var(--stitch-viewport-bg);
+  color: var(--stitch-text-title);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Compact screen title */
-#screen-config .screen-title {
-  margin: 4px 0 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--hub-text-primary);
+/* Centered mobile device frame */
+#screen-config .config-frame {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Floating back pill button */
+.stitch-back-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 30;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--stitch-radius-full);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: var(--stitch-card-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stitch-text-body);
+  cursor: pointer;
+  transition: all var(--stitch-duration) var(--stitch-spring);
+}
+
+.stitch-back-btn:hover {
+  background: #ffffff;
+  color: var(--stitch-text-title);
+  transform: scale(1.04);
+}
+
+.stitch-back-btn:active {
+  transform: scale(0.95);
+}
+
+/* Header section */
+.stitch-header {
+  padding: 14px 16px 8px 60px;
   flex-shrink: 0;
 }
 
-/* Middle body wrapper */
-.config-body {
-  flex: 1 1 0%;
-  min-height: 0;
-  position: relative;
-  display: flex;
-  flex-direction: column;
+.stitch-header-title,
+#screen-config .screen-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--stitch-text-title);
+  line-height: 1.25;
 }
 
-/* Individual step panel */
-.config-step-panel {
-  flex: 1 1 0%;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-right: 2px;
-}
-
-/* Custom sleek hairline scrollbar */
-.config-step-panel::-webkit-scrollbar {
-  width: 4px;
-}
-.config-step-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-.config-step-panel::-webkit-scrollbar-thumb {
-  background: var(--hub-border);
-  border-radius: var(--hub-radius-full);
+.stitch-header-sub {
+  margin: 2px 0 0 0;
+  font-size: 0.72rem;
+  color: var(--stitch-text-muted);
 }
 
 /* Segmented Stepper Track */
@@ -7987,6 +8146,7 @@ button.book-page-label:active {
   border-radius: var(--hub-radius-pill);
   padding: 3px;
   gap: 2px;
+  margin: 0 16px 8px 16px;
   flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
@@ -7996,19 +8156,19 @@ button.book-page-label:active {
 .config-tab {
   flex: 1 1 0;
   min-width: 0;
-  height: 38px;
-  min-height: 38px;
+  height: 36px;
+  min-height: 36px;
   appearance: none;
   border: none;
   background: transparent;
   border-radius: calc(var(--hub-radius-pill) - 2px);
-  padding: 0 8px;
+  padding: 0 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   font-family: inherit;
-  font-size: 0.84rem;
+  font-size: 0.80rem;
   font-weight: 500;
   color: var(--hub-text-muted);
   cursor: pointer;
@@ -8025,27 +8185,27 @@ button.book-page-label:active {
 }
 
 .config-tab:focus-visible {
-  outline: 2px solid var(--hub-border-focus);
+  outline: 2px solid var(--stitch-primary);
   outline-offset: 1px;
 }
 
 /* Active Segment Pill */
 .config-tab.is-active,
 .config-tab[aria-selected="true"] {
-  background: var(--hub-tab-pill-bg);
-  color: var(--hub-tab-active-text);
-  font-weight: 600;
-  box-shadow: var(--hub-tab-pill-shadow);
+  background: var(--stitch-pill-active-bg);
+  color: var(--stitch-pill-active-text);
+  font-weight: 700;
+  box-shadow: var(--stitch-pill-active-shadow);
 }
 
 /* Step number pill indicator */
 .config-tab-num {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   border-radius: var(--hub-radius-full);
   background: var(--hub-border);
   color: var(--hub-text-primary);
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -8055,8 +8215,8 @@ button.book-page-label:active {
 }
 
 .config-tab.is-active .config-tab-num {
-  background: var(--hub-primary);
-  color: var(--color-on-primary, #ffffff);
+  background: var(--stitch-primary);
+  color: #ffffff;
 }
 
 /* Tab label text with truncation guard */
@@ -8071,10 +8231,10 @@ button.book-page-label:active {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--hub-primary);
+  background: var(--stitch-primary);
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 5px;
+  right: 5px;
 }
 
 /* Step Panel Entry Keyframe */
@@ -8089,82 +8249,381 @@ button.book-page-label:active {
   }
 }
 
+/* Middle body wrapper */
+.config-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Individual step panel */
+.config-step-panel {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 16px 16px 16px;
+  box-sizing: border-box;
+}
+
+/* Custom sleek hairline scrollbar */
+.config-step-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.config-step-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.config-step-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: var(--stitch-radius-full);
+}
+
 .config-step-panel:not(.hidden) {
   animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
 }
 
 /* Cards within #screen-config */
+.stitch-card,
 #screen-config .setting-card {
-  background: var(--hub-surface-subtle);
-  border: 1px solid var(--hub-border);
-  border-radius: var(--hub-radius-card);
-  padding: 12px 14px;
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-card-border);
+  border-radius: var(--stitch-radius-card);
+  box-shadow: var(--stitch-card-shadow);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: none;
+  gap: 10px;
   box-sizing: border-box;
+  transition: border-color var(--stitch-duration) ease;
 }
 
+.stitch-card:hover,
+#screen-config .setting-card:hover {
+  border-color: var(--stitch-card-border-hover);
+}
+
+/* Card header row */
+.stitch-card-head,
 #screen-config .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 0.90rem;
-  font-weight: 600;
-  color: var(--hub-text-primary);
 }
 
+.stitch-card-title-group,
 .setting-title-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
+.stitch-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--stitch-text-title);
+  letter-spacing: -0.01em;
+}
+
+.stitch-badge-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--stitch-text-muted);
+  background: var(--stitch-segmented-track);
+  padding: 2px 8px;
+  border-radius: var(--stitch-radius-full);
+}
+
+.stitch-badge-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stitch-text-brand);
+}
+
+.stitch-badge-pill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--stitch-primary-tint-50);
+  color: var(--stitch-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stitch-badge-rec {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--stitch-badge-recommended-text);
+  background: var(--stitch-badge-recommended-bg);
+  padding: 2px 8px;
+  border-radius: var(--stitch-radius-full);
+}
+
+.stitch-card-desc,
 .setting-live-hint {
   margin: 0;
-  font-size: 0.78rem;
-  color: var(--hub-text-muted);
-  line-height: 1.35;
+  font-size: 0.76rem;
+  color: var(--stitch-text-muted);
+  line-height: 1.4;
 }
 
-#screen-config .segmented-group {
+.stitch-card-divider {
+  border: none;
+  border-top: 1px solid var(--stitch-card-divider);
+  margin: 4px 0;
+  padding-top: 4px;
+}
+
+/* Dynamic Spine Thickness Card */
+.stitch-card-spine,
+#screen-config #wrapCoverSummaryCard {
+  background: var(--stitch-spine-card-bg);
+  border: 1px solid var(--stitch-spine-card-border);
+  border-radius: var(--stitch-radius-card);
+  padding: 14px 16px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  background: var(--hub-surface-muted);
-  border: 1px solid var(--hub-border-subtle);
-  border-radius: var(--hub-radius-pill);
-  padding: 3px;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
 
+.stitch-spine-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stitch-spine-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--stitch-text-brand);
+}
+
+.stitch-spine-val,
+#wrapCoverSpineLabel {
+  margin: 2px 0 0 0;
+  font-size: 1.30rem;
+  font-weight: 800;
+  color: var(--stitch-text-title);
+  letter-spacing: -0.02em;
+}
+
+.stitch-spine-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--stitch-spine-icon-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stitch-spine-icon-color);
+  flex-shrink: 0;
+}
+
+.stitch-spine-sub {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--stitch-text-muted);
+}
+
+/* Callout Info Box */
+.stitch-callout {
+  background: var(--stitch-viewport-bg);
+  border: 1px solid var(--stitch-card-border);
+  border-radius: var(--stitch-radius-segmented);
+  padding: 8px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.stitch-callout-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--stitch-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stitch-callout-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--stitch-text-body);
+}
+
+/* Segmented Pill Controls */
+.stitch-segmented,
+#screen-config .segmented-group {
+  display: grid;
+  gap: 4px;
+  background: var(--stitch-segmented-track);
+  border-radius: var(--stitch-radius-segmented);
+  padding: 3px;
+  border: 1px solid var(--stitch-segmented-border);
+  box-sizing: border-box;
+}
+
+.stitch-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stitch-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stitch-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stitch-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.stitch-pill-btn,
 #screen-config .segmented-btn {
   appearance: none;
   border: none;
   background: transparent;
-  color: var(--hub-text-muted);
-  border-radius: calc(var(--hub-radius-pill) - 2px);
-  padding: 6px 10px;
-  font-size: 0.80rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease;
-}
-
-#screen-config .segmented-btn:hover:not(.is-active) {
-  color: var(--hub-text-primary);
-  background: var(--hub-surface-hover);
-}
-
-#screen-config .segmented-btn.is-active {
-  background: var(--hub-tab-pill-bg);
-  color: var(--hub-tab-active-text);
+  color: var(--stitch-pill-inactive-text);
+  border-radius: var(--stitch-radius-pill);
+  padding: 7px 8px;
+  font-size: 12px;
   font-weight: 600;
-  box-shadow: var(--hub-tab-pill-shadow);
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.stitch-pill-btn:hover:not(.is-active),
+#screen-config .segmented-btn:hover:not(.is-active) {
+  color: var(--stitch-pill-hover-text);
+}
+
+.stitch-pill-btn.is-active,
+#screen-config .segmented-btn.is-active {
+  background: var(--stitch-pill-active-bg);
+  color: var(--stitch-pill-active-text);
+  font-weight: 700;
+  box-shadow: var(--stitch-pill-active-shadow);
+}
+
+.stitch-pill-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
+  color: var(--stitch-primary);
+}
+
+/* Range Sliders */
+.stitch-range,
+#screen-config input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--stitch-radius-full);
+  background: var(--stitch-slider-track);
+  outline: none;
+  margin: 6px 0 2px 0;
+  cursor: pointer;
+}
+
+.stitch-range::-webkit-slider-thumb,
+#screen-config input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--stitch-slider-thumb-bg);
+  border: 2px solid var(--stitch-slider-thumb-border);
+  box-shadow: var(--stitch-slider-thumb-glow);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.stitch-range::-webkit-slider-thumb:active,
+#screen-config input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.55);
+}
+
+.stitch-range::-moz-range-thumb,
+#screen-config input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--stitch-slider-thumb-bg);
+  border: 2px solid var(--stitch-slider-thumb-border);
+  box-shadow: var(--stitch-slider-thumb-glow);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.stitch-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--stitch-text-subtle);
+  margin-top: 2px;
+}
+
+/* Toggle Switch Component */
+.stitch-switch-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stitch-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stitch-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.stitch-switch-track {
+  width: 48px;
+  height: 24px;
+  background: var(--stitch-switch-track-off);
+  border-radius: var(--stitch-radius-full);
+  position: relative;
+  transition: background-color var(--stitch-duration) var(--stitch-spring);
+}
+
+.stitch-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--stitch-switch-thumb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform var(--stitch-duration) var(--stitch-spring);
+}
+
+.stitch-switch input:checked + .stitch-switch-track {
+  background: var(--stitch-switch-track-on);
+}
+
+.stitch-switch input:checked + .stitch-switch-track .stitch-switch-thumb {
+  transform: translateX(24px);
 }
 
 /* Info Trigger Button */
@@ -8172,15 +8631,15 @@ button.book-page-label:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   appearance: none;
   border: 1px solid var(--hub-border);
   background: transparent;
   color: var(--hub-text-subtle);
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 700;
   font-style: italic;
   cursor: pointer;
@@ -8199,7 +8658,7 @@ button.book-page-label:active {
 }
 
 .config-info-btn:focus-visible {
-  outline: 2px solid var(--hub-border-focus);
+  outline: 2px solid var(--stitch-primary);
   outline-offset: 1px;
 }
 
@@ -8231,63 +8690,210 @@ button.book-page-label:active {
   pointer-events: auto;
 }
 
-/* Pinned Sticky Footer Envelope */
-#configStickyFooter {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--hub-border);
-  background: var(--color-surface);
-  position: relative;
-  z-index: 10;
+/* Pulsating Live Status Dot */
+@keyframes stitchPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
 }
 
+.stitch-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stitch-live-dot);
+  animation: stitchPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Pinned Sticky Footer / Dock Envelope */
+.stitch-dock,
+#configStickyFooter {
+  flex-shrink: 0;
+  border-top: 1px solid var(--hub-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px;
+  background: var(--stitch-dock-bg);
+  backdrop-filter: var(--stitch-dock-blur);
+  -webkit-backdrop-filter: var(--stitch-dock-blur);
+  position: relative;
+  z-index: 40;
+  box-sizing: border-box;
+}
+
+.stitch-summary-capsule,
 #configStickyFooter .config-summary {
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: var(--hub-radius-sm);
-  background: var(--hub-surface-subtle);
-  border: 1px solid var(--hub-border);
-  color: var(--hub-text-primary);
-  font-size: 0.84rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: var(--stitch-radius-full);
+  background: var(--stitch-summary-bg);
+  border: 1px solid var(--stitch-summary-border);
+  font-size: 11px;
   font-weight: 600;
+  color: var(--stitch-summary-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin: 0;
   text-align: center;
+  max-width: 90%;
   min-height: 18px;
   line-height: 1.35;
+}
+
+.stitch-summary-capsule::before,
+#configStickyFooter .config-summary:not(.hidden)::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stitch-live-dot);
+  animation: stitchPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  flex-shrink: 0;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.stitch-summary-divider {
+  color: var(--stitch-text-subtle);
+  opacity: 0.6;
+  margin: 0 4px;
+}
+
+/* Step Indicator Pill & Dots */
+.stitch-step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.stitch-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--stitch-radius-full);
+  background: var(--stitch-step-dot-inactive);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 200ms ease;
+  position: relative;
+}
+
+.stitch-step-dot::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: -12px;
+  right: -12px;
+}
+
+.stitch-step-dot:hover {
+  background: var(--stitch-text-muted);
+  transform: scale(1.2);
+}
+
+.stitch-step-dot.is-active,
+.stitch-step-pill-active {
+  width: 24px !important;
+  height: 6px !important;
+  border-radius: var(--stitch-radius-full) !important;
+  background: var(--stitch-step-dot-active) !important;
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.35) !important;
+}
+
+/* Next Step Hint */
+.stitch-step-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--stitch-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: var(--stitch-radius-pill);
+  transition: color 150ms ease;
+}
+
+.stitch-step-hint:hover {
+  color: var(--stitch-text-brand);
+}
+
+.stitch-step-hint svg {
+  width: 14px;
+  height: 14px;
 }
 
 #configStickyFooter .warning-banner {
   margin: 0;
   padding: 8px 10px;
   font-size: 0.78rem;
+  width: 100%;
 }
 
+/* Primary Sticky CTA */
+.stitch-btn-primary,
 #configStickyFooter #generateBtn {
   width: 100%;
   height: 48px;
   min-height: 48px;
+  border-radius: var(--stitch-radius-btn);
+  background: var(--stitch-primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border-radius: var(--hub-radius-pill);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--stitch-primary-shadow);
+  transition: all 160ms var(--stitch-spring);
+  user-select: none;
+}
+
+.stitch-btn-primary:hover,
+#configStickyFooter #generateBtn:hover {
+  background: var(--stitch-primary-hover);
+  box-shadow: var(--stitch-primary-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.stitch-btn-primary:active,
+#configStickyFooter #generateBtn:active {
+  background: var(--stitch-primary-active);
+  transform: scale(0.98);
 }
 
 @media (max-width: 380px) {
   .config-tab {
-    padding: 0 4px;
-    gap: 4px;
-    font-size: 0.78rem;
+    padding: 0 3px;
+    gap: 3px;
+    font-size: 0.74rem;
   }
 
   .config-tab-num {
-    width: 16px;
-    height: 16px;
-    font-size: 0.68rem;
+    width: 15px;
+    height: 15px;
+    font-size: 0.65rem;
   }
 }
 
@@ -8302,8 +8908,12 @@ button.book-page-label:active {
   .config-tab,
   .config-tab-num,
   .config-switch-thumb,
-  .config-switch-track {
+  .config-switch-track,
+  .stitch-live-dot,
+  .stitch-btn-primary,
+  #configStickyFooter #generateBtn {
     transition: none !important;
+    animation: none !important;
     transition-delay: 0s !important;
     animation-delay: 0s !important;
   }

@@ -521,8 +521,18 @@ export function initApp(): void {
   const configTabButtons = Array.from(byId('screen-config').querySelectorAll<HTMLButtonElement>('.config-tab'));
   const configStepLayout = byId<HTMLDivElement>('configStepLayout');
   const configStepCover = byId<HTMLDivElement>('configStepCover');
+  const configStepPages = byId<HTMLDivElement>('configStepPages');
   const configStepPrint = byId<HTMLDivElement>('configStepPrint');
   const configTooltipPopover = byId<HTMLDivElement>('configTooltipPopover');
+  const configBackBtn = byId<HTMLButtonElement>('configBackBtn');
+  const stitchStepSubtitle = byId<HTMLElement>('stitchStepSubtitle');
+  const stitchNextHint = byId<HTMLElement>('stitchNextHint');
+  const stitchNextHintText = byId<HTMLElement>('stitchNextHintText');
+  const paperSelectedLabel = byId<HTMLElement>('paperSelectedLabel');
+  const formaBadge = byId<HTMLElement>('formaBadge');
+  const spineBasisLabel = byId<HTMLElement>('spineBasisLabel');
+  const stitchStepNav = byId<HTMLElement>('stitchStepNav');
+  const coverToggle = byId<HTMLInputElement>('coverToggle');
   const advancedToggle = byId<HTMLButtonElement>('advancedToggle');
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
@@ -1360,6 +1370,29 @@ export function initApp(): void {
     );
   }
 
+  function updatePaperSelectedBadge(): void {
+    if (!paperSelectedLabel) return;
+    const paperLabels: Record<string, string> = {
+      A4: 'A4 (210×297 mm)',
+      A5: 'A5 (148×210 mm)',
+      Letter: 'Letter (8.5×11 in)',
+      source: t('config.paperSource'),
+    };
+    paperSelectedLabel.textContent = paperLabels[String(bookletPaperSize)] || String(bookletPaperSize);
+  }
+
+  function updateFormaBadge(): void {
+    if (!formaBadge) return;
+    if (bookletSignature === 'single') {
+      formaBadge.textContent = 'Single';
+    } else if (bookletSignature === 'auto') {
+      formaBadge.textContent = 'Auto';
+    } else {
+      const sheets = Number(bookletSignature);
+      formaBadge.textContent = `${sheets} sh / ${sheets * 4}p`;
+    }
+  }
+
   function resetPicker(): void {
     stopPickerIntake();
     selectedFile = null;
@@ -1407,6 +1440,8 @@ export function initApp(): void {
     // After the wrap-cover state above, so the separate-cover segment is not
     // reconciled against the previous document's setting.
     updateCoverAvailability();
+    updatePaperSelectedBadge();
+    updateFormaBadge();
     refreshConfigSummary();
     setAdvancedOpen(false);
     switchConfigTab('layout');
@@ -1459,6 +1494,8 @@ export function initApp(): void {
     }
     applyWrapCoverToUi();
     updateCoverAvailability();
+    updatePaperSelectedBadge();
+    updateFormaBadge();
     refreshConfigSummary();
     setAdvancedOpen(false);
     switchConfigTab('layout');
@@ -1556,10 +1593,46 @@ export function initApp(): void {
     );
   }
 
-  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {
-    const tabs: Array<{ id: string; panel: HTMLElement; name: 'layout' | 'cover' | 'print' }> = [
+  let currentConfigTab: 'layout' | 'cover' | 'pages' | 'print' = 'layout';
+
+  function updateStitchDock(tab: 'layout' | 'cover' | 'pages' | 'print'): void {
+    currentConfigTab = tab;
+    const stepMap: Record<'layout' | 'cover' | 'pages' | 'print', { step: number; subKey: string; hintKey: string }> = {
+      layout: { step: 1, subKey: 'config.stitchStepSubtitle1', hintKey: 'config.stitchNextHint1' },
+      cover: { step: 2, subKey: 'config.stitchStepSubtitle2', hintKey: 'config.stitchNextHint2' },
+      pages: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
+      print: { step: 4, subKey: 'config.stitchStepSubtitle4', hintKey: 'config.stitchNextHint4' },
+    };
+
+    const current = stepMap[tab];
+    if (stitchStepSubtitle) {
+      stitchStepSubtitle.textContent = t(current.subKey);
+      stitchStepSubtitle.dataset.i18n = current.subKey;
+    }
+    if (stitchNextHintText) {
+      stitchNextHintText.textContent = t(current.hintKey);
+      stitchNextHintText.dataset.i18n = current.hintKey;
+    }
+
+    if (stitchStepNav) {
+      const stepDots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
+      stepDots.forEach((dot) => {
+        const stepNum = Number(dot.dataset.step);
+        const isActive = stepNum === current.step;
+        dot.classList.toggle('is-active', isActive);
+        dot.classList.toggle('stitch-step-pill-active', isActive);
+        dot.setAttribute('aria-selected', String(isActive));
+      });
+    }
+  }
+
+  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void;
+  function switchConfigTab(tab: 'layout' | 'cover' | 'pages' | 'print'): void;
+  function switchConfigTab(tab: 'layout' | 'cover' | 'pages' | 'print'): void {
+    const tabs: Array<{ id: string; panel: HTMLElement; name: 'layout' | 'cover' | 'pages' | 'print' }> = [
       { id: 'configTab-layout', panel: configStepLayout, name: 'layout' },
       { id: 'configTab-cover', panel: configStepCover, name: 'cover' },
+      { id: 'configTab-pages', panel: configStepPages, name: 'pages' },
       { id: 'configTab-print', panel: configStepPrint, name: 'print' },
     ];
 
@@ -1573,15 +1646,19 @@ export function initApp(): void {
 
       item.panel.classList.toggle('hidden', !isActive);
     }
+
+    updateStitchDock(tab);
   }
 
   function updateConfigTabDots(): void {
     const layoutTab = byId<HTMLElement>('configTab-layout');
     const coverTab = byId<HTMLElement>('configTab-cover');
+    const pagesTab = document.getElementById('configTab-pages');
     const printTab = byId<HTMLElement>('configTab-print');
 
     const layoutDot = layoutTab?.querySelector('.config-tab-dot');
     const coverDot = coverTab?.querySelector('.config-tab-dot');
+    const pagesDot = pagesTab?.querySelector('.config-tab-dot');
     const printDot = printTab?.querySelector('.config-tab-dot');
 
     if (layoutDot) {
@@ -1592,8 +1669,12 @@ export function initApp(): void {
       const isCoverModified = effectiveSeparateCover() || Boolean(bookletWrapCover);
       coverDot.classList.toggle('hidden', !isCoverModified);
     }
+    if (pagesDot) {
+      const isPagesModified = bookletIncludeInstructions || bookletReverseSheetOrder || insertBlankInput.value.trim() !== '';
+      pagesDot.classList.toggle('hidden', !isPagesModified);
+    }
     if (printDot) {
-      const isPrintModified = Number(gutterSlider.value) !== 0 || Number(creepSlider.value) !== 0 || bookletIncludeInstructions || bookletReverseSheetOrder || bookletMarks !== 'none' || insertBlankInput.value.trim() !== '';
+      const isPrintModified = Number(gutterSlider.value) !== 0 || Number(creepSlider.value) !== 0 || bookletMarks !== 'none';
       printDot.classList.toggle('hidden', !isPrintModified);
     }
   }
@@ -1725,6 +1806,9 @@ export function initApp(): void {
    * applyCoverFormatToUi).
    */
   function applyWrapCoverToUi(): void {
+    if (coverToggle) {
+      coverToggle.checked = Boolean(bookletWrapCover);
+    }
     setActiveSegment(wrapCoverToggleGroup, 'wrapcover', bookletWrapCover ? 'on' : 'off');
     wrapCoverOptions.classList.toggle('hidden', !bookletWrapCover);
 
@@ -1772,6 +1856,9 @@ export function initApp(): void {
     const mmPerPt = 25.4 / 72;
 
     wrapCoverSpineLabel.textContent = `${spine.totalSpineWidthMm.toFixed(2)} mm`;
+    if (spineBasisLabel) {
+      spineBasisLabel.textContent = `${wrapCoverGsm} gsm · ${t('cover.spineBasisDesc')}`;
+    }
     wrapCoverPaperBulkBadge.textContent = t('cover.paperBulk', { value: spine.textBlockThicknessMm.toFixed(2) });
     wrapCoverThreadSwellBadge.textContent = t('cover.threadSwell', { value: spine.threadSwellMm.toFixed(2) });
     wrapCoverHingeBadge.textContent = t('cover.hingeAllowance', { value: spine.hingeAllowanceMm.toFixed(2) });
@@ -2391,6 +2478,7 @@ export function initApp(): void {
     if (!paper) return;
     bookletPaperSize = paper as PaperSize;
     setActiveSegment(paperSizeGroup, 'paper', paper);
+    updatePaperSelectedBadge();
     refreshConfigSummary();
   });
 
@@ -2409,6 +2497,7 @@ export function initApp(): void {
     if (!sig) return;
     bookletSignature = sig;
     setActiveSegment(signatureSizeGroup, 'sig', sig);
+    updateFormaBadge();
     refreshConfigSummary();
   });
 
@@ -2744,9 +2833,9 @@ export function initApp(): void {
   });
 
   // ── Config Stepper Navigation & Micro-interactions ────────────────────────
-  const configTabNames: Array<'layout' | 'cover' | 'print'> = ['layout', 'cover', 'print'];
+  const configTabNames: Array<'layout' | 'cover' | 'pages' | 'print'> = ['layout', 'cover', 'pages', 'print'];
   configTabButtons.forEach((tabBtn, index) => {
-    const tabName = tabBtn.getAttribute('data-tab') as 'layout' | 'cover' | 'print';
+    const tabName = tabBtn.getAttribute('data-tab') as 'layout' | 'cover' | 'pages' | 'print';
     tabBtn.addEventListener('click', () => {
       switchConfigTab(tabName);
     });
@@ -2771,6 +2860,92 @@ export function initApp(): void {
       }
     });
   });
+
+  // ── Stitch 4-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
+  if (stitchStepNav) {
+    const stepTabs: Array<'layout' | 'cover' | 'pages' | 'print'> = ['layout', 'cover', 'pages', 'print'];
+    const dots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
+    dots.forEach((dot, idx) => {
+      dot.addEventListener('click', () => {
+        if (stepTabs[idx]) {
+          switchConfigTab(stepTabs[idx]);
+        }
+      });
+    });
+  }
+
+  if (stitchNextHint) {
+    stitchNextHint.addEventListener('click', () => {
+      if (currentConfigTab === 'layout') {
+        switchConfigTab('cover');
+      } else if (currentConfigTab === 'cover') {
+        switchConfigTab('pages');
+      } else if (currentConfigTab === 'pages') {
+        switchConfigTab('print');
+      } else if (currentConfigTab === 'print') {
+        generateBtn.click();
+      }
+    });
+  }
+
+  if (configBackBtn) {
+    configBackBtn.addEventListener('click', () => {
+      if (currentConfigTab === 'print') {
+        switchConfigTab('pages');
+      } else if (currentConfigTab === 'pages') {
+        switchConfigTab('cover');
+      } else if (currentConfigTab === 'cover') {
+        switchConfigTab('layout');
+      } else {
+        showScreen('picker');
+      }
+    });
+  }
+
+  if (coverToggle) {
+    coverToggle.addEventListener('change', () => {
+      bookletWrapCover = coverToggle.checked;
+      applyWrapCoverToUi();
+      updateCoverAvailability();
+      refreshConfigSummary();
+    });
+  }
+
+  const configBody = byId('screen-config').querySelector<HTMLElement>('.config-body');
+  if (configBody) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    configBody.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, button, .segmented-btn, .stitch-pill-btn')) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = performance.now();
+    }, { passive: true });
+
+    configBody.addEventListener('touchend', (e) => {
+      if (touchStartTime === 0 || e.changedTouches.length !== 1) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const dt = performance.now() - touchStartTime;
+      touchStartTime = 0;
+
+      if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) {
+          if (currentConfigTab === 'layout') switchConfigTab('cover');
+          else if (currentConfigTab === 'cover') switchConfigTab('pages');
+          else if (currentConfigTab === 'pages') switchConfigTab('print');
+        } else {
+          if (currentConfigTab === 'print') switchConfigTab('pages');
+          else if (currentConfigTab === 'pages') switchConfigTab('cover');
+          else if (currentConfigTab === 'cover') switchConfigTab('layout');
+        }
+      }
+    }, { passive: true });
+  }
 
   // ── Info Tooltips Micro-interactions ──────────────────────────────────────
   let activeTooltipBtn: HTMLElement | null = null;
@@ -2847,7 +3022,7 @@ export function initApp(): void {
     // engine, which surfaces them through the normal error flow.
     const insertBlankAfter = parseInsertBlank();
     if (insertBlankAfter === null) {
-      switchConfigTab('print');
+      switchConfigTab('pages'); // Formerly switchConfigTab('print') in 3-tab layout
       insertBlankError.textContent = t('config.insertBlankError');
       insertBlankError.classList.remove('hidden');
       insertBlankInput.setAttribute('aria-invalid', 'true');
@@ -8335,6 +8510,8 @@ export function initApp(): void {
     refreshSaveLabel();
     updateCoverAvailability();
     refreshConfigSummary();
+    updateStitchDock(currentConfigTab);
+    updatePaperSelectedBadge();
     atelierHub?.refreshTexts();
     libraryScreen?.refreshTexts();
     bookReader?.refreshTexts();
