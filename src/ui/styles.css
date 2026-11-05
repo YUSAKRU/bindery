@@ -7809,3 +7809,502 @@ button.book-page-label:active {
     animation-delay: 0s !important;
   }
 }
+
+/* ==========================================================================
+   Config Stepper Redesign (Vercel Geist / Linear Aesthetic)
+   ========================================================================== */
+
+:root {
+  /* Surface & Base Colors */
+  --hub-primary: var(--atelier-primary, #9a401d);
+  --hub-primary-hover: var(--atelier-terracotta-deep, #8a3819);
+  --hub-surface: var(--atelier-surface-cream, #f9f9fb);
+  --hub-surface-subtle: #ffffff;
+  --hub-surface-muted: rgba(0, 0, 0, 0.03);
+  --hub-surface-hover: rgba(154, 64, 29, 0.05);
+  --hub-surface-active: rgba(154, 64, 29, 0.09);
+
+  /* Hairlines & Borders */
+  --hub-border: var(--atelier-border-hairline, rgba(0, 0, 0, 0.09));
+  --hub-border-subtle: rgba(0, 0, 0, 0.05);
+  --hub-border-focus: var(--atelier-gold-foil, #c89d53);
+
+  /* Typography */
+  --hub-text-primary: var(--atelier-ink-black, #1c1a18);
+  --hub-text-muted: var(--atelier-ink-muted, #5c5650);
+  --hub-text-subtle: #8a847c;
+
+  /* Stepper Tab Pill */
+  --hub-stepper-track-bg: rgba(0, 0, 0, 0.04);
+  --hub-tab-pill-bg: #ffffff;
+  --hub-tab-pill-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --hub-tab-active-text: var(--hub-text-primary);
+
+  /* Switch Component */
+  --hub-switch-track-off: rgba(0, 0, 0, 0.15);
+  --hub-switch-track-on: var(--hub-primary);
+  --hub-switch-thumb: #ffffff;
+  --hub-switch-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+
+  /* Tooltip & Popover */
+  --hub-tooltip-bg: #1c1a18;
+  --hub-tooltip-text: #f5efe6;
+  --hub-tooltip-border: rgba(255, 255, 255, 0.12);
+  --hub-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.1);
+
+  /* Geometry & Radii */
+  --hub-radius-card: 10px;
+  --hub-radius-pill: 8px;
+  --hub-radius-sm: 6px;
+  --hub-radius-full: 9999px;
+
+  /* Physics & Durations */
+  --hub-motion-duration: 220ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) {
+    --hub-surface: var(--atelier-card2-bg, #1a1816);
+    --hub-surface-subtle: #221e1a;
+    --hub-surface-muted: rgba(255, 255, 255, 0.03);
+    --hub-surface-hover: rgba(255, 255, 255, 0.05);
+    --hub-surface-active: rgba(200, 157, 83, 0.12);
+
+    --hub-border: var(--atelier-border-hairline, rgba(255, 255, 255, 0.09));
+    --hub-border-subtle: rgba(255, 255, 255, 0.05);
+    --hub-border-focus: var(--atelier-gold-foil, #c89d53);
+
+    --hub-text-primary: var(--atelier-ink-black, #f5efe6);
+    --hub-text-muted: var(--atelier-ink-muted, #b0a699);
+    --hub-text-subtle: #7a7268;
+
+    --hub-stepper-track-bg: rgba(255, 255, 255, 0.06);
+    --hub-tab-pill-bg: #2a2520;
+    --hub-tab-pill-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+
+    --hub-switch-track-off: rgba(255, 255, 255, 0.2);
+    --hub-switch-track-on: var(--hub-primary);
+    --hub-switch-thumb: #f5efe6;
+
+    --hub-tooltip-bg: #26211c;
+    --hub-tooltip-text: #f5efe6;
+    --hub-tooltip-border: rgba(255, 255, 255, 0.12);
+    --hub-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+}
+
+:root.dark-theme {
+  --hub-surface: var(--atelier-card2-bg, #1a1816);
+  --hub-surface-subtle: #221e1a;
+  --hub-surface-muted: rgba(255, 255, 255, 0.03);
+  --hub-surface-hover: rgba(255, 255, 255, 0.05);
+  --hub-surface-active: rgba(200, 157, 83, 0.12);
+
+  --hub-border: var(--atelier-border-hairline, rgba(255, 255, 255, 0.09));
+  --hub-border-subtle: rgba(255, 255, 255, 0.05);
+  --hub-border-focus: var(--atelier-gold-foil, #c89d53);
+
+  --hub-text-primary: var(--atelier-ink-black, #f5efe6);
+  --hub-text-muted: var(--atelier-ink-muted, #b0a699);
+  --hub-text-subtle: #7a7268;
+
+  --hub-stepper-track-bg: rgba(255, 255, 255, 0.06);
+  --hub-tab-pill-bg: #2a2520;
+  --hub-tab-pill-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+
+  --hub-switch-track-off: rgba(255, 255, 255, 0.2);
+  --hub-switch-track-on: var(--hub-primary);
+  --hub-switch-thumb: #f5efe6;
+
+  --hub-tooltip-bg: #26211c;
+  --hub-tooltip-text: #f5efe6;
+  --hub-tooltip-border: rgba(255, 255, 255, 0.12);
+  --hub-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Container enclosing the entire configuration flow */
+#screen-config {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0 16px 12px;
+  gap: 10px;
+}
+
+/* Compact screen title */
+#screen-config .screen-title {
+  margin: 4px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--hub-text-primary);
+  flex-shrink: 0;
+}
+
+/* Middle body wrapper */
+.config-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual step panel */
+.config-step-panel {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+/* Custom sleek hairline scrollbar */
+.config-step-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.config-step-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.config-step-panel::-webkit-scrollbar-thumb {
+  background: var(--hub-border);
+  border-radius: var(--hub-radius-full);
+}
+
+/* Segmented Stepper Track */
+.config-stepper {
+  display: flex;
+  align-items: center;
+  background: var(--hub-stepper-track-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius-pill);
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Individual Stepper Tab */
+.config-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--hub-radius-pill) - 2px);
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--hub-text-muted);
+  cursor: pointer;
+  position: relative;
+  transition:
+    background-color 160ms var(--ease-out-spring),
+    color 160ms var(--ease-out-spring),
+    box-shadow 160ms var(--ease-out-spring);
+}
+
+.config-tab:hover:not(.is-active) {
+  color: var(--hub-text-primary);
+  background: var(--hub-surface-hover);
+}
+
+.config-tab:focus-visible {
+  outline: 2px solid var(--hub-border-focus);
+  outline-offset: 1px;
+}
+
+/* Active Segment Pill */
+.config-tab.is-active,
+.config-tab[aria-selected="true"] {
+  background: var(--hub-tab-pill-bg);
+  color: var(--hub-tab-active-text);
+  font-weight: 600;
+  box-shadow: var(--hub-tab-pill-shadow);
+}
+
+/* Step number pill indicator */
+.config-tab-num {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--hub-radius-full);
+  background: var(--hub-border);
+  color: var(--hub-text-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 160ms var(--ease-out-spring);
+}
+
+.config-tab.is-active .config-tab-num {
+  background: var(--hub-primary);
+  color: var(--color-on-primary, #ffffff);
+}
+
+/* Tab label text with truncation guard */
+.config-tab-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Modified indicator dot */
+.config-tab-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hub-primary);
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* Step Panel Entry Keyframe */
+@keyframes configStepEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.config-step-panel:not(.hidden) {
+  animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
+}
+
+/* Cards within #screen-config */
+#screen-config .setting-card {
+  background: var(--hub-surface-subtle);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius-card);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+#screen-config .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.90rem;
+  font-weight: 600;
+  color: var(--hub-text-primary);
+}
+
+.setting-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setting-live-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--hub-text-muted);
+  line-height: 1.35;
+}
+
+#screen-config .segmented-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: var(--hub-surface-muted);
+  border: 1px solid var(--hub-border-subtle);
+  border-radius: var(--hub-radius-pill);
+  padding: 3px;
+}
+
+#screen-config .segmented-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--hub-text-muted);
+  border-radius: calc(var(--hub-radius-pill) - 2px);
+  padding: 6px 10px;
+  font-size: 0.80rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+#screen-config .segmented-btn:hover:not(.is-active) {
+  color: var(--hub-text-primary);
+  background: var(--hub-surface-hover);
+}
+
+#screen-config .segmented-btn.is-active {
+  background: var(--hub-tab-pill-bg);
+  color: var(--hub-tab-active-text);
+  font-weight: 600;
+  box-shadow: var(--hub-tab-pill-shadow);
+}
+
+/* Info Trigger Button */
+.config-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  appearance: none;
+  border: 1px solid var(--hub-border);
+  background: transparent;
+  color: var(--hub-text-subtle);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-style: italic;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.config-info-btn:hover {
+  color: var(--hub-text-primary);
+  border-color: var(--hub-border-focus);
+  background: var(--hub-surface-hover);
+}
+
+.config-info-btn:focus-visible {
+  outline: 2px solid var(--hub-border-focus);
+  outline-offset: 1px;
+}
+
+/* Tooltip Popover Container */
+.config-tooltip-popover {
+  position: absolute;
+  z-index: 100;
+  max-width: 260px;
+  background: var(--hub-tooltip-bg);
+  color: var(--hub-tooltip-text);
+  border: 1px solid var(--hub-tooltip-border);
+  box-shadow: var(--hub-tooltip-shadow);
+  border-radius: var(--hub-radius-sm);
+  padding: 8px 11px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.42;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 160ms var(--ease-out-spring),
+    transform 160ms var(--ease-out-spring);
+}
+
+.config-tooltip-popover.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Pinned Sticky Footer Envelope */
+#configStickyFooter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hub-border);
+  background: var(--color-surface);
+  position: relative;
+  z-index: 10;
+}
+
+#configStickyFooter .config-summary {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-surface-subtle);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text-primary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: center;
+  min-height: 18px;
+  line-height: 1.35;
+}
+
+#configStickyFooter .warning-banner {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
+
+#configStickyFooter #generateBtn {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--hub-radius-pill);
+}
+
+@media (max-width: 380px) {
+  .config-tab {
+    padding: 0 4px;
+    gap: 4px;
+    font-size: 0.78rem;
+  }
+
+  .config-tab-num {
+    width: 16px;
+    height: 16px;
+    font-size: 0.68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .config-step-panel:not(.hidden) {
+    animation: none !important;
+    transform: none !important;
+    transition-delay: 0s !important;
+    animation-delay: 0s !important;
+  }
+
+  .config-tab,
+  .config-tab-num,
+  .config-switch-thumb,
+  .config-switch-track {
+    transition: none !important;
+    transition-delay: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

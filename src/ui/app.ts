@@ -518,6 +518,11 @@ export function initApp(): void {
   const wrapCoverMiniSpineText = byId<HTMLSpanElement>('wrapCoverMiniSpineText');
   const wrapCoverMiniTitle = byId<HTMLHeadingElement>('wrapCoverMiniTitle');
   const wrapCoverMiniAuthor = byId<HTMLParagraphElement>('wrapCoverMiniAuthor');
+  const configTabButtons = Array.from(byId('screen-config').querySelectorAll<HTMLButtonElement>('.config-tab'));
+  const configStepLayout = byId<HTMLDivElement>('configStepLayout');
+  const configStepCover = byId<HTMLDivElement>('configStepCover');
+  const configStepPrint = byId<HTMLDivElement>('configStepPrint');
+  const configTooltipPopover = byId<HTMLDivElement>('configTooltipPopover');
   const advancedToggle = byId<HTMLButtonElement>('advancedToggle');
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
@@ -1404,6 +1409,7 @@ export function initApp(): void {
     updateCoverAvailability();
     refreshConfigSummary();
     setAdvancedOpen(false);
+    switchConfigTab('layout');
     updateAdvancedBadge();
   }
 
@@ -1455,6 +1461,7 @@ export function initApp(): void {
     updateCoverAvailability();
     refreshConfigSummary();
     setAdvancedOpen(false);
+    switchConfigTab('layout');
     updateAdvancedBadge();
   }
 
@@ -1549,12 +1556,57 @@ export function initApp(): void {
     );
   }
 
+  function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {
+    const tabs: Array<{ id: string; panel: HTMLElement; name: 'layout' | 'cover' | 'print' }> = [
+      { id: 'configTab-layout', panel: configStepLayout, name: 'layout' },
+      { id: 'configTab-cover', panel: configStepCover, name: 'cover' },
+      { id: 'configTab-print', panel: configStepPrint, name: 'print' },
+    ];
+
+    for (const item of tabs) {
+      const tabEl = byId<HTMLButtonElement>(item.id);
+      const isActive = item.name === tab;
+
+      tabEl.classList.toggle('is-active', isActive);
+      tabEl.setAttribute('aria-selected', String(isActive));
+      tabEl.setAttribute('tabindex', isActive ? '0' : '-1');
+
+      item.panel.classList.toggle('hidden', !isActive);
+    }
+  }
+
+  function updateConfigTabDots(): void {
+    const layoutTab = byId<HTMLElement>('configTab-layout');
+    const coverTab = byId<HTMLElement>('configTab-cover');
+    const printTab = byId<HTMLElement>('configTab-print');
+
+    const layoutDot = layoutTab?.querySelector('.config-tab-dot');
+    const coverDot = coverTab?.querySelector('.config-tab-dot');
+    const printDot = printTab?.querySelector('.config-tab-dot');
+
+    if (layoutDot) {
+      const isLayoutModified = bookletFlipEdge !== 'short' || bookletBinding !== 'ltr' || bookletPaperSize !== 'A4' || bookletSignature !== 'single';
+      layoutDot.classList.toggle('hidden', !isLayoutModified);
+    }
+    if (coverDot) {
+      const isCoverModified = effectiveSeparateCover() || Boolean(bookletWrapCover);
+      coverDot.classList.toggle('hidden', !isCoverModified);
+    }
+    if (printDot) {
+      const isPrintModified = Number(gutterSlider.value) !== 0 || Number(creepSlider.value) !== 0 || bookletIncludeInstructions || bookletReverseSheetOrder || bookletMarks !== 'none' || insertBlankInput.value.trim() !== '';
+      printDot.classList.toggle('hidden', !isPrintModified);
+    }
+  }
+
   function updateAdvancedBadge(): void {
     advancedBadge.classList.toggle('hidden', !isAdvancedModified());
+    updateConfigTabDots();
   }
 
   function setAdvancedOpen(open: boolean): void {
-    advancedPanel.classList.toggle('hidden', !open);
+    // In the 3-step non-linear stepper, advancedPanel resides inside #configStepPrint
+    // and must never be hidden so that Step 3 options are immediately accessible.
+    advancedPanel.classList.remove('hidden');
     advancedToggle.classList.toggle('is-open', open);
     advancedToggle.setAttribute('aria-expanded', String(open));
   }
@@ -2691,6 +2743,99 @@ export function initApp(): void {
     }
   });
 
+  // ── Config Stepper Navigation & Micro-interactions ────────────────────────
+  const configTabNames: Array<'layout' | 'cover' | 'print'> = ['layout', 'cover', 'print'];
+  configTabButtons.forEach((tabBtn, index) => {
+    const tabName = tabBtn.getAttribute('data-tab') as 'layout' | 'cover' | 'print';
+    tabBtn.addEventListener('click', () => {
+      switchConfigTab(tabName);
+    });
+
+    tabBtn.addEventListener('keydown', (e) => {
+      let targetIndex = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        targetIndex = (index + 1) % configTabNames.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        targetIndex = (index - 1 + configTabNames.length) % configTabNames.length;
+      } else if (e.key === 'Home') {
+        targetIndex = 0;
+      } else if (e.key === 'End') {
+        targetIndex = configTabNames.length - 1;
+      }
+
+      if (targetIndex !== -1) {
+        e.preventDefault();
+        const targetTabName = configTabNames[targetIndex];
+        switchConfigTab(targetTabName);
+        configTabButtons[targetIndex].focus();
+      }
+    });
+  });
+
+  // ── Info Tooltips Micro-interactions ──────────────────────────────────────
+  let activeTooltipBtn: HTMLElement | null = null;
+
+  function showTooltip(btn: HTMLElement): void {
+    const tooltipKey = btn.getAttribute('data-tooltip');
+    if (!tooltipKey || !configTooltipPopover) return;
+
+    activeTooltipBtn = btn;
+    configTooltipPopover.textContent = t(tooltipKey);
+    configTooltipPopover.classList.add('is-visible');
+    configTooltipPopover.setAttribute('aria-hidden', 'false');
+
+    const btnRect = btn.getBoundingClientRect();
+    const configRect = byId('screen-config').getBoundingClientRect();
+
+    const top = btnRect.bottom - configRect.top + 6;
+    let left = btnRect.left - configRect.left - 20;
+
+    if (left + 260 > configRect.width - 12) {
+      left = configRect.width - 272;
+    }
+    if (left < 12) {
+      left = 12;
+    }
+
+    configTooltipPopover.style.top = `${top}px`;
+    configTooltipPopover.style.left = `${left}px`;
+  }
+
+  function hideTooltip(): void {
+    if (!configTooltipPopover) return;
+    configTooltipPopover.classList.remove('is-visible');
+    configTooltipPopover.setAttribute('aria-hidden', 'true');
+    activeTooltipBtn = null;
+  }
+
+  const infoBtns = Array.from(byId('screen-config').querySelectorAll<HTMLButtonElement>('.config-info-btn'));
+  infoBtns.forEach((btn) => {
+    btn.addEventListener('mouseenter', () => showTooltip(btn));
+    btn.addEventListener('mouseleave', () => hideTooltip());
+    btn.addEventListener('focus', () => showTooltip(btn));
+    btn.addEventListener('blur', () => hideTooltip());
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (activeTooltipBtn === btn) {
+        hideTooltip();
+      } else {
+        showTooltip(btn);
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (configTooltipPopover && activeTooltipBtn && !configTooltipPopover.contains(e.target as Node) && !activeTooltipBtn.contains(e.target as Node)) {
+      hideTooltip();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && configTooltipPopover?.classList.contains('is-visible')) {
+      hideTooltip();
+    }
+  });
+
   generateBtn.addEventListener('click', async () => {
     if (!selectedFile) {
       showScreen('picker');
@@ -2702,11 +2847,16 @@ export function initApp(): void {
     // engine, which surfaces them through the normal error flow.
     const insertBlankAfter = parseInsertBlank();
     if (insertBlankAfter === null) {
+      switchConfigTab('print');
       insertBlankError.textContent = t('config.insertBlankError');
       insertBlankError.classList.remove('hidden');
+      insertBlankInput.setAttribute('aria-invalid', 'true');
+      insertBlankInput.focus();
+      insertBlankInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     insertBlankError.classList.add('hidden');
+    insertBlankInput.removeAttribute('aria-invalid');
 
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');

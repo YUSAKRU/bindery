@@ -1380,309 +1380,406 @@
         <section class="screen hidden" id="screen-config">
           <h2 class="screen-title" data-i18n="screenTitle.config">Folding Settings</h2>
 
-          <!-- Basic: always visible -->
-          <div class="setting-card">
-            <div class="setting-row">
-              <span data-i18n="config.paperSize">Paper size</span>
-            </div>
-            <div class="segmented-group" id="paperSizeGroup">
-              <button type="button" class="segmented-btn is-active" data-paper="A4">A4</button>
-              <button type="button" class="segmented-btn" data-paper="Letter">Letter</button>
-              <button type="button" class="segmented-btn" data-paper="A5">A5</button>
-              <button type="button" class="segmented-btn" data-paper="A3">A3</button>
-              <button type="button" class="segmented-btn" data-paper="source" data-i18n="config.paperSize.source">Source size</button>
-            </div>
-            <p class="setting-hint" data-i18n="config.paperSizeHint">The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.</p>
-          </div>
+          <!-- Non-linear Segmented Stepper Navigation (Pinned) -->
+          <nav class="config-stepper" role="tablist" aria-label="Booklet Settings Steps" data-i18n-aria-label="config.stepperLabel">
+            <button type="button" role="tab" class="config-tab is-active" id="configTab-layout"
+                    aria-selected="true" aria-controls="configStepLayout" tabindex="0" data-tab="layout">
+              <span class="config-tab-num">1</span>
+              <span class="config-tab-label" data-i18n="config.tabLayout">Layout</span>
+              <span class="config-tab-dot hidden" aria-hidden="true"></span>
+            </button>
+            <button type="button" role="tab" class="config-tab" id="configTab-cover"
+                    aria-selected="false" aria-controls="configStepCover" tabindex="-1" data-tab="cover">
+              <span class="config-tab-num">2</span>
+              <span class="config-tab-label" data-i18n="config.tabCover">Cover</span>
+              <span class="config-tab-dot hidden" aria-hidden="true"></span>
+            </button>
+            <button type="button" role="tab" class="config-tab" id="configTab-print"
+                    aria-selected="false" aria-controls="configStepPrint" tabindex="-1" data-tab="print">
+              <span class="config-tab-num">3</span>
+              <span class="config-tab-label" data-i18n="config.tabPrint">Print</span>
+              <span class="config-tab-dot hidden" aria-hidden="true"></span>
+            </button>
+          </nav>
 
-          <div class="setting-card">
-            <div class="setting-row">
-              <span data-i18n="config.signatureSize">Signature size</span>
-              <button type="button" class="info-btn" id="signatureInfoBtn"
-                      aria-haspopup="dialog" aria-controls="signatureInfoSheet"
-                      data-i18n-aria-label="signatureInfo.open" aria-label="What is a signature? Learn more">
-                <span aria-hidden="true">i</span>
-              </button>
-            </div>
-            <div class="segmented-group" id="signatureSizeGroup">
-              <button type="button" class="segmented-btn is-active" data-sig="single" data-i18n="config.signature.single">Single</button>
-              <button type="button" class="segmented-btn" data-sig="4">4</button>
-              <button type="button" class="segmented-btn" data-sig="8">8</button>
-              <button type="button" class="segmented-btn" data-sig="16">16</button>
-              <button type="button" class="segmented-btn" data-sig="32">32</button>
-              <button type="button" class="segmented-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
-            </div>
-            <p class="setting-hint" id="signatureHintText" data-i18n="config.signatureHint">Splits thick documents into smaller folded groups for easier binding. Standard: 16 pages (4 sheets).</p>
-          </div>
-
-          <!-- Wrap-around cover, designed inline from this booklet's own numbers -->
-          <div class="setting-card">
-            <div class="setting-row">
-              <span data-i18n="config.wrapCover">Add wrap-around cover</span>
-            </div>
-            <div class="segmented-group" id="wrapCoverToggleGroup">
-              <button type="button" class="segmented-btn is-active" data-wrapcover="off" data-i18n="config.wrapCoverOff">Off</button>
-              <button type="button" class="segmented-btn" data-wrapcover="on" data-i18n="config.wrapCoverOn">Add cover</button>
-            </div>
-            <p class="setting-hint" id="wrapCoverHintText" data-i18n="config.wrapCoverHint">Designs a printable outer cover for this booklet.</p>
-
-            <div class="setting-card-nested hidden" id="wrapCoverOptions">
-              <!-- 1. Binding -->
-              <div class="setting-row">
-                <span data-i18n="cover.bindingStyle">Binding Type</span>
-              </div>
-              <div class="segmented-group" id="wrapCoverBindingGroup">
-                <button type="button" class="segmented-btn" data-wrapbinding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
-                <button type="button" class="segmented-btn is-active" data-wrapbinding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
-                <button type="button" class="segmented-btn" data-wrapbinding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
-              </div>
-              <p class="setting-hint" id="wrapCoverBindingHint" data-i18n="config.wrapCoverBindingHint">Pick the method you will bind with — the spine is measured to match it.</p>
-
-              <!-- 2. Cover kind -->
-              <div class="setting-row" style="margin-top: 12px;" id="wrapCoverKindRow">
-                <span data-i18n="cover.coverKind">Cover Kind</span>
-              </div>
-              <div class="segmented-group" id="wrapCoverKindGroup">
-                <button type="button" class="segmented-btn is-active" data-wrapkind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
-                <button type="button" class="segmented-btn" data-wrapkind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
-              </div>
-              <p class="setting-hint" id="wrapCoverKindHint"></p>
-
-              <!-- Hardcover Board Thickness -->
-              <div class="setting-card-nested hidden" id="wrapCoverBoardThicknessBlock">
+          <div class="config-body">
+            <!-- Step 1: Layout -->
+            <div class="config-step-panel" id="configStepLayout" role="tabpanel" aria-labelledby="configTab-layout">
+              <div class="setting-card">
                 <div class="setting-row">
-                  <span data-i18n="cover.boardThickness">Board Thickness</span>
-                </div>
-                <div class="segmented-group" id="wrapCoverBoardGroup">
-                  <button type="button" class="segmented-btn" data-wrapboard="1.5">1.5mm</button>
-                  <button type="button" class="segmented-btn is-active" data-wrapboard="2.0">2.0mm</button>
-                  <button type="button" class="segmented-btn" data-wrapboard="2.5">2.5mm</button>
-                  <button type="button" class="segmented-btn" data-wrapboard="3.0">3.0mm</button>
-                </div>
-              </div>
-
-              <!-- 3. Print paper -->
-              <div class="setting-row" style="margin-top: 12px;">
-                <span data-i18n="cover.formatTitle">Print Paper</span>
-              </div>
-              <div class="segmented-group" id="wrapCoverFormatGroup">
-                <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">A4 paper (2 sheets)</button>
-                <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
-              </div>
-              <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
-              <p class="setting-hint hidden" id="wrapCoverFormatResultLine"></p>
-
-              <!-- Paper weight: the spine cannot be measured without it -->
-              <div class="setting-row" style="margin-top: 12px;">
-                <span data-i18n="cover.paperGsm">Paper Weight</span>
-              </div>
-              <div class="segmented-group" id="wrapCoverGsmGroup">
-                <button type="button" class="segmented-btn" data-gsm="70">70g</button>
-                <button type="button" class="segmented-btn is-active" data-gsm="80">80g</button>
-                <button type="button" class="segmented-btn" data-gsm="90">90g</button>
-                <button type="button" class="segmented-btn" data-gsm="100">100g</button>
-                <button type="button" class="segmented-btn" data-gsm="120">120g</button>
-              </div>
-
-              <!-- Palette -->
-              <div class="setting-row" style="margin-top: 12px;">
-                <span data-i18n="cover.colorTheme">Color Palette</span>
-              </div>
-              <div class="cover-palette-group" id="wrapCoverPaletteGroup">
-                <button type="button" class="cover-swatch is-active" data-theme="cream" title="Warm Cream" style="background:#fbf8f2; color:#292524; border:1px solid #dcd6c8;">Aa</button>
-                <button type="button" class="cover-swatch" data-theme="white" title="Classic White" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1;">Aa</button>
-                <button type="button" class="cover-swatch" data-theme="navy" title="Midnight Navy" style="background:#0f172a; color:#f8fafc;">Aa</button>
-                <button type="button" class="cover-swatch" data-theme="burgundy" title="Burgundy" style="background:#450a0a; color:#fef2f2;">Aa</button>
-                <button type="button" class="cover-swatch" data-theme="charcoal" title="Charcoal" style="background:#1e293b; color:#f8fafc;">Aa</button>
-              </div>
-
-              <!-- Content -->
-              <div class="setting-row" style="margin-top: 12px;">
-                <span class="setting-section-title" data-i18n="config.wrapCoverContent">Cover content</span>
-              </div>
-              <div class="cover-input-group">
-                <label for="wrapCoverTitleInput" class="setting-label" data-i18n="cover.bookTitle">Book Title</label>
-                <input type="text" id="wrapCoverTitleInput" class="modal-input" placeholder="e.g. The Odyssey" data-i18n-placeholder="cover.bookTitlePlaceholder" maxlength="80" />
-              </div>
-              <div class="cover-input-group">
-                <label for="wrapCoverAuthorInput" class="setting-label" data-i18n="cover.author">Author / Subtitle</label>
-                <input type="text" id="wrapCoverAuthorInput" class="modal-input" placeholder="e.g. Homer" data-i18n-placeholder="cover.authorPlaceholder" maxlength="60" />
-              </div>
-              <div class="cover-input-group">
-                <label for="wrapCoverSynopsisInput" class="setting-label" data-i18n="cover.synopsis">Back Cover Synopsis</label>
-                <textarea id="wrapCoverSynopsisInput" class="modal-input cover-textarea" rows="3" placeholder="Add a short summary or blurb for the back cover..." data-i18n-placeholder="cover.synopsisPlaceholder" maxlength="600"></textarea>
-              </div>
-
-              <!-- Live spine calculation, driven by the booklet's own numbers -->
-              <div class="setting-card cover-summary-card" id="wrapCoverSummaryCard">
-                <div class="cover-summary-head">
-                  <span class="cover-summary-title" data-i18n="cover.spineCalcTitle">Live Spine Calculation</span>
-                  <span class="cover-spine-value" id="wrapCoverSpineLabel">0.00 mm</span>
-                </div>
-                <div class="cover-breakdown-badges">
-                  <span class="cover-badge" id="wrapCoverPaperBulkBadge">Paper: 0.00 mm</span>
-                  <span class="cover-badge" id="wrapCoverThreadSwellBadge">Swell: +0.00 mm</span>
-                  <span class="cover-badge" id="wrapCoverHingeBadge">Hinge: +0.00 mm</span>
-                </div>
-                <div class="cover-fit-status">
-                  <span class="cover-fit-badge cover-fit-badge--ok" id="wrapCoverFitBadge" data-i18n="cover.spineTextFit">✓ Spine text fits (≥ 3.5 mm)</span>
-                  <span class="cover-fit-badge cover-fit-badge--warn hidden" id="wrapCoverPaperFitBadge" data-i18n="cover.needsA3">⚠️ Too wide for A4 — print this sheet on A3</span>
-                </div>
-                <div class="cover-total-dim" id="wrapCoverDimsLabel"></div>
-              </div>
-
-              <!-- Mini preview -->
-              <div class="setting-row" style="margin-top: 12px;">
-                <span data-i18n="config.wrapCoverPreview">Cover preview</span>
-              </div>
-              <div class="cover-preview-wrapper">
-                <div class="cover-layout-preview" id="wrapCoverMiniPreview" style="height: 110px;">
-                  <div class="cover-panel cover-panel--back">
-                    <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
-                    <p class="cover-panel-synopsis" id="wrapCoverMiniSynopsis"></p>
-                  </div>
-                  <div class="cover-crease" aria-hidden="true"></div>
-                  <div class="cover-panel cover-panel--spine" id="wrapCoverMiniSpine">
-                    <span class="cover-spine-text" id="wrapCoverMiniSpineText"></span>
-                  </div>
-                  <div class="cover-crease" aria-hidden="true"></div>
-                  <div class="cover-panel cover-panel--front">
-                    <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
-                    <h4 class="cover-preview-title" id="wrapCoverMiniTitle">Book Title</h4>
-                    <p class="cover-preview-author" id="wrapCoverMiniAuthor">Author</p>
+                  <div class="setting-title-wrap">
+                    <span data-i18n="config.paperSize">Paper size</span>
+                    <button type="button" class="config-info-btn" aria-label="Paper size info" data-i18n-aria-label="config.paperSizeInfo" data-tooltip="config.paperSizeHint">
+                      <span aria-hidden="true">i</span>
+                    </button>
                   </div>
                 </div>
+                <div class="segmented-group" id="paperSizeGroup">
+                  <button type="button" class="segmented-btn is-active" data-paper="A4">A4</button>
+                  <button type="button" class="segmented-btn" data-paper="Letter">Letter</button>
+                  <button type="button" class="segmented-btn" data-paper="A5">A5</button>
+                  <button type="button" class="segmented-btn" data-paper="A3">A3</button>
+                  <button type="button" class="segmented-btn" data-paper="source" data-i18n="config.paperSize.source">Source size</button>
+                </div>
+                <p class="setting-hint config-tooltip-text hidden" data-i18n="config.paperSizeHint">The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.</p>
               </div>
+
+              <div class="setting-card">
+                <div class="setting-row">
+                  <div class="setting-title-wrap">
+                    <span data-i18n="config.signatureSize">Signature size</span>
+                    <button type="button" class="info-btn" id="signatureInfoBtn"
+                            aria-haspopup="dialog" aria-controls="signatureInfoSheet"
+                            data-i18n-aria-label="signatureInfo.open" aria-label="What is a signature? Learn more">
+                      <span aria-hidden="true">i</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="segmented-group" id="signatureSizeGroup">
+                  <button type="button" class="segmented-btn is-active" data-sig="single" data-i18n="config.signature.single">Single</button>
+                  <button type="button" class="segmented-btn" data-sig="4">4</button>
+                  <button type="button" class="segmented-btn" data-sig="8">8</button>
+                  <button type="button" class="segmented-btn" data-sig="16">16</button>
+                  <button type="button" class="segmented-btn" data-sig="32">32</button>
+                  <button type="button" class="segmented-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
+                </div>
+                <p class="setting-hint setting-live-hint" id="signatureHintText" data-i18n="config.signatureHint">Splits thick documents into smaller folded groups for easier binding. Standard: 16 pages (4 sheets).</p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-row">
+                  <div class="setting-title-wrap">
+                    <span data-i18n="config.binding">Binding direction</span>
+                    <button type="button" class="config-info-btn" aria-label="Binding direction info" data-i18n-aria-label="config.bindingInfo" data-tooltip="config.bindingHint">
+                      <span aria-hidden="true">i</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="segmented-group" id="bindingGroup">
+                  <button type="button" class="segmented-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
+                  <button type="button" class="segmented-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
+                </div>
+                <p class="setting-hint config-tooltip-text hidden" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-row">
+                  <div class="setting-title-wrap">
+                    <span data-i18n="config.flipEdge">Flip edge</span>
+                    <button type="button" class="config-info-btn" aria-label="Flip edge info" data-i18n-aria-label="config.flipEdgeInfo" data-tooltip="config.flipEdgeHint">
+                      <span aria-hidden="true">i</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="segmented-group" id="flipEdgeGroup">
+                  <button type="button" class="segmented-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
+                  <button type="button" class="segmented-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
+                </div>
+                <p class="setting-hint config-tooltip-text hidden" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
+              </div>
+            </div>
+
+            <!-- Step 2: Cover -->
+            <div class="config-step-panel hidden" id="configStepCover" role="tabpanel" aria-labelledby="configTab-cover">
+              <div class="setting-card">
+                <div class="setting-row">
+                  <div class="setting-title-wrap">
+                    <span data-i18n="config.wrapCover">Add wrap-around cover</span>
+                    <button type="button" class="config-info-btn" aria-label="Cover info" data-i18n-aria-label="config.wrapCoverInfo" data-tooltip="config.wrapCoverHint">
+                      <span aria-hidden="true">i</span>
+                    </button>
+                  </div>
+                  <div class="segmented-group" id="wrapCoverToggleGroup">
+                    <button type="button" class="segmented-btn is-active" data-wrapcover="off" data-i18n="config.wrapCoverOff">Off</button>
+                    <button type="button" class="segmented-btn" data-wrapcover="on" data-i18n="config.wrapCoverOn">Add cover</button>
+                  </div>
+                </div>
+                <p class="setting-hint setting-live-hint" id="wrapCoverHintText" data-i18n="config.wrapCoverHint">Designs a printable outer cover for this booklet.</p>
+
+                <div class="cover-slot-container" id="coverSlot">
+                  <div class="setting-card-nested hidden" id="wrapCoverOptions">
+                    <!-- 1. Binding -->
+                    <div class="setting-row">
+                      <span data-i18n="cover.bindingStyle">Binding Type</span>
+                    </div>
+                    <div class="segmented-group" id="wrapCoverBindingGroup">
+                      <button type="button" class="segmented-btn" data-wrapbinding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
+                      <button type="button" class="segmented-btn is-active" data-wrapbinding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
+                      <button type="button" class="segmented-btn" data-wrapbinding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
+                    </div>
+                    <p class="setting-hint" id="wrapCoverBindingHint" data-i18n="config.wrapCoverBindingHint">Pick the method you will bind with — the spine is measured to match it.</p>
+
+                    <!-- 2. Cover kind -->
+                    <div class="setting-row" style="margin-top: 12px;" id="wrapCoverKindRow">
+                      <span data-i18n="cover.coverKind">Cover Kind</span>
+                    </div>
+                    <div class="segmented-group" id="wrapCoverKindGroup">
+                      <button type="button" class="segmented-btn is-active" data-wrapkind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
+                      <button type="button" class="segmented-btn" data-wrapkind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
+                    </div>
+                    <p class="setting-hint" id="wrapCoverKindHint"></p>
+
+                    <!-- Hardcover Board Thickness -->
+                    <div class="setting-card-nested hidden" id="wrapCoverBoardThicknessBlock">
+                      <div class="setting-row">
+                        <span data-i18n="cover.boardThickness">Board Thickness</span>
+                      </div>
+                      <div class="segmented-group" id="wrapCoverBoardGroup">
+                        <button type="button" class="segmented-btn" data-wrapboard="1.5">1.5mm</button>
+                        <button type="button" class="segmented-btn is-active" data-wrapboard="2.0">2.0mm</button>
+                        <button type="button" class="segmented-btn" data-wrapboard="2.5">2.5mm</button>
+                        <button type="button" class="segmented-btn" data-wrapboard="3.0">3.0mm</button>
+                      </div>
+                    </div>
+
+                    <!-- 3. Print paper -->
+                    <div class="setting-row" style="margin-top: 12px;">
+                      <span data-i18n="cover.formatTitle">Print Paper</span>
+                    </div>
+                    <div class="segmented-group" id="wrapCoverFormatGroup">
+                      <button type="button" class="segmented-btn is-active" data-format="split" data-i18n="cover.formatSplit">A4 paper (2 sheets)</button>
+                      <button type="button" class="segmented-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
+                    </div>
+                    <p class="setting-hint" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
+                    <p class="setting-hint hidden" id="wrapCoverFormatResultLine"></p>
+
+                    <!-- Paper weight: the spine cannot be measured without it -->
+                    <div class="setting-row" style="margin-top: 12px;">
+                      <span data-i18n="cover.paperGsm">Paper Weight</span>
+                    </div>
+                    <div class="segmented-group" id="wrapCoverGsmGroup">
+                      <button type="button" class="segmented-btn" data-gsm="70">70g</button>
+                      <button type="button" class="segmented-btn is-active" data-gsm="80">80g</button>
+                      <button type="button" class="segmented-btn" data-gsm="90">90g</button>
+                      <button type="button" class="segmented-btn" data-gsm="100">100g</button>
+                      <button type="button" class="segmented-btn" data-gsm="120">120g</button>
+                    </div>
+
+                    <!-- Palette -->
+                    <div class="setting-row" style="margin-top: 12px;">
+                      <span data-i18n="cover.colorTheme">Color Palette</span>
+                    </div>
+                    <div class="cover-palette-group" id="wrapCoverPaletteGroup">
+                      <button type="button" class="cover-swatch is-active" data-theme="cream" title="Warm Cream" style="background:#fbf8f2; color:#292524; border:1px solid #dcd6c8;">Aa</button>
+                      <button type="button" class="cover-swatch" data-theme="white" title="Classic White" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1;">Aa</button>
+                      <button type="button" class="cover-swatch" data-theme="navy" title="Midnight Navy" style="background:#0f172a; color:#f8fafc;">Aa</button>
+                      <button type="button" class="cover-swatch" data-theme="burgundy" title="Burgundy" style="background:#450a0a; color:#fef2f2;">Aa</button>
+                      <button type="button" class="cover-swatch" data-theme="charcoal" title="Charcoal" style="background:#1e293b; color:#f8fafc;">Aa</button>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="setting-row" style="margin-top: 12px;">
+                      <span class="setting-section-title" data-i18n="config.wrapCoverContent">Cover content</span>
+                    </div>
+                    <div class="cover-input-group">
+                      <label for="wrapCoverTitleInput" class="setting-label" data-i18n="cover.bookTitle">Book Title</label>
+                      <input type="text" id="wrapCoverTitleInput" class="modal-input" placeholder="e.g. The Odyssey" data-i18n-placeholder="cover.bookTitlePlaceholder" maxlength="80" />
+                    </div>
+                    <div class="cover-input-group">
+                      <label for="wrapCoverAuthorInput" class="setting-label" data-i18n="cover.author">Author / Subtitle</label>
+                      <input type="text" id="wrapCoverAuthorInput" class="modal-input" placeholder="e.g. Homer" data-i18n-placeholder="cover.authorPlaceholder" maxlength="60" />
+                    </div>
+                    <div class="cover-input-group">
+                      <label for="wrapCoverSynopsisInput" class="setting-label" data-i18n="cover.synopsis">Back Cover Synopsis</label>
+                      <textarea id="wrapCoverSynopsisInput" class="modal-input cover-textarea" rows="3" placeholder="Add a short summary or blurb for the back cover..." data-i18n-placeholder="cover.synopsisPlaceholder" maxlength="600"></textarea>
+                    </div>
+
+                    <!-- Live spine calculation, driven by the booklet's own numbers -->
+                    <div class="setting-card cover-summary-card" id="wrapCoverSummaryCard">
+                      <div class="cover-summary-head">
+                        <span class="cover-summary-title" data-i18n="cover.spineCalcTitle">Live Spine Calculation</span>
+                        <span class="cover-spine-value" id="wrapCoverSpineLabel">0.00 mm</span>
+                      </div>
+                      <div class="cover-breakdown-badges">
+                        <span class="cover-badge" id="wrapCoverPaperBulkBadge">Paper: 0.00 mm</span>
+                        <span class="cover-badge" id="wrapCoverThreadSwellBadge">Swell: +0.00 mm</span>
+                        <span class="cover-badge" id="wrapCoverHingeBadge">Hinge: +0.00 mm</span>
+                      </div>
+                      <div class="cover-fit-status">
+                        <span class="cover-fit-badge cover-fit-badge--ok" id="wrapCoverFitBadge" data-i18n="cover.spineTextFit">✓ Spine text fits (≥ 3.5 mm)</span>
+                        <span class="cover-fit-badge cover-fit-badge--warn hidden" id="wrapCoverPaperFitBadge" data-i18n="cover.needsA3">⚠️ Too wide for A4 — print this sheet on A3</span>
+                      </div>
+                      <div class="cover-total-dim" id="wrapCoverDimsLabel"></div>
+                    </div>
+
+                    <!-- Mini preview -->
+                    <div class="setting-row" style="margin-top: 12px;">
+                      <span data-i18n="config.wrapCoverPreview">Cover preview</span>
+                    </div>
+                    <div class="cover-preview-wrapper">
+                      <div class="cover-layout-preview" id="wrapCoverMiniPreview" style="height: 110px;">
+                        <div class="cover-panel cover-panel--back">
+                          <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
+                          <p class="cover-panel-synopsis" id="wrapCoverMiniSynopsis"></p>
+                        </div>
+                        <div class="cover-crease" aria-hidden="true"></div>
+                        <div class="cover-panel cover-panel--spine" id="wrapCoverMiniSpine">
+                          <span class="cover-spine-text" id="wrapCoverMiniSpineText"></span>
+                        </div>
+                        <div class="cover-crease" aria-hidden="true"></div>
+                        <div class="cover-panel cover-panel--front">
+                          <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
+                          <h4 class="cover-preview-title" id="wrapCoverMiniTitle">Book Title</h4>
+                          <p class="cover-preview-author" id="wrapCoverMiniAuthor">Author</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Print & Calibration -->
+            <div class="config-step-panel hidden" id="configStepPrint" role="tabpanel" aria-labelledby="configTab-print">
+              <!-- Compatibility anchor for accordion references & test slicing -->
+              <button type="button" class="advanced-toggle hidden" id="advancedToggle" aria-expanded="true" aria-controls="advancedPanel">
+                <span class="advanced-toggle-label">
+                  <span data-i18n="config.advanced">Advanced settings</span>
+                  <span class="advanced-badge hidden" id="advancedBadge" data-i18n="config.advancedModified">· modified</span>
+                </span>
+                <span class="advanced-chevron" aria-hidden="true">▸</span>
+              </button>
+
+              <section class="advanced-panel" id="advancedPanel" aria-labelledby="advancedToggle">
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <label for="gutterSlider" data-i18n="config.gutter">Gutter</label>
+                      <button type="button" class="config-info-btn" aria-label="Gutter info" data-i18n-aria-label="config.gutterInfo" data-tooltip="config.gutterHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                    <span class="setting-value" id="gutterValueLabel">0 pt</span>
+                  </div>
+                  <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.gutterHint">Space left between pages along the fold line, for stitching or glue. Pages shrink slightly to make room, so nothing is cut off the outer edge. At 0, the fold and spine marks can print over content sitting close to the fold.</p>
+                </div>
+
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <label for="creepSlider" data-i18n="config.creep">Creep</label>
+                      <button type="button" class="config-info-btn" aria-label="Creep info" data-i18n-aria-label="config.creepInfo" data-tooltip="config.creepHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                    <span class="setting-value" id="creepValueLabel">0.00 pt · 0.00 mm</span>
+                  </div>
+                  <input type="range" id="creepSlider" min="0" max="5" step="0.01" value="0" class="slider" />
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
+                  <div class="setting-row" style="margin-top: 6px;">
+                    <label for="creepPaperGsm" data-i18n="config.creepPaperGsm">Paper weight (g/m²)</label>
+                    <input type="number" id="creepPaperGsm" class="number-input creep-gsm-input" min="30" max="400" step="1" inputmode="numeric" placeholder="80" />
+                  </div>
+                  <div class="segmented-group" id="creepPaperTypeGroup">
+                    <button type="button" class="segmented-btn is-active" data-paper-type="uncoated" data-i18n="config.creepPaper.uncoated">Uncoated</button>
+                    <button type="button" class="segmented-btn" data-paper-type="matte" data-i18n="config.creepPaper.matte">Matte coated</button>
+                    <button type="button" class="segmented-btn" data-paper-type="gloss" data-i18n="config.creepPaper.gloss">Gloss coated</button>
+                    <button type="button" class="segmented-btn" data-paper-type="bulky" data-i18n="config.creepPaper.bulky">Bulky book</button>
+                  </div>
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.creepPaperHint">Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.</p>
+                </div>
+
+                <!-- Cover mode (Together / Separate) - Preserved per CRITIC P1-1 -->
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <span data-i18n="config.cover">Cover</span>
+                      <button type="button" class="config-info-btn" aria-label="Cover mode info" data-i18n-aria-label="config.coverInfo" data-tooltip="config.coverHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group" id="coverModeGroup">
+                    <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
+                    <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
+                  </div>
+                  <p class="setting-hint setting-live-hint" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
+                </div>
+
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <span data-i18n="config.marks">Assembly marks</span>
+                      <button type="button" class="config-info-btn" aria-label="Assembly marks info" data-i18n-aria-label="config.marksInfo" data-tooltip="config.marksHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group" id="marksGroup">
+                    <button type="button" class="segmented-btn is-active" data-marks="none" data-i18n="config.marks.none">None</button>
+                    <button type="button" class="segmented-btn" data-marks="fold" data-i18n="config.marks.fold">Fold</button>
+                    <button type="button" class="segmented-btn" data-marks="full" data-i18n="config.marks.full">Fold + spine</button>
+                  </div>
+                  <p class="setting-hint setting-live-hint" id="marksHintText" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also steps a bar down the spine, one step per section, so a missing or misordered section shows up as you stack them &mdash; the bar prints on the front side only.</p>
+                </div>
+
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <span data-i18n="config.sheetOrder">Sheet order</span>
+                      <button type="button" class="config-info-btn" aria-label="Sheet order info" data-i18n-aria-label="config.sheetOrderInfo" data-tooltip="config.sheetOrderHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group" id="sheetOrderGroup">
+                    <button type="button" class="segmented-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
+                    <button type="button" class="segmented-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
+                  </div>
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.sheetOrderHint">Reverses each signature's own sheet print order (innermost sheet first); the order of the signatures themselves is unchanged. Corrects feed-order mismatches on printers with an automatic folding unit.</p>
+                </div>
+
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <span data-i18n="config.instructions">Instructions page</span>
+                      <button type="button" class="config-info-btn" aria-label="Instructions info" data-i18n-aria-label="config.instructionsInfo" data-tooltip="config.instructionsHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="segmented-group" id="instructionsGroup">
+                    <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
+                    <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
+                  </div>
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.instructionsHint">Generates a one-page PDF with the printing and folding steps, in the app's current language.</p>
+                </div>
+
+                <div class="setting-card">
+                  <div class="setting-row">
+                    <div class="setting-title-wrap">
+                      <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
+                      <button type="button" class="config-info-btn" aria-label="Insert blank pages info" data-i18n-aria-label="config.insertBlankInfo" data-tooltip="config.insertBlankHint">
+                        <span aria-hidden="true">i</span>
+                      </button>
+                    </div>
+                  </div>
+                  <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
+                  <p class="setting-hint config-tooltip-text hidden" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
+                  <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
+                </div>
+              </section>
             </div>
           </div>
 
-          <!-- Advanced: collapsed accordion -->
-          <button type="button" class="advanced-toggle" id="advancedToggle" aria-expanded="false" aria-controls="advancedPanel">
-            <span class="advanced-toggle-label">
-              <span data-i18n="config.advanced">Advanced settings</span>
-              <span class="advanced-badge hidden" id="advancedBadge" data-i18n="config.advancedModified">· modified</span>
-            </span>
-            <span class="advanced-chevron" aria-hidden="true">▸</span>
-          </button>
+          <!-- Sticky Live Footer (Pinned) -->
+          <div class="config-sticky-footer" id="configStickyFooter">
+            <div class="config-summary hidden" id="configSummary" aria-live="polite"></div>
 
-          <section class="advanced-panel hidden" id="advancedPanel" aria-labelledby="advancedToggle">
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.flipEdge">Flip edge</span>
-              </div>
-              <div class="segmented-group" id="flipEdgeGroup">
-                <button type="button" class="segmented-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
-                <button type="button" class="segmented-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
-              </div>
-              <p class="setting-hint" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
+            <div class="warning-banner hidden" id="configPreflightWarning" role="status">
+              <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
+              <span id="configPreflightWarningText" data-i18n="config.preflightWarning">Large document detected (&gt;150 pages or &gt;50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.</span>
             </div>
 
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.binding">Binding direction</span>
-              </div>
-              <div class="segmented-group" id="bindingGroup">
-                <button type="button" class="segmented-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
-                <button type="button" class="segmented-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
-              </div>
-              <p class="setting-hint" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <label for="gutterSlider" data-i18n="config.gutter">Gutter</label>
-                <span class="setting-value" id="gutterValueLabel">0 pt</span>
-              </div>
-              <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider" />
-              <p class="setting-hint" data-i18n="config.gutterHint">Space left between pages along the fold line, for stitching or glue. Pages shrink slightly to make room, so nothing is cut off the outer edge. At 0, the fold and spine marks can print over content sitting close to the fold.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <label for="creepSlider" data-i18n="config.creep">Creep</label>
-                <span class="setting-value" id="creepValueLabel">0.00 pt · 0.00 mm</span>
-              </div>
-              <input type="range" id="creepSlider" min="0" max="5" step="0.01" value="0" class="slider" />
-              <p class="setting-hint" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
-              <div class="setting-row">
-                <label for="creepPaperGsm" data-i18n="config.creepPaperGsm">Paper weight (g/m²)</label>
-                <input type="number" id="creepPaperGsm" class="number-input creep-gsm-input" min="30" max="400" step="1" inputmode="numeric" placeholder="80" />
-              </div>
-              <div class="segmented-group" id="creepPaperTypeGroup">
-                <button type="button" class="segmented-btn is-active" data-paper-type="uncoated" data-i18n="config.creepPaper.uncoated">Uncoated</button>
-                <button type="button" class="segmented-btn" data-paper-type="matte" data-i18n="config.creepPaper.matte">Matte coated</button>
-                <button type="button" class="segmented-btn" data-paper-type="gloss" data-i18n="config.creepPaper.gloss">Gloss coated</button>
-                <button type="button" class="segmented-btn" data-paper-type="bulky" data-i18n="config.creepPaper.bulky">Bulky book</button>
-              </div>
-              <p class="setting-hint" data-i18n="config.creepPaperHint">Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.cover">Cover</span>
-              </div>
-              <div class="segmented-group" id="coverModeGroup">
-                <button type="button" class="segmented-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
-                <button type="button" class="segmented-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
-              </div>
-              <p class="setting-hint" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.instructions">Instructions page</span>
-              </div>
-              <div class="segmented-group" id="instructionsGroup">
-                <button type="button" class="segmented-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
-                <button type="button" class="segmented-btn" data-instr="add" data-i18n="config.instructions.add">Add</button>
-              </div>
-              <p class="setting-hint" data-i18n="config.instructionsHint">Generates a one-page PDF with the printing and folding steps, in the app's current language.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.sheetOrder">Sheet order</span>
-              </div>
-              <div class="segmented-group" id="sheetOrderGroup">
-                <button type="button" class="segmented-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
-                <button type="button" class="segmented-btn" data-order="reversed" data-i18n="config.sheetOrder.reversed">Reversed</button>
-              </div>
-              <p class="setting-hint" data-i18n="config.sheetOrderHint">Reverses each signature's own sheet print order (innermost sheet first); the order of the signatures themselves is unchanged. Corrects feed-order mismatches on printers with an automatic folding unit.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <span data-i18n="config.marks">Assembly marks</span>
-              </div>
-              <div class="segmented-group" id="marksGroup">
-                <button type="button" class="segmented-btn is-active" data-marks="none" data-i18n="config.marks.none">None</button>
-                <button type="button" class="segmented-btn" data-marks="fold" data-i18n="config.marks.fold">Fold</button>
-                <button type="button" class="segmented-btn" data-marks="full" data-i18n="config.marks.full">Fold + spine</button>
-              </div>
-              <p class="setting-hint" id="marksHintText" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also steps a bar down the spine, one step per section, so a missing or misordered section shows up as you stack them &mdash; the bar prints on the front side only.</p>
-            </div>
-
-            <div class="setting-card">
-              <div class="setting-row">
-                <label for="insertBlankInput" data-i18n="config.insertBlank">Insert blank pages</label>
-              </div>
-              <input type="text" id="insertBlankInput" class="number-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
-              <p class="setting-hint" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
-              <p class="setting-hint setting-error hidden" id="insertBlankError" data-i18n="config.insertBlankError">Enter page numbers separated by commas, e.g. 0, 4, 4.</p>
-            </div>
-          </section>
-
-          <div class="config-summary hidden" id="configSummary" aria-live="polite"></div>
-
-          <div class="warning-banner hidden" id="configPreflightWarning" role="status">
-            <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
-            <span id="configPreflightWarningText" data-i18n="config.preflightWarning">Large document detected (&gt;150 pages or &gt;50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.</span>
+            <button class="btn btn-primary btn-large" id="generateBtn">
+              <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
+              <span class="spinner hidden" id="generateSpinner"></span>
+            </button>
           </div>
 
-          <button class="btn btn-primary btn-large" id="generateBtn">
-            <span id="generateBtnLabel" data-i18n="config.generateBooklet">Create Booklet</span>
-            <span class="spinner hidden" id="generateSpinner"></span>
-          </button>
+          <!-- Tooltip Popover Container -->
+          <div class="config-tooltip-popover" id="configTooltipPopover" role="tooltip" aria-hidden="true"></div>
         </section>
 
         <section class="screen hidden" id="screen-result">
