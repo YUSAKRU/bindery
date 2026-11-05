@@ -226,6 +226,12 @@ describe('Stitch 2-step prototype restoration — gesture & dot navigation', () 
     expect(bodySwipe).not.toContain("target.closest('input, textarea, select, button");
     expect(bodySwipe).toContain("window.addEventListener('click'");
   });
+
+  it('updates formaBadge with exact page count without multiplying by 4', () => {
+    const badgeBlock = stripTsComments(blockAfter(appTs, 'function updateFormaBadge(): void {'));
+    expect(badgeBlock).toContain('formaBadge.textContent = `${bookletSignature} ${pagesSuffix}`;');
+    expect(badgeBlock).not.toContain('sheets * 4');
+  });
 });
 
 describe('Stitch 2-step prototype restoration — invalid blank-page input jumps to Step 2 (print)', () => {

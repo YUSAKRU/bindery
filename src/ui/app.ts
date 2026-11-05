@@ -1383,12 +1383,12 @@ export function initApp(): void {
   function updateFormaBadge(): void {
     if (!formaBadge) return;
     if (bookletSignature === 'single') {
-      formaBadge.textContent = 'Tek forma';
+      formaBadge.textContent = t('config.signature.single') || 'Tek forma';
     } else if (bookletSignature === 'auto') {
-      formaBadge.textContent = 'Otomatik';
+      formaBadge.textContent = t('config.signature.auto') || 'Otomatik';
     } else {
-      const sheets = Number(bookletSignature);
-      formaBadge.textContent = `${sheets * 4} Sayfa`;
+      const pagesSuffix = t('config.signaturePagesSuffix') || 'Sayfa';
+      formaBadge.textContent = `${bookletSignature} ${pagesSuffix}`;
     }
   }
 
