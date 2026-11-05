@@ -3877,12 +3877,18 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-library,
 #screen-book,
 #screen-picker,
+#screen-config,
+#screen-result,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
 .app:has(#screen-book:not(.hidden)) .screen-container,
 .app:has(#screen-picker:not(.hidden)) .top-bar,
-.app:has(#screen-picker:not(.hidden)) .screen-container {
+.app:has(#screen-picker:not(.hidden)) .screen-container,
+.app:has(#screen-config:not(.hidden)) .top-bar,
+.app:has(#screen-config:not(.hidden)) .screen-container,
+.app:has(#screen-result:not(.hidden)) .top-bar,
+.app:has(#screen-result:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3911,12 +3917,18 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-library,
   :root:not(.light-theme) #screen-book,
   :root:not(.light-theme) #screen-picker,
+  :root:not(.light-theme) #screen-config,
+  :root:not(.light-theme) #screen-result,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-picker:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-picker:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-picker:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-config:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-config:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-result:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3940,12 +3952,18 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-library,
 :root.dark-theme #screen-book,
 :root.dark-theme #screen-picker,
+:root.dark-theme #screen-config,
+:root.dark-theme #screen-result,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-picker:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-picker:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-picker:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-config:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-config:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-result:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -5254,7 +5272,8 @@ body:has(#screen-hub:not(.hidden)) {
    ========================================================================== */
 
 .app:has(#screen-library:not(.hidden)) .screen-container,
-.app:has(#screen-picker:not(.hidden)) .screen-container {
+.app:has(#screen-picker:not(.hidden)) .screen-container,
+.app:has(#screen-result:not(.hidden)) .screen-container {
   padding-top: max(env(safe-area-inset-top), 16px);
   padding-left: 16px;
   padding-right: 16px;
@@ -7822,6 +7841,327 @@ button.book-page-label:active {
 }
 
 /* ==========================================================================
+   15. Atelier Screen Result ("Kitapçık Hazır" / "Booklet Ready")
+   Tactile workshop craft finish, stat cards, and print/share action rows.
+   Scoped to #screen-result and its parent container.
+   ========================================================================== */
+
+.app:has(#screen-result:not(.hidden)) .top-bar {
+  background: var(--atelier-bg);
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  color: var(--atelier-ink-black);
+}
+
+.app:has(#screen-result:not(.hidden)) .top-bar-title {
+  visibility: visible;
+  color: var(--atelier-ink-black);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.04);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+#screen-result {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 16px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+#screen-result .result-banner {
+  text-align: center;
+  padding: 16px 8px 4px;
+}
+
+#screen-result .result-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #F2F7F4;
+  border: 2px solid #C8DFD2;
+  color: #2D5540;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(45, 85, 64, 0.12);
+}
+
+:root:not(.light-theme) #screen-result .result-icon,
+.dark-theme #screen-result .result-icon {
+  background: rgba(45, 85, 64, 0.25);
+  border-color: #2D5540;
+  color: #4ade80;
+}
+
+#screen-result .result-banner h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+#screen-result .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+#screen-result .stat-card {
+  background: var(--atelier-surface-cream, #FAF5EE);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 4px rgba(28, 26, 24, 0.04);
+}
+
+:root:not(.light-theme) #screen-result .stat-card,
+.dark-theme #screen-result .stat-card {
+  background: #221e1a;
+  border-color: #38312a;
+}
+
+#screen-result .stat-value {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--atelier-primary, #9a401d);
+  line-height: 1;
+}
+
+:root:not(.light-theme) #screen-result .stat-value,
+.dark-theme #screen-result .stat-value {
+  color: #e08e62;
+}
+
+#screen-result .stat-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--atelier-ink-muted, #5C5650);
+}
+
+#screen-result .booklet-preview-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+#screen-result .booklet-preview-cell {
+  background: var(--atelier-surface-cream, #FAF5EE);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+:root:not(.light-theme) #screen-result .booklet-preview-cell,
+.dark-theme #screen-result .booklet-preview-cell {
+  background: #221e1a;
+  border-color: #38312a;
+}
+
+#screen-result .booklet-preview-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--atelier-ink-muted, #5C5650);
+}
+
+#screen-result .booklet-filename-field .modal-label {
+  color: var(--atelier-ink-black, #1C1A18);
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+}
+
+#screen-result .booklet-filename-field .modal-input {
+  background: #ffffff;
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  color: var(--atelier-ink-black, #1C1A18);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  transition: border-color 0.15s ease;
+}
+
+#screen-result .booklet-filename-field .modal-input:focus {
+  border-color: var(--atelier-primary, #9a401d);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(154, 64, 29, 0.15);
+}
+
+:root:not(.light-theme) #screen-result .booklet-filename-field .modal-input,
+.dark-theme #screen-result .booklet-filename-field .modal-input {
+  background: #221e1a;
+  border-color: #38312a;
+  color: #f5efe6;
+}
+
+#screen-result .modal-hint {
+  background: #FAF0EC;
+  border: 1px solid #ECC9BD;
+  color: #8C3717;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+:root:not(.light-theme) #screen-result .modal-hint,
+.dark-theme #screen-result .modal-hint {
+  background: rgba(154, 64, 29, 0.2);
+  border-color: rgba(154, 64, 29, 0.4);
+  color: #f5cbba;
+}
+
+#screen-result .action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#screen-result .action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(28, 26, 24, 0.04);
+}
+
+:root:not(.light-theme) #screen-result .action-row,
+.dark-theme #screen-result .action-row {
+  background: #221e1a;
+  border-color: #38312a;
+}
+
+#screen-result .action-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--atelier-ink-black, #1C1A18);
+}
+
+#screen-result .action-sublabel {
+  font-size: 0.75rem;
+  color: var(--atelier-ink-muted, #5C5650);
+}
+
+#screen-result .action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+#screen-result .action-buttons .btn {
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 160ms var(--ease-out-spring);
+}
+
+#screen-result .action-buttons .btn[data-action="share"] {
+  background: var(--atelier-surface-cream, #F3ECE1);
+  border-color: var(--atelier-border-hairline, #DCD5C9);
+  color: var(--atelier-ink-black, #1C1A18);
+}
+
+#screen-result .action-buttons .btn[data-action="share"]:hover {
+  background: #EBE2D5;
+  transform: translateY(-1px);
+}
+
+#screen-result .action-buttons .btn[data-action="print"] {
+  background: var(--atelier-primary, #9a401d);
+  border-color: var(--atelier-terracotta-deep, #8a3819);
+  color: #ffffff;
+}
+
+#screen-result .action-buttons .btn[data-action="print"]:hover {
+  background: var(--atelier-terracotta-deep, #8a3819);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(154, 64, 29, 0.25);
+}
+
+#screen-result #bookletSaveBtn {
+  background: var(--atelier-primary, #9a401d);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  padding: 14px 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(154, 64, 29, 0.25);
+  border: 1px solid var(--atelier-terracotta-deep, #8a3819);
+  transition: all 160ms var(--ease-out-spring);
+}
+
+#screen-result #bookletSaveBtn:hover {
+  background: var(--atelier-terracotta-deep, #8a3819);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(154, 64, 29, 0.35);
+}
+
+#screen-result #resultOpenCoverStudioBtn {
+  background: var(--atelier-surface-cream, #F3ECE1);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  color: var(--atelier-ink-black, #1C1A18);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+#screen-result #newFileBtn {
+  color: var(--atelier-primary, #9a401d);
+  font-weight: 600;
+}
+
+:root:not(.light-theme) #screen-result .action-buttons .btn[data-action="share"],
+.dark-theme #screen-result .action-buttons .btn[data-action="share"] {
+  background: #2d2620;
+  border-color: #4d443b;
+  color: #f5efe6;
+}
+
+:root:not(.light-theme) #screen-result .action-buttons .btn[data-action="print"],
+.dark-theme #screen-result .action-buttons .btn[data-action="print"] {
+  background: #c4683c;
+  border-color: #a35028;
+  color: #ffffff;
+}
+
+/* ==========================================================================
    Config Stepper Redesign (Vercel Geist / Linear Aesthetic)
    ========================================================================== */
 
@@ -7938,71 +8278,71 @@ button.book-page-label:active {
    ========================================================================== */
 
 :root {
-  /* Brand Accents - Bindery Terracotta / Orange Theme (#ea580c) */
-  --stitch-primary: #ea580c;
-  --stitch-primary-hover: #c2410c;
-  --stitch-primary-active: #9a3412;
-  --stitch-primary-tint-50: #fff7ed;
-  --stitch-primary-tint-100: #ffedd5;
-  --stitch-primary-glow: rgba(234, 88, 12, 0.35);
-  --stitch-primary-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
-  --stitch-primary-shadow-hover: 0 6px 20px rgba(234, 88, 12, 0.38);
+  /* Brand Accents - Bindery Atölye Terracotta Palette (#9a401d) */
+  --stitch-primary: #9a401d;
+  --stitch-primary-hover: #8a3819;
+  --stitch-primary-active: #732d13;
+  --stitch-primary-tint-50: #FAF0EC;
+  --stitch-primary-tint-100: #F5DFD7;
+  --stitch-primary-glow: rgba(154, 64, 29, 0.28);
+  --stitch-primary-shadow: 0 4px 14px rgba(154, 64, 29, 0.22);
+  --stitch-primary-shadow-hover: 0 6px 20px rgba(154, 64, 29, 0.35);
 
-  /* Surfaces & Backgrounds */
-  --stitch-viewport-bg: #f8fafc;
+  /* Surfaces & Backgrounds - Atölye Kraft Paper */
+  --stitch-viewport-bg: var(--atelier-bg, #fff8f5);
   --stitch-card-bg: #ffffff;
-  --stitch-card-border: #f1f5f9;
-  --stitch-card-border-hover: #e2e8f0;
-  --stitch-card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
-  --stitch-card-divider: #f1f5f9;
+  --stitch-card-border: var(--atelier-border-hairline, #DCD5C9);
+  --stitch-card-border-hover: #C5BCAD;
+  --stitch-card-shadow: 0 2px 12px -2px rgba(28, 26, 24, 0.06);
+  --stitch-card-divider: #EDE8DE;
 
   /* Spine Estimation Card */
-  --stitch-spine-card-bg: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(255, 237, 213, 0.6) 100%);
-  --stitch-spine-card-border: #fed7aa;
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(243, 236, 225, 0.7) 0%, rgba(250, 240, 236, 0.7) 100%);
+  --stitch-spine-card-border: var(--atelier-border-hairline, #DCD5C9);
   --stitch-spine-icon-bg: #ffffff;
-  --stitch-spine-icon-color: #ea580c;
+  --stitch-spine-icon-color: #9a401d;
 
   /* Typography */
-  --stitch-text-title: #0f172a;
-  --stitch-text-body: #334155;
-  --stitch-text-muted: #64748b;
-  --stitch-text-subtle: #94a3b8;
-  --stitch-text-brand: #ea580c;
+  --stitch-text-title: #1C1A18;
+  --stitch-text-body: #332F2B;
+  --stitch-text-muted: #5C5650;
+  --stitch-text-subtle: #8A8279;
+  --stitch-text-brand: #9a401d;
 
   /* Segmented Pill Controls */
-  --stitch-segmented-track: #f1f5f9;
+  --stitch-segmented-track: #F0EAE1;
   --stitch-segmented-border: transparent;
   --stitch-pill-active-bg: #ffffff;
-  --stitch-pill-active-text: #ea580c;
-  --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(234, 88, 12, 0.08);
-  --stitch-pill-inactive-text: #475569;
-  --stitch-pill-hover-text: #0f172a;
+  --stitch-pill-active-text: #9a401d;
+  --stitch-pill-active-shadow: 0 1px 3px rgba(28, 26, 24, 0.08), 0 1px 2px rgba(154, 64, 29, 0.08);
+  --stitch-pill-inactive-text: #5C5650;
+  --stitch-pill-hover-text: #1C1A18;
 
   /* Slider & Controls */
-  --stitch-slider-track: #e2e8f0;
-  --stitch-slider-thumb-bg: #ea580c;
+  --stitch-slider-track: #E4DDD2;
+  --stitch-slider-thumb-bg: #9a401d;
   --stitch-slider-thumb-border: #ffffff;
-  --stitch-slider-thumb-glow: 0 2px 6px rgba(234, 88, 12, 0.35);
+  --stitch-slider-thumb-glow: 0 2px 6px rgba(154, 64, 29, 0.35);
 
   /* Toggle Switch */
-  --stitch-switch-track-off: #e2e8f0;
-  --stitch-switch-track-on: #ea580c;
+  --stitch-switch-track-off: #E4DDD2;
+  --stitch-switch-track-on: #9a401d;
   --stitch-switch-thumb: #ffffff;
 
   /* Bottom Floating Dock */
-  --stitch-dock-bg: rgba(255, 255, 255, 0.90);
-  --stitch-dock-border: rgba(241, 245, 249, 0.85);
+  --stitch-dock-bg: rgba(255, 248, 245, 0.94);
+  --stitch-dock-border: var(--atelier-border-hairline, #DCD5C9);
   --stitch-dock-blur: blur(16px);
-  --stitch-summary-bg: rgba(248, 250, 252, 0.9);
-  --stitch-summary-border: rgba(226, 232, 240, 0.8);
-  --stitch-summary-text: #475569;
-  --stitch-step-dot-inactive: #cbd5e1;
-  --stitch-step-dot-active: #ea580c;
+  --stitch-summary-bg: rgba(243, 236, 225, 0.92);
+  --stitch-summary-border: var(--atelier-border-hairline, #DCD5C9);
+  --stitch-summary-text: #1C1A18;
+  --stitch-step-dot-inactive: #D8CDB4;
+  --stitch-step-dot-active: #9a401d;
 
   /* Status Indicators */
   --stitch-live-dot: #10b981;
-  --stitch-badge-recommended-bg: #ecfdf5;
-  --stitch-badge-recommended-text: #059669;
+  --stitch-badge-recommended-bg: #F2F7F4;
+  --stitch-badge-recommended-text: #2D5540;
 
   /* Geometry & Radii */
   --stitch-radius-card: 1.25rem;    /* 20px */
@@ -8020,49 +8360,49 @@ button.book-page-label:active {
 
 :root:not(.light-theme),
 .dark-theme {
-  --stitch-viewport-bg: #0f172a;
-  --stitch-card-bg: #181d26;
-  --stitch-card-border: rgba(255, 255, 255, 0.07);
-  --stitch-card-border-hover: rgba(255, 255, 255, 0.12);
-  --stitch-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
-  --stitch-card-divider: rgba(255, 255, 255, 0.06);
+  --stitch-viewport-bg: #161412;
+  --stitch-card-bg: #221e1a;
+  --stitch-card-border: #38312a;
+  --stitch-card-border-hover: #4d443b;
+  --stitch-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  --stitch-card-divider: #2d2620;
 
-  --stitch-spine-card-bg: linear-gradient(135deg, rgba(120, 53, 15, 0.32) 0%, rgba(154, 64, 29, 0.22) 100%);
-  --stitch-spine-card-border: rgba(234, 88, 12, 0.35);
-  --stitch-spine-icon-bg: #232832;
-  --stitch-spine-icon-color: #fb923c;
+  --stitch-spine-card-bg: linear-gradient(135deg, rgba(56, 44, 34, 0.45) 0%, rgba(36, 28, 22, 0.25) 100%);
+  --stitch-spine-card-border: #4d3a2a;
+  --stitch-spine-icon-bg: #2d2620;
+  --stitch-spine-icon-color: #e08e62;
 
-  --stitch-text-title: #f8fafc;
-  --stitch-text-body: #e2e8f0;
-  --stitch-text-muted: #94a3b8;
-  --stitch-text-subtle: #64748b;
-  --stitch-text-brand: #fb923c;
+  --stitch-text-title: #f5efe6;
+  --stitch-text-body: #d5cbbe;
+  --stitch-text-muted: #b0a699;
+  --stitch-text-subtle: #736b61;
+  --stitch-text-brand: #e08e62;
 
-  --stitch-segmented-track: #11141a;
-  --stitch-pill-active-bg: #262c37;
-  --stitch-pill-active-text: #fb923c;
+  --stitch-segmented-track: #1b1714;
+  --stitch-pill-active-bg: #2d2620;
+  --stitch-pill-active-text: #e08e62;
   --stitch-pill-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --stitch-pill-inactive-text: #94a3b8;
-  --stitch-pill-hover-text: #f8fafc;
+  --stitch-pill-inactive-text: #b0a699;
+  --stitch-pill-hover-text: #f5efe6;
 
-  --stitch-slider-track: #262e3d;
-  --stitch-slider-thumb-bg: #ea580c;
-  --stitch-slider-thumb-border: #181d26;
-  --stitch-slider-thumb-glow: 0 2px 6px rgba(234, 88, 12, 0.35);
+  --stitch-slider-track: #2d2620;
+  --stitch-slider-thumb-bg: #c4683c;
+  --stitch-slider-thumb-border: #161412;
+  --stitch-slider-thumb-glow: 0 2px 6px rgba(196, 104, 60, 0.35);
 
-  --stitch-switch-track-off: #262e3d;
-  --stitch-switch-track-on: #ea580c;
+  --stitch-switch-track-off: #2d2620;
+  --stitch-switch-track-on: #c4683c;
 
-  --stitch-dock-bg: rgba(24, 29, 38, 0.92);
-  --stitch-dock-border: rgba(255, 255, 255, 0.08);
-  --stitch-summary-bg: rgba(17, 20, 26, 0.85);
-  --stitch-summary-border: rgba(255, 255, 255, 0.08);
-  --stitch-summary-text: #94a3b8;
-  --stitch-step-dot-inactive: #334155;
-  --stitch-step-dot-active: #ea580c;
+  --stitch-dock-bg: rgba(22, 20, 18, 0.94);
+  --stitch-dock-border: #38312a;
+  --stitch-summary-bg: rgba(37, 33, 29, 0.92);
+  --stitch-summary-border: #38312a;
+  --stitch-summary-text: #b0a699;
+  --stitch-step-dot-inactive: #3d352e;
+  --stitch-step-dot-active: #c4683c;
 
-  --stitch-badge-recommended-bg: rgba(16, 185, 129, 0.15);
-  --stitch-badge-recommended-text: #34d399;
+  --stitch-badge-recommended-bg: rgba(45, 85, 64, 0.25);
+  --stitch-badge-recommended-text: #4ade80;
 }
 
 /* Container enclosing the entire configuration flow */
@@ -8077,6 +8417,11 @@ button.book-page-label:active {
   gap: 0;
   position: relative;
   background-color: var(--stitch-viewport-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--stitch-viewport-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
   color: var(--stitch-text-title);
   user-select: none;
   -webkit-user-select: none;
@@ -8105,22 +8450,20 @@ button.book-page-label:active {
   width: 38px;
   height: 38px;
   border-radius: var(--stitch-radius-full);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: var(--stitch-card-shadow);
+  background: var(--atelier-surface-cream, #F3ECE1);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--stitch-text-body);
+  color: var(--atelier-ink-black, #1C1A18);
   cursor: pointer;
   transition: all var(--stitch-duration) var(--stitch-spring);
 }
 
 .stitch-back-btn:hover {
   background: #ffffff;
-  color: var(--stitch-text-title);
+  color: var(--stitch-primary);
   transform: scale(1.04);
 }
 
@@ -8140,16 +8483,17 @@ button.book-page-label:active {
 .stitch-header-title,
 #screen-config .screen-title {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--stitch-text-title);
   line-height: 1.25;
 }
 
 .stitch-header-sub {
   margin: 2px 0 0 0;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--stitch-text-muted);
 }
 
