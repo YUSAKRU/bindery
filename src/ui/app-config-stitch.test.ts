@@ -160,13 +160,13 @@ describe('Stitch 3-step prototype restoration — clutter-free header and 3-step
   });
 });
 
-describe('Stitch 3-step prototype restoration — bottom dock & conditional CTA', () => {
-  it('declares 3 step dots in #stitchStepNav', () => {
+describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA', () => {
+  it('declares 2 step dots in #stitchStepNav', () => {
     const navMatch = configScreen.match(/<div[^>]*id="stitchStepNav"[^>]*>([\s\S]*?)<\/div>/);
     expect(navMatch).not.toBeNull();
     const dots = [...navMatch![1].matchAll(/<button[^>]*class="stitch-step-dot[^"]*"[^>]*>/g)];
-    expect(dots).toHaveLength(3);
-    expect(dots.map((d) => attrs(d[0])['data-step'])).toEqual(['1', '2', '3']);
+    expect(dots).toHaveLength(2);
+    expect(dots.map((d) => attrs(d[0])['data-step'])).toEqual(['1', '2']);
   });
 
   it('initializes generateBtn with .hidden on Step 1', () => {
@@ -175,9 +175,9 @@ describe('Stitch 3-step prototype restoration — bottom dock & conditional CTA'
     expect(genBtnMatch![0]).toContain('hidden');
   });
 
-  it('hides generateBtn on Steps 1 & 2 and reveals it only on Step 3 in updateStitchDock', () => {
+  it('hides generateBtn on Step 1 and reveals it only on Step 2 in updateStitchDock', () => {
     const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {");
-    expect(dockFn).toContain('current.step === 3');
+    expect(dockFn).toContain('current.step === 2');
     expect(dockFn).toContain("generateBtn.classList.remove('hidden')");
     expect(dockFn).toContain("generateBtn.classList.add('hidden')");
     expect(dockFn).toContain("stitchNextHint.classList.add('hidden')");
@@ -192,47 +192,43 @@ describe('Stitch 3-step prototype restoration — bottom dock & conditional CTA'
   });
 });
 
-describe('Stitch 3-step prototype restoration — gesture & dot navigation', () => {
+describe('Stitch 2-step prototype restoration — gesture & dot navigation', () => {
   it('wires dots in stitchStepNav to switchConfigTab', () => {
-    const navAt = appTs.indexOf("const stepTabs: Array<'layout' | 'cover' | 'print'>");
+    const navAt = appTs.indexOf("const stepTabs: Array<'layout' | 'print'>");
     expect(navAt).toBeGreaterThan(0);
     const navBlock = stripTsComments(appTs.slice(navAt, navAt + 500));
-    expect(navBlock).toContain("['layout', 'cover', 'print']");
+    expect(navBlock).toContain("['layout', 'print']");
     expect(navBlock).toContain('switchConfigTab(stepTabs[idx])');
   });
 
-  it('wires stitchNextHint to step from layout -> cover -> print', () => {
+  it('wires stitchNextHint to step from layout -> print', () => {
     const hintAt = appTs.indexOf("stitchNextHint.addEventListener('click'");
     expect(hintAt).toBeGreaterThan(0);
     const hintBlock = stripTsComments(appTs.slice(hintAt, hintAt + 300));
     expect(hintBlock).toContain("currentConfigTab === 'layout'");
-    expect(hintBlock).toContain("switchConfigTab('cover')");
-    expect(hintBlock).toContain("currentConfigTab === 'cover'");
     expect(hintBlock).toContain("switchConfigTab('print')");
   });
 
-  it('wires configBackBtn to step back print -> cover -> layout -> picker', () => {
+  it('wires configBackBtn to step back print -> layout -> picker', () => {
     const backBlock = stripTsComments(blockAfter(appTs, 'if (configBackBtn) {'));
     expect(backBlock).toContain("currentConfigTab === 'print'");
-    expect(backBlock).toContain("switchConfigTab('cover')");
-    expect(backBlock).toContain("currentConfigTab === 'cover'");
     expect(backBlock).toContain("switchConfigTab('layout')");
     expect(backBlock).toContain("showScreen('picker')");
   });
 
-  it('supports horizontal swipe gestures between all 3 steps', () => {
+  it('supports horizontal swipe gestures between 2 steps', () => {
     const bodySwipe = stripTsComments(blockAfter(appTs, 'if (configBody) {'));
     expect(bodySwipe).toContain("currentConfigTab === 'layout'");
-    expect(bodySwipe).toContain("switchConfigTab('cover')");
     expect(bodySwipe).toContain("switchConfigTab('print')");
     expect(bodySwipe).toContain("currentConfigTab === 'print'");
+    expect(bodySwipe).toContain("switchConfigTab('layout')");
   });
 });
 
-describe('Stitch 3-step prototype restoration — invalid blank-page input jumps to Step 3', () => {
+describe('Stitch 2-step prototype restoration — invalid blank-page input jumps to Step 2 (print)', () => {
   const generateBlock = stripTsComments(blockAfter(appTs, "generateBtn.addEventListener('click', async () => {"));
 
-  it('lands on Step 3 (print) when parseInsertBlank() rejects the input', () => {
+  it('lands on Step 2 (print) when parseInsertBlank() rejects the input', () => {
     const parseAt = generateBlock.indexOf('if (insertBlankAfter === null)');
     expect(parseAt).toBeGreaterThanOrEqual(0);
     const branch = generateBlock.slice(parseAt);
@@ -253,9 +249,9 @@ describe('Stitch 3-step prototype restoration — invalid blank-page input jumps
   });
 });
 
-describe('Stitch 3-step prototype restoration — Stitch card classes & warm orange palette', () => {
+describe('Stitch prototype restoration — Stitch card classes & indigo palette', () => {
   it('renders the config steps as Stitch cards', () => {
-    expect(configScreen.match(/class="[^"]*\bstitch-card\b/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
+    expect(configScreen.match(/class="[^"]*\bstitch-card\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(configScreen).toContain('stitch-card-head');
     expect(configScreen).toContain('stitch-card-title');
     expect(configScreen).toContain('stitch-card-divider');
@@ -263,28 +259,25 @@ describe('Stitch 3-step prototype restoration — Stitch card classes & warm ora
     expect(configScreen).toContain('stitch-back-btn');
   });
 
-  it('defines the warm orange token set instead of indigo', () => {
+  it('defines the indigo token set from Stitch prototype', () => {
     const stitchSection = stylesCss.slice(
       stylesCss.indexOf('Stitch Design Language Tokens'),
       stylesCss.indexOf('Container enclosing the entire configuration flow'),
     );
     expect(stitchSection.length).toBeGreaterThan(1000);
-    expect(stitchSection).toContain('--stitch-primary: #ea580c;');
-    expect(stitchSection).toContain('--stitch-primary-hover: #c2410c;');
-    expect(stitchSection).toContain('--stitch-primary-tint-50: #fff7ed;');
-    expect(stitchSection).toContain('--stitch-primary-glow: rgba(234, 88, 12, 0.35);');
-    expect(stitchSection).toContain('--stitch-step-dot-active: #ea580c;');
+    expect(stitchSection).toContain('--stitch-primary: #4f46e5;');
+    expect(stitchSection).toContain('--stitch-primary-hover: #4338ca;');
+    expect(stitchSection).toContain('--stitch-primary-tint-50: #f5f3ff;');
+    expect(stitchSection).toContain('--stitch-primary-glow: rgba(79, 70, 229, 0.35);');
+    expect(stitchSection).toContain('--stitch-step-dot-active: #4f46e5;');
   });
 
-  it('paints from the Stitch tokens, never from the indigo --color-primary', () => {
+  it('paints from the Stitch tokens', () => {
     const stitchSection = stylesCss.slice(
       stylesCss.indexOf('Stitch Design Language Tokens'),
       stylesCss.indexOf('Container enclosing the entire configuration flow'),
     );
-    expect(stitchSection).not.toContain('var(--color-primary)');
-    for (const indigo of ['#4f46e5', '#6366f1', '#ede9fe', '#8b5cf6', '#a5b4fc']) {
-      expect(stitchSection.toLowerCase()).not.toContain(indigo);
-    }
+    expect(stitchSection).toContain('--stitch-primary: #4f46e5;');
     const cta = cssRule(stylesCss, '#configStickyFooter #generateBtn');
     expect(cta).toContain('background: var(--stitch-primary)');
   });

@@ -1399,21 +1399,18 @@
               <div class="setting-card stitch-card">
                 <div class="setting-row stitch-card-head">
                   <div class="setting-title-wrap stitch-card-title-group">
-                    <span class="stitch-card-title" data-i18n="config.paperSize">Paper size</span>
-                    <button type="button" class="config-info-btn" aria-label="Paper size info" data-i18n-aria-label="config.paperSizeInfo" data-tooltip="config.paperSizeHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
+                    <span class="stitch-card-title" data-i18n="config.paperSize">Kağıt Boyutu</span>
+                    <span class="stitch-badge-tag" data-i18n="config.paperSourceTag">Kaynak</span>
                   </div>
                   <span class="stitch-badge-val" id="paperSelectedLabel">A4 (210×297 mm)</span>
                 </div>
-                <div class="segmented-group stitch-segmented stitch-grid-5" id="paperSizeGroup">
+                <div class="segmented-group stitch-segmented stitch-grid-4" id="paperSizeGroup">
                   <button type="button" class="segmented-btn stitch-pill-btn is-active" data-paper="A4">A4</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-paper="Letter">Letter</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-paper="A5">A5</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-paper="A3">A3</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-paper="source" data-i18n="config.paperSize.source">Source size</button>
                 </div>
-                <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.paperSizeHint">The size of the paper you'll load into the printer. Folded, each half becomes a booklet page.</p>
+                <p class="setting-hint stitch-card-desc" data-i18n="config.paperSizeDesc">Baskının yapılacağı fiziksel yaprak tabaka ebadı.</p>
               </div>
 
               <!-- Forma Boyutu Card -->
@@ -1421,254 +1418,135 @@
                 <div class="setting-row stitch-card-head">
                   <div class="setting-title-wrap stitch-card-title-group">
                     <div>
-                      <span class="stitch-card-title" data-i18n="config.signatureSize">Signature size</span>
-                      <p class="setting-hint stitch-card-desc" data-i18n="config.signatureSub">Single or multi-signature folding ratio</p>
+                      <span class="stitch-card-title" data-i18n="config.signatureSize">Forma Boyutu (Sayfa/Forma)</span>
+                      <p class="setting-hint stitch-card-desc" data-i18n="config.signatureSub">Tek forma veya çoklu forma katlama oranı</p>
                     </div>
-                    <button type="button" class="info-btn config-info-btn" id="signatureInfoBtn"
-                            aria-haspopup="dialog" aria-controls="signatureInfoSheet"
-                            data-i18n-aria-label="signatureInfo.open" aria-label="What is a signature? Learn more">
-                      <span aria-hidden="true">i</span>
-                    </button>
                   </div>
-                  <span class="stitch-badge-pill" id="formaBadge">Single</span>
+                  <span class="stitch-badge-pill" id="formaBadge">4 Sayfa</span>
                 </div>
                 <div class="segmented-group stitch-segmented stitch-grid-5" id="signatureSizeGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-sig="single" data-i18n="config.signature.single">Single</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-sig="4">4</button>
+                  <button type="button" class="segmented-btn stitch-pill-btn" data-sig="auto" data-i18n="config.signature.auto">Otomatik</button>
+                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-sig="4">4</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="8">8</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="16">16</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="32">32</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-sig="auto" data-i18n="config.signature.auto">Auto</button>
                 </div>
-                <p class="setting-hint setting-live-hint stitch-card-desc" id="signatureHintText" data-i18n="config.signatureHint">Splits thick documents into smaller folded groups for easier binding. Standard: 16 pages (4 sheets).</p>
+                <div class="stitch-callout" id="signatureCallout">
+                  <svg class="stitch-callout-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                  </svg>
+                  <p class="stitch-callout-text" id="signatureHintText" data-i18n="config.signatureHint">Toplam <strong>2 forma</strong> üretilir. Forma başına 1 yaprak (4 sayfa) birlikte katlanacaktır.</p>
+                </div>
               </div>
 
               <!-- 2-in-1: Cilt Yönü & Çevirme Kenarı Card -->
               <div class="setting-card stitch-card">
                 <div>
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <span class="stitch-card-title" data-i18n="config.binding">Binding direction</span>
-                      <button type="button" class="config-info-btn" aria-label="Binding direction info" data-i18n-aria-label="config.bindingInfo" data-tooltip="config.bindingHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
-                    <span class="stitch-badge-tag" data-i18n="config.bindingSub">Reading direction</span>
+                    <span class="stitch-card-title" data-i18n="config.binding">Cilt Yönü</span>
+                    <span class="stitch-card-desc" style="font-size: 11px; color: var(--stitch-text-subtle);" data-i18n="config.bindingSub">Okuma akışı</span>
                   </div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="bindingGroup" style="margin-top: 8px;">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">Left (LTR)</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-binding="rtl" data-i18n="config.binding.rtl">Right (RTL)</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-binding="ltr" data-i18n="config.binding.ltr">
+                      <svg class="stitch-pill-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+                      </svg>
+                      Soldan (LTR)
+                    </button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-binding="rtl" data-i18n="config.binding.rtl">Sağdan (RTL)</button>
                   </div>
-                  <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.bindingHint">Right-to-left binding is for Arabic and manga-style books.</p>
                 </div>
 
                 <div class="stitch-card-divider"></div>
 
                 <div>
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <span class="stitch-card-title" data-i18n="config.flipEdge">Flip edge</span>
-                      <button type="button" class="config-info-btn" aria-label="Flip edge info" data-i18n-aria-label="config.flipEdgeInfo" data-tooltip="config.flipEdgeHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
-                    <span class="stitch-badge-rec" data-i18n="config.flipEdgeRec">Recommended: Short edge</span>
+                    <span class="stitch-card-title" data-i18n="config.flipEdge">Çevirme Kenarı</span>
+                    <span class="stitch-badge-rec" data-i18n="config.flipEdgeRec">Önerilen: Kısa Kenar</span>
                   </div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="flipEdgeGroup" style="margin-top: 8px;">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Short edge (recommended)</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-flip="long" data-i18n="config.flipEdge.long">Long edge</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-flip="short" data-i18n="config.flipEdge.short">Kısa Kenar</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-flip="long" data-i18n="config.flipEdge.long">Uzun Kenar</button>
                   </div>
-                  <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.flipEdgeHint">Must match your printer's duplex flip setting.</p>
                 </div>
               </div>
             </div>
 
-            <!-- Step 2: Cover -->
-            <div class="config-step-panel hidden" id="configStepCover" role="tabpanel" aria-labelledby="configStepCover">
-              <!-- Sarma Kapak Ekle Toggle Card -->
-              <div class="setting-card stitch-card">
-                <div class="setting-row stitch-card-head stitch-switch-wrap">
-                  <div class="setting-title-wrap stitch-card-title-group">
-                    <div>
-                      <span class="stitch-card-title" data-i18n="config.wrapCover">Add wrap-around cover</span>
-                      <p class="setting-hint stitch-card-desc" data-i18n="config.wrapCoverSub">Print-ready independent outer cover sheet</p>
-                    </div>
-                    <button type="button" class="config-info-btn" aria-label="Cover info" data-i18n-aria-label="config.wrapCoverInfo" data-tooltip="config.wrapCoverHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
-                  </div>
-                  <label class="stitch-switch" aria-label="Sarma Kapak Ekle Switch">
-                    <input type="checkbox" id="coverToggle" />
-                    <div class="stitch-switch-track">
-                      <div class="stitch-switch-thumb"></div>
-                    </div>
-                  </label>
-                </div>
-                <div class="segmented-group stitch-segmented stitch-grid-2" id="wrapCoverToggleGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-wrapcover="off" data-i18n="config.wrapCoverOff">Off</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-wrapcover="on" data-i18n="config.wrapCoverOn">Add cover</button>
-                </div>
-                <p class="setting-hint setting-live-hint stitch-card-desc" id="wrapCoverHintText" data-i18n="config.wrapCoverHint">Designs a printable outer cover for this booklet.</p>
-              </div>
-
-              <!-- Canlı Sırt Kalınlığı Hesaplama Kartı -->
-              <div class="setting-card cover-summary-card stitch-card-spine" id="wrapCoverSummaryCard">
-                <div class="stitch-spine-top">
-                  <div>
-                    <span class="stitch-spine-label" data-i18n="cover.spineCalcTitle">Live Spine Calculation</span>
-                    <h3 class="cover-spine-value stitch-spine-val" id="wrapCoverSpineLabel">0.00 mm</h3>
-                  </div>
-                  <div class="stitch-spine-icon-box">
-                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                    </svg>
-                  </div>
-                </div>
-                <div class="cover-breakdown-badges">
-                  <span class="cover-badge" id="wrapCoverPaperBulkBadge">Paper: 0.00 mm</span>
-                  <span class="cover-badge" id="wrapCoverThreadSwellBadge">Swell: +0.00 mm</span>
-                  <span class="cover-badge" id="wrapCoverHingeBadge">Hinge: +0.00 mm</span>
-                </div>
-                <div class="cover-fit-status">
-                  <span class="cover-fit-badge cover-fit-badge--ok" id="wrapCoverFitBadge" data-i18n="cover.spineTextFit">✓ Spine text fits (≥ 3.5 mm)</span>
-                  <span class="cover-fit-badge cover-fit-badge--warn hidden" id="wrapCoverPaperFitBadge" data-i18n="cover.needsA3">⚠️ Too wide for A4 — print this sheet on A3</span>
-                </div>
-                <div class="cover-total-dim" id="wrapCoverDimsLabel"></div>
-                <p class="stitch-spine-sub" id="spineBasisLabel" data-i18n="cover.spineBasisDesc">80 g/m² hamur kağıt baz alınarak hesaplanmıştır.</p>
-              </div>
-
-              <!-- Kapak Çıktı Modu (Moved from Step 3 per Critic L-8) -->
-              <div class="setting-card stitch-card">
-                <div class="setting-row stitch-card-head">
-                  <div class="setting-title-wrap stitch-card-title-group">
-                    <span class="stitch-card-title" data-i18n="config.cover">Cover</span>
-                    <button type="button" class="config-info-btn" aria-label="Cover mode info" data-i18n-aria-label="config.coverInfo" data-tooltip="config.coverHint">
-                      <span aria-hidden="true">i</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="segmented-group stitch-segmented stitch-grid-2" id="coverModeGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-cover="together" data-i18n="config.cover.together">Together</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-cover="separate" data-i18n="config.cover.separate">Print separately</button>
-                </div>
-                <p class="setting-hint setting-live-hint stitch-card-desc" id="coverHintText" data-i18n="config.coverHint">Produces a separate PDF for the cover (first 2 + last 2 pages) to print on heavier paper.</p>
-              </div>
-
-              <div class="cover-slot-container" id="coverSlot">
-                <div class="setting-card-nested hidden" id="wrapCoverOptions">
-                  <!-- 1. Binding -->
-                  <div class="setting-row">
-                    <span data-i18n="cover.bindingStyle">Binding Type</span>
-                  </div>
+            <!-- Step 2: Cover (Blanked out per user directive; hidden placeholder container retains legacy input IDs) -->
+            <div class="config-step-panel hidden" id="configStepCover" role="tabpanel" aria-labelledby="configStepCover" style="display: none !important;">
+              <div style="display: none !important;" aria-hidden="true">
+                <button type="button" class="hidden" id="signatureInfoBtn" style="display: none !important;" aria-hidden="true"></button>
+                <input type="checkbox" id="coverToggle" />
+                <div id="wrapCoverToggleGroup"><button type="button" class="segmented-btn is-active" data-wrapcover="off"></button><button type="button" class="segmented-btn" data-wrapcover="on"></button></div>
+                <p id="wrapCoverHintText"></p>
+                <div id="coverSlot"></div>
+                <div class="hidden" id="wrapCoverOptions">
                   <div class="segmented-group stitch-segmented stitch-grid-3" id="wrapCoverBindingGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-wrapbinding="saddle" data-i18n="cover.bindingSaddle">Saddle</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-wrapbinding="sewn" data-i18n="cover.bindingSewn">Sewn</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-wrapbinding="perfect" data-i18n="cover.bindingPerfect">Perfect</button>
+                    <button type="button" class="segmented-btn" data-wrapbinding="saddle"></button>
+                    <button type="button" class="segmented-btn is-active" data-wrapbinding="sewn"></button>
+                    <button type="button" class="segmented-btn" data-wrapbinding="perfect"></button>
                   </div>
-                  <p class="setting-hint stitch-card-desc" id="wrapCoverBindingHint" data-i18n="config.wrapCoverBindingHint">Pick the method you will bind with — the spine is measured to match it.</p>
-
-                  <!-- 2. Cover kind -->
-                  <div class="setting-row" style="margin-top: 12px;" id="wrapCoverKindRow">
-                    <span data-i18n="cover.coverKind">Cover Kind</span>
-                  </div>
+                  <p class="setting-hint stitch-card-desc" id="wrapCoverBindingHint"></p>
+                  <div id="wrapCoverKindRow"></div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="wrapCoverKindGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-wrapkind="softcover" data-i18n="cover.kindSoft">Flexible cover</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-wrapkind="hardcover" data-i18n="cover.kindHard">Hard cover (board)</button>
+                    <button type="button" class="segmented-btn is-active" data-wrapkind="softcover"></button>
+                    <button type="button" class="segmented-btn" data-wrapkind="hardcover"></button>
                   </div>
                   <p class="setting-hint" id="wrapCoverKindHint"></p>
-
-                  <!-- Hardcover Board Thickness -->
-                  <div class="setting-card-nested hidden" id="wrapCoverBoardThicknessBlock">
-                    <div class="setting-row">
-                      <span data-i18n="cover.boardThickness">Board Thickness</span>
-                    </div>
+                  <div id="wrapCoverBoardThicknessBlock">
                     <div class="segmented-group stitch-segmented stitch-grid-4" id="wrapCoverBoardGroup">
-                      <button type="button" class="segmented-btn stitch-pill-btn" data-wrapboard="1.5">1.5mm</button>
-                      <button type="button" class="segmented-btn stitch-pill-btn is-active" data-wrapboard="2.0">2.0mm</button>
-                      <button type="button" class="segmented-btn stitch-pill-btn" data-wrapboard="2.5">2.5mm</button>
-                      <button type="button" class="segmented-btn stitch-pill-btn" data-wrapboard="3.0">3.0mm</button>
+                      <button type="button" class="segmented-btn" data-wrapboard="1.5">1.5mm</button>
+                      <button type="button" class="segmented-btn is-active" data-wrapboard="2.0">2.0mm</button>
+                      <button type="button" class="segmented-btn" data-wrapboard="2.5">2.5mm</button>
+                      <button type="button" class="segmented-btn" data-wrapboard="3.0">3.0mm</button>
                     </div>
-                  </div>
-
-                  <!-- 3. Print paper -->
-                  <div class="setting-row" style="margin-top: 12px;">
-                    <span data-i18n="cover.formatTitle">Print Paper</span>
                   </div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="wrapCoverFormatGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-format="split" data-i18n="cover.formatSplit">A4 paper (2 sheets)</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-format="single" data-i18n="cover.formatSingle">A3 paper (1 sheet)</button>
+                    <button type="button" class="segmented-btn is-active" data-format="split"></button>
+                    <button type="button" class="segmented-btn" data-format="single"></button>
                   </div>
-                  <p class="setting-hint stitch-card-desc" id="wrapCoverFormatHint" data-i18n="cover.formatSplitHint">Two A4 sheets join at the spine: 20 mm lap flap, 10 mm glue tab.</p>
+                  <p class="setting-hint stitch-card-desc" id="wrapCoverFormatHint"></p>
                   <p class="setting-hint stitch-card-desc hidden" id="wrapCoverFormatResultLine"></p>
-
-                  <!-- Paper weight: the spine cannot be measured without it -->
-                  <div class="setting-row" style="margin-top: 12px;">
-                    <span data-i18n="cover.paperGsm">Paper Weight</span>
-                  </div>
                   <div class="segmented-group stitch-segmented stitch-grid-5" id="wrapCoverGsmGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-gsm="70">70g</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-gsm="80">80g</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-gsm="90">90g</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-gsm="100">100g</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-gsm="120">120g</button>
-                  </div>
-
-                  <!-- Palette -->
-                  <div class="setting-row" style="margin-top: 12px;">
-                    <span data-i18n="cover.colorTheme">Color Palette</span>
+                    <button type="button" class="segmented-btn" data-gsm="70"></button>
+                    <button type="button" class="segmented-btn is-active" data-gsm="80"></button>
+                    <button type="button" class="segmented-btn" data-gsm="90"></button>
+                    <button type="button" class="segmented-btn" data-gsm="100"></button>
+                    <button type="button" class="segmented-btn" data-gsm="120"></button>
                   </div>
                   <div class="cover-palette-group" id="wrapCoverPaletteGroup">
-                    <button type="button" class="cover-swatch is-active" data-theme="cream" title="Warm Cream" style="background:#fbf8f2; color:#292524; border:1px solid #dcd6c8;">Aa</button>
-                    <button type="button" class="cover-swatch" data-theme="white" title="Classic White" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1;">Aa</button>
-                    <button type="button" class="cover-swatch" data-theme="navy" title="Midnight Navy" style="background:#0f172a; color:#f8fafc;">Aa</button>
-                    <button type="button" class="cover-swatch" data-theme="burgundy" title="Burgundy" style="background:#450a0a; color:#fef2f2;">Aa</button>
-                    <button type="button" class="cover-swatch" data-theme="charcoal" title="Charcoal" style="background:#1e293b; color:#f8fafc;">Aa</button>
+                    <button type="button" class="cover-swatch is-active" data-theme="cream">Aa</button>
+                    <button type="button" class="cover-swatch" data-theme="white">Aa</button>
+                    <button type="button" class="cover-swatch" data-theme="navy">Aa</button>
+                    <button type="button" class="cover-swatch" data-theme="burgundy">Aa</button>
+                    <button type="button" class="cover-swatch" data-theme="charcoal">Aa</button>
                   </div>
-
-                  <!-- Content -->
-                  <div class="setting-row" style="margin-top: 12px;">
-                    <span class="setting-section-title stitch-card-title" data-i18n="config.wrapCoverContent">Cover content</span>
-                  </div>
-                  <div class="cover-input-group">
-                    <label for="wrapCoverTitleInput" class="setting-label" data-i18n="cover.bookTitle">Book Title</label>
-                    <input type="text" id="wrapCoverTitleInput" class="modal-input" placeholder="e.g. The Odyssey" data-i18n-placeholder="cover.bookTitlePlaceholder" maxlength="80" />
-                  </div>
-                  <div class="cover-input-group">
-                    <label for="wrapCoverAuthorInput" class="setting-label" data-i18n="cover.author">Author / Subtitle</label>
-                    <input type="text" id="wrapCoverAuthorInput" class="modal-input" placeholder="e.g. Homer" data-i18n-placeholder="cover.authorPlaceholder" maxlength="60" />
-                  </div>
-                  <div class="cover-input-group">
-                    <label for="wrapCoverSynopsisInput" class="setting-label" data-i18n="cover.synopsis">Back Cover Synopsis</label>
-                    <textarea id="wrapCoverSynopsisInput" class="modal-input cover-textarea" rows="3" placeholder="Add a short summary or blurb for the back cover..." data-i18n-placeholder="cover.synopsisPlaceholder" maxlength="600"></textarea>
-                  </div>
-
-                  <!-- Mini preview -->
-                  <div class="setting-row" style="margin-top: 12px;">
-                    <span data-i18n="config.wrapCoverPreview">Cover preview</span>
-                  </div>
-                  <div class="cover-preview-wrapper">
-                    <div class="cover-layout-preview" id="wrapCoverMiniPreview" style="height: 110px;">
-                      <div class="cover-panel cover-panel--back">
-                        <span class="cover-panel-label" data-i18n="cover.previewBack">Back</span>
-                        <p class="cover-panel-synopsis" id="wrapCoverMiniSynopsis"></p>
-                      </div>
-                      <div class="cover-crease" aria-hidden="true"></div>
-                      <div class="cover-panel cover-panel--spine" id="wrapCoverMiniSpine">
-                        <span class="cover-spine-text" id="wrapCoverMiniSpineText"></span>
-                      </div>
-                      <div class="cover-crease" aria-hidden="true"></div>
-                      <div class="cover-panel cover-panel--front">
-                        <span class="cover-panel-label" data-i18n="cover.previewFront">Front</span>
-                        <h4 class="cover-preview-title" id="wrapCoverMiniTitle">Book Title</h4>
-                        <p class="cover-preview-author" id="wrapCoverMiniAuthor">Author</p>
-                      </div>
-                    </div>
-                  </div>
+                  <input type="text" id="wrapCoverTitleInput" />
+                  <input type="text" id="wrapCoverAuthorInput" />
+                  <textarea id="wrapCoverSynopsisInput"></textarea>
+                  <div id="wrapCoverMiniPreview"></div>
+                  <p id="wrapCoverMiniSynopsis"></p>
+                  <div id="wrapCoverMiniSpine"></div>
+                  <span id="wrapCoverMiniSpineText"></span>
+                  <h4 id="wrapCoverMiniTitle"></h4>
+                  <p id="wrapCoverMiniAuthor"></p>
+                </div>
+                <div id="coverModeGroup"><button type="button" class="segmented-btn is-active" data-cover="together"></button><button type="button" class="segmented-btn" data-cover="separate"></button></div>
+                <p id="coverHintText"></p>
+                <div id="wrapCoverSummaryCard">
+                  <span id="wrapCoverPaperBulkBadge"></span>
+                  <span id="wrapCoverThreadSwellBadge"></span>
+                  <span id="wrapCoverHingeBadge"></span>
+                  <span class="cover-fit-badge cover-fit-badge--ok" id="wrapCoverFitBadge"></span>
+                  <span class="cover-fit-badge cover-fit-badge--warn hidden" id="wrapCoverPaperFitBadge" data-i18n="cover.needsA3"></span>
+                  <div id="wrapCoverDimsLabel"></div>
+                  <span id="wrapCoverSpineLabel"></span>
+                  <span id="spineBasisLabel"></span>
                 </div>
               </div>
             </div>
 
-            <!-- Step 3: Print & Flow -->
+            <!-- Step 3: Print -->
             <div class="config-step-panel hidden" id="configStepPrint" role="tabpanel" aria-labelledby="configStepPrint">
               <!-- Compatibility anchor for accordion references & test slicing -->
               <button type="button" class="advanced-toggle hidden" id="advancedToggle" aria-expanded="true" aria-controls="advancedPanel">
@@ -1683,17 +1561,12 @@
                 <!-- Gutter Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <label for="gutterSlider" class="stitch-card-title" data-i18n="config.gutter">Gutter</label>
-                      <button type="button" class="config-info-btn" aria-label="Gutter info" data-i18n-aria-label="config.gutterInfo" data-tooltip="config.gutterHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <span class="stitch-card-title" data-i18n="config.gutter">Orta Boşluk (Gutter)</span>
                     <span class="setting-value stitch-badge-tag" id="gutterValueLabel">0 pt</span>
                   </div>
                   <input type="range" id="gutterSlider" min="0" max="50" step="1" value="0" class="slider stitch-range" />
                   <div class="stitch-slider-ticks">
-                    <span data-i18n="config.gutterZero">0 pt</span>
+                    <span data-i18n="config.gutterZero">0 pt (Standart)</span>
                     <span>25 pt</span>
                     <span>50 pt</span>
                   </div>
@@ -1703,12 +1576,7 @@
                 <!-- Creep & Paper Weight Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <label for="creepSlider" class="stitch-card-title" data-i18n="config.creep">Creep</label>
-                      <button type="button" class="config-info-btn" aria-label="Creep info" data-i18n-aria-label="config.creepInfo" data-tooltip="config.creepHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <span class="stitch-card-title" data-i18n="config.creep">Kağıt Taşma Payı (Creep)</span>
                     <span class="setting-value stitch-badge-pill" id="creepValueLabel">0.00 pt · 0.00 mm</span>
                   </div>
                   <input type="range" id="creepSlider" min="0" max="5" step="0.01" value="0" class="slider stitch-range" />
@@ -1720,14 +1588,14 @@
                   <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.creepHint">Amount inner pages shift inward to compensate for paper thickness.</p>
                   <div class="stitch-card-divider"></div>
                   <div class="setting-row" style="margin-top: 6px;">
-                    <label for="creepPaperGsm" class="stitch-card-title" style="font-size: 12px;" data-i18n="config.creepPaperGsm">Paper weight (g/m²)</label>
-                    <input type="number" id="creepPaperGsm" class="number-input creep-gsm-input" min="30" max="400" step="1" inputmode="numeric" placeholder="80" />
+                    <label for="creepPaperGsm" class="stitch-card-title" style="font-size: 13px;" data-i18n="config.creepPaperGsm">Kağıt gramajı (g/m²)</label>
+                    <input type="number" id="creepPaperGsm" class="number-input creep-gsm-input" min="30" max="400" step="1" inputmode="numeric" placeholder="80" value="80" />
                   </div>
-                  <div class="segmented-group stitch-segmented stitch-grid-4" id="creepPaperTypeGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-paper-type="uncoated" data-i18n="config.creepPaper.uncoated">Uncoated</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="matte" data-i18n="config.creepPaper.matte">Matte coated</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="gloss" data-i18n="config.creepPaper.gloss">Gloss coated</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="bulky" data-i18n="config.creepPaper.bulky">Bulky book</button>
+                  <div class="segmented-group stitch-segmented stitch-grid-4" id="creepPaperTypeGroup" style="margin-top: 6px;">
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-paper-type="uncoated" data-i18n="config.creepPaper.uncoated">Kuşesiz</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="matte" data-i18n="config.creepPaper.matte">Mat kuşe</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="gloss" data-i18n="config.creepPaper.gloss">Parlak</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-paper-type="bulky" data-i18n="config.creepPaper.bulky">Kitap kağıdı</button>
                   </div>
                   <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.creepPaperHint">Enter the paper weight to set creep from the sheet's thickness: weight × bulk gives the thickness in microns.</p>
                 </div>
@@ -1735,30 +1603,20 @@
                 <!-- Assembly Marks Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <span class="stitch-card-title" data-i18n="config.marks">Assembly marks</span>
-                      <button type="button" class="config-info-btn" aria-label="Assembly marks info" data-i18n-aria-label="config.marksInfo" data-tooltip="config.marksHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <span class="stitch-card-title" data-i18n="config.marks">Montaj işaretleri</span>
                   </div>
-                  <div class="segmented-group stitch-segmented stitch-grid-3" id="marksGroup">
-                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-marks="none" data-i18n="config.marks.none">None</button>
-                    <button type="button" class="segmented-btn stitch-pill-btn" data-marks="fold" data-i18n="config.marks.fold">Fold</button>
+                  <div class="segmented-group stitch-segmented stitch-grid-3" id="marksGroup" style="margin-top: 4px;">
+                    <button type="button" class="segmented-btn stitch-pill-btn is-active" data-marks="none" data-i18n="config.marks.none">Yok</button>
+                    <button type="button" class="segmented-btn stitch-pill-btn" data-marks="fold" data-i18n="config.marks.fold">Katlama</button>
                     <button type="button" class="segmented-btn stitch-pill-btn" data-marks="full" data-i18n="config.marks.full">Fold + spine</button>
                   </div>
-                  <p class="setting-hint setting-live-hint stitch-card-desc" id="marksHintText" data-i18n="config.marksHint">Prints a light dashed fold line down every sheet. &ldquo;Fold + spine&rdquo; also steps a bar down the spine, one step per section, so a missing or misordered section shows up as you stack them &mdash; the bar prints on the front side only.</p>
+                  <p class="setting-hint setting-live-hint stitch-card-desc" id="marksHintText" data-i18n="config.marksHint">Her yaprağa açık renkli kesikli bir katlama çizgisi basar. &ldquo;Fold + spine&rdquo; ayrıca sırta her formada bir basamak inen bir bar ekler; formaları üst üste dizerken eksik ya da yanlış sıradaki forma hemen belli olur &mdash; bar yalnızca ön yüze basılır.</p>
                 </div>
 
                 <!-- Talimat Sayfası Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <span class="stitch-card-title" data-i18n="config.instructions">Instructions page</span>
-                      <button type="button" class="config-info-btn" aria-label="Instructions info" data-i18n-aria-label="config.instructionsInfo" data-tooltip="config.instructionsHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <span class="stitch-card-title" data-i18n="config.instructions">Instructions page</span>
                   </div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="instructionsGroup">
                     <button type="button" class="segmented-btn stitch-pill-btn is-active" data-instr="none" data-i18n="config.instructions.none">None</button>
@@ -1770,12 +1628,7 @@
                 <!-- Yaprak Sırası Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <span class="stitch-card-title" data-i18n="config.sheetOrder">Sheet order</span>
-                      <button type="button" class="config-info-btn" aria-label="Sheet order info" data-i18n-aria-label="config.sheetOrderInfo" data-tooltip="config.sheetOrderHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <span class="stitch-card-title" data-i18n="config.sheetOrder">Sheet order</span>
                   </div>
                   <div class="segmented-group stitch-segmented stitch-grid-2" id="sheetOrderGroup">
                     <button type="button" class="segmented-btn stitch-pill-btn is-active" data-order="default" data-i18n="config.sheetOrder.default">Default</button>
@@ -1787,12 +1640,7 @@
                 <!-- Boş Sayfa Ekle Card -->
                 <div class="setting-card stitch-card">
                   <div class="setting-row stitch-card-head">
-                    <div class="setting-title-wrap stitch-card-title-group">
-                      <label for="insertBlankInput" class="stitch-card-title" data-i18n="config.insertBlank">Insert blank pages</label>
-                      <button type="button" class="config-info-btn" aria-label="Insert blank pages info" data-i18n-aria-label="config.insertBlankInfo" data-tooltip="config.insertBlankHint">
-                        <span aria-hidden="true">i</span>
-                      </button>
-                    </div>
+                    <label for="insertBlankInput" class="stitch-card-title" data-i18n="config.insertBlank">Insert blank pages</label>
                   </div>
                   <input type="text" id="insertBlankInput" class="number-input modal-input" placeholder="e.g. 0, 4, 4" data-i18n-placeholder="config.insertBlankPlaceholder" />
                   <p class="setting-hint stitch-card-desc config-tooltip-text hidden" data-i18n="config.insertBlankHint">Adds a blank page after these page numbers (0 = start of the document). Use it to move chapter starts onto a right-hand page.</p>
@@ -1807,16 +1655,15 @@
             <!-- Live Summary Capsule -->
             <div class="config-summary stitch-summary-capsule hidden" id="configSummary" aria-live="polite"></div>
 
-            <!-- 3-Step Pill Navigation -->
+            <!-- 2-Step Pill Navigation -->
             <div class="stitch-step-nav" id="stitchStepNav" role="tablist" aria-label="Adım Göstergesi">
               <button type="button" class="stitch-step-dot is-active stitch-step-pill-active" data-step="1" title="1. Düzen"></button>
-              <button type="button" class="stitch-step-dot" data-step="2" title="2. Kapak"></button>
-              <button type="button" class="stitch-step-dot" data-step="3" title="3. Baskı"></button>
+              <button type="button" class="stitch-step-dot" data-step="2" title="2. Baskı"></button>
             </div>
 
             <!-- Next Step Hint -->
             <button type="button" class="stitch-step-hint" id="stitchNextHint">
-              <span id="stitchNextHintText" data-i18n="config.stitchNextHint1">Kapak için kaydırın</span>
+              <span id="stitchNextHintText" data-i18n="config.stitchNextHint1">Baskı için kaydırın</span>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 

@@ -1374,6 +1374,7 @@ export function initApp(): void {
       A4: 'A4 (210×297 mm)',
       A5: 'A5 (148×210 mm)',
       Letter: 'Letter (8.5×11 in)',
+      A3: 'A3 (297×420 mm)',
       source: t('config.paperSource'),
     };
     paperSelectedLabel.textContent = paperLabels[String(bookletPaperSize)] || String(bookletPaperSize);
@@ -1382,12 +1383,12 @@ export function initApp(): void {
   function updateFormaBadge(): void {
     if (!formaBadge) return;
     if (bookletSignature === 'single') {
-      formaBadge.textContent = 'Single';
+      formaBadge.textContent = 'Tek forma';
     } else if (bookletSignature === 'auto') {
-      formaBadge.textContent = 'Auto';
+      formaBadge.textContent = 'Otomatik';
     } else {
       const sheets = Number(bookletSignature);
-      formaBadge.textContent = `${sheets} sh / ${sheets * 4}p`;
+      formaBadge.textContent = `${sheets * 4} Sayfa`;
     }
   }
 
@@ -1594,21 +1595,21 @@ export function initApp(): void {
   let currentConfigTab: 'layout' | 'cover' | 'print' = 'layout';
 
   function updateStitchDock(tab: 'layout' | 'cover' | 'print'): void {
-    currentConfigTab = tab;
-    const stepMap: Record<'layout' | 'cover' | 'print', { step: number; subKey: string; hintKey: string }> = {
+    const effectiveTab: 'layout' | 'print' = tab === 'cover' ? 'print' : tab;
+    currentConfigTab = effectiveTab;
+    const stepMap: Record<'layout' | 'print', { step: number; subKey: string; hintKey: string }> = {
       layout: { step: 1, subKey: 'config.stitchStepSubtitle1', hintKey: 'config.stitchNextHint1' },
-      cover: { step: 2, subKey: 'config.stitchStepSubtitle2', hintKey: 'config.stitchNextHint2' },
-      print: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
+      print: { step: 2, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
     };
 
-    const current = stepMap[tab];
+    const current = stepMap[effectiveTab];
     if (stitchStepSubtitle) {
       stitchStepSubtitle.textContent = t(current.subKey);
       stitchStepSubtitle.dataset.i18n = current.subKey;
     }
 
     if (stitchNextHint) {
-      if (current.step === 3) {
+      if (current.step === 2) {
         stitchNextHint.classList.add('hidden');
       } else {
         stitchNextHint.classList.remove('hidden');
@@ -1620,7 +1621,7 @@ export function initApp(): void {
     }
 
     if (generateBtn) {
-      if (current.step === 3) {
+      if (current.step === 2) {
         generateBtn.classList.remove('hidden');
       } else {
         generateBtn.classList.add('hidden');
@@ -1640,15 +1641,17 @@ export function initApp(): void {
   }
 
   function switchConfigTab(tab: 'layout' | 'cover' | 'print'): void {
-    currentConfigTab = tab;
-    const panels: Array<{ panel: HTMLElement; name: 'layout' | 'cover' | 'print' }> = [
+    const effectiveTab: 'layout' | 'print' = tab === 'cover' ? 'print' : tab;
+    currentConfigTab = effectiveTab;
+    const panels: Array<{ panel: HTMLElement | null; name: 'layout' | 'cover' | 'print' }> = [
       { panel: configStepLayout, name: 'layout' },
       { panel: configStepCover, name: 'cover' },
       { panel: configStepPrint, name: 'print' },
     ];
 
     for (const item of panels) {
-      const isActive = item.name === tab;
+      if (!item.panel) continue;
+      const isActive = item.name === effectiveTab;
       item.panel.classList.toggle('hidden', !isActive);
     }
 
@@ -2812,9 +2815,9 @@ export function initApp(): void {
     }
   });
 
-  // ── Stitch 3-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
+  // ── Stitch 2-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
   if (stitchStepNav) {
-    const stepTabs: Array<'layout' | 'cover' | 'print'> = ['layout', 'cover', 'print'];
+    const stepTabs: Array<'layout' | 'print'> = ['layout', 'print'];
     const dots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
     dots.forEach((dot, idx) => {
       dot.addEventListener('click', () => {
@@ -2828,8 +2831,6 @@ export function initApp(): void {
   if (stitchNextHint) {
     stitchNextHint.addEventListener('click', () => {
       if (currentConfigTab === 'layout') {
-        switchConfigTab('cover');
-      } else if (currentConfigTab === 'cover') {
         switchConfigTab('print');
       }
     });
@@ -2838,8 +2839,6 @@ export function initApp(): void {
   if (configBackBtn) {
     configBackBtn.addEventListener('click', () => {
       if (currentConfigTab === 'print') {
-        switchConfigTab('cover');
-      } else if (currentConfigTab === 'cover') {
         switchConfigTab('layout');
       } else {
         showScreen('picker');
@@ -2880,11 +2879,9 @@ export function initApp(): void {
 
       if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (dx < 0) {
-          if (currentConfigTab === 'layout') switchConfigTab('cover');
-          else if (currentConfigTab === 'cover') switchConfigTab('print');
+          if (currentConfigTab === 'layout') switchConfigTab('print');
         } else {
-          if (currentConfigTab === 'print') switchConfigTab('cover');
-          else if (currentConfigTab === 'cover') switchConfigTab('layout');
+          if (currentConfigTab === 'print') switchConfigTab('layout');
         }
       }
     }, { passive: true });
