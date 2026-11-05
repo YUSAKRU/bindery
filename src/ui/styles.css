@@ -7135,7 +7135,11 @@ button.book-page-label:active {
   font-weight: 600;
 }
 
-.app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn {
+.top-bar .icon-btn[hidden] {
+  display: none !important;
+}
+
+.app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
   color: var(--atelier-ink-black);
   border: 1px solid var(--atelier-paper-edge);
@@ -7152,13 +7156,13 @@ button.book-page-label:active {
 }
 
 @media (hover: hover) {
-  .app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:hover {
+  .app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]):hover {
     background: #eae0d0;
     border-color: #c9bea3;
   }
 }
 
-.app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:active {
+.app:has(#screen-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
   transform: scale(0.96);
 }
 
@@ -7617,27 +7621,6 @@ button.book-page-label:active {
 
 #screen-picker .btn-continue:active {
   transform: scale(0.97);
-}
-
-#screen-picker .btn-switch-file {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--atelier-tertiary);
-  font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 8px;
-  transition: color 0.15s ease;
-  text-align: center;
-}
-
-@media (hover: hover) {
-  #screen-picker .btn-switch-file:hover {
-    color: var(--atelier-primary);
-    text-decoration: underline;
-  }
 }
 
 /* Warnings Wrap & Banners */
