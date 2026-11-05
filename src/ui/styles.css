@@ -8639,12 +8639,10 @@ button.book-page-label:active {
   animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
 }
 
-/* Step 1 centered layout & action group */
-#screen-config:has(#configStepLayout:not(.hidden)) #configStickyFooter {
-  display: none;
-}
-
-#configStepLayout {
+/* 3-Step Centered Layout */
+#configStepLayout,
+#configStepPrint,
+#configStepSummary {
   margin-block: auto;
   justify-content: center;
 }
@@ -8654,9 +8652,65 @@ button.book-page-label:active {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 10px;
   width: 100%;
   box-sizing: border-box;
+}
+
+.atelier-generate-cta,
+.atelier-step-next-cta {
+  width: 100%;
+  height: 50px;
+  min-height: 50px;
+  border-radius: 12px;
+  background: var(--atelier-primary, #9a401d);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #8a3819;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(154, 64, 29, 0.22);
+  transition: all 160ms var(--stitch-spring);
+}
+
+.atelier-generate-cta:hover,
+.atelier-step-next-cta:hover {
+  background: var(--stitch-primary-hover, #8a3819);
+  box-shadow: 0 3px 10px rgba(154, 64, 29, 0.32);
+  transform: translateY(-1px);
+}
+
+.atelier-generate-cta:active,
+.atelier-step-next-cta:active {
+  background: var(--stitch-primary-active, #732d13);
+  transform: scale(0.98);
+}
+
+.stitch-back-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--stitch-text-muted, #78716c);
+  font-family: inherit;
+  font-size: 0.80rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--stitch-radius-pill);
+  transition: color 150ms ease;
+}
+
+.stitch-back-link:hover {
+  color: var(--stitch-primary, #9a401d);
 }
 
 .stitch-advanced-link {
@@ -8680,6 +8734,14 @@ button.book-page-label:active {
   color: var(--stitch-primary);
 }
 
+.stitch-advanced-link svg {
+  transition: transform 200ms ease;
+}
+
+.stitch-advanced-link.is-open svg {
+  transform: rotate(180deg);
+}
+
 .stitch-privacy-note {
   display: flex;
   align-items: center;
@@ -8695,6 +8757,60 @@ button.book-page-label:active {
 
 .stitch-privacy-note svg {
   flex-shrink: 0;
+}
+
+/* Step 2 Smart Preset & Accordion */
+.print-mode-card {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-card-border);
+  border-radius: var(--stitch-radius-card);
+}
+
+/* Step 3 Summary & Spec Card */
+.summary-spec-card {
+  background: var(--atelier-surface-cream, #F3ECE1);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+}
+
+.summary-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.summary-spec-cell {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summary-spec-label {
+  font-size: 0.70rem;
+  color: var(--stitch-text-muted, #78716c);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.summary-spec-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--stitch-text-title, #1C1A18);
+}
+
+#summaryLogicalPagesBadge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--stitch-primary-tint-50, #FAF0EC);
+  color: var(--stitch-primary, #9a401d);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(154, 64, 29, 0.15);
 }
 
 /* Cards within #screen-config */
@@ -9122,6 +9238,7 @@ button.book-page-label:active {
 /* Pinned Sticky Footer / Dock Envelope */
 .stitch-dock,
 #configStickyFooter {
+  display: none !important;
   flex-shrink: 0;
   border-top: 1px solid var(--hub-border);
   display: flex;
