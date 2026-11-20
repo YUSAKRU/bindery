@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setLanguage, t } from '../i18n';
+import { applyLanguageToDom, setLanguage, t } from '../i18n';
 
 const htmlPath = fileURLToPath(new URL('../../index.html', import.meta.url));
 const htmlSource = readFileSync(htmlPath, 'utf-8');
@@ -79,8 +79,77 @@ describe('Atelier hub copy', () => {
     expect(t('atelier.deskTitle')).toBe('Bugün ne hazırlıyoruz?');
     expect(t('atelier.hintFree')).toBe('Bir karta dokunun');
     expect(t('atelier.hintCarousel')).toBe('Kaydırarak seçin, boşluğa dokunup geri dönün');
-    expect(t('atelier.card3.ctaTitle')).toBe('Kapak hazırla');
+    expect(t('atelier.card3.title')).toBe('Şablon Tasarımı');
+    expect(t('atelier.card3.desc')).toBe('Özel sayfa ve baskı şablonları — yakında');
+    expect(t('atelier.card3.ctaTitle')).toBe('Yakında');
     expect(t('atelier.privacySeal')).toBe('Her şey cihazınızda kalır, hiçbir dosya yüklenmez');
+    expect(t('atelier.privacyNote')).toBe('Her şey cihazınızda kalır, hiçbir dosya yüklenmez');
+  });
+
+  it('marks card 3 as disabled Template Design in both languages and HTML', () => {
+    setLanguage('en');
+    expect(t('atelier.card3.title')).toBe('Template Design');
+    expect(t('atelier.card3.desc')).toBe('Custom page & print templates — coming soon');
+    expect(t('atelier.card3.ctaTitle')).toBe('Soon');
+    expect(t('atelier.privacyNote')).toBe('Everything stays on your device, no file is uploaded');
+
+    const card2Match = htmlSource.match(/<div[^>]*id="atelierCard2"[^>]*>/);
+    expect(card2Match?.[0]).toContain('aria-disabled="true"');
+    expect(card2Match?.[0]).toContain('atelier-card--soon');
+    expect(htmlSource).toContain('<span class="badge-soon" data-i18n="atelier.card3.ctaTitle">Soon</span>');
+  });
+
+  it('applies data-i18n-title attributes in applyLanguageToDom()', () => {
+    const setAttribute = vi.fn();
+    const titleEl = { dataset: { i18nTitle: 'library.backToHub' }, setAttribute };
+    vi.stubGlobal('document', {
+      documentElement: { lang: '' },
+      querySelectorAll: (selector: string) => (selector === '[data-i18n-title]' ? [titleEl] : []),
+    });
+
+    setLanguage('tr');
+    applyLanguageToDom();
+    expect(setAttribute).toHaveBeenCalledWith('title', 'Atölye');
+
+    setLanguage('en');
+    applyLanguageToDom();
+    expect(setAttribute).toHaveBeenCalledWith('title', 'Atelier');
+  });
+
+  it('keeps EN and TR i18n key sets identical and covers all HTML data-i18n* keys', () => {
+    const enStart = i18nSource.indexOf('  en: {');
+    const trStart = i18nSource.indexOf('  tr: {');
+    const storageStart = i18nSource.indexOf('const STORAGE_KEY');
+    expect(enStart).toBeGreaterThan(-1);
+    expect(trStart).toBeGreaterThan(enStart);
+    expect(storageStart).toBeGreaterThan(trStart);
+
+    const extractKeys = (block: string) =>
+      Array.from(block.matchAll(/^\s*'([^']+)':/gm), (m) => m[1]);
+
+    const enKeys = extractKeys(i18nSource.slice(enStart, trStart));
+    const trKeys = extractKeys(i18nSource.slice(trStart, storageStart));
+    const enSet = new Set(enKeys);
+    const trSet = new Set(trKeys);
+
+    expect(enKeys.length).toBe(enSet.size);
+    expect(trKeys.length).toBe(trSet.size);
+    expect(enKeys.filter((k) => !trSet.has(k))).toEqual([]);
+    expect(trKeys.filter((k) => !enSet.has(k))).toEqual([]);
+
+    const htmlKeyAttrs = [
+      'data-i18n',
+      'data-i18n-placeholder',
+      'data-i18n-aria-label',
+      'data-i18n-title',
+    ];
+    for (const attr of htmlKeyAttrs) {
+      const matches = Array.from(htmlSource.matchAll(new RegExp(`${attr}="([^"]+)"`, 'g')), (m) => m[1]);
+      for (const key of matches) {
+        expect(enSet.has(key), `Missing EN key for ${attr}="${key}"`).toBe(true);
+        expect(trSet.has(key), `Missing TR key for ${attr}="${key}"`).toBe(true);
+      }
+    }
   });
 
   it('has every library string in both languages', () => {

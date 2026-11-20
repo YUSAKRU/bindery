@@ -46,4 +46,19 @@ describe('Hub — legacy home page removed', () => {
       expect(htmlSource, `expected #${id} to exist in index.html`).toContain(`id="${id}"`);
     }
   });
+
+  it('removes stand-alone Cover Studio screens, tool entry, result button, and routing', () => {
+    expect(htmlSource).not.toContain('id="screen-cover"');
+    expect(htmlSource).not.toContain('id="screen-cover-result"');
+    expect(htmlSource).not.toContain('data-tool="cover"');
+    expect(htmlSource).not.toContain('id="resultOpenCoverStudioBtn"');
+
+    const toolEntryBlock = appSource.slice(
+      appSource.indexOf('const TOOL_ENTRY_SCREEN'),
+      appSource.indexOf('function byId'),
+    );
+    expect(toolEntryBlock).not.toContain('cover:');
+    expect(appSource).not.toContain('TOOL_ENTRY_SCREEN.cover');
+    expect(appSource).not.toContain('moduleIndex === 2');
+  });
 });

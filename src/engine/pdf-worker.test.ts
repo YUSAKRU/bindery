@@ -3,7 +3,6 @@ import { isWorkerSupported, runInPdfWorker, terminatePdfWorker } from './worker-
 import { BookletError } from './types';
 import { inspectPdf, makeBooklet } from './booklet-engine';
 import { mergePdfs } from './merge-engine';
-import { generateCoverPdf } from './cover-engine';
 import { PDFDocument } from 'pdf-lib';
 
 describe('PDF Web Worker client and fallback architecture', () => {
@@ -59,17 +58,6 @@ describe('PDF Web Worker client and fallback architecture', () => {
   it('preserves BookletError when operations throw in fallback', async () => {
     const badBytes = new Uint8Array([1, 2, 3, 4]);
     await expect(makeBooklet(badBytes)).rejects.toThrow();
-  });
-
-  it('runs generateCoverPdf cleanly via fallback when worker is unavailable', async () => {
-    await expect(
-      generateCoverPdf({
-        format: 'split',
-        dimensions: { format: 'single' } as any,
-        content: { title: 'Test', author: 'Author' },
-        spineResult: { widthMm: 5, sheets: 10, signatures: 1 } as any,
-      }),
-    ).rejects.toThrow();
   });
 
   it('handles custom error reconstruction in worker client', async () => {

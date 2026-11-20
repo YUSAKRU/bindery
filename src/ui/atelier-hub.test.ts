@@ -6,9 +6,11 @@ import {
   type AtelierNavTarget,
   ATELIER_MENU_CLOSE_MS,
   createAtelierHub,
+  DISABLED_MODULES,
   DOCK_META,
   FREE_POSITIONS,
   initAtelierHub,
+  isModuleDisabled,
   resolveAtelierBackAction,
 } from './atelier-hub';
 
@@ -59,6 +61,7 @@ class FakeElement {
   classList = new FakeClassList();
   style: Record<string, string> = {};
   attributes = new Map<string, string>();
+  disabled = false;
   textContent = '';
   children: FakeElement[] = [];
   parentNode: FakeElement | null = null;
@@ -73,6 +76,12 @@ class FakeElement {
     this.attributes.set(name, value);
     if (name === 'id') this.id = value;
     if (name === 'class') this.classList = new FakeClassList(value);
+  }
+
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+    if (name === 'id') this.id = '';
+    if (name === 'class') this.classList = new FakeClassList();
   }
 
   getAttribute(name: string): string | null {
@@ -594,11 +603,58 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       }
     });
 
-    it('calls onSelectModule with activeIndex when clicking the primary action button', () => {
-      controller.applyCoverflow(2);
+    it('calls onSelectModule with activeIndex when clicking the primary action button on enabled modules', () => {
+      controller.applyCoverflow(0);
       fixture.actionBtn.dispatchEvent({ type: 'click' });
       expect(onSelectModuleMock).toHaveBeenCalledTimes(1);
-      expect(onSelectModuleMock).toHaveBeenCalledWith(2);
+      expect(onSelectModuleMock).toHaveBeenLastCalledWith(0);
+
+      controller.applyCoverflow(1);
+      fixture.actionBtn.dispatchEvent({ type: 'click' });
+      expect(onSelectModuleMock).toHaveBeenCalledTimes(2);
+      expect(onSelectModuleMock).toHaveBeenLastCalledWith(1);
+    });
+
+    it('keeps module 2 navigable in coverflow while disabling activation and updating #atelierPrimaryActionBtn state', () => {
+      expect(DISABLED_MODULES.has(2)).toBe(true);
+      expect(isModuleDisabled(2)).toBe(true);
+      expect(isModuleDisabled(0)).toBe(false);
+      expect(isModuleDisabled(1)).toBe(false);
+
+      controller.applyCoverflow(2);
+      expect(controller.getState().isCoverflow).toBe(true);
+      expect(controller.getState().activeIndex).toBe(2);
+
+      expect(fixture.actionBtn.getAttribute('aria-disabled')).toBe('true');
+      expect(fixture.actionBtn.disabled).toBe(true);
+      expect(fixture.actionBtn.classList.contains('is-disabled')).toBe(true);
+
+      // Clicking primary action button must not activate disabled module 2
+      fixture.actionBtn.dispatchEvent({ type: 'click' });
+      expect(onSelectModuleMock).not.toHaveBeenCalled();
+
+      // Tapping focused center card 2 must not activate disabled module 2
+      fixture.canvasContainer.dispatchEvent({
+        type: 'pointerdown',
+        clientX: 320,
+        clientY: 655,
+        target: fixture.cards[2],
+      });
+      fakeWindow.dispatchEvent({
+        type: 'pointerup',
+        clientX: 320,
+        clientY: 655,
+        target: fixture.cards[2],
+      });
+      expect(onSelectModuleMock).not.toHaveBeenCalled();
+
+      // Switching back to enabled cards 0 and 1 restores enabled button state
+      for (const enabledIdx of [0, 1] as const) {
+        controller.applyCoverflow(enabledIdx);
+        expect(fixture.actionBtn.getAttribute('aria-disabled')).toBeNull();
+        expect(fixture.actionBtn.disabled).toBe(false);
+        expect(fixture.actionBtn.classList.contains('is-disabled')).toBe(false);
+      }
     });
 
     it('triggers onSelectModule when tapping the center focused card in Carousel mode', () => {

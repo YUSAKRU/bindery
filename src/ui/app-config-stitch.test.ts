@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// Audit suite for the Stitch 3-step booklet-settings prototype restoration.
+// Audit suite for the Stitch booklet-settings prototype restoration.
 //
-// Matches /home/ruveys/Downloads/stitich/booklet/screen.png and code.html:
+// Matches the Stitch booklet-settings prototype (screen.png and code.html):
 // - Top stepper / tab bar completely removed
 // - Top header only has back button, title, and subtitle
-// - 3-step flow: Layout (Step 1) -> Cover (Step 2) -> Print & Flow (Step 3)
-// - Step 1 & 2 bottom dock has summary capsule, 3 dots, and next hint ("... için kaydırın >")
-// - #generateBtn ("Kitapçığı Oluştur") is hidden on Steps 1 & 2, only visible on Step 3
+// - 2-step flow: Layout (Step 1) -> Print & Flow (Step 2)
+// - Step 1 bottom dock has summary capsule, 2 dots, and next hint ("... için kaydırın >")
+// - #generateBtn ("Kitapçığı Oluştur") is hidden on Step 1, only visible on Step 2
 // - Zero-scroll viewport contracts & warm orange palette maintained
 
 const root = resolve(__dirname, '../..');
@@ -139,7 +139,7 @@ describe('Stitch 3-step prototype restoration — clutter-free header and 3-step
     expect(configScreen).not.toContain('id="configStepPages"');
   });
 
-  it('starts on Step 1: Layout visible, Cover and Print panels hidden', () => {
+  it('starts on Step 1: Layout visible, Print and Summary panels hidden', () => {
     const visible = panelTags.filter((t) => !/(^|\s)hidden(\s|$)/.test(attrs(t).class ?? ''));
     expect(visible.map((t) => attrs(t).id)).toEqual(['configStepLayout']);
   });
@@ -152,13 +152,13 @@ describe('Stitch 3-step prototype restoration — clutter-free header and 3-step
   });
 
   it('implements switchConfigTab with 3 steps in app.ts', () => {
-    const body = blockAfter(appTs, "function switchConfigTab(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
+    const body = blockAfter(appTs, "function switchConfigTab(tab: 'layout' | 'print' | 'summary'): void {");
     expect(body).toContain("panel: configStepLayout, name: 'layout'");
-    expect(body).toContain("panel: configStepCover, name: 'cover'");
     expect(body).toContain("panel: configStepPrint, name: 'print'");
     expect(body).toContain("panel: configStepSummary, name: 'summary'");
     expect(body).toContain('updateStitchDock(tab);');
     expect(appTs).not.toContain("const configStepPages = byId<HTMLDivElement>('configStepPages');");
+    expect(appTs).not.toContain("const configStepCover = byId<HTMLDivElement>('configStepCover');");
   });
 });
 
@@ -178,7 +178,7 @@ describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA'
   });
 
   it('hides generateBtn on Step 1 and reveals it only on Step 2 in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
+    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
     expect(dockFn).toContain('current.step === 3 || current.step === 2');
     expect(dockFn).toContain("generateBtn.classList.remove('hidden')");
     expect(dockFn).toContain("generateBtn.classList.add('hidden')");
@@ -187,10 +187,16 @@ describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA'
   });
 
   it('updates elongated pill and inactive dots in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'cover' | 'print' | 'summary'): void {");
+    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
     expect(dockFn).toContain("dot.classList.toggle('is-active', isActive)");
     expect(dockFn).toContain("dot.classList.toggle('stitch-step-pill-active', isActive)");
     expect(dockFn).toContain("dot.setAttribute('aria-selected', String(isActive))");
+  });
+
+  it('highlights dot 2 on step 3 (summary) while keeping 2 dots in #stitchStepNav', () => {
+    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
+    expect(dockFn).toContain('summary: { step: 3,');
+    expect(dockFn).toContain('stepNum === Math.min(current.step, 2)');
   });
 });
 
@@ -314,8 +320,6 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     'signatureHintText',
     'bindingGroup',
     'flipEdgeGroup',
-    'wrapCoverToggleGroup',
-    'wrapCoverOptions',
     'coverModeGroup',
     'insertBlankInput',
     'insertBlankError',
@@ -326,24 +330,16 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     'marksGroup',
   ];
 
-  it('keeps all 16 essential control IDs on the config screen', () => {
+  it('keeps all 14 essential control IDs on the config screen', () => {
     for (const id of bindingPoints) {
       expect(configScreen, `missing control #${id}`).toContain(`id="${id}"`);
     }
   });
 
-  it('keeps all legacy feature IDs (excluding deleted top stepper tabs)', () => {
+  it('keeps all legacy feature IDs (excluding deleted top stepper tabs and inline wrap cover)', () => {
     const legacy = `
       screen-config configStepLayout
       paperSizeGroup signatureInfoBtn signatureSizeGroup signatureHintText bindingGroup flipEdgeGroup
-      configStepCover wrapCoverToggleGroup wrapCoverHintText coverSlot wrapCoverOptions
-      wrapCoverBindingGroup wrapCoverBindingHint wrapCoverKindRow wrapCoverKindGroup wrapCoverKindHint
-      wrapCoverBoardThicknessBlock wrapCoverBoardGroup wrapCoverFormatGroup wrapCoverFormatHint
-      wrapCoverFormatResultLine wrapCoverGsmGroup wrapCoverPaletteGroup wrapCoverTitleInput
-      wrapCoverAuthorInput wrapCoverSynopsisInput wrapCoverSummaryCard wrapCoverSpineLabel
-      wrapCoverPaperBulkBadge wrapCoverThreadSwellBadge wrapCoverHingeBadge wrapCoverFitBadge
-      wrapCoverPaperFitBadge wrapCoverDimsLabel wrapCoverMiniPreview wrapCoverMiniSynopsis
-      wrapCoverMiniSpine wrapCoverMiniSpineText wrapCoverMiniTitle wrapCoverMiniAuthor
       configStepPrint advancedToggle advancedBadge advancedPanel gutterValueLabel gutterSlider
       creepValueLabel creepSlider creepPaperGsm creepPaperTypeGroup coverModeGroup coverHintText
       marksGroup marksHintText sheetOrderGroup instructionsGroup insertBlankInput insertBlankError
@@ -377,10 +373,44 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     expect(indexHtml).toContain('data-i18n-aria-label="config.backBtnLabel"');
   });
 
-  it('leaves the tab panels inside #screen-config so booklet-flow slicing still finds the cover block', () => {
+  it('removes inline wrap-cover markup while keeping separate-cover and signature-info anchors inside #screen-config', () => {
     const slice = indexHtml.slice(indexHtml.indexOf('id="screen-config"'), indexHtml.indexOf('id="advancedPanel"'));
-    expect(slice).toContain('id="wrapCoverToggleGroup"');
-    expect(slice).toContain('id="wrapCoverOptions"');
-    expect(slice).toContain('id="configStepCover"');
+    expect(slice).not.toContain('id="wrapCoverToggleGroup"');
+    expect(slice).not.toContain('id="wrapCoverOptions"');
+    expect(slice).not.toContain('id="configStepCover"');
+    expect(slice).toContain('id="coverModeGroup"');
+    expect(slice).toContain('id="coverHintText"');
+    expect(slice).toContain('id="signatureInfoBtn"');
+  });
+
+  it('restores data-paper="source" and data-sig="single" pills and aligns static is-active defaults with resetPicker()', () => {
+    const paperGroup = configScreen.match(/<div[^>]*id="paperSizeGroup"[^>]*>([\s\S]*?)<\/div>/);
+    expect(paperGroup).not.toBeNull();
+    const paperButtons = [...paperGroup![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
+    const sourcePill = paperButtons.find((b) => b['data-paper'] === 'source');
+    expect(sourcePill).toBeDefined();
+    expect(sourcePill?.['data-i18n']).toBe('config.paperSource');
+    expect(paperButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-paper'])).toEqual([
+      'A4',
+    ]);
+
+    const sigGroup = configScreen.match(/<div[^>]*id="signatureSizeGroup"[^>]*>([\s\S]*?)<\/div>/);
+    expect(sigGroup).not.toBeNull();
+    const sigButtons = [...sigGroup![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
+    const singlePill = sigButtons.find((b) => b['data-sig'] === 'single');
+    expect(singlePill).toBeDefined();
+    expect(singlePill?.['data-i18n']).toBe('config.signature.single');
+    expect(sigButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-sig'])).toEqual([
+      'single',
+    ]);
+
+    const resetBody = blockAfter(appTs, 'function resetPicker(): void {');
+    expect(resetBody).toContain("setActiveSegment(paperSizeGroup, 'paper', 'A4')");
+    expect(resetBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', 'single')");
+
+    const applyBody = blockAfter(appTs, 'function applyStoredBookletSettings(settings: StoredBookletSettings): void {');
+    expect(applyBody).toContain("options.signatureSize === undefined ? 'single' : String(options.signatureSize)");
+    expect(applyBody).toContain("setActiveSegment(paperSizeGroup, 'paper', typeof bookletPaperSize === 'string' ? bookletPaperSize : '')");
+    expect(applyBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', bookletSignature)");
   });
 });

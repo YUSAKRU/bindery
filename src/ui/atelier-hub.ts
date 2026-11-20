@@ -1,6 +1,12 @@
 export type AtelierModuleIndex = 0 | 1 | 2;
 export type AtelierNavTarget = 'files' | 'recents' | 'tools-all' | 'settings';
 
+export const DISABLED_MODULES: ReadonlySet<AtelierModuleIndex> = new Set([2]);
+
+export function isModuleDisabled(idx: AtelierModuleIndex): boolean {
+  return DISABLED_MODULES.has(idx);
+}
+
 export interface AtelierHubDeps {
   root?: ParentNode;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -241,12 +247,26 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
 
   function updateBottomDock(): void {
     const meta = DOCK_META[activeIndex];
+    const disabled = isModuleDisabled(activeIndex);
     if (btnTitle) btnTitle.textContent = deps.t(meta.titleKey);
     if (btnSub) btnSub.textContent = deps.t(meta.subKey);
     if (actionBtn) {
       actionBtn.style.backgroundColor = meta.bgHex;
       actionBtn.style.borderColor = meta.borderHex;
       actionBtn.style.boxShadow = meta.shadow;
+      if (disabled) {
+        actionBtn.setAttribute('aria-disabled', 'true');
+        actionBtn.classList.add('is-disabled');
+      } else {
+        actionBtn.removeAttribute('aria-disabled');
+        actionBtn.classList.remove('is-disabled');
+      }
+      if (
+        (typeof HTMLButtonElement !== 'undefined' && actionBtn instanceof HTMLButtonElement) ||
+        'disabled' in actionBtn
+      ) {
+        (actionBtn as HTMLButtonElement).disabled = disabled;
+      }
     }
     const icons = btnIcon
       ? btnIcon.querySelectorAll<HTMLElement>('[data-atelier-icon]')
@@ -438,6 +458,7 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
         const clickedIdx =
           rawIdx !== null && rawIdx !== undefined ? (Number(rawIdx) as AtelierModuleIndex) : null;
         if (clickedIdx === activeIndex) {
+          if (isModuleDisabled(activeIndex)) return;
           const absorbClick = (evt: MouseEvent): void => {
             evt.stopPropagation();
             evt.preventDefault();
@@ -470,6 +491,7 @@ export function createAtelierHub(deps: AtelierHubDeps): AtelierHubController {
   };
 
   const onActionBtnClick = (): void => {
+    if (isModuleDisabled(activeIndex)) return;
     deps.onSelectModule(activeIndex);
   };
 
