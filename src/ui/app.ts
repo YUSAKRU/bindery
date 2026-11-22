@@ -262,6 +262,44 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
 
 const SINGLE_SIGNATURE_WARNING_THRESHOLD = 40;
 
+/** Printer choice on the result screen: two-sided (duplex) or one-sided (simplex). */
+export type PrinterMode = 'duplex' | 'simplex';
+
+/** Coerces a stored/raw value to a printer mode; anything unknown means duplex. */
+export function normalizePrinterMode(value: string | null | undefined): PrinterMode {
+  return value === 'simplex' ? 'simplex' : 'duplex';
+}
+
+/** Which booklet outputs the result screen offers as main actions for a printer mode. */
+export function printerModeTargets(mode: PrinterMode): Array<'combined' | 'front' | 'back'> {
+  return mode === 'simplex' ? ['front', 'back'] : ['combined'];
+}
+
+/**
+ * One-line result summary, e.g. "5 sayfa → 2 yaprak · 1 forma · +3 boş".
+ * Padding and inserted blanks are appended only when non-zero.
+ */
+export function formatResultSummary(r: {
+  originalPages: number;
+  sheetsCount: number;
+  signaturesCount: number;
+  paddingApplied: number;
+  blanksInserted: number;
+}): string {
+  // Non-breaking spaces keep "+3 boş" or "2 yaprak" together; the line may
+  // only wrap at the " · " separators.
+  const keep = (text: string): string => text.replace(/ /g, '\u00a0');
+  const count = (key: string, n: number): string =>
+    keep(t(n === 1 ? `${key}.one` : `${key}.other`, { count: n }));
+  const parts = [
+    `${count('result.summary.pages', r.originalPages)} → ${count('result.summary.sheets', r.sheetsCount)}`,
+    count('result.summary.signatures', r.signaturesCount),
+  ];
+  if (r.paddingApplied > 0) parts.push(keep(t('result.summary.padding', { count: r.paddingApplied })));
+  if (r.blanksInserted > 0) parts.push(keep(t('result.summary.blanks', { count: r.blanksInserted })));
+  return parts.join(' · ');
+}
+
 /** Formats the selected signature value for the Step 3 summary row. */
 export function formatSummarySignature(signature: string): string {
   if (signature === 'single') return t('config.signature.single');
@@ -526,14 +564,8 @@ export function initApp(): void {
   const step3GenerateSpinner = byId<HTMLSpanElement>('step3GenerateSpinner');
   const step3BackLink = byId<HTMLButtonElement>('step3BackLink');
 
-  const statOriginal = byId<HTMLSpanElement>('statOriginal');
-  const statPaddingCard = byId<HTMLDivElement>('statPaddingCard');
-  const statPadding = byId<HTMLSpanElement>('statPadding');
-  const statSheets = byId<HTMLSpanElement>('statSheets');
-  const statSignaturesCard = byId<HTMLDivElement>('statSignaturesCard');
-  const statSignatures = byId<HTMLSpanElement>('statSignatures');
-  const statBlanksCard = byId<HTMLDivElement>('statBlanksCard');
-  const statBlanks = byId<HTMLSpanElement>('statBlanks');
+  const screenResult = byId<HTMLElement>('screen-result');
+  const resultSummaryLine = byId<HTMLParagraphElement>('resultSummaryLine');
   const coverActionRow = byId<HTMLDivElement>('coverActionRow');
   const instructionsActionRow = byId<HTMLDivElement>('instructionsActionRow');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
@@ -2622,26 +2654,7 @@ export function initApp(): void {
       instructionsActionRow.classList.toggle('hidden', !booklet.instructionsPdf);
       coverPreviewCell.classList.toggle('hidden', !booklet.coverPdf);
 
-      statOriginal.textContent = String(result.originalPages);
-      statSheets.textContent = String(result.sheetsCount);
-      if (result.paddingApplied > 0) {
-        statPadding.textContent = `+${result.paddingApplied}`;
-        statPaddingCard.classList.remove('hidden');
-      } else {
-        statPaddingCard.classList.add('hidden');
-      }
-      if (result.signaturesCount > 1) {
-        statSignatures.textContent = String(result.signaturesCount);
-        statSignaturesCard.classList.remove('hidden');
-      } else {
-        statSignaturesCard.classList.add('hidden');
-      }
-      if (result.blanksInserted > 0) {
-        statBlanks.textContent = `+${result.blanksInserted}`;
-        statBlanksCard.classList.remove('hidden');
-      } else {
-        statBlanksCard.classList.add('hidden');
-      }
+      resultSummaryLine.textContent = formatResultSummary(result);
       actionStatus.textContent = '';
 
       showScreen('result');
@@ -2677,7 +2690,8 @@ export function initApp(): void {
     try {
       const proxy = await loadPdfForThumbnails(bytes);
       try {
-        imgEl.src = await renderPageThumbnail(proxy, pageIndex, 160);
+        // 480px wide keeps the result hero crisp on 2-3x screens; JPEG keeps it light.
+        imgEl.src = await renderPageThumbnail(proxy, pageIndex, 480, 'image/jpeg', 0.85);
         imgEl.classList.remove('hidden');
       } finally {
         await destroyThumbnailDoc(proxy);
@@ -2704,6 +2718,42 @@ export function initApp(): void {
     }
     await Promise.allSettled(jobs);
   }
+
+  // Result screen printer choice: shows only the outputs that printer needs.
+  // Remembered per device as a convenience; storage failures are harmless.
+  const PRINTER_MODE_KEY = 'bindery.printerMode';
+  function readPrinterMode(): PrinterMode {
+    try {
+      return normalizePrinterMode(localStorage.getItem(PRINTER_MODE_KEY));
+    } catch {
+      return 'duplex';
+    }
+  }
+  function applyPrinterMode(mode: PrinterMode): void {
+    screenResult.dataset.printer = mode;
+    const targets: string[] = printerModeTargets(mode);
+    screenResult.querySelectorAll<HTMLElement>('[data-row-target]').forEach((row) => {
+      row.classList.toggle('hidden', !targets.includes(row.dataset.rowTarget ?? ''));
+    });
+    screenResult.querySelectorAll<HTMLElement>('[data-show-for]').forEach((el) => {
+      el.classList.toggle('hidden', el.dataset.showFor !== mode);
+    });
+    screenResult.querySelectorAll<HTMLButtonElement>('.result-printer-opt').forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.printer === mode));
+    });
+  }
+  screenResult.querySelectorAll<HTMLButtonElement>('.result-printer-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = normalizePrinterMode(btn.dataset.printer);
+      applyPrinterMode(mode);
+      try {
+        localStorage.setItem(PRINTER_MODE_KEY, mode);
+      } catch {
+        // Private mode / blocked storage: the choice just is not remembered.
+      }
+    });
+  });
+  applyPrinterMode(readPrinterMode());
 
   // Share and Print differ only in the last step, so they share one handler:
   // same target lookup, same filename, same status line.
