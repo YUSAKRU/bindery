@@ -69,6 +69,11 @@ describe('loadBookletFile (Reader -> Booklet stale-summary flash fix)', () => {
     const refreshIndex = body.indexOf('refreshConfigSummary()');
     expect(resetIndex).toBeLessThan(refreshIndex);
   });
+
+  it('sets both textContent and title on fileNameLabel to the full file name', () => {
+    expect(body).toContain('fileNameLabel.textContent = name;');
+    expect(body).toContain('fileNameLabel.title = name;');
+  });
 });
 
 describe('refreshConfigSummary guard (mechanism the fix relies on)', () => {

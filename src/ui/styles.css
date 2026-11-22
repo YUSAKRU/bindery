@@ -6922,6 +6922,7 @@ button.book-page-label:active {
   align-items: center;
   flex: 1;
   min-height: 100%;
+  min-width: 0;
   padding: 20px 16px 28px;
   max-width: 480px;
   margin: 0 auto;
@@ -6938,9 +6939,10 @@ button.book-page-label:active {
 /* 14a. Card Stage & Content-Aware Fluid Slot Sizing */
 #screen-picker .picker-stage {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   position: relative;
 }
@@ -6953,10 +6955,11 @@ button.book-page-label:active {
 
 #screen-picker .picker-slot {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 0fr;
   opacity: 0;
   width: 100%;
+  min-width: 0;
   pointer-events: none;
   transition:
     grid-template-rows var(--motion-slot) var(--ease-out-spring),
@@ -6965,6 +6968,7 @@ button.book-page-label:active {
 
 #screen-picker .picker-slot-clip {
   min-height: 0;
+  min-width: 0;
   overflow: clip;
   margin: -16px -16px -24px;
   padding: 16px 16px 24px;
@@ -6977,6 +6981,8 @@ button.book-page-label:active {
 #screen-picker .atelier-craft-card,
 #screen-picker .file-card {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -7149,10 +7155,10 @@ button.book-page-label:active {
   background: var(--atelier-surface-cream);
   border: 1px solid var(--atelier-paper-edge);
   border-radius: var(--radius-xl);
-  padding: 20px 20px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   box-shadow:
     0 8px 24px rgba(28, 26, 24, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
@@ -7166,9 +7172,9 @@ button.book-page-label:active {
 }
 
 #screen-picker .file-card-icon {
-  width: 44px;
-  height: 48px;
-  border-radius: 11px;
+  width: 42px;
+  height: 46px;
+  border-radius: 10px;
   background: #faf4eb;
   border: 1px solid var(--atelier-paper-edge);
   display: flex;
@@ -7201,7 +7207,7 @@ button.book-page-label:active {
 #screen-picker .file-card-name {
   display: block;
   font-weight: 600;
-  font-size: 0.98rem;
+  font-size: 0.94rem;
   color: var(--atelier-ink-black);
   white-space: nowrap;
   overflow: hidden;
@@ -7212,7 +7218,7 @@ button.book-page-label:active {
 
 #screen-picker .file-card-size {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--atelier-ink-muted);
   font-family: 'Space Mono', monospace;
   white-space: nowrap;
@@ -7221,8 +7227,10 @@ button.book-page-label:active {
 }
 
 #screen-picker .btn-clear-file {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   border: 1px solid var(--atelier-border-hairline);
   background: var(--atelier-bg);
@@ -7252,6 +7260,36 @@ button.book-page-label:active {
 
 #screen-picker .btn-clear-file:active {
   transform: scale(0.95);
+}
+
+@media (max-width: 380px) {
+  #screen-picker .file-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  #screen-picker .file-card-icon {
+    width: 36px;
+    height: 40px;
+    border-radius: 9px;
+  }
+
+  #screen-picker .file-card-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  #screen-picker .pdf-pill {
+    font-size: 7.5px;
+  }
+
+  #screen-picker .file-card-name {
+    font-size: 0.86rem;
+  }
+
+  #screen-picker .file-card-size {
+    font-size: 0.72rem;
+  }
 }
 
 /* ── Explicit Data-State Machine Slot Orchestration ───────────────────────── */
