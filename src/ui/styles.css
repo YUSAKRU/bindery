@@ -3574,6 +3574,7 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-config,
 #screen-result,
 #pdfSourceModal,
+#confirmModal,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3615,6 +3616,7 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-config,
   :root:not(.light-theme) #screen-result,
   :root:not(.light-theme) #pdfSourceModal,
+  :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3651,6 +3653,7 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-config,
 :root.dark-theme #screen-result,
 :root.dark-theme #pdfSourceModal,
+:root.dark-theme #confirmModal,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -9688,6 +9691,186 @@ button.book-page-label:active {
   }
 }
 /* End Atelier PDF Source Modal */
+
+/* Atelier Confirm Modal (#confirmModal) */
+#confirmModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+#confirmModal .modal-card {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  max-width: 320px;
+  width: 100%;
+  min-width: 0;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 22px 20px 14px;
+  gap: 14px;
+}
+
+#confirmModal .modal-body {
+  gap: 0;
+  min-width: 0;
+}
+
+#confirmModal .modal-label {
+  color: var(--atelier-ink-black);
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
+#confirmModal .modal-actions {
+  margin-top: 0;
+  padding-top: 2px;
+  gap: 8px;
+}
+
+#confirmModal .btn-text:focus:not(:focus-visible),
+#confirmModal .btn-primary:focus:not(:focus-visible) {
+  outline: none;
+}
+
+#confirmModal .btn-text {
+  color: var(--atelier-primary);
+  padding: 10px 14px;
+  min-height: 44px;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 10px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+@media (hover: hover) {
+  #confirmModal .btn-text:hover {
+    background: color-mix(in srgb, var(--atelier-primary) 8%, transparent);
+    color: var(--atelier-terracotta-deep);
+  }
+}
+
+#confirmModal .btn-text:active {
+  background: color-mix(in srgb, var(--atelier-primary) 14%, transparent);
+  color: var(--atelier-terracotta-deep);
+}
+
+#confirmModal .btn-text:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+#confirmModal .btn-primary {
+  background: var(--atelier-primary);
+  border: 1px solid var(--atelier-terracotta-deep);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(154, 64, 29, 0.22);
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+
+@media (hover: hover) {
+  #confirmModal .btn-primary:hover {
+    background: var(--atelier-terracotta-deep);
+  }
+}
+
+#confirmModal .btn-primary:active {
+  transform: scale(0.98);
+  filter: none;
+}
+
+#confirmModal .btn-primary:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #confirmModal .modal-card {
+    box-shadow:
+      0 22px 52px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 248, 240, 0.06);
+  }
+
+  :root:not(.light-theme) #confirmModal .btn-text {
+    color: var(--atelier-gold-foil);
+  }
+
+  :root:not(.light-theme) #confirmModal .btn-primary {
+    background: #c4683c;
+    border-color: #a35028;
+    color: #ffffff;
+  }
+
+  :root:not(.light-theme) #confirmModal .btn-text:focus-visible,
+  :root:not(.light-theme) #confirmModal .btn-primary:focus-visible {
+    outline-color: var(--atelier-gold-foil);
+  }
+}
+
+:root.dark-theme #confirmModal .modal-card {
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 248, 240, 0.06);
+}
+
+:root.dark-theme #confirmModal .btn-text {
+  color: var(--atelier-gold-foil);
+}
+
+:root.dark-theme #confirmModal .btn-primary {
+  background: #c4683c;
+  border-color: #a35028;
+  color: #ffffff;
+}
+
+:root.dark-theme #confirmModal .btn-text:focus-visible,
+:root.dark-theme #confirmModal .btn-primary:focus-visible {
+  outline-color: var(--atelier-gold-foil);
+}
+
+@media (max-width: 380px) {
+  #confirmModal .modal-card {
+    padding: 20px 16px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #confirmModal .modal-card,
+  #confirmModal .btn-text,
+  #confirmModal .btn-primary {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+/* End Atelier Confirm Modal */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {
