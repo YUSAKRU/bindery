@@ -535,6 +535,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.PRINT_MISSING_URI': 'No file was supplied to print.',
     'error.PRINT_FAILED': 'Could not open the print dialog.',
     'status.printed': 'Sent to the print dialog.',
+    'status.print.shareSheet': 'Choose “Print” in the share menu to print.',
+    'status.print.opened': 'The PDF opened in a new tab — print it from there.',
+    'status.print.downloaded': 'The PDF was downloaded — open it and print from your PDF viewer.',
     'status.printFailed': 'Could not print: {message}',
 
     // Engine error bodies, keyed by BookletError.code (see src/engine/types.ts).
@@ -1333,6 +1336,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.PRINT_MISSING_URI': 'Yazdırılacak dosya verilmedi.',
     'error.PRINT_FAILED': 'Yazdırma penceresi açılamadı.',
     'status.printed': 'Yazdırma penceresine gönderildi.',
+    'status.print.shareSheet': 'Yazdırmak için paylaşım menüsünden «Yazdır»ı seçin.',
+    'status.print.opened': 'PDF yeni sekmede açıldı — oradan yazdırın.',
+    'status.print.downloaded': 'PDF indirildi — açıp PDF görüntüleyicinizden yazdırın.',
     'status.printFailed': 'Yazdırılamadı: {message}',
 
     // Engine hata gövdeleri, BookletError.code ile eşleşir (bkz. src/engine/types.ts).

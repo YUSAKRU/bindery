@@ -559,7 +559,12 @@ export async function printPdf(
   filename: string,
   jobName: string,
   pageDimensions?: { widthPt: number; heightPt: number },
-): Promise<void> {
+): Promise<PrintOutcome> {
+  // Web/PWA has no system print bridge. This branch must run before any
+  // `await`: share sheets and new tabs need the click's transient activation.
+  if (Capacitor.getPlatform() === 'web') {
+    return printPdfOnWeb(bytes, filename, jobName);
+  }
   if (!canPrint()) {
     throw new PrintUnavailableError();
   }
@@ -588,6 +593,74 @@ export async function printPdf(
   } else {
     await printPdfUri(uri, jobName);
   }
+  return 'dialog';
+}
+
+/**
+ * What a print request turned into, so the UI can tell the user the next step.
+ * - `dialog`: the native Android print dialog opened.
+ * - `share-sheet`: web on a phone — the OS share sheet opened with the PDF;
+ *   its "Print" entry (iOS AirPrint, Android's built-in print service) prints it.
+ * - `opened`: web on a desktop — the PDF opened in a new tab to print from.
+ * - `downloaded`: nothing better was available; the PDF was downloaded.
+ * - `canceled`: the user dismissed the share sheet.
+ */
+export type PrintOutcome = 'dialog' | 'share-sheet' | 'opened' | 'downloaded' | 'canceled';
+
+/** Phones and tablets, including iPadOS which reports itself as a Mac. */
+export function isTouchMobile(nav: Pick<Navigator, 'userAgent' | 'maxTouchPoints'> & { platform?: string }): boolean {
+  if (/Android|iPhone|iPad|iPod/i.test(nav.userAgent)) return true;
+  return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
+}
+
+/**
+ * Web print. Browsers cannot print a PDF reliably from a hidden frame on
+ * phones (Android Chrome has no inline PDF viewer; iOS prints only page 1 and
+ * `window.print()` is unreliable in Home Screen apps), so phones get the OS
+ * share sheet, which offers Print. Desktops open the PDF in a new tab, whose
+ * built-in viewer prints all pages at their real size.
+ */
+async function printPdfOnWeb(bytes: Uint8Array, filename: string, title: string): Promise<PrintOutcome> {
+  const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+
+  if (nav && isTouchMobile(nav)) {
+    const file = new File([copy], filename, { type: 'application/pdf' });
+    if (typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+      try {
+        await nav.share({ title, files: [file] });
+        return 'share-sheet';
+      } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || isShareCanceled(error))) {
+          return 'canceled';
+        }
+        // NotAllowedError etc.: fall through to a download the user can open.
+      }
+    }
+    downloadPdfInBrowser(copy, filename);
+    return 'downloaded';
+  }
+
+  if (typeof window !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    const url = URL.createObjectURL(new Blob([copy], { type: 'application/pdf' }));
+    // No 'noopener' feature: with it window.open always returns null and a
+    // popup block could not be detected. Detach the opener by hand instead.
+    const tab = window.open(url, '_blank');
+    if (tab) {
+      try {
+        tab.opener = null;
+      } catch {
+        // Cross-origin hardening may forbid this; harmless.
+      }
+      // Give the new tab time to load the blob before releasing it.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return 'opened';
+    }
+    URL.revokeObjectURL(url);
+  }
+  downloadPdfInBrowser(copy, filename);
+  return 'downloaded';
 }
 
 /** Raised when printing is requested on a platform with no system print dialog. */

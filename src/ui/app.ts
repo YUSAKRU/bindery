@@ -50,6 +50,7 @@ import {
   readThumbnailFromDiskCache,
   writeThumbnailToDiskCache,
   type PickedPdf,
+  type PrintOutcome,
   type FileEntryInfo,
 } from '../native/file-bridge';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -261,6 +262,20 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
 };
 
 const SINGLE_SIGNATURE_WARNING_THRESHOLD = 40;
+
+/** Status line key telling the user what to do after a print request. */
+export function printStatusKey(outcome: Exclude<PrintOutcome, 'canceled'>): string {
+  switch (outcome) {
+    case 'share-sheet':
+      return 'status.print.shareSheet';
+    case 'opened':
+      return 'status.print.opened';
+    case 'downloaded':
+      return 'status.print.downloaded';
+    default:
+      return 'status.printed';
+  }
+}
 
 /** Printer choice on the result screen: two-sided (duplex) or one-sided (simplex). */
 export type PrinterMode = 'duplex' | 'simplex';
@@ -2796,8 +2811,11 @@ export function initApp(): void {
 
       try {
         if (action === 'print') {
-          await withBusyOverlay(() => printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]));
-          actionStatus.textContent = t('status.printed');
+          const outcome = await withBusyOverlay(() =>
+            printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]),
+          );
+          if (outcome === 'canceled') return;
+          actionStatus.textContent = t(printStatusKey(outcome));
           void triggerReviewPromptIfEligible();
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;

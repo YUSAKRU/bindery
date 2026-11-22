@@ -60,6 +60,7 @@ const {
   pickPdf,
   pickPdfs,
   printPdf,
+  isTouchMobile,
   sharePdf,
   shareText,
   takePhoto,
@@ -1060,3 +1061,107 @@ describe('web platform fallbacks', () => {
   });
 });
 
+
+describe('printPdf on the web (PWA / browser)', () => {
+  const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 15; 2412DPC0AG) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36';
+  const DESKTOP_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36';
+
+  function stubDownload() {
+    const click = vi.fn();
+    const link = { href: '', download: '', style: { display: '' }, click, remove: vi.fn() };
+    vi.stubGlobal('document', { createElement: vi.fn(() => link), body: { appendChild: vi.fn() } });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:pdf'), revokeObjectURL: vi.fn() });
+    return { click, link };
+  }
+
+  it('opens the share sheet with the PDF on a phone, without touching the native print plugin', async () => {
+    getPlatform.mockReturnValue('web');
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { userAgent: ANDROID_UA, maxTouchPoints: 5, share, canShare: () => true });
+
+    const outcome = await printPdf(pseudoRandomBytes(64, 7), 'booklet_combined.pdf', 'Combined PDF');
+
+    expect(outcome).toBe('share-sheet');
+    const [arg] = share.mock.calls[0];
+    expect(arg.title).toBe('Combined PDF');
+    expect(arg.files[0].name).toBe('booklet_combined.pdf');
+    expect(arg.files[0].type).toBe('application/pdf');
+    expect(printPdfUri).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('calls navigator.share synchronously, inside the click that requested printing', () => {
+    getPlatform.mockReturnValue('web');
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { userAgent: ANDROID_UA, maxTouchPoints: 5, share, canShare: () => true });
+
+    void printPdf(pseudoRandomBytes(64, 8), 'a.pdf', 'A');
+
+    // No await yet: a share sheet requested after an await would lose user activation.
+    expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a dismissed share sheet as canceled', async () => {
+    getPlatform.mockReturnValue('web');
+    const abort = Object.assign(new Error('Share canceled'), { name: 'AbortError' });
+    vi.stubGlobal('navigator', {
+      userAgent: ANDROID_UA,
+      maxTouchPoints: 5,
+      share: vi.fn().mockRejectedValue(abort),
+      canShare: () => true,
+    });
+
+    await expect(printPdf(pseudoRandomBytes(64, 9), 'a.pdf', 'A')).resolves.toBe('canceled');
+  });
+
+  it('downloads the PDF on a phone that cannot share files', async () => {
+    getPlatform.mockReturnValue('web');
+    vi.stubGlobal('navigator', { userAgent: ANDROID_UA, maxTouchPoints: 5 });
+    const { click, link } = stubDownload();
+
+    await expect(printPdf(pseudoRandomBytes(64, 10), 'a.pdf', 'A')).resolves.toBe('downloaded');
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(link.download).toBe('a.pdf');
+  });
+
+  it('opens the PDF in a new tab on a desktop browser', async () => {
+    getPlatform.mockReturnValue('web');
+    vi.stubGlobal('navigator', { userAgent: DESKTOP_UA, maxTouchPoints: 0, share: vi.fn(), canShare: () => true });
+    stubDownload();
+    const open = vi.fn(() => ({ opener: {} }));
+    vi.stubGlobal('window', { open });
+
+    await expect(printPdf(pseudoRandomBytes(64, 11), 'a.pdf', 'A')).resolves.toBe('opened');
+    expect(open).toHaveBeenCalledWith('blob:pdf', '_blank');
+  });
+
+  it('falls back to a download when the desktop browser blocks the new tab', async () => {
+    getPlatform.mockReturnValue('web');
+    vi.stubGlobal('navigator', { userAgent: DESKTOP_UA, maxTouchPoints: 0 });
+    const { click } = stubDownload();
+    vi.stubGlobal('window', { open: vi.fn(() => null) });
+
+    await expect(printPdf(pseudoRandomBytes(64, 12), 'a.pdf', 'A')).resolves.toBe('downloaded');
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it('still refuses on a native platform without a print bridge', async () => {
+    getPlatform.mockReturnValue('ios');
+    canPrint.mockReturnValueOnce(false);
+
+    await expect(printPdf(pseudoRandomBytes(64, 13), 'a.pdf', 'A')).rejects.toBeInstanceOf(PrintUnavailableError);
+  });
+});
+
+describe('isTouchMobile', () => {
+  it('recognises Android phones, iPhones and iPadOS (which reports itself as a Mac)', () => {
+    expect(isTouchMobile({ userAgent: 'Linux; Android 15', maxTouchPoints: 5 })).toBe(true);
+    expect(isTouchMobile({ userAgent: 'iPhone; CPU iPhone OS 18_0', maxTouchPoints: 5 })).toBe(true);
+    expect(isTouchMobile({ userAgent: 'Macintosh; Intel Mac OS X', maxTouchPoints: 5, platform: 'MacIntel' })).toBe(true);
+  });
+
+  it('treats desktop browsers as non-mobile', () => {
+    expect(isTouchMobile({ userAgent: 'Macintosh; Intel Mac OS X', maxTouchPoints: 0, platform: 'MacIntel' })).toBe(false);
+    expect(isTouchMobile({ userAgent: 'X11; Linux x86_64', maxTouchPoints: 0, platform: 'Linux x86_64' })).toBe(false);
+  });
+});
