@@ -3528,13 +3528,11 @@ dialog.modal-sheet::backdrop {
 /* 1. Shell Integration when #screen-hub is active */
 .app:has(#screen-hub:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .top-bar,
-.app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-hub:not(.hidden)) .bottom-nav {
   display: none;
 }
 
-.app:has(#screen-hub:not(.hidden)) .screen-container,
-.app:has(#screen-config:not(.hidden)) .screen-container {
+.app:has(#screen-hub:not(.hidden)) .screen-container {
   padding-top: 0;
   padding-left: 0;
   padding-right: 0;
@@ -6886,7 +6884,8 @@ button.book-page-label:active {
 .app:has(#screen-picker:not(.hidden)) .top-bar-title {
   visibility: visible;
   color: var(--atelier-ink-black);
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
@@ -7109,7 +7108,7 @@ button.book-page-label:active {
   font-weight: 600;
   padding: 15px 36px;
   min-height: 48px;
-  border-radius: var(--radius-pill);
+  border-radius: 14px;
   cursor: pointer;
   width: 100%;
   max-width: 270px;
@@ -7118,7 +7117,7 @@ button.book-page-label:active {
   justify-content: center;
   gap: 10px;
   box-shadow:
-    0 6px 18px var(--atelier-terracotta-glow),
+    0 6px 18px rgba(154, 64, 29, 0.22),
     0 1px 3px rgba(154, 64, 29, 0.2);
   transition:
     background-color 0.18s ease,
@@ -7418,11 +7417,11 @@ button.book-page-label:active {
   font-weight: 600;
   padding: 16px 24px;
   min-height: 48px;
-  border-radius: var(--radius-pill);
+  border-radius: 14px;
   border: none;
   cursor: pointer;
   box-shadow:
-    0 6px 20px var(--atelier-terracotta-glow),
+    0 6px 20px rgba(154, 64, 29, 0.22),
     0 2px 4px rgba(154, 64, 29, 0.18);
   transition:
     background-color 0.18s ease,
@@ -7534,6 +7533,46 @@ button.book-page-label:active {
   opacity: 0.9;
 }
 
+/* File chosen: the Continue button drops to the bottom edge, where the
+   settings screen's button also sits; the file card centres in the space
+   above, and the privacy line moves up to sit just over the button. */
+#screen-picker[data-state="ready"],
+#screen-picker[data-state="reading"] {
+  justify-content: flex-start;
+  padding-inline: 0;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+.app:has(#screen-picker[data-state="ready"]:not(.hidden)) .screen-container,
+.app:has(#screen-picker[data-state="reading"]:not(.hidden)) .screen-container {
+  padding-bottom: 0;
+}
+
+#screen-picker[data-state="ready"] .picker-stage,
+#screen-picker[data-state="reading"] .picker-stage {
+  margin-block: auto;
+}
+
+#screen-picker[data-state="ready"] .workshop-privacy-footer,
+#screen-picker[data-state="reading"] .workshop-privacy-footer {
+  order: 1;
+  margin-top: 0;
+  padding: 0 8px 10px;
+}
+
+#screen-picker[data-state="ready"] .picker-slot-continue,
+#screen-picker[data-state="reading"] .picker-slot-continue {
+  order: 2;
+}
+
+#screen-picker[data-state="ready"] .btn-continue,
+#screen-picker[data-state="reading"] .btn-continue {
+  max-width: none;
+  height: 52px;
+  min-height: 52px;
+  padding-block: 0;
+}
+
 /* Workshop Privacy Guarantee Footer */
 #screen-picker .workshop-privacy-footer {
   display: flex;
@@ -7572,12 +7611,14 @@ button.book-page-label:active {
    printer needs. Scoped to #screen-result and its parent container.
    ========================================================================== */
 
+.app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
   border-bottom: 1px solid var(--atelier-border-hairline);
   color: var(--atelier-ink-black);
 }
 
+.app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
   color: var(--atelier-ink-black);
@@ -7586,6 +7627,7 @@ button.book-page-label:active {
   font-weight: 600;
 }
 
+.app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
   color: var(--atelier-ink-black);
@@ -8190,10 +8232,10 @@ button.book-page-label:active {
 
   /* Surfaces & Backgrounds - Atölye Kraft Paper */
   --stitch-viewport-bg: var(--atelier-bg, #fff8f5);
-  --stitch-card-bg: #ffffff;
+  --stitch-card-bg: var(--atelier-card2-bg, #FAF5EE);
   --stitch-card-border: var(--atelier-border-hairline, #DCD5C9);
   --stitch-card-border-hover: #C5BCAD;
-  --stitch-card-shadow: 0 2px 12px -2px rgba(28, 26, 24, 0.06);
+  --stitch-card-shadow: none;
   --stitch-card-divider: #EDE8DE;
 
   /* Spine Estimation Card */
@@ -8341,162 +8383,6 @@ button.book-page-label:active {
   box-sizing: border-box;
 }
 
-/* Floating back pill button */
-.stitch-back-btn {
-  position: absolute;
-  top: calc(14px + env(safe-area-inset-top, 0px));
-  left: calc(14px + env(safe-area-inset-left, 0px));
-  z-index: 30;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--stitch-radius-full);
-  background: var(--atelier-surface-cream, #F3ECE1);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--atelier-ink-black, #1C1A18);
-  cursor: pointer;
-  transition: all var(--stitch-duration) var(--stitch-spring);
-}
-
-.stitch-back-btn:hover {
-  background: #ffffff;
-  color: var(--stitch-primary);
-  transform: scale(1.04);
-}
-
-.stitch-back-btn:active {
-  transform: scale(0.95);
-}
-
-/* Header section */
-.stitch-header {
-  padding: calc(14px + env(safe-area-inset-top, 0px))
-           calc(16px + env(safe-area-inset-right, 0px))
-           8px
-           calc(60px + env(safe-area-inset-left, 0px));
-  flex-shrink: 0;
-}
-
-.stitch-header-title,
-#screen-config .screen-title {
-  margin: 0;
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.55rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--stitch-text-title);
-  line-height: 1.25;
-}
-
-.stitch-header-sub {
-  margin: 2px 0 0 0;
-  font-size: 0.78rem;
-  color: var(--stitch-text-muted);
-}
-
-/* Segmented Stepper Track */
-.config-stepper {
-  display: flex;
-  align-items: center;
-  background: var(--hub-stepper-track-bg);
-  border: 1px solid var(--hub-border);
-  border-radius: var(--hub-radius-pill);
-  padding: 3px;
-  gap: 2px;
-  margin: 0 16px 8px 16px;
-  flex-shrink: 0;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* Individual Stepper Tab */
-.config-tab {
-  flex: 1 1 0;
-  min-width: 0;
-  height: 36px;
-  min-height: 36px;
-  appearance: none;
-  border: none;
-  background: transparent;
-  border-radius: calc(var(--hub-radius-pill) - 2px);
-  padding: 0 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  font-family: inherit;
-  font-size: 0.80rem;
-  font-weight: 500;
-  color: var(--hub-text-muted);
-  cursor: pointer;
-  position: relative;
-  transition:
-    background-color 160ms var(--ease-out-spring),
-    color 160ms var(--ease-out-spring),
-    box-shadow 160ms var(--ease-out-spring);
-}
-
-.config-tab:hover:not(.is-active) {
-  color: var(--hub-text-primary);
-  background: var(--hub-surface-hover);
-}
-
-.config-tab:focus-visible {
-  outline: 2px solid var(--stitch-primary);
-  outline-offset: 1px;
-}
-
-/* Active Segment Pill */
-.config-tab.is-active,
-.config-tab[aria-selected="true"] {
-  background: var(--stitch-pill-active-bg);
-  color: var(--stitch-pill-active-text);
-  font-weight: 700;
-  box-shadow: var(--stitch-pill-active-shadow);
-}
-
-/* Step number pill indicator */
-.config-tab-num {
-  width: 17px;
-  height: 17px;
-  border-radius: var(--hub-radius-full);
-  background: var(--hub-border);
-  color: var(--hub-text-primary);
-  font-size: 0.70rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background-color 160ms var(--ease-out-spring);
-}
-
-.config-tab.is-active .config-tab-num {
-  background: var(--stitch-primary);
-  color: #ffffff;
-}
-
-/* Tab label text with truncation guard */
-.config-tab-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Modified indicator dot */
-.config-tab-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--stitch-primary);
-  position: absolute;
-  top: 5px;
-  right: 5px;
-}
-
 /* Step Panel Entry Keyframe */
 @keyframes configStepEnter {
   0% {
@@ -8549,291 +8435,6 @@ button.book-page-label:active {
 
 .config-step-panel:not(.hidden) {
   animation: configStepEnter var(--hub-motion-duration) var(--ease-out-spring) forwards;
-}
-
-.config-step-action-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.atelier-generate-cta,
-.atelier-step-next-cta {
-  width: 100%;
-  height: 50px;
-  min-height: 50px;
-  border-radius: 12px;
-  background: var(--atelier-primary, #9a401d);
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid #8a3819;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(154, 64, 29, 0.22);
-  transition: all 160ms var(--stitch-spring);
-}
-
-.atelier-generate-cta:hover,
-.atelier-step-next-cta:hover {
-  background: var(--stitch-primary-hover, #8a3819);
-  box-shadow: 0 3px 10px rgba(154, 64, 29, 0.32);
-  transform: translateY(-1px);
-}
-
-.atelier-generate-cta:active,
-.atelier-step-next-cta:active {
-  background: var(--stitch-primary-active, #732d13);
-  transform: scale(0.98);
-}
-
-.stitch-back-link {
-  appearance: none;
-  background: transparent;
-  border: none;
-  color: var(--stitch-text-muted, #78716c);
-  font-family: inherit;
-  font-size: 0.80rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: var(--stitch-radius-pill);
-  transition: color 150ms ease;
-}
-
-.stitch-back-link:hover {
-  color: var(--stitch-primary, #9a401d);
-}
-
-.stitch-advanced-link {
-  appearance: none;
-  background: transparent;
-  border: none;
-  color: var(--stitch-text-muted);
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: var(--stitch-radius-pill);
-  transition: color 150ms ease;
-}
-
-.stitch-advanced-link:hover {
-  color: var(--stitch-primary);
-}
-
-.stitch-advanced-link svg {
-  transition: transform 200ms ease;
-}
-
-.stitch-advanced-link.is-open svg {
-  transform: rotate(180deg);
-}
-
-.stitch-privacy-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-family: 'Space Mono', monospace;
-  font-size: 0.68rem;
-  color: var(--stitch-text-muted);
-  letter-spacing: 0.02em;
-  margin-top: 2px;
-  opacity: 0.85;
-}
-
-.stitch-privacy-note svg {
-  flex-shrink: 0;
-}
-
-/* Step 2 Smart Preset & Accordion */
-.print-mode-card {
-  background: var(--stitch-card-bg);
-  border: 1px solid var(--stitch-card-border);
-  border-radius: var(--stitch-radius-card);
-}
-
-/* Step 3 Atelier Colophon Ticket */
-.atelier-colophon-ticket {
-  background: var(--atelier-surface-cream, #F3ECE1);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  border-radius: var(--stitch-radius-card);
-  padding: 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: relative;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.colophon-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--stitch-card-border);
-}
-
-.colophon-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.colophon-craft-icon {
-  color: var(--stitch-text-brand);
-  flex-shrink: 0;
-}
-
-.colophon-title {
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--stitch-text-title);
-  letter-spacing: -0.01em;
-}
-
-.colophon-badge {
-  padding: 3px 10px;
-  border-radius: var(--stitch-radius-pill);
-  background: var(--stitch-primary-tint-50, #FAF0EC);
-  color: var(--stitch-text-brand);
-  font-size: 0.75rem;
-  font-weight: 700;
-  border: 1px solid rgba(154, 64, 29, 0.2);
-}
-
-:root:not(.light-theme) .colophon-badge,
-.dark-theme .colophon-badge {
-  background: rgba(154, 64, 29, 0.2);
-  border-color: rgba(224, 142, 98, 0.3);
-  color: var(--stitch-text-brand);
-}
-
-.colophon-spec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  min-width: 0;
-}
-
-.colophon-spec-row {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  column-gap: 0.75rem;
-  row-gap: 0.15em;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.colophon-spec-label {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.96em;
-  color: var(--stitch-text-muted);
-  font-weight: 500;
-  /* Match .stitch-card background in both light and dark themes to mask the leader cleanly */
-  background: var(--stitch-card-bg);
-  padding-right: 0.375rem;
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.colophon-spec-label svg {
-  color: var(--stitch-text-brand);
-  opacity: 0.85;
-  flex-shrink: 0;
-  width: 1.05em;
-  height: 1.05em;
-}
-
-.colophon-spec-label span {
-  min-width: 0;
-}
-
-.colophon-spec-dots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  /*
-   * Safe because row line-height is fixed at 1.45:
-   * - Single-line row height H = 1.45em -> 2*H - 1.82em = 1.08em (sits near baseline, well inside [0, 1.45em]).
-   * - Any wrapped row has H >= 2.90em (> 1.82em), so 2*H - 1.82em > H and overflow:hidden clips it cleanly.
-   */
-  top: calc(200% - 1.82em);
-  border-bottom: 1px dashed var(--stitch-card-border-hover);
-  opacity: 0.65;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.colophon-spec-val {
-  position: relative;
-  z-index: 1;
-  font-size: 1em;
-  font-weight: 600;
-  color: var(--stitch-text-title);
-  background: var(--stitch-card-bg);
-  padding-left: 0.375rem;
-  margin-left: auto;
-  text-align: right;
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.colophon-yield-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(154, 64, 29, 0.08);
-  border: 1px solid rgba(154, 64, 29, 0.16);
-  color: var(--stitch-text-brand);
-  margin-top: 4px;
-}
-
-:root:not(.light-theme) .colophon-yield-banner,
-.dark-theme .colophon-yield-banner {
-  background: rgba(154, 64, 29, 0.18);
-  border-color: rgba(224, 142, 98, 0.25);
-}
-
-.colophon-yield-banner svg {
-  flex-shrink: 0;
-}
-
-.colophon-yield-text {
-  font-size: 0.84rem;
-  font-weight: 600;
-  line-height: 1.35;
 }
 
 /* Cards within #screen-config */
@@ -9007,8 +8608,9 @@ button.book-page-label:active {
   background: transparent;
   color: var(--stitch-pill-inactive-text);
   border-radius: var(--stitch-radius-pill);
-  padding: 7px 8px;
-  font-size: 12px;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
@@ -9038,6 +8640,133 @@ button.book-page-label:active {
   height: 14px;
   stroke-width: 2.2;
   color: var(--stitch-primary);
+}
+
+/* Settings screen sits under the shared top bar (absolute, like the result
+   screen's), so the container clears it and the screen fills the rest. */
+.app:has(#screen-config:not(.hidden)) .screen-container {
+  padding: calc(max(env(safe-area-inset-top), 20px) + 60px) 0 0;
+  overflow: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+#screen-config .stitch-card > div:not([class]) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stitch-card-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* "Other" signature sizes: 4 / 8 / 16 / 32 on their own row inside the track */
+#screen-config .stitch-sub-segmented {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--stitch-card-divider);
+}
+
+#screen-config .stitch-sub-segmented.hidden {
+  display: none;
+}
+
+.stitch-pill-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+#signatureMoreBtn[aria-expanded="true"] .stitch-pill-chevron {
+  transform: rotate(180deg);
+}
+
+/* "What is a signature?" — opens the animated explainer sheet */
+.stitch-info-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--stitch-text-brand);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 4px;
+  margin: -10px -4px -10px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.stitch-info-link:focus-visible,
+#screen-config .segmented-btn:focus-visible,
+#screen-config .stitch-advanced-row:focus-visible {
+  outline: 2px solid var(--stitch-text-brand);
+  outline-offset: 2px;
+}
+
+/* Advanced print settings: one quiet disclosure row */
+#screen-config .stitch-advanced-row {
+  margin: 0;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--stitch-card-border);
+  border-radius: var(--stitch-radius-card);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-title);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+#screen-config .advanced-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--stitch-text-muted);
+}
+
+#screen-config .advanced-badge {
+  color: var(--stitch-text-brand);
+  font-size: 0.8rem;
+}
+
+#screen-config .advanced-chevron {
+  color: var(--stitch-text-muted);
+}
+
+#screen-config .advanced-toggle.is-open .advanced-chevron {
+  transform: rotate(180deg);
+}
+
+#screen-config .advanced-panel {
+  margin-bottom: 0;
+}
+
+/* Dark theme: the tinted value pill kept its light-theme fill */
+:root:not(.light-theme) #screen-config .stitch-badge-pill,
+.dark-theme #screen-config .stitch-badge-pill {
+  background: rgba(224, 142, 98, 0.14);
+  color: #e08e62;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stitch-pill-chevron,
+  #screen-config .advanced-chevron {
+    transition: none;
+  }
 }
 
 /* Range Sliders */
@@ -9159,227 +8888,74 @@ button.book-page-label:active {
   pointer-events: auto;
 }
 
-/* Pulsating Live Status Dot */
-@keyframes stitchPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.35;
-    transform: scale(0.8);
-  }
-}
-
-.stitch-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--stitch-live-dot);
-  animation: stitchPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-/* Pinned Sticky Footer / Dock Envelope */
-.stitch-dock,
+/* Bottom action bar: the yield line and the one primary action, pinned to the
+   bottom of the settings screen so the button never moves (same place as the
+   picker's Continue and the result screen's Print). */
 #configStickyFooter {
-  display: none !important;
   flex-shrink: 0;
-  border-top: 1px solid var(--hub-border);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   padding: 10px calc(16px + env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--stitch-dock-bg);
-  backdrop-filter: var(--stitch-dock-blur);
-  -webkit-backdrop-filter: var(--stitch-dock-blur);
+  border-top: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  background: var(--stitch-viewport-bg);
   position: relative;
   z-index: 40;
   box-sizing: border-box;
 }
 
-.stitch-summary-capsule,
 #configStickyFooter .config-summary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 12px;
-  border-radius: var(--stitch-radius-full);
-  background: var(--stitch-summary-bg);
-  border: 1px solid var(--stitch-summary-border);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--stitch-summary-text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   margin: 0;
-  text-align: center;
-  max-width: 90%;
-  min-height: 18px;
-  line-height: 1.35;
-}
-
-.stitch-summary-capsule::before,
-#configStickyFooter .config-summary:not(.hidden)::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--stitch-live-dot);
-  animation: stitchPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  flex-shrink: 0;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-.stitch-summary-divider {
-  color: var(--stitch-text-subtle);
-  opacity: 0.6;
-  margin: 0 4px;
-}
-
-/* Step Indicator Pill & Dots */
-.stitch-step-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 2px 0;
-}
-
-.stitch-step-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--stitch-radius-full);
-  background: var(--stitch-step-dot-inactive);
-  border: none;
   padding: 0;
-  cursor: pointer;
-  transition: all 200ms ease;
-  position: relative;
-}
-
-.stitch-step-dot::after {
-  content: "";
-  position: absolute;
-  top: -12px;
-  bottom: -12px;
-  left: -12px;
-  right: -12px;
-}
-
-.stitch-step-dot:hover {
-  background: var(--stitch-text-muted);
-  transform: scale(1.2);
-}
-
-.stitch-step-dot.is-active,
-.stitch-step-pill-active {
-  width: 24px !important;
-  height: 6px !important;
-  border-radius: var(--stitch-radius-full) !important;
-  background: var(--stitch-step-dot-active) !important;
-  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.35) !important;
-}
-
-/* Next Step Hint */
-.stitch-step-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 400;
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
   color: var(--stitch-text-muted);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  border-radius: var(--stitch-radius-pill);
-  transition: color 150ms ease;
+  text-align: center;
+  text-wrap: balance;
 }
 
-.stitch-step-hint:hover {
-  color: var(--stitch-text-brand);
-}
-
-.stitch-step-hint svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Primary Sticky CTA */
-.stitch-btn-primary,
 #configStickyFooter #generateBtn {
   width: 100%;
-  height: 48px;
-  min-height: 48px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0 16px;
   border-radius: var(--stitch-radius-btn);
   background: var(--stitch-primary);
+  border: 1px solid var(--atelier-terracotta-deep, #8a3819);
   color: #ffffff;
   font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: none;
   cursor: pointer;
-  box-shadow: var(--stitch-primary-shadow);
-  transition: all 160ms var(--stitch-spring);
+  box-shadow: 0 6px 16px rgba(154, 64, 29, 0.22);
+  transition: background-color 0.15s ease, transform 0.12s ease;
   user-select: none;
 }
 
-.stitch-btn-primary:hover,
-#configStickyFooter #generateBtn:hover {
-  background: var(--stitch-primary-hover);
-  box-shadow: var(--stitch-primary-shadow-hover);
-  transform: translateY(-1px);
-}
-
-.stitch-btn-primary:active,
 #configStickyFooter #generateBtn:active {
   background: var(--stitch-primary-active);
   transform: scale(0.98);
 }
 
-@media (max-width: 380px) {
-  .config-tab {
-    padding: 0 3px;
-    gap: 3px;
-    font-size: 0.74rem;
-  }
+#configStickyFooter #generateBtn:focus-visible {
+  outline: 2px solid var(--stitch-text-brand);
+  outline-offset: 2px;
+}
 
-  .config-tab-num {
-    width: 15px;
-    height: 15px;
-    font-size: 0.65rem;
-  }
-
-  .colophon-spec-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
-  }
-
-  .colophon-spec-label {
-    padding-right: 0;
-    background: transparent;
-  }
-
-  .colophon-spec-dots {
-    display: none;
-  }
-
-  .colophon-spec-val {
-    padding-left: 0;
-    margin-left: 0;
-    text-align: left;
-    background: transparent;
-  }
+:root:not(.light-theme) #configStickyFooter #generateBtn,
+.dark-theme #configStickyFooter #generateBtn {
+  background: #c4683c;
+  border-color: #a35028;
 }
 
 /* Atelier PDF Source Modal (#pdfSourceModal) */

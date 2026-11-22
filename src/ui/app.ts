@@ -315,18 +315,6 @@ export function formatResultSummary(r: {
   return parts.join(' · ');
 }
 
-/** Formats the selected signature value for the Step 3 summary row. */
-export function formatSummarySignature(signature: string): string {
-  if (signature === 'single') return t('config.signature.single');
-  if (signature === 'auto') return t('config.signature.auto');
-  return `${signature} ${t('config.signaturePagesSuffix')}`;
-}
-
-/** Formats the duplex flip edge using short summary-only labels. */
-export function formatSummaryFlipEdge(flipEdge: FlipEdge): string {
-  return flipEdge === 'long' ? t('config.summaryFlipLong') : t('config.summaryFlipShort');
-}
-
 /** Returns true when a thick document (>40 original pages) has Single signature selected. */
 export function shouldWarnSingleSignature(signature: string, originalPages: number): boolean {
   return signature === 'single' && originalPages > SINGLE_SIGNATURE_WARNING_THRESHOLD;
@@ -531,18 +519,14 @@ export function initApp(): void {
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
   const configSummary = byId<HTMLDivElement>('configSummary');
   const configStepLayout = byId<HTMLDivElement>('configStepLayout');
-  const configStepPrint = byId<HTMLDivElement>('configStepPrint');
   const configTooltipPopover = byId<HTMLDivElement>('configTooltipPopover');
-  const configBackBtn = byId<HTMLButtonElement>('configBackBtn');
-  const stitchStepSubtitle = byId<HTMLElement>('stitchStepSubtitle');
-  const stitchNextHint = byId<HTMLElement>('stitchNextHint');
-  const stitchNextHintText = byId<HTMLElement>('stitchNextHintText');
   const paperSelectedLabel = byId<HTMLElement>('paperSelectedLabel');
-  const formaBadge = byId<HTMLElement>('formaBadge');
-  const stitchStepNav = byId<HTMLElement>('stitchStepNav');
+  const signatureMoreBtn = byId<HTMLButtonElement>('signatureMoreBtn');
+  const signatureSizeMore = byId<HTMLDivElement>('signatureSizeMore');
   const advancedToggle = byId<HTMLButtonElement>('advancedToggle');
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
+  const advancedDefaultLabel = byId<HTMLSpanElement>('advancedDefaultLabel');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const trimBoxNotice = byId<HTMLDivElement>('trimBoxNotice');
   const preflightLargeFileWarning = byId<HTMLDivElement>('preflightLargeFileWarning');
@@ -556,29 +540,6 @@ export function initApp(): void {
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
-  const step1NextBtn = byId<HTMLButtonElement>('step1NextBtn');
-
-  const printPresetModeGroup = byId<HTMLDivElement>('printPresetModeGroup');
-  const presetRecommendedBtn = byId<HTMLButtonElement>('presetRecommendedBtn');
-  const presetCustomBtn = byId<HTMLButtonElement>('presetCustomBtn');
-  const printPresetHint = byId<HTMLParagraphElement>('printPresetHint');
-  const toggleDetailedSettingsBtn = byId<HTMLButtonElement>('toggleDetailedSettingsBtn');
-  const toggleDetailedSettingsText = byId<HTMLSpanElement>('toggleDetailedSettingsText');
-  const step2NextBtn = byId<HTMLButtonElement>('step2NextBtn');
-  const step2BackLink = byId<HTMLButtonElement>('step2BackLink');
-
-  const configStepSummary = byId<HTMLDivElement>('configStepSummary');
-  const summaryLogicalPagesBadge = byId<HTMLSpanElement>('summaryLogicalPagesBadge');
-  const summaryPaperVal = byId<HTMLDivElement>('summaryPaperVal');
-  const summaryFormaVal = byId<HTMLDivElement>('summaryFormaVal');
-  const summaryBindingVal = byId<HTMLDivElement>('summaryBindingVal');
-  const summaryPrintVal = byId<HTMLDivElement>('summaryPrintVal');
-  const summaryTotalMetricsLabel = byId<HTMLSpanElement>('summaryTotalMetricsLabel');
-  const step3GenerateBtn = byId<HTMLButtonElement>('step3GenerateBtn');
-  const step3GenerateBtnLabel = byId<HTMLSpanElement>('step3GenerateBtnLabel');
-  const step3GenerateSpinner = byId<HTMLSpanElement>('step3GenerateSpinner');
-  const step3BackLink = byId<HTMLButtonElement>('step3BackLink');
-
   const screenResult = byId<HTMLElement>('screen-result');
   const resultSummaryLine = byId<HTMLParagraphElement>('resultSummaryLine');
   const coverActionRow = byId<HTMLDivElement>('coverActionRow');
@@ -1240,7 +1201,7 @@ export function initApp(): void {
       void renderErrorLog();
     } else if (id === 'config') {
       updatePaperSelectedBadge();
-      updateFormaBadge();
+      syncSignatureMore();
       updateConfigPreflightWarning();
     }
     updateReaderNightChrome();
@@ -1265,16 +1226,15 @@ export function initApp(): void {
     paperSelectedLabel.textContent = paperLabels[String(bookletPaperSize)] || String(bookletPaperSize);
   }
 
-  function updateFormaBadge(): void {
-    if (!formaBadge) return;
-    if (bookletSignature === 'single') {
-      formaBadge.textContent = t('config.signature.single') || 'Tek forma';
-    } else if (bookletSignature === 'auto') {
-      formaBadge.textContent = t('config.signature.auto') || 'Otomatik';
-    } else {
-      const pagesSuffix = t('config.signaturePagesSuffix') || 'Sayfa';
-      formaBadge.textContent = `${bookletSignature} ${pagesSuffix}`;
-    }
+  // The numeric signature sizes live behind "Other" so the common choices fit
+  // one row. "Other" lights up while a numeric size is selected, and its row
+  // stays open then, so the active size is never hidden.
+  function syncSignatureMore(open?: boolean): void {
+    const numeric = bookletSignature !== 'auto' && bookletSignature !== 'single';
+    const show = numeric || (open ?? !signatureSizeMore.classList.contains('hidden'));
+    signatureSizeMore.classList.toggle('hidden', !show);
+    signatureMoreBtn.classList.toggle('is-active', numeric);
+    signatureMoreBtn.setAttribute('aria-expanded', String(show));
   }
 
   function updateConfigPreflightWarning(): void {
@@ -1306,6 +1266,7 @@ export function initApp(): void {
     setActiveSegment(paperSizeGroup, 'paper', 'A4');
     bookletSignature = 'auto';
     setActiveSegment(signatureSizeGroup, 'sig', 'auto');
+    syncSignatureMore(false);
     bookletBinding = 'ltr';
     setActiveSegment(bindingGroup, 'binding', 'ltr');
     bookletSeparateCover = false;
@@ -1321,11 +1282,11 @@ export function initApp(): void {
     bookletSourceSheetSize = null;
     updateCoverAvailability();
     updatePaperSelectedBadge();
-    updateFormaBadge();
+    syncSignatureMore();
     updateConfigPreflightWarning();
     refreshConfigSummary();
     setAdvancedOpen(false);
-    switchConfigTab('layout');
+    configStepLayout.scrollTop = 0;
     updateAdvancedBadge();
   }
 
@@ -1363,11 +1324,11 @@ export function initApp(): void {
     creepPaperGsm.value = '';
     updateCoverAvailability();
     updatePaperSelectedBadge();
-    updateFormaBadge();
+    syncSignatureMore();
     updateConfigPreflightWarning();
     refreshConfigSummary();
     setAdvancedOpen(false);
-    switchConfigTab('layout');
+    configStepLayout.scrollTop = 0;
     updateAdvancedBadge();
   }
 
@@ -1412,15 +1373,13 @@ export function initApp(): void {
       : t('config.coverHint');
   }
 
-  // True when any control inside the Advanced accordion differs from its
-  // default, so a "modified" badge can warn the user about settings hidden
-  // behind the collapsed panel. Defaults: flip=short, binding=ltr, gutter=0,
-  // creep=0, cover=together, instructions=none, sheet order=default, blank
-  // field empty.
+  // True when any control inside the collapsed advanced print section differs
+  // from its default, so its row can say "Modified" instead of "Recommended".
+  // Binding and flip edge are not in it: they sit on the main screen.
+  // Defaults: gutter=0, creep=0, cover=together, instructions=none, sheet
+  // order=default, marks=none, blank field empty.
   function isAdvancedModified(): boolean {
     return (
-      bookletFlipEdge !== 'short' ||
-      bookletBinding !== 'ltr' ||
       Number(gutterSlider.value) !== 0 ||
       Number(creepSlider.value) !== 0 ||
       bookletSeparateCover ||
@@ -1431,126 +1390,16 @@ export function initApp(): void {
     );
   }
 
-  let currentConfigTab: 'layout' | 'print' | 'summary' = 'layout';
-
-  function renderConfigSummarySpec(): void {
-    if (!summaryPaperVal || !summaryFormaVal || !summaryBindingVal || !summaryPrintVal) return;
-
-    summaryPaperVal.textContent = paperSummaryLabel(bookletPaperSize);
-
-    summaryFormaVal.textContent = formatSummarySignature(bookletSignature);
-
-    const bindingLabel = bookletBinding === 'rtl' ? t('config.binding.rtl') : t('config.binding.ltr');
-    const flipLabel = formatSummaryFlipEdge(bookletFlipEdge);
-    summaryBindingVal.textContent = `${bindingLabel} · ${flipLabel}`;
-
-    const isModified = isAdvancedModified();
-    summaryPrintVal.textContent = isModified ? t('config.summaryCustom') : t('config.summaryStandard');
-
-    const metrics = bookletBlockMetrics();
-    if (metrics) {
-      summaryLogicalPagesBadge.textContent = `${metrics.logical} ${t('config.signaturePagesSuffix')}`;
-      summaryTotalMetricsLabel.textContent = `${t('stat.totalSheets')}: ${metrics.sheets} · ${metrics.sigLengths.length} ${t('stat.signatures')}`;
-    }
-  }
-
-  function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {
-    currentConfigTab = tab;
-    const stepMap: Record<'layout' | 'print' | 'summary', { step: number; subKey: string; hintKey: string }> = {
-      layout: { step: 1, subKey: 'config.stitchStepSubtitle1', hintKey: 'config.stitchNextHint1' },
-      print: { step: 2, subKey: 'config.stitchStepSubtitle2', hintKey: 'config.stitchNextHint2' },
-      summary: { step: 3, subKey: 'config.stitchStepSubtitle3', hintKey: 'config.stitchNextHint3' },
-    };
-
-    const current = stepMap[tab];
-    if (stitchStepSubtitle) {
-      stitchStepSubtitle.textContent = t(current.subKey);
-      stitchStepSubtitle.dataset.i18n = current.subKey;
-    }
-
-    if (stitchNextHint) {
-      if (current.step === 3 || current.step === 2) {
-        stitchNextHint.classList.add('hidden');
-      } else {
-        stitchNextHint.classList.remove('hidden');
-        if (stitchNextHintText) {
-          stitchNextHintText.textContent = t(current.hintKey);
-          stitchNextHintText.dataset.i18n = current.hintKey;
-        }
-      }
-    }
-
-    if (generateBtn) {
-      if (current.step === 3 || current.step === 2) {
-        generateBtn.classList.remove('hidden');
-      } else {
-        generateBtn.classList.add('hidden');
-      }
-    }
-
-    if (stitchStepNav) {
-      const stepDots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
-      stepDots.forEach((dot) => {
-        const stepNum = Number(dot.dataset.step);
-        const isActive = stepNum === Math.min(current.step, 2);
-        dot.classList.toggle('is-active', isActive);
-        dot.classList.toggle('stitch-step-pill-active', isActive);
-        dot.setAttribute('aria-selected', String(isActive));
-      });
-    }
-  }
-
-  function switchConfigTab(tab: 'layout' | 'print' | 'summary'): void {
-    currentConfigTab = tab;
-    const panels: Array<{ panel: HTMLElement | null; name: 'layout' | 'print' | 'summary' }> = [
-      { panel: configStepLayout, name: 'layout' },
-      { panel: configStepPrint, name: 'print' },
-      { panel: configStepSummary, name: 'summary' },
-    ];
-
-    for (const item of panels) {
-      if (!item.panel) continue;
-      const isActive = item.name === tab;
-      item.panel.classList.toggle('hidden', !isActive);
-    }
-
-    if (tab === 'summary') {
-      renderConfigSummarySpec();
-    }
-
-    updateStitchDock(tab);
-  }
-
-  function updateConfigTabDots(): void {
-    // Top tabs were completely removed; keep function as a safe no-op.
-  }
-
   function updateAdvancedBadge(): void {
-    advancedBadge.classList.toggle('hidden', !isAdvancedModified());
-    updateConfigTabDots();
+    const modified = isAdvancedModified();
+    advancedBadge.classList.toggle('hidden', !modified);
+    advancedDefaultLabel.classList.toggle('hidden', modified);
   }
 
   function setAdvancedOpen(open: boolean): void {
     advancedPanel.classList.toggle('hidden', !open);
     advancedToggle.classList.toggle('is-open', open);
     advancedToggle.setAttribute('aria-expanded', String(open));
-    if (presetRecommendedBtn && presetCustomBtn) {
-      presetRecommendedBtn.classList.toggle('is-active', !open);
-      presetCustomBtn.classList.toggle('is-active', open);
-    }
-    if (printPresetHint) {
-      const hintKey = open ? 'config.presetCustomHint' : 'config.presetRecommendedHint';
-      printPresetHint.textContent = t(hintKey);
-      printPresetHint.dataset.i18n = hintKey;
-    }
-    if (toggleDetailedSettingsBtn) {
-      toggleDetailedSettingsBtn.classList.toggle('is-open', open);
-    }
-    if (toggleDetailedSettingsText) {
-      const key = open ? 'config.hideSettingsDetails' : 'config.viewSettingsDetails';
-      toggleDetailedSettingsText.textContent = t(key);
-      toggleDetailedSettingsText.dataset.i18n = key;
-    }
   }
 
   /**
@@ -2122,11 +1971,15 @@ export function initApp(): void {
 
   signatureSizeGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    if (btn === signatureMoreBtn) {
+      syncSignatureMore(signatureSizeMore.classList.contains('hidden'));
+      return;
+    }
     const sig = btn?.dataset.sig;
     if (!sig) return;
     bookletSignature = sig;
     setActiveSegment(signatureSizeGroup, 'sig', sig);
-    updateFormaBadge();
+    syncSignatureMore();
     updateConfigPreflightWarning();
     refreshConfigSummary();
   });
@@ -2370,154 +2223,6 @@ export function initApp(): void {
     }
   });
 
-  // ── Stitch 3-Step Nav, Back Button, Switch & Swipe Gestures ─────────────────
-  if (stitchStepNav) {
-    const stepTabs: Array<'layout' | 'print' | 'summary'> = ['layout', 'print', 'summary'];
-    const dots = stitchStepNav.querySelectorAll<HTMLButtonElement>('.stitch-step-dot');
-    dots.forEach((dot, idx) => {
-      dot.addEventListener('click', () => {
-        if (stepTabs[idx]) {
-          switchConfigTab(stepTabs[idx]);
-        }
-      });
-    });
-  }
-
-  if (stitchNextHint) {
-    stitchNextHint.addEventListener('click', () => {
-      if (currentConfigTab === 'layout') {
-        switchConfigTab('print');
-      } else if (currentConfigTab === 'print') {
-        switchConfigTab('summary');
-      }
-    });
-  }
-
-  if (configBackBtn) {
-    configBackBtn.addEventListener('click', () => {
-      if (currentConfigTab === 'summary') {
-        switchConfigTab('print');
-      } else if (currentConfigTab === 'print') {
-        switchConfigTab('layout');
-      } else {
-        showScreen('picker');
-      }
-    });
-  }
-
-  if (step1NextBtn) {
-    step1NextBtn.addEventListener('click', () => {
-      switchConfigTab('print');
-    });
-  }
-
-  if (printPresetModeGroup) {
-    if (presetRecommendedBtn) {
-      presetRecommendedBtn.addEventListener('click', () => {
-        setAdvancedOpen(false);
-      });
-    }
-    if (presetCustomBtn) {
-      presetCustomBtn.addEventListener('click', () => {
-        setAdvancedOpen(true);
-      });
-    }
-  }
-
-  if (toggleDetailedSettingsBtn) {
-    toggleDetailedSettingsBtn.addEventListener('click', () => {
-      const isCurrentlyHidden = advancedPanel.classList.contains('hidden');
-      setAdvancedOpen(isCurrentlyHidden);
-    });
-  }
-
-  if (step2NextBtn) {
-    step2NextBtn.addEventListener('click', () => {
-      switchConfigTab('summary');
-    });
-  }
-
-  if (step2BackLink) {
-    step2BackLink.addEventListener('click', () => {
-      switchConfigTab('layout');
-    });
-  }
-
-  if (step3GenerateBtn) {
-    step3GenerateBtn.addEventListener('click', () => {
-      generateBtn.click();
-    });
-  }
-
-  if (step3BackLink) {
-    step3BackLink.addEventListener('click', () => {
-      switchConfigTab('print');
-    });
-  }
-
-  const configBody = byId('screen-config').querySelector<HTMLElement>('.config-body');
-  if (configBody) {
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
-    let isSwiping = false;
-
-    configBody.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) return;
-      const target = e.target as HTMLElement;
-      // Do not initiate swipe on sliders (range inputs) or text fields where horizontal drag/selection is native
-      if (target.closest('input[type="range"], input[type="text"], input[type="number"], textarea, select')) return;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = performance.now();
-      isSwiping = false;
-    }, { passive: true });
-
-    configBody.addEventListener('touchmove', (e) => {
-      if (touchStartTime === 0 || e.touches.length !== 1) return;
-      const dx = e.touches[0].clientX - touchStartX;
-      const dy = e.touches[0].clientY - touchStartY;
-      if (Math.abs(dx) > 15 && Math.abs(dx) > Math.abs(dy)) {
-        isSwiping = true;
-      }
-    }, { passive: true });
-
-    configBody.addEventListener('touchend', (e) => {
-      if (touchStartTime === 0 || e.changedTouches.length !== 1) return;
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      const dt = performance.now() - touchStartTime;
-      touchStartTime = 0;
-
-      const isHorizontalFlick = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2;
-      const swiped = (isSwiping || isHorizontalFlick) && dt < 500 && isHorizontalFlick;
-      isSwiping = false;
-
-      if (swiped) {
-        // Prevent accidental button clicks when ending a swipe gesture
-        const blockClick = (evt: MouseEvent) => {
-          evt.stopPropagation();
-          evt.preventDefault();
-        };
-        window.addEventListener('click', blockClick, { capture: true, once: true });
-        setTimeout(() => window.removeEventListener('click', blockClick, { capture: true }), 350);
-
-        if (dx < 0) {
-          if (currentConfigTab === 'layout') switchConfigTab('print');
-          else if (currentConfigTab === 'print') switchConfigTab('summary');
-        } else {
-          if (currentConfigTab === 'summary') switchConfigTab('print');
-          else if (currentConfigTab === 'print') switchConfigTab('layout');
-        }
-      }
-    }, { passive: true });
-
-    configBody.addEventListener('touchcancel', () => {
-      touchStartTime = 0;
-      isSwiping = false;
-    }, { passive: true });
-  }
-
   // ── Info Tooltips Micro-interactions ──────────────────────────────────────
   let activeTooltipBtn: HTMLElement | null = null;
 
@@ -2593,7 +2298,7 @@ export function initApp(): void {
     // engine, which surfaces them through the normal error flow.
     const insertBlankAfter = parseInsertBlank();
     if (insertBlankAfter === null) {
-      switchConfigTab('print');
+      setAdvancedOpen(true);
       insertBlankError.textContent = t('config.insertBlankError');
       insertBlankError.classList.remove('hidden');
       insertBlankInput.setAttribute('aria-invalid', 'true');
@@ -2607,9 +2312,6 @@ export function initApp(): void {
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');
     generateSpinner.classList.remove('hidden');
-    if (step3GenerateBtn) step3GenerateBtn.disabled = true;
-    if (step3GenerateBtnLabel) step3GenerateBtnLabel.classList.add('hidden');
-    if (step3GenerateSpinner) step3GenerateSpinner.classList.remove('hidden');
 
     try {
       // Assigned inside the call so the options literal stays at the call site
@@ -2681,9 +2383,6 @@ export function initApp(): void {
       generateBtn.disabled = false;
       generateBtnLabel.classList.remove('hidden');
       generateSpinner.classList.add('hidden');
-      if (step3GenerateBtn) step3GenerateBtn.disabled = false;
-      if (step3GenerateBtnLabel) step3GenerateBtnLabel.classList.remove('hidden');
-      if (step3GenerateSpinner) step3GenerateSpinner.classList.add('hidden');
     }
   });
 
@@ -7311,13 +7010,9 @@ export function initApp(): void {
     refreshSaveLabel();
     updateCoverAvailability();
     refreshConfigSummary();
-    updateStitchDock(currentConfigTab);
     updatePaperSelectedBadge();
-    updateFormaBadge();
+    syncSignatureMore();
     updateConfigPreflightWarning();
-    if (currentConfigTab === 'summary') {
-      renderConfigSummarySpec();
-    }
     atelierHub?.refreshTexts();
     libraryScreen?.refreshTexts();
     bookReader?.refreshTexts();
@@ -7913,7 +7608,7 @@ export function initApp(): void {
   });
 
   updatePaperSelectedBadge();
-  updateFormaBadge();
+  syncSignatureMore();
   updateConfigPreflightWarning();
 
   showScreen('hub');

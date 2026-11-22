@@ -9,11 +9,7 @@ vi.hoisted(() => {
 });
 
 import { setLanguage, t } from '../i18n';
-import {
-  formatSummaryFlipEdge,
-  formatSummarySignature,
-  shouldWarnSingleSignature,
-} from './app';
+import { shouldWarnSingleSignature } from './app';
 
 const root = resolve(__dirname, '../..');
 const read = (rel: string): string => readFileSync(resolve(root, rel), 'utf-8');
@@ -68,65 +64,40 @@ describe('booklet config defaults & summary/warning fixes (T-03 / T-04 / T-07)',
     expect(applyBody).toContain("options.signatureSize === undefined ? 'single' : String(options.signatureSize)");
   });
 
-  it('Decision 2: Step 3 summary formats auto as localized Otomatik/Auto without Pages suffix', () => {
-    setLanguage('tr');
-    expect(formatSummarySignature('auto')).toBe('Otomatik');
-    expect(formatSummarySignature('auto')).toBe(t('config.signature.auto'));
-    expect(formatSummarySignature('auto')).not.toContain('Sayfa');
-    expect(formatSummarySignature('single')).toBe('Tek forma');
-    expect(formatSummarySignature('16')).toBe('16 Sayfa');
-
-    setLanguage('en');
-    expect(formatSummarySignature('auto')).toBe('Auto');
-    expect(formatSummarySignature('auto')).toBe(t('config.signature.auto'));
-    expect(formatSummarySignature('auto')).not.toContain('Pages');
-    expect(formatSummarySignature('single')).toBe('Single');
-    expect(formatSummarySignature('16')).toBe('16 Pages');
-
-    const summaryBody = blockAfter(appTs, 'function renderConfigSummarySpec(): void {');
-    expect(summaryBody).toContain('summaryFormaVal.textContent = formatSummarySignature(bookletSignature);');
-  });
-
-  it('Decision 3: #formaBadge avoids stale static 4 Sayfa and updates on startup and config screen entry', () => {
-    const badgeMatch = indexHtml.match(/<span[^>]*id="formaBadge"[^>]*>([^<]*)<\/span>/);
-    expect(badgeMatch).not.toBeNull();
-    expect(badgeMatch![1]).toBe('Otomatik');
-    expect(badgeMatch![1]).not.toContain('4 Sayfa');
-
+  it('Decision 3: the "Other" signature row is synced on startup and on config screen entry', () => {
     const initBody = blockAfter(appTs, 'export function initApp(): void {');
     const showHubIndex = initBody.indexOf("showScreen('hub');");
     expect(showHubIndex).toBeGreaterThan(0);
     const startupTail = initBody.slice(Math.max(0, showHubIndex - 300), showHubIndex);
-    expect(startupTail).toContain('updateFormaBadge();');
+    expect(startupTail).toContain('syncSignatureMore();');
 
     const showScreenBody = blockAfter(appTs, 'function showScreen(id: ScreenId): void {');
     const configBranchAt = showScreenBody.indexOf("else if (id === 'config')");
     expect(configBranchAt).toBeGreaterThanOrEqual(0);
     const configBranch = blockAfter(showScreenBody.slice(configBranchAt), "else if (id === 'config')");
-    expect(configBranch).toContain('updateFormaBadge();');
+    expect(configBranch).toContain('syncSignatureMore();');
     expect(configBranch).toContain('updatePaperSelectedBadge();');
     expect(configBranch).toContain('updateConfigPreflightWarning();');
   });
 
-  it('Decision 4: Step 3 summary uses short flip labels without recommended suffix while keeping button labels', () => {
+  it('Decision 4: binding and flip labels are plain words; the recommendation lives in one badge', () => {
     setLanguage('tr');
-    expect(formatSummaryFlipEdge('short')).toBe('Kısa kenar');
-    expect(formatSummaryFlipEdge('long')).toBe('Uzun kenar');
-    expect(`${t('config.binding.ltr')} · ${formatSummaryFlipEdge('short')}`).toBe('Soldan (LTR) · Kısa kenar');
-    expect(t('config.flipEdge.short')).toBe('Kısa kenar (önerilen)');
+    expect(t('config.flipEdge.short')).toBe('Kısa kenar');
     expect(t('config.flipEdge.long')).toBe('Uzun kenar');
+    expect(t('config.binding.ltr')).toBe('Soldan sağa');
+    expect(t('config.binding.rtl')).toBe('Sağdan sola');
+    expect(t('config.flipEdgeRec')).toContain('Önerilen');
 
     setLanguage('en');
-    expect(formatSummaryFlipEdge('short')).toBe('Short edge');
-    expect(formatSummaryFlipEdge('long')).toBe('Long edge');
-    expect(`${t('config.binding.ltr')} · ${formatSummaryFlipEdge('short')}`).toBe('Left (LTR) · Short edge');
-    expect(t('config.flipEdge.short')).toBe('Short edge (recommended)');
-    expect(t('config.flipEdge.long')).toBe('Long edge');
-
-    const summaryBody = blockAfter(appTs, 'function renderConfigSummarySpec(): void {');
-    expect(summaryBody).toContain('formatSummaryFlipEdge(bookletFlipEdge)');
-    expect(summaryBody).not.toContain('config.flipEdge.short');
-    expect(summaryBody).not.toContain('config.flipEdge.long');
+    expect(t('config.flipEdge.short')).toBe('Short edge');
+    expect(t('config.binding.ltr')).toBe('Left to right');
+    expect(t('config.binding.rtl')).toBe('Right to left');
+    for (const key of ['config.flipEdge.short', 'config.binding.ltr', 'config.binding.rtl']) {
+      setLanguage('tr');
+      expect(t(key)).not.toMatch(/LTR|RTL|önerilen/i);
+      setLanguage('en');
+      expect(t(key)).not.toMatch(/LTR|RTL|recommended/i);
+    }
   });
 
   it('Decision 5a: shouldWarnSingleSignature triggers only for single and >40 pages', () => {
@@ -163,9 +134,9 @@ describe('booklet config defaults & summary/warning fixes (T-03 / T-04 / T-07)',
     expect(t('picker.largeFileWarning')).toContain('>150 pages');
   });
 
-  it('Decision 5c: relocates #configPreflightWarning into Step 1 below signature card with monochrome SVG', () => {
+  it('Decision 5c: relocates #configPreflightWarning into the settings screen below the signature card with monochrome SVG', () => {
     const step1Start = indexHtml.indexOf('id="configStepLayout"');
-    const step2Start = indexHtml.indexOf('id="configStepPrint"');
+    const step2Start = indexHtml.indexOf('id="advancedToggle"');
     const footerStart = indexHtml.indexOf('id="configStickyFooter"');
     expect(step1Start).toBeGreaterThan(0);
     expect(step2Start).toBeGreaterThan(step1Start);
@@ -229,6 +200,5 @@ describe('booklet config defaults & summary/warning fixes (T-03 / T-04 / T-07)',
 
     const langBody = blockAfter(appTs, 'function applyLanguageChange(lang: Lang): void {');
     expect(langBody).toContain('updateConfigPreflightWarning();');
-    expect(langBody).toContain('renderConfigSummarySpec();');
   });
 });
