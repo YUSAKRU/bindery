@@ -260,6 +260,25 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   'md-to-pdf': 'tool.mdToPdf.title',
 };
 
+const SINGLE_SIGNATURE_WARNING_THRESHOLD = 40;
+
+/** Formats the selected signature value for the Step 3 summary row. */
+export function formatSummarySignature(signature: string): string {
+  if (signature === 'single') return t('config.signature.single');
+  if (signature === 'auto') return t('config.signature.auto');
+  return `${signature} ${t('config.signaturePagesSuffix')}`;
+}
+
+/** Formats the duplex flip edge using short summary-only labels. */
+export function formatSummaryFlipEdge(flipEdge: FlipEdge): string {
+  return flipEdge === 'long' ? t('config.summaryFlipLong') : t('config.summaryFlipShort');
+}
+
+/** Returns true when a thick document (>40 original pages) has Single signature selected. */
+export function shouldWarnSingleSignature(signature: string, originalPages: number): boolean {
+  return signature === 'single' && originalPages > SINGLE_SIGNATURE_WARNING_THRESHOLD;
+}
+
 export function initApp(): void {
   initLanguage();
 
@@ -475,6 +494,7 @@ export function initApp(): void {
   const trimBoxNotice = byId<HTMLDivElement>('trimBoxNotice');
   const preflightLargeFileWarning = byId<HTMLDivElement>('preflightLargeFileWarning');
   const configPreflightWarning = byId<HTMLDivElement>('configPreflightWarning');
+  const configPreflightWarningText = byId<HTMLSpanElement>('configPreflightWarningText');
   const settingsShareAppBtn = byId<HTMLButtonElement>('settingsShareAppBtn');
   const settingsRateAppBtn = byId<HTMLButtonElement>('settingsRateAppBtn');
   const growthReviewDialog = byId<HTMLDialogElement>('growthReviewDialog');
@@ -584,8 +604,8 @@ export function initApp(): void {
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
-  // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
-  let bookletSignature = 'single';
+  // Raw segmented value: 'single' | 'auto' | '4' | '8' | '16' | '32'.
+  let bookletSignature = 'auto';
   let bookletBinding: Binding = 'ltr';
   let bookletSeparateCover = false;
   let bookletIncludeInstructions = false;
@@ -1171,6 +1191,10 @@ export function initApp(): void {
       void renderFilesList();
     } else if (id === 'error-log') {
       void renderErrorLog();
+    } else if (id === 'config') {
+      updatePaperSelectedBadge();
+      updateFormaBadge();
+      updateConfigPreflightWarning();
     }
     updateReaderNightChrome();
   }
@@ -1206,6 +1230,16 @@ export function initApp(): void {
     }
   }
 
+  function updateConfigPreflightWarning(): void {
+    const shouldShow = shouldWarnSingleSignature(bookletSignature, bookletOriginalPages);
+    if (shouldShow) {
+      configPreflightWarningText.textContent = t('config.preflightWarning', {
+        pages: bookletOriginalPages,
+      });
+    }
+    configPreflightWarning.classList.toggle('hidden', !shouldShow);
+  }
+
   function resetPicker(): void {
     stopPickerIntake();
     selectedFile = null;
@@ -1219,13 +1253,12 @@ export function initApp(): void {
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
-    configPreflightWarning.classList.add('hidden');
     bookletFlipEdge = 'short';
     setActiveSegment(flipEdgeGroup, 'flip', 'short');
     bookletPaperSize = 'A4';
     setActiveSegment(paperSizeGroup, 'paper', 'A4');
-    bookletSignature = 'single';
-    setActiveSegment(signatureSizeGroup, 'sig', 'single');
+    bookletSignature = 'auto';
+    setActiveSegment(signatureSizeGroup, 'sig', 'auto');
     bookletBinding = 'ltr';
     setActiveSegment(bindingGroup, 'binding', 'ltr');
     bookletSeparateCover = false;
@@ -1242,6 +1275,7 @@ export function initApp(): void {
     updateCoverAvailability();
     updatePaperSelectedBadge();
     updateFormaBadge();
+    updateConfigPreflightWarning();
     refreshConfigSummary();
     setAdvancedOpen(false);
     switchConfigTab('layout');
@@ -1283,6 +1317,7 @@ export function initApp(): void {
     updateCoverAvailability();
     updatePaperSelectedBadge();
     updateFormaBadge();
+    updateConfigPreflightWarning();
     refreshConfigSummary();
     setAdvancedOpen(false);
     switchConfigTab('layout');
@@ -1356,13 +1391,10 @@ export function initApp(): void {
 
     summaryPaperVal.textContent = paperSummaryLabel(bookletPaperSize);
 
-    const sigText = bookletSignature === 'single'
-      ? t('config.signature.single')
-      : `${bookletSignature} ${t('config.signaturePagesSuffix')}`;
-    summaryFormaVal.textContent = sigText;
+    summaryFormaVal.textContent = formatSummarySignature(bookletSignature);
 
     const bindingLabel = bookletBinding === 'rtl' ? t('config.binding.rtl') : t('config.binding.ltr');
-    const flipLabel = bookletFlipEdge === 'long' ? t('config.flipEdge.long') : t('config.flipEdge.short');
+    const flipLabel = formatSummaryFlipEdge(bookletFlipEdge);
     summaryBindingVal.textContent = `${bindingLabel} · ${flipLabel}`;
 
     const isModified = isAdvancedModified();
@@ -1883,7 +1915,7 @@ export function initApp(): void {
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
-    configPreflightWarning.classList.add('hidden');
+    updateConfigPreflightWarning();
 
     try {
       await showMixedSizeWarningIfNeeded(bytes);
@@ -1921,7 +1953,7 @@ export function initApp(): void {
       bookletOriginalPages = pageCount;
       const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
       preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
-      configPreflightWarning.classList.toggle('hidden', !isLarge);
+      updateConfigPreflightWarning();
       // Null when the document's own page size is outside the engine's
       // printable bounds; falls back to A4 for sheet size queries.
       bookletSourceSheetSize = sourceSheetSize;
@@ -2048,6 +2080,7 @@ export function initApp(): void {
     bookletSignature = sig;
     setActiveSegment(signatureSizeGroup, 'sig', sig);
     updateFormaBadge();
+    updateConfigPreflightWarning();
     refreshConfigSummary();
   });
 
@@ -7213,6 +7246,10 @@ export function initApp(): void {
     updateStitchDock(currentConfigTab);
     updatePaperSelectedBadge();
     updateFormaBadge();
+    updateConfigPreflightWarning();
+    if (currentConfigTab === 'summary') {
+      renderConfigSummarySpec();
+    }
     atelierHub?.refreshTexts();
     libraryScreen?.refreshTexts();
     bookReader?.refreshTexts();
@@ -7806,6 +7843,10 @@ export function initApp(): void {
       }
     },
   });
+
+  updatePaperSelectedBadge();
+  updateFormaBadge();
+  updateConfigPreflightWarning();
 
   showScreen('hub');
 
