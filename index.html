@@ -2088,19 +2088,38 @@
         <h3 class="modal-title" id="pdfSourceModalTitle" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
         <div class="modal-body">
           <div class="modal-radio-group">
-            <button type="button" class="modal-source-btn modal-source-btn--primary" id="pdfSourceDeviceBtn">
-              <span class="file-item-icon">📱</span>
+            <button type="button" class="modal-source-btn" id="pdfSourceDeviceBtn">
+              <span class="file-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+                  <path d="M12 18h.01"></path>
+                </svg>
+              </span>
               <div class="modal-radio-content">
                 <span class="modal-radio-title" data-i18n="modal.pdfSource.device">Device Files</span>
                 <span class="modal-radio-desc" data-i18n="modal.pdfSource.deviceDesc">Choose a PDF file from your device storage.</span>
               </div>
+              <span class="modal-source-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
             </button>
             <button type="button" class="modal-source-btn" id="pdfSourceBinderyBtn">
-              <span class="file-item-icon">📂</span>
+              <span class="file-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+                </svg>
+              </span>
               <div class="modal-radio-content">
                 <span class="modal-radio-title" data-i18n="modal.pdfSource.bindery">Bindery Documents</span>
                 <span class="modal-radio-desc" data-i18n="modal.pdfSource.binderyDesc">PDFs saved inside Bindery — sample file and results from other tools.</span>
               </div>
+              <span class="modal-source-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
             </button>
           </div>
         </div>
