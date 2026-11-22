@@ -1134,6 +1134,24 @@ describe('signatureStartPages', () => {
     expect(signatureStartPages(44, 16)).toEqual([1, 17, 33]);
     expect(signatureStartPages(32, 8)).toEqual([1, 9, 17, 25]);
   });
+
+  it('follows balanced signature sizes when multiple shorter signatures exist', () => {
+    const firstPagesFromMappings = (N: number, size?: number | 'auto') =>
+      computeSignatureMappings(N, size).map(
+        (sig) =>
+          Math.min(...sig.flatMap((s) => [s.frontLeft, s.frontRight, s.backLeft, s.backRight])) + 1,
+      );
+
+    // 56 pages, 'auto' -> 14 sheets balanced as [4, 4, 3, 3] (16, 16, 12, 12 pages).
+    const expected56 = [1, 17, 33, 45];
+    expect(firstPagesFromMappings(56, 'auto')).toEqual(expected56);
+    expect(signatureStartPages(56, 'auto')).toEqual(expected56);
+
+    // 120 pages, 'auto' -> 30 sheets balanced as [4, 4, 4, 4, 4, 4, 3, 3] (6x16 + 2x12 pages).
+    const expected120 = [1, 17, 33, 49, 65, 81, 97, 109];
+    expect(firstPagesFromMappings(120, 'auto')).toEqual(expected120);
+    expect(signatureStartPages(120, 'auto')).toEqual(expected120);
+  });
 });
 
 describe('makeBooklet includeInstructions', () => {

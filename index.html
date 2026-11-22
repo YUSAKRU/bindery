@@ -1118,11 +1118,11 @@
                       <p class="setting-hint stitch-card-desc" data-i18n="config.signatureSub">Her forma bloğundaki sayfa sayısı</p>
                     </div>
                   </div>
-                  <span class="stitch-badge-pill" id="formaBadge">4 Sayfa</span>
+                  <span class="stitch-badge-pill" id="formaBadge">Otomatik</span>
                 </div>
                 <div class="segmented-group stitch-segmented stitch-grid-3" id="signatureSizeGroup">
-                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-sig="single" data-i18n="config.signature.single">Tek forma</button>
-                  <button type="button" class="segmented-btn stitch-pill-btn" data-sig="auto" data-i18n="config.signature.auto">Otomatik</button>
+                  <button type="button" class="segmented-btn stitch-pill-btn" data-sig="single" data-i18n="config.signature.single">Tek forma</button>
+                  <button type="button" class="segmented-btn stitch-pill-btn is-active" data-sig="auto" data-i18n="config.signature.auto">Otomatik</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="4">4</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="8">8</button>
                   <button type="button" class="segmented-btn stitch-pill-btn" data-sig="16">16</button>
@@ -1134,6 +1134,16 @@
                   </svg>
                   <p class="stitch-callout-text" id="signatureHintText" data-i18n="config.signatureHint">Toplam <strong>2 forma</strong> üretilir. Forma başına 1 yaprak (4 sayfa) birlikte katlanacaktır.</p>
                 </div>
+              </div>
+
+              <!-- Large-document single-signature warning -->
+              <div class="warning-banner config-signature-warning hidden" id="configPreflightWarning" role="status">
+                <svg class="warning-banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span id="configPreflightWarningText"></span>
               </div>
 
               <!-- 2-in-1: Cilt Yönü & Çevirme Kenarı Card -->
@@ -1440,12 +1450,6 @@
               <span id="stitchNextHintText" data-i18n="config.stitchNextHint1">Baskı için kaydırın</span>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
-
-            <!-- Warning Banner -->
-            <div class="warning-banner hidden" id="configPreflightWarning" role="status">
-              <span class="warning-banner-icon" aria-hidden="true">⚠️</span>
-              <span id="configPreflightWarningText" data-i18n="config.preflightWarning">Large document detected (&gt;150 pages or &gt;50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.</span>
-            </div>
 
             <!-- Primary Generation Button -->
             <button class="btn btn-primary btn-large stitch-btn-primary hidden" id="generateBtn">
@@ -2088,19 +2092,38 @@
         <h3 class="modal-title" id="pdfSourceModalTitle" data-i18n="modal.pdfSource.title">Select PDF Source</h3>
         <div class="modal-body">
           <div class="modal-radio-group">
-            <button type="button" class="modal-source-btn modal-source-btn--primary" id="pdfSourceDeviceBtn">
-              <span class="file-item-icon">📱</span>
+            <button type="button" class="modal-source-btn" id="pdfSourceDeviceBtn">
+              <span class="file-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+                  <path d="M12 18h.01"></path>
+                </svg>
+              </span>
               <div class="modal-radio-content">
                 <span class="modal-radio-title" data-i18n="modal.pdfSource.device">Device Files</span>
                 <span class="modal-radio-desc" data-i18n="modal.pdfSource.deviceDesc">Choose a PDF file from your device storage.</span>
               </div>
+              <span class="modal-source-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
             </button>
             <button type="button" class="modal-source-btn" id="pdfSourceBinderyBtn">
-              <span class="file-item-icon">📂</span>
+              <span class="file-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+                </svg>
+              </span>
               <div class="modal-radio-content">
                 <span class="modal-radio-title" data-i18n="modal.pdfSource.bindery">Bindery Documents</span>
                 <span class="modal-radio-desc" data-i18n="modal.pdfSource.binderyDesc">PDFs saved inside Bindery — sample file and results from other tools.</span>
               </div>
+              <span class="modal-source-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </span>
             </button>
           </div>
         </div>

@@ -3573,6 +3573,7 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-picker,
 #screen-config,
 #screen-result,
+#pdfSourceModal,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3613,6 +3614,7 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-picker,
   :root:not(.light-theme) #screen-config,
   :root:not(.light-theme) #screen-result,
+  :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3648,6 +3650,7 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-picker,
 :root.dark-theme #screen-config,
 :root.dark-theme #screen-result,
+:root.dark-theme #pdfSourceModal,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -6922,6 +6925,7 @@ button.book-page-label:active {
   align-items: center;
   flex: 1;
   min-height: 100%;
+  min-width: 0;
   padding: 20px 16px 28px;
   max-width: 480px;
   margin: 0 auto;
@@ -6938,9 +6942,10 @@ button.book-page-label:active {
 /* 14a. Card Stage & Content-Aware Fluid Slot Sizing */
 #screen-picker .picker-stage {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   position: relative;
 }
@@ -6953,10 +6958,11 @@ button.book-page-label:active {
 
 #screen-picker .picker-slot {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 0fr;
   opacity: 0;
   width: 100%;
+  min-width: 0;
   pointer-events: none;
   transition:
     grid-template-rows var(--motion-slot) var(--ease-out-spring),
@@ -6965,6 +6971,7 @@ button.book-page-label:active {
 
 #screen-picker .picker-slot-clip {
   min-height: 0;
+  min-width: 0;
   overflow: clip;
   margin: -16px -16px -24px;
   padding: 16px 16px 24px;
@@ -6977,6 +6984,8 @@ button.book-page-label:active {
 #screen-picker .atelier-craft-card,
 #screen-picker .file-card {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -7149,10 +7158,10 @@ button.book-page-label:active {
   background: var(--atelier-surface-cream);
   border: 1px solid var(--atelier-paper-edge);
   border-radius: var(--radius-xl);
-  padding: 20px 20px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   box-shadow:
     0 8px 24px rgba(28, 26, 24, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
@@ -7166,9 +7175,9 @@ button.book-page-label:active {
 }
 
 #screen-picker .file-card-icon {
-  width: 44px;
-  height: 48px;
-  border-radius: 11px;
+  width: 42px;
+  height: 46px;
+  border-radius: 10px;
   background: #faf4eb;
   border: 1px solid var(--atelier-paper-edge);
   display: flex;
@@ -7199,20 +7208,25 @@ button.book-page-label:active {
 }
 
 #screen-picker .file-card-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-weight: 600;
-  font-size: 0.98rem;
+  font-size: 0.94rem;
+  line-height: 1.3;
   color: var(--atelier-ink-black);
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   margin-bottom: 3px;
   letter-spacing: -0.01em;
 }
 
 #screen-picker .file-card-size {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--atelier-ink-muted);
   font-family: 'Space Mono', monospace;
   white-space: nowrap;
@@ -7221,8 +7235,10 @@ button.book-page-label:active {
 }
 
 #screen-picker .btn-clear-file {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   border: 1px solid var(--atelier-border-hairline);
   background: var(--atelier-bg);
@@ -7252,6 +7268,36 @@ button.book-page-label:active {
 
 #screen-picker .btn-clear-file:active {
   transform: scale(0.95);
+}
+
+@media (max-width: 380px) {
+  #screen-picker .file-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  #screen-picker .file-card-icon {
+    width: 36px;
+    height: 40px;
+    border-radius: 9px;
+  }
+
+  #screen-picker .file-card-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  #screen-picker .pdf-pill {
+    font-size: 7.5px;
+  }
+
+  #screen-picker .file-card-name {
+    font-size: 0.86rem;
+  }
+
+  #screen-picker .file-card-size {
+    font-size: 0.72rem;
+  }
 }
 
 /* ── Explicit Data-State Machine Slot Orchestration ───────────────────────── */
@@ -8445,7 +8491,7 @@ button.book-page-label:active {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-bottom: 1px solid var(--stitch-card-border);
 }
 
 .colophon-title-wrap {
@@ -8455,7 +8501,7 @@ button.book-page-label:active {
 }
 
 .colophon-craft-icon {
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   flex-shrink: 0;
 }
 
@@ -8463,7 +8509,7 @@ button.book-page-label:active {
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--atelier-ink-black, #1C1A18);
+  color: var(--stitch-text-title);
   letter-spacing: -0.01em;
 }
 
@@ -8471,52 +8517,98 @@ button.book-page-label:active {
   padding: 3px 10px;
   border-radius: var(--stitch-radius-pill);
   background: var(--stitch-primary-tint-50, #FAF0EC);
-  color: var(--stitch-primary, #9a401d);
+  color: var(--stitch-text-brand);
   font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid rgba(154, 64, 29, 0.2);
 }
 
+:root:not(.light-theme) .colophon-badge,
+.dark-theme .colophon-badge {
+  background: rgba(154, 64, 29, 0.2);
+  border-color: rgba(224, 142, 98, 0.3);
+  color: var(--stitch-text-brand);
+}
+
 .colophon-spec-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .colophon-spec-row {
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 0.75rem;
+  row-gap: 0.15em;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .colophon-spec-label {
-  display: flex;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.80rem;
-  color: var(--atelier-ink-muted, #78716c);
+  gap: 0.375rem;
+  font-size: 0.96em;
+  color: var(--stitch-text-muted);
   font-weight: 500;
-  white-space: nowrap;
+  /* Match .stitch-card background in both light and dark themes to mask the leader cleanly */
+  background: var(--stitch-card-bg);
+  padding-right: 0.375rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .colophon-spec-label svg {
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   opacity: 0.85;
   flex-shrink: 0;
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.colophon-spec-label span {
+  min-width: 0;
 }
 
 .colophon-spec-dots {
-  flex: 1 1 0%;
-  border-bottom: 1px dashed var(--atelier-paper-edge, #D8CDB4);
-  margin-bottom: 3px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  /*
+   * Safe because row line-height is fixed at 1.45:
+   * - Single-line row height H = 1.45em -> 2*H - 1.82em = 1.08em (sits near baseline, well inside [0, 1.45em]).
+   * - Any wrapped row has H >= 2.90em (> 1.82em), so 2*H - 1.82em > H and overflow:hidden clips it cleanly.
+   */
+  top: calc(200% - 1.82em);
+  border-bottom: 1px dashed var(--stitch-card-border-hover);
   opacity: 0.65;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .colophon-spec-val {
-  font-size: 0.88rem;
+  position: relative;
+  z-index: 1;
+  font-size: 1em;
   font-weight: 600;
-  color: var(--atelier-ink-black, #1C1A18);
-  white-space: nowrap;
+  color: var(--stitch-text-title);
+  background: var(--stitch-card-bg);
+  padding-left: 0.375rem;
+  margin-left: auto;
+  text-align: right;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .colophon-yield-banner {
@@ -8527,8 +8619,14 @@ button.book-page-label:active {
   border-radius: 10px;
   background: rgba(154, 64, 29, 0.08);
   border: 1px solid rgba(154, 64, 29, 0.16);
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   margin-top: 4px;
+}
+
+:root:not(.light-theme) .colophon-yield-banner,
+.dark-theme .colophon-yield-banner {
+  background: rgba(154, 64, 29, 0.18);
+  border-color: rgba(224, 142, 98, 0.25);
 }
 
 .colophon-yield-banner svg {
@@ -8656,6 +8754,36 @@ button.book-page-label:active {
   font-size: 11px;
   line-height: 1.45;
   color: var(--stitch-text-body);
+}
+
+#screen-config .config-signature-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--stitch-radius-segmented);
+  background: #FAF0EC;
+  border: 1px solid #ECC9BD;
+  color: #8C3717;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  gap: 9px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#screen-config .config-signature-warning .warning-banner-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: currentColor;
+}
+
+:root:not(.light-theme) #screen-config .config-signature-warning,
+.dark-theme #screen-config .config-signature-warning {
+  background: rgba(154, 64, 29, 0.16);
+  border-color: rgba(224, 142, 98, 0.35);
+  color: #f2b797;
 }
 
 /* Segmented Pill Controls */
@@ -8985,13 +9113,6 @@ button.book-page-label:active {
   height: 14px;
 }
 
-#configStickyFooter .warning-banner {
-  margin: 0;
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  width: 100%;
-}
-
 /* Primary Sticky CTA */
 .stitch-btn-primary,
 #configStickyFooter #generateBtn {
@@ -9040,7 +9161,339 @@ button.book-page-label:active {
     height: 15px;
     font-size: 0.65rem;
   }
+
+  .colophon-spec-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  .colophon-spec-label {
+    padding-right: 0;
+    background: transparent;
+  }
+
+  .colophon-spec-dots {
+    display: none;
+  }
+
+  .colophon-spec-val {
+    padding-left: 0;
+    margin-left: 0;
+    text-align: left;
+    background: transparent;
+  }
 }
+
+/* Atelier PDF Source Modal (#pdfSourceModal) */
+#pdfSourceModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+#pdfSourceModal .modal-card {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  max-width: 380px;
+  width: 100%;
+  min-width: 0;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 22px 20px 14px;
+  gap: 14px;
+}
+
+#pdfSourceModal .modal-title {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: clamp(1.38rem, 4.8vw, 1.58rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0;
+}
+
+#pdfSourceModal .modal-body {
+  gap: 0;
+  min-width: 0;
+}
+
+#pdfSourceModal .modal-radio-group {
+  gap: 10px;
+  min-width: 0;
+}
+
+#pdfSourceModal .modal-source-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
+}
+
+#pdfSourceModal .modal-source-btn:focus:not(:focus-visible),
+#pdfSourceModal .btn-text:focus:not(:focus-visible) {
+  outline: none;
+}
+
+#pdfSourceModal .modal-source-btn:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+  border-color: var(--atelier-primary);
+}
+
+@media (hover: hover) {
+  #pdfSourceModal .modal-source-btn:hover {
+    border-color: var(--atelier-primary);
+    background: var(--atelier-card2-bg);
+    box-shadow: 0 4px 14px rgba(154, 64, 29, 0.1);
+  }
+}
+
+#pdfSourceModal .modal-source-btn:active {
+  border-color: var(--atelier-primary);
+  background: color-mix(in srgb, var(--atelier-primary) 10%, var(--atelier-surface-cream));
+  transform: scale(0.985);
+}
+
+#pdfSourceModal .file-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+#pdfSourceModal .file-item-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+@media (hover: hover) {
+  #pdfSourceModal .modal-source-btn:hover .file-item-icon {
+    border-color: var(--atelier-primary);
+  }
+}
+
+#pdfSourceModal .modal-source-btn:active .file-item-icon,
+#pdfSourceModal .modal-source-btn:focus-visible .file-item-icon {
+  border-color: var(--atelier-primary);
+}
+
+#pdfSourceModal .modal-radio-content {
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+}
+
+#pdfSourceModal .modal-radio-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--atelier-ink-black);
+}
+
+#pdfSourceModal .modal-radio-desc {
+  font-size: 0.8rem;
+  line-height: 1.42;
+  color: var(--atelier-ink-muted);
+  overflow-wrap: break-word;
+}
+
+#pdfSourceModal .modal-source-chevron {
+  align-self: center;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--atelier-ink-muted);
+  opacity: 0.7;
+  transition:
+    color 0.16s ease,
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+@media (hover: hover) {
+  #pdfSourceModal .modal-source-btn:hover .modal-source-chevron {
+    color: var(--atelier-primary);
+    opacity: 1;
+    transform: translateX(2px);
+  }
+}
+
+#pdfSourceModal .modal-source-btn:active .modal-source-chevron,
+#pdfSourceModal .modal-source-btn:focus-visible .modal-source-chevron {
+  color: var(--atelier-primary);
+  opacity: 1;
+}
+
+#pdfSourceModal .modal-actions {
+  margin-top: 0;
+  padding-top: 2px;
+  gap: 8px;
+}
+
+#pdfSourceModal .btn-text {
+  color: var(--atelier-primary);
+  padding: 10px 14px;
+  min-height: 44px;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 10px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+@media (hover: hover) {
+  #pdfSourceModal .btn-text:hover {
+    background: color-mix(in srgb, var(--atelier-primary) 8%, transparent);
+    color: var(--atelier-terracotta-deep);
+  }
+}
+
+#pdfSourceModal .btn-text:active {
+  background: color-mix(in srgb, var(--atelier-primary) 14%, transparent);
+  color: var(--atelier-terracotta-deep);
+}
+
+#pdfSourceModal .btn-text:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #pdfSourceModal .modal-card {
+    box-shadow:
+      0 22px 52px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 248, 240, 0.06);
+  }
+
+  :root:not(.light-theme) #pdfSourceModal .file-item-icon,
+  :root:not(.light-theme) #pdfSourceModal .btn-text {
+    color: var(--atelier-gold-foil);
+  }
+
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:focus-visible,
+  :root:not(.light-theme) #pdfSourceModal .btn-text:focus-visible {
+    outline-color: var(--atelier-gold-foil);
+    border-color: var(--atelier-gold-foil);
+  }
+
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:active {
+    border-color: var(--atelier-gold-foil);
+    background: color-mix(in srgb, var(--atelier-gold-foil) 12%, var(--atelier-surface-cream));
+  }
+
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:active .file-item-icon,
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:focus-visible .file-item-icon,
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:active .modal-source-chevron,
+  :root:not(.light-theme) #pdfSourceModal .modal-source-btn:focus-visible .modal-source-chevron {
+    color: var(--atelier-gold-foil);
+    border-color: var(--atelier-gold-foil);
+  }
+}
+
+:root.dark-theme #pdfSourceModal .modal-card {
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 248, 240, 0.06);
+}
+
+:root.dark-theme #pdfSourceModal .file-item-icon,
+:root.dark-theme #pdfSourceModal .btn-text {
+  color: var(--atelier-gold-foil);
+}
+
+:root.dark-theme #pdfSourceModal .modal-source-btn:focus-visible,
+:root.dark-theme #pdfSourceModal .btn-text:focus-visible {
+  outline-color: var(--atelier-gold-foil);
+  border-color: var(--atelier-gold-foil);
+}
+
+:root.dark-theme #pdfSourceModal .modal-source-btn:active {
+  border-color: var(--atelier-gold-foil);
+  background: color-mix(in srgb, var(--atelier-gold-foil) 12%, var(--atelier-surface-cream));
+}
+
+:root.dark-theme #pdfSourceModal .modal-source-btn:active .file-item-icon,
+:root.dark-theme #pdfSourceModal .modal-source-btn:focus-visible .file-item-icon,
+:root.dark-theme #pdfSourceModal .modal-source-btn:active .modal-source-chevron,
+:root.dark-theme #pdfSourceModal .modal-source-btn:focus-visible .modal-source-chevron {
+  color: var(--atelier-gold-foil);
+  border-color: var(--atelier-gold-foil);
+}
+
+@media (max-width: 380px) {
+  #pdfSourceModal .modal-card {
+    padding: 20px 16px 12px;
+  }
+
+  #pdfSourceModal .modal-source-btn {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  #pdfSourceModal .file-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  #pdfSourceModal .file-item-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pdfSourceModal .modal-card,
+  #pdfSourceModal .modal-source-btn,
+  #pdfSourceModal .file-item-icon,
+  #pdfSourceModal .modal-source-chevron,
+  #pdfSourceModal .btn-text {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+/* End Atelier PDF Source Modal */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

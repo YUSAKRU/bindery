@@ -349,6 +349,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.summaryPaper': 'Paper Size',
     'config.summaryForma': 'Signature Structure',
     'config.summaryBinding': 'Binding & Turn',
+    'config.summaryFlipShort': 'Short edge',
+    'config.summaryFlipLong': 'Long edge',
     'config.summaryPrint': 'Print Mode',
     'config.summaryStandard': 'Recommended (Standard)',
     'config.summaryCustom': 'Custom Configuration',
@@ -375,7 +377,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'picker.largeFileWarning':
       'Large document detected (>150 pages or >50 MB). Processing may take longer and use more memory.',
     'config.preflightWarning':
-      'Large document detected (>150 pages or >50 MB). Splitting into signatures (e.g. 16 or 32 pages) is strongly recommended for easier folding and binding.',
+      'This document has {pages} pages. A single signature makes a thick block that is hard to fold; Auto or a 16/32-page signature is recommended.',
     'growth.shareTitle': 'Bindery — Offline Booklet & PDF Tools',
     'growth.shareText':
       'Check out Bindery — 100% private, on-device booklet imposition and PDF tools:\nWeb / iOS: {webUrl}\nAndroid (Google Play): {url}',
@@ -1127,6 +1129,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'config.summaryPaper': 'Kağıt Boyutu',
     'config.summaryForma': 'Forma Yapısı',
     'config.summaryBinding': 'Cilt & Çevirme',
+    'config.summaryFlipShort': 'Kısa kenar',
+    'config.summaryFlipLong': 'Uzun kenar',
     'config.summaryPrint': 'Baskı Modu',
     'config.summaryStandard': 'Önerilen (Standart)',
     'config.summaryCustom': 'Özel Yapılandırma',
@@ -1153,7 +1157,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'picker.largeFileWarning':
       'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). İşlem daha uzun sürebilir ve daha fazla bellek kullanabilir.',
     'config.preflightWarning':
-      'Büyük belge tespit edildi (150+ sayfa veya 50 MB üzeri). Rahat katlama ve ciltleme için formalara bölmeniz (örn. 16 veya 32 sayfa) şiddetle önerilir.',
+      'Bu belge {pages} sayfa. Tek forma, katlanması zor kalın bir blok olur; Otomatik veya 16/32 sayfalık forma önerilir.',
     'growth.shareTitle': 'Bindery — Çevrimdışı Kitapçık ve PDF Araçları',
     'growth.shareText':
       "Bindery'ye göz atın — %100 gizli, cihaz üzerinde çalışan kitapçık basımı ve PDF araçları:\nWeb / iOS: {webUrl}\nAndroid (Google Play): {url}",
@@ -1374,7 +1378,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'toast.fileSelectError': 'Dosya seçilemedi: {message}',
     'modal.pdfSource.title': 'Belge Kaynağı Seçin',
     'modal.pdfSource.bindery': 'Bindery Belgeleri',
-    'modal.pdfSource.binderyDesc': 'Bindery içine kaydedilen PDFler — örnek dosya ve diğer araçların sonuçları.',
+    'modal.pdfSource.binderyDesc': "Bindery içine kaydedilen PDF'ler — örnek dosya ve diğer araçların sonuçları.",
     'modal.pdfSource.device': 'Cihaz Dosyaları',
     'modal.pdfSource.deviceDesc': 'Cihazınızın hafızasından bir PDF seçin.',
     'modal.binderyPicker.title': 'PDF Seç',
