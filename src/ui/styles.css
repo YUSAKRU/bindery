@@ -7564,8 +7564,9 @@ button.book-page-label:active {
 
 /* ==========================================================================
    15. Atelier Screen Result ("Kitapçık Hazır" / "Booklet Ready")
-   Tactile workshop craft finish, stat cards, and print/share action rows.
-   Scoped to #screen-result and its parent container.
+   One calm, scroll-free screen: file name, a small fanned stack of the first
+   sheet, a one-line summary, the printer choice and only the outputs that
+   printer needs. Scoped to #screen-result and its parent container.
    ========================================================================== */
 
 .app:has(#screen-result:not(.hidden)) .top-bar {
@@ -7598,270 +7599,463 @@ button.book-page-label:active {
   flex-shrink: 0;
 }
 
+/* Clear the absolute top bar; keep the bottom tight so everything fits. */
+.app:has(#screen-result:not(.hidden)) .screen-container {
+  padding-top: calc(max(env(safe-area-inset-top), 20px) + 60px);
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+}
+
 #screen-result {
+  --result-accent-text: var(--atelier-primary, #9a401d);
+  --result-fill: var(--atelier-primary, #9a401d);
+  --result-fill-deep: var(--atelier-terracotta-deep, #8a3819);
+  --result-card: #ffffff;
+  width: 100%;
   max-width: 480px;
+  min-height: 100%;
   margin: 0 auto;
-  padding: 8px 16px 24px 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   box-sizing: border-box;
 }
 
-#screen-result .result-banner {
-  text-align: center;
-  padding: 16px 8px 4px;
+:root:not(.light-theme) #screen-result,
+.dark-theme #screen-result {
+  --result-accent-text: #e08e62;
+  --result-fill: #c4683c;
+  --result-fill-deep: #a35028;
+  --result-card: #221e1a;
 }
 
-#screen-result .result-icon {
-  display: none !important;
+/* --- File name: quiet inline field ------------------------------------- */
+#screen-result .result-filename {
+  position: relative;
+  display: block;
+  cursor: text;
 }
 
-:root:not(.light-theme) #screen-result .result-icon,
-.dark-theme #screen-result .result-icon {
-  background: rgba(45, 85, 64, 0.25);
-  border-color: #2D5540;
-  color: #4ade80;
-}
-
-#screen-result .result-banner h2 {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.8rem;
-  font-weight: 600;
+#screen-result .result-filename-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 30px;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--atelier-ink-black);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-#screen-result .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-#screen-result .stat-card {
-  background: var(--atelier-surface-cream, #FAF5EE);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 1px 4px rgba(28, 26, 24, 0.04);
-}
-
-:root:not(.light-theme) #screen-result .stat-card,
-.dark-theme #screen-result .stat-card {
-  background: #221e1a;
-  border-color: #38312a;
-}
-
-#screen-result .stat-value {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--atelier-primary, #9a401d);
-  line-height: 1;
-}
-
-:root:not(.light-theme) #screen-result .stat-value,
-.dark-theme #screen-result .stat-value {
-  color: #e08e62;
-}
-
-#screen-result .stat-label {
-  font-size: 0.8rem;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: var(--atelier-ink-muted, #5C5650);
-}
-
-#screen-result .booklet-preview-strip {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 4px 0;
-  -webkit-overflow-scrolling: touch;
-}
-
-#screen-result .booklet-preview-cell {
-  background: var(--atelier-surface-cream, #FAF5EE);
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-:root:not(.light-theme) #screen-result .booklet-preview-cell,
-.dark-theme #screen-result .booklet-preview-cell {
-  background: #221e1a;
-  border-color: #38312a;
-}
-
-#screen-result .booklet-preview-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--atelier-ink-muted, #5C5650);
-}
-
-#screen-result .booklet-filename-field .modal-label {
-  color: var(--atelier-ink-black, #1C1A18);
-  font-weight: 600;
-  font-size: 0.88rem;
-  margin-bottom: 4px;
-}
-
-#screen-result .booklet-filename-field .modal-input {
-  background: #ffffff;
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  color: var(--atelier-ink-black, #1C1A18);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-size: 0.92rem;
+  text-align: center;
+  text-overflow: ellipsis;
   transition: border-color 0.15s ease;
 }
 
-#screen-result .booklet-filename-field .modal-input:focus {
-  border-color: var(--atelier-primary, #9a401d);
+#screen-result .result-filename:hover .result-filename-input {
+  border-bottom-color: var(--atelier-paper-edge);
+}
+
+#screen-result .result-filename-input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(154, 64, 29, 0.15);
+  border-bottom-color: var(--result-accent-text);
 }
 
-:root:not(.light-theme) #screen-result .booklet-filename-field .modal-input,
-.dark-theme #screen-result .booklet-filename-field .modal-input {
-  background: #221e1a;
-  border-color: #38312a;
-  color: #f5efe6;
+#screen-result .result-filename-icon {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--atelier-tertiary);
+  pointer-events: none;
 }
 
-#screen-result .modal-hint {
-  background: #FAF0EC;
-  border: 1px solid #ECC9BD;
-  color: #8C3717;
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  font-size: 0.84rem;
-  line-height: 1.45;
+/* --- Hero: fanned stack of the first sheet ----------------------------- */
+/* The hero takes whatever height is left; the sheet stack sizes itself from
+   that space (container query units) so it can never overlap its
+   neighbours. If even the minimum does not fit, the screen scrolls instead. */
+#screen-result .result-hero {
+  flex: 1 1 0;
+  min-height: 132px;
+  container-type: size;
+  --result-sheet-h: max(
+    64px,
+    min(250px, calc(100cqh - 2.4rem - 28px), calc((100cqw - 48px) / 1.414))
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+#screen-result .result-stack {
+  position: relative;
+  width: min(100%, calc(var(--result-sheet-h) * 1.414 + 48px));
+  height: calc(var(--result-sheet-h) + 28px);
+  flex-shrink: 0;
+}
+
+#screen-result .result-sheet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--result-sheet-h) * 1.414);
+  min-height: 0;
+  height: var(--result-sheet-h);
+  padding: 0;
+  gap: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #fffdf9;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 6px;
+  box-shadow:
+    0 1px 2px rgba(28, 26, 24, 0.06),
+    0 10px 28px rgba(28, 26, 24, 0.10);
+}
+
+#screen-result .result-sheet--front {
+  transform: translate(-50%, -50%) rotate(1.2deg);
+  z-index: 3;
+}
+
+#screen-result .result-sheet--back {
+  transform: translate(calc(-50% - 12px), calc(-50% - 8px)) rotate(-4deg);
+  z-index: 2;
+}
+
+#screen-result .result-sheet--cover {
+  transform: translate(calc(-50% + 14px), calc(-50% - 12px)) rotate(5deg);
+  z-index: 1;
+}
+
+#screen-result .result-sheet .booklet-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
+  display: block;
+}
+
+#screen-result .result-sheet .booklet-preview-spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+  border-color: var(--atelier-paper-edge);
+  border-top-color: var(--atelier-primary, #9a401d);
+}
+
+#screen-result .result-sheet .booklet-preview-error {
+  padding: 0 12px;
+  color: #5C5650;
+}
+
+/* Labels stay for screen readers only. */
+#screen-result .result-sheet .booklet-preview-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#screen-result .result-summary {
   margin: 0;
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  color: var(--atelier-ink-muted);
+  text-align: center;
 }
 
-:root:not(.light-theme) #screen-result .modal-hint,
-.dark-theme #screen-result .modal-hint {
-  background: rgba(154, 64, 29, 0.2);
-  border-color: rgba(154, 64, 29, 0.4);
-  color: #f5cbba;
+/* --- Printer choice ------------------------------------------------------ */
+#screen-result .result-printer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-#screen-result .action-list {
+#screen-result .result-printer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#screen-result .result-printer-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#screen-result .result-printer-toggle {
+  display: inline-flex;
+  min-width: 0;
+  margin: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-border-hairline);
+}
+
+#screen-result .result-printer-opt {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--atelier-ink-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#screen-result .result-printer-opt[aria-pressed="true"] {
+  background: var(--result-card);
+  color: var(--atelier-ink-black);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.14);
+}
+
+#screen-result .result-printer-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--atelier-ink-muted);
+}
+
+/* --- Actions ----------------------------------------------------------- */
+#screen-result .result-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-#screen-result .action-row {
+#screen-result .result-action-row {
+  display: flex;
+  gap: 10px;
+}
+
+#screen-result .result-print-btn,
+#screen-result .result-share-btn {
+  min-height: 52px;
+  border-radius: 14px;
+  border: 1px solid var(--atelier-paper-edge);
+  background: var(--result-card);
+  color: var(--atelier-ink-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#screen-result .result-print-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 10px;
+  padding: 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+#screen-result .result-print-btn.is-primary {
+  background: var(--result-fill);
+  border-color: var(--result-fill-deep);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(154, 64, 29, 0.22);
+}
+
+#screen-result .result-share-btn {
+  width: 52px;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+#screen-result .result-print-btn svg,
+#screen-result .result-share-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+#screen-result .result-print-btn:active,
+#screen-result .result-share-btn:active {
+  transform: scale(0.98);
+}
+
+#screen-result button:focus-visible {
+  outline: 2px solid var(--result-accent-text);
+  outline-offset: 2px;
+}
+
+/* Extras: hidden entirely unless the booklet produced a cover/instructions PDF. */
+#screen-result .result-extras {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: #ffffff;
-  border: 1px solid var(--atelier-border-hairline, #DCD5C9);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  box-shadow: 0 1px 4px rgba(28, 26, 24, 0.04);
-}
-
-:root:not(.light-theme) #screen-result .action-row,
-.dark-theme #screen-result .action-row {
-  background: #221e1a;
-  border-color: #38312a;
-}
-
-#screen-result .action-label {
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: var(--atelier-ink-black, #1C1A18);
-}
-
-#screen-result .action-sublabel {
-  font-size: 0.75rem;
-  color: var(--atelier-ink-muted, #5C5650);
-}
-
-#screen-result .action-buttons {
-  display: flex;
+  justify-content: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-#screen-result .action-buttons .btn {
-  border-radius: var(--radius-full);
+#screen-result .result-extras:not(:has(.result-extra-chip:not(.hidden))) {
+  display: none;
+}
+
+/* The chips name themselves; the group label is for screen readers only. */
+#screen-result .result-extras-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#screen-result .result-extra-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 0 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--atelier-border-hairline);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
   font-size: 0.82rem;
   font-weight: 600;
-  padding: 8px 16px;
+}
+
+#screen-result .result-chip-btn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--result-accent-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 160ms var(--ease-out-spring);
+  padding: 0;
 }
 
-#screen-result .action-buttons .btn[data-action="share"] {
-  background: var(--atelier-surface-cream, #F3ECE1);
-  border-color: var(--atelier-border-hairline, #DCD5C9);
-  color: var(--atelier-ink-black, #1C1A18);
+#screen-result .result-chip-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-#screen-result .action-buttons .btn[data-action="share"]:hover {
-  background: #EBE2D5;
-  transform: translateY(-1px);
+/* --- Quiet links, status, privacy -------------------------------------- */
+#screen-result .result-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 16px;
+  row-gap: 0;
+  flex-wrap: wrap;
 }
 
-#screen-result .action-buttons .btn[data-action="print"] {
-  background: var(--atelier-primary, #9a401d);
-  border-color: var(--atelier-terracotta-deep, #8a3819);
-  color: #ffffff;
-}
-
-#screen-result .action-buttons .btn[data-action="print"]:hover {
-  background: var(--atelier-terracotta-deep, #8a3819);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(154, 64, 29, 0.25);
-}
-
-#screen-result #bookletSaveBtn {
-  background: var(--atelier-primary, #9a401d);
-  color: #ffffff;
-  border-radius: var(--radius-full);
-  padding: 14px 24px;
+#screen-result .result-link-btn {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--result-accent-text);
+  font-family: inherit;
+  font-size: 0.9rem;
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(154, 64, 29, 0.25);
-  border: 1px solid var(--atelier-terracotta-deep, #8a3819);
-  transition: all 160ms var(--ease-out-spring);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 
-#screen-result #bookletSaveBtn:hover {
-  background: var(--atelier-terracotta-deep, #8a3819);
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 20px rgba(154, 64, 29, 0.35);
+#screen-result .result-link-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
-#screen-result #newFileBtn {
-  color: var(--atelier-primary, #9a401d);
-  font-weight: 600;
+#screen-result .result-link-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
-:root:not(.light-theme) #screen-result .action-buttons .btn[data-action="share"],
-.dark-theme #screen-result .action-buttons .btn[data-action="share"] {
-  background: #2d2620;
-  border-color: #4d443b;
-  color: #f5efe6;
+#screen-result .result-link-btn .spinner {
+  width: 14px;
+  height: 14px;
 }
 
-:root:not(.light-theme) #screen-result .action-buttons .btn[data-action="print"],
-.dark-theme #screen-result .action-buttons .btn[data-action="print"] {
-  background: #c4683c;
-  border-color: #a35028;
-  color: #ffffff;
+#screen-result .action-status {
+  margin: -6px 0 0;
+  font-size: 0.8rem;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-result .action-status:empty {
+  display: none;
+}
+
+#screen-result .result-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 0 2px;
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--atelier-ink-muted);
+  text-align: center;
+}
+
+#screen-result .result-privacy span {
+  text-align: left;
+}
+
+#screen-result .result-privacy svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--atelier-tertiary);
+}
+
+/* Short viewports: tighten rhythm before anything has to scroll. */
+@media (max-height: 680px) {
+  #screen-result {
+    gap: 10px;
+  }
+
+  #screen-result .result-print-btn,
+  #screen-result .result-share-btn {
+    min-height: 48px;
+  }
+
+  #screen-result .result-share-btn {
+    width: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #screen-result .result-print-btn,
+  #screen-result .result-share-btn,
+  #screen-result .result-printer-opt {
+    transition: none;
+  }
 }
 
 /* ==========================================================================

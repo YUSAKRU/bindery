@@ -1463,126 +1463,124 @@
         </div>
       </section>
 
-        <section class="screen hidden" id="screen-result">
-          <div class="result-banner">
-            <div class="result-icon hidden" aria-hidden="true">✓</div>
-            <h2 data-i18n="screenTitle.result">Booklet ready</h2>
-          </div>
+        <section class="screen hidden" id="screen-result" data-printer="duplex">
+          <!-- File name: quiet inline field under the top-bar title -->
+          <label class="result-filename" for="bookletFileNameInput">
+            <input type="text" id="bookletFileNameInput" class="result-filename-input"
+                   aria-label="File Name" data-i18n-aria-label="common.fileName"
+                   placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
+            <svg class="result-filename-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </label>
 
-          <div class="stat-grid">
-            <div class="stat-card">
-              <span class="stat-value" id="statOriginal">0</span>
-              <span class="stat-label" data-i18n="stat.originalPages">Original Pages</span>
-            </div>
-            <div class="stat-card hidden" id="statPaddingCard">
-              <span class="stat-value" id="statPadding">0</span>
-              <span class="stat-label" data-i18n="stat.blankPagesAdded">Blank Pages Added</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-value" id="statSheets">0</span>
-              <span class="stat-label" data-i18n="stat.totalSheets">Total Sheets</span>
-            </div>
-            <div class="stat-card hidden" id="statSignaturesCard">
-              <span class="stat-value" id="statSignatures">0</span>
-              <span class="stat-label" data-i18n="stat.signatures">Signatures</span>
-            </div>
-            <div class="stat-card hidden" id="statBlanksCard">
-              <span class="stat-value" id="statBlanks">0</span>
-              <span class="stat-label" data-i18n="stat.insertedBlanks">Inserted Blanks</span>
-            </div>
-          </div>
-
-          <div class="booklet-preview-strip">
-            <div class="booklet-preview-cell hidden" id="coverPreviewCell">
-              <div class="booklet-preview-spinner" id="coverPreviewSpinner" aria-hidden="true"></div>
-              <img id="coverPreviewImg" class="booklet-preview-img hidden" alt="">
-              <p class="booklet-preview-error hidden" id="coverPreviewError"
-                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
-              <p class="booklet-preview-label" data-i18n="booklet.previewCover">Cover</p>
-            </div>
-            <div class="booklet-preview-cell">
-              <div class="booklet-preview-spinner" id="frontPreviewSpinner" aria-hidden="true"></div>
-              <img id="frontPreviewImg" class="booklet-preview-img hidden" alt="">
-              <p class="booklet-preview-error hidden" id="frontPreviewError"
-                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
-              <p class="booklet-preview-label" data-i18n="booklet.previewFront">Front · sheet 1</p>
-            </div>
-            <div class="booklet-preview-cell">
-              <div class="booklet-preview-spinner" id="backPreviewSpinner" aria-hidden="true"></div>
-              <img id="backPreviewImg" class="booklet-preview-img hidden" alt="">
-              <p class="booklet-preview-error hidden" id="backPreviewError"
-                 data-i18n="booklet.previewUnavailable">Preview unavailable</p>
-              <p class="booklet-preview-label" data-i18n="booklet.previewBack">Back · sheet 1</p>
-            </div>
-          </div>
-
-          <div class="booklet-filename-field">
-            <label for="bookletFileNameInput" class="modal-label" data-i18n="common.fileName">File Name</label>
-            <input type="text" id="bookletFileNameInput" class="modal-input" placeholder="Enter a file name" data-i18n-placeholder="common.fileNamePlaceholder" />
-          </div>
-
-          <p class="modal-hint" data-i18n="booklet.printHint">🖨️ Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.</p>
-
-          <div class="action-list">
-            <div class="action-row">
-              <span class="action-label-stack">
-                <span class="action-label" data-i18n="booklet.frontSidePdf">Front Side PDF</span>
-                <span class="action-sublabel" data-i18n="booklet.forOneSided">for a one-sided printer</span>
-              </span>
-              <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="front" data-action="share" data-i18n="common.share">Share</button>
-                <button class="btn btn-tonal" data-target="front" data-action="print" data-i18n="common.print">Print</button>
+          <!-- Hero: a small fanned stack of the first sheet (front over back, cover behind) -->
+          <div class="result-hero">
+            <div class="result-stack">
+              <div class="booklet-preview-cell result-sheet result-sheet--cover hidden" id="coverPreviewCell">
+                <div class="booklet-preview-spinner" id="coverPreviewSpinner" aria-hidden="true"></div>
+                <img id="coverPreviewImg" class="booklet-preview-img hidden" alt="">
+                <p class="booklet-preview-error hidden" id="coverPreviewError"
+                   data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+                <p class="booklet-preview-label" data-i18n="booklet.previewCover">Cover</p>
+              </div>
+              <div class="booklet-preview-cell result-sheet result-sheet--back">
+                <div class="booklet-preview-spinner" id="backPreviewSpinner" aria-hidden="true"></div>
+                <img id="backPreviewImg" class="booklet-preview-img hidden" alt="">
+                <p class="booklet-preview-error hidden" id="backPreviewError"
+                   data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+                <p class="booklet-preview-label" data-i18n="booklet.previewBack">Back · sheet 1</p>
+              </div>
+              <div class="booklet-preview-cell result-sheet result-sheet--front">
+                <div class="booklet-preview-spinner" id="frontPreviewSpinner" aria-hidden="true"></div>
+                <img id="frontPreviewImg" class="booklet-preview-img hidden" alt="">
+                <p class="booklet-preview-error hidden" id="frontPreviewError"
+                   data-i18n="booklet.previewUnavailable">Preview unavailable</p>
+                <p class="booklet-preview-label" data-i18n="booklet.previewFront">Front · sheet 1</p>
               </div>
             </div>
-            <div class="action-row">
-              <span class="action-label-stack">
-                <span class="action-label" data-i18n="booklet.backSidePdf">Back Side PDF</span>
-                <span class="action-sublabel" data-i18n="booklet.forOneSided">for a one-sided printer</span>
-              </span>
-              <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="back" data-action="share" data-i18n="common.share">Share</button>
-                <button class="btn btn-tonal" data-target="back" data-action="print" data-i18n="common.print">Print</button>
-              </div>
+            <p class="result-summary" id="resultSummaryLine"></p>
+          </div>
+
+          <!-- Printer choice decides which output is offered -->
+          <div class="result-printer">
+            <div class="result-printer-head">
+              <span class="result-printer-label" id="resultPrinterLabel" data-i18n="result.printerLabel">Your printer</span>
+              <fieldset class="result-printer-toggle" aria-labelledby="resultPrinterLabel">
+                <button type="button" class="result-printer-opt" data-printer="duplex" aria-pressed="true" data-i18n="result.printer.duplex">Two-sided</button>
+                <button type="button" class="result-printer-opt" data-printer="simplex" aria-pressed="false" data-i18n="result.printer.simplex">One-sided</button>
+              </fieldset>
             </div>
-            <div class="action-row">
-              <span class="action-label-stack">
-                <span class="action-label" data-i18n="booklet.combinedPdf">Combined Booklet PDF</span>
-                <span class="action-sublabel" data-i18n="booklet.forTwoSided">for a two-sided printer</span>
-              </span>
-              <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="combined" data-action="share" data-i18n="common.share">Share</button>
-                <button class="btn btn-tonal" data-target="combined" data-action="print" data-i18n="common.print">Print</button>
-              </div>
+            <p class="result-printer-hint" data-show-for="duplex" data-i18n="result.hint.duplex">One file, printed on both sides. Flip on the short edge.</p>
+            <p class="result-printer-hint" data-show-for="simplex" data-i18n="result.hint.simplex">1 · Print the fronts — 2 · Turn the stack over and print the backs</p>
+          </div>
+
+          <div class="result-actions">
+            <div class="result-action-row" data-row-target="combined">
+              <button type="button" class="result-print-btn is-primary" data-target="combined" data-action="print">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                <span data-i18n="common.print">Print</span>
+              </button>
+              <button type="button" class="result-share-btn" data-target="combined" data-action="share" aria-label="Share" data-i18n-aria-label="common.share">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+              </button>
             </div>
-            <div class="action-row hidden" id="coverActionRow">
-              <span class="action-label" data-i18n="booklet.coverPdfLabel">Cover PDF</span>
-              <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="cover" data-action="share" data-i18n="common.share">Share</button>
-                <button class="btn btn-tonal" data-target="cover" data-action="print" data-i18n="common.print">Print</button>
-              </div>
+            <div class="result-action-row hidden" data-row-target="front">
+              <button type="button" class="result-print-btn is-primary" data-target="front" data-action="print">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                <span data-i18n="result.printFront">Print the fronts</span>
+              </button>
+              <button type="button" class="result-share-btn" data-target="front" data-action="share" aria-label="Share" data-i18n-aria-label="common.share">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+              </button>
             </div>
-            <div class="action-row hidden" id="instructionsActionRow">
-              <span class="action-label" data-i18n="booklet.instructionsPdfLabel">Instructions PDF</span>
-              <div class="action-buttons">
-                <button class="btn btn-tonal" data-target="instructions" data-action="share" data-i18n="common.share">Share</button>
-                <button class="btn btn-tonal" data-target="instructions" data-action="print" data-i18n="common.print">Print</button>
+            <div class="result-action-row hidden" data-row-target="back">
+              <button type="button" class="result-print-btn" data-target="back" data-action="print">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                <span data-i18n="result.printBack">Print the backs</span>
+              </button>
+              <button type="button" class="result-share-btn" data-target="back" data-action="share" aria-label="Share" data-i18n-aria-label="common.share">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+              </button>
+            </div>
+
+            <!-- Optional extras: only shown when the booklet produced them -->
+            <div class="result-extras">
+              <span class="result-extras-label" data-i18n="result.extras">Extra files</span>
+              <div class="result-extra-chip hidden" id="coverActionRow">
+                <span data-i18n="booklet.previewCover">Cover</span>
+                <button type="button" class="result-chip-btn" data-target="cover" data-action="print" aria-label="Print" data-i18n-aria-label="common.print">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                </button>
+                <button type="button" class="result-chip-btn" data-target="cover" data-action="share" aria-label="Share" data-i18n-aria-label="common.share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+                </button>
+              </div>
+              <div class="result-extra-chip hidden" id="instructionsActionRow">
+                <span data-i18n="result.instructions">Instructions</span>
+                <button type="button" class="result-chip-btn" data-target="instructions" data-action="print" aria-label="Print" data-i18n-aria-label="common.print">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                </button>
+                <button type="button" class="result-chip-btn" data-target="instructions" data-action="share" aria-label="Share" data-i18n-aria-label="common.share">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+                </button>
               </div>
             </div>
           </div>
 
-          <button class="btn btn-primary btn-large" id="bookletSaveBtn">
-            <span id="bookletSaveBtnLabel">Save All</span>
-            <span class="spinner hidden" id="bookletSaveSpinner"></span>
-          </button>
+          <!-- Quiet secondary links -->
+          <div class="result-links">
+            <button type="button" class="result-link-btn" id="bookletSaveBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              <span id="bookletSaveBtnLabel">Save All</span>
+              <span class="spinner hidden" id="bookletSaveSpinner"></span>
+            </button>
+            <button type="button" class="result-link-btn hidden" id="bookletGoToLocationBtn" data-i18n="result.goToLocation">Open folder</button>
+            <button type="button" class="result-link-btn" id="newFileBtn" data-i18n="common.newFile">New File</button>
+          </div>
 
           <p class="action-status" id="actionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="bookletGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
-
-          <button class="btn btn-text btn-large" id="newFileBtn" data-i18n="common.newFile">New File</button>
-
-          <div class="workshop-privacy-footer" style="margin-top: 16px;">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; color: var(--atelier-tertiary);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect><path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2"></path></svg>
+          <div class="workshop-privacy-footer result-privacy">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect><path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2"></path></svg>
             <span data-i18n="atelier.privacyNote">Everything stays on your device, no file is uploaded</span>
           </div>
         </section>
