@@ -8,6 +8,7 @@ import {
   computeSlotRects,
   foldGuideCrossesContent,
   makeBooklet,
+  signatureStartPages,
 } from './booklet-engine';
 import type { BookletOptions } from './types';
 
@@ -87,6 +88,23 @@ describe('booklet engine invariants', () => {
         }
 
         expect(expectedStart).toBe(N);
+      }),
+    );
+  });
+
+  // The instructions sheet lists where each signature begins in reading order.
+  // Those start pages must match the actual first (lowest-numbered, 1-based)
+  // page placed into each signature by computeSignatureMappings — even when
+  // balanced sheet distribution creates multiple shorter signatures (e.g.
+  // 56pp @ 'auto' -> [4, 4, 3, 3] sheets -> starts [1, 17, 33, 45], not 49).
+  it('reports the exact 1-based first page of every mapped signature', () => {
+    fc.assert(
+      fc.property(pageCount, signatureSize, (N, size) => {
+        const signatures = computeSignatureMappings(N, size);
+        const expectedStarts = signatures.map(
+          (signature) => Math.min(...signature.flatMap(pagesOf)) + 1,
+        );
+        expect(signatureStartPages(N, size)).toEqual(expectedStarts);
       }),
     );
   });

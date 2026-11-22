@@ -506,12 +506,7 @@ export function resolveSignatureSize(N: number, signatureSize?: number | 'auto')
  * by the printed instructions/reading-order check. Pure and test-friendly.
  */
 export function signatureStartPages(N: number, signatureSize?: number | 'auto'): number[] {
-  const sigLen = resolveSignatureSize(N, signatureSize);
-  const starts: number[] = [];
-  for (let start = 0; start < N; start += sigLen) {
-    starts.push(start + 1);
-  }
-  return starts;
+  return computeSignatureMappings(N, signatureSize).map((sheets) => sheets[0].frontRight + 1);
 }
 
 /**
