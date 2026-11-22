@@ -1374,7 +1374,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'toast.fileSelectError': 'Dosya seçilemedi: {message}',
     'modal.pdfSource.title': 'Belge Kaynağı Seçin',
     'modal.pdfSource.bindery': 'Bindery Belgeleri',
-    'modal.pdfSource.binderyDesc': 'Bindery içine kaydedilen PDFler — örnek dosya ve diğer araçların sonuçları.',
+    'modal.pdfSource.binderyDesc': "Bindery içine kaydedilen PDF'ler — örnek dosya ve diğer araçların sonuçları.",
     'modal.pdfSource.device': 'Cihaz Dosyaları',
     'modal.pdfSource.deviceDesc': 'Cihazınızın hafızasından bir PDF seçin.',
     'modal.binderyPicker.title': 'PDF Seç',
