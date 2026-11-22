@@ -2,15 +2,15 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// Audit suite for the Stitch booklet-settings prototype restoration.
+// Contract for the booklet settings screen (flow review, 2026-11-22).
 //
-// Matches the Stitch booklet-settings prototype (screen.png and code.html):
-// - Top stepper / tab bar completely removed
-// - Top header only has back button, title, and subtitle
-// - 2-step flow: Layout (Step 1) -> Print & Flow (Step 2)
-// - Step 1 bottom dock has summary capsule, 2 dots, and next hint ("... için kaydırın >")
-// - #generateBtn ("Kitapçığı Oluştur") is hidden on Step 1, only visible on Step 2
-// - Zero-scroll viewport contracts & warm orange palette maintained
+// The old three-step wizard (Layout -> Print -> Summary) became one screen:
+// - the shared top bar (title + back) replaces the floating back pill/header
+// - print overrides sit behind one collapsed "Advanced print settings" row
+// - the read-only summary step is gone; its yield line sits in a bottom bar
+//   right above the one primary action, which therefore never moves
+// - segmented controls are real touch targets (>= 40px) and the signature
+//   sizes fit one row (Auto / Single / Other -> 4 / 8 / 16 / 32)
 
 const root = resolve(__dirname, '../..');
 const read = (rel: string): string => readFileSync(resolve(root, rel), 'utf-8');
@@ -119,144 +119,134 @@ function attrs(tag: string): Record<string, string> {
 
 const configScreen = configSection();
 const panelTags = [...configScreen.matchAll(/<div[^>]*class="config-step-panel[^"]*"[^>]*>/g)].map((m) => m[0]);
+const appCode = stripTsComments(appTs);
 
-describe('Stitch 3-step prototype restoration — clutter-free header and 3-step layout', () => {
-  it('has completely removed the top stepper and tab bar from index.html', () => {
-    expect(indexHtml).not.toContain('class="config-stepper"');
-    expect(indexHtml).not.toContain('role="tablist" aria-label="Booklet Settings Steps"');
-    expect(indexHtml).not.toContain('class="config-tab');
-    expect(indexHtml).not.toContain('id="configTab-layout"');
-    expect(indexHtml).not.toContain('id="configTab-cover"');
-    expect(indexHtml).not.toContain('id="configTab-pages"');
-    expect(indexHtml).not.toContain('id="configTab-print"');
+describe('settings screen — one screen, no wizard', () => {
+  it('has exactly one settings panel, and it is visible', () => {
+    expect(panelTags.map((t) => attrs(t).id)).toEqual(['configStepLayout']);
+    expect(attrs(panelTags[0]).class).not.toMatch(/(^|\s)hidden(\s|$)/);
   });
 
-  it('declares step panels for layout, print, and summary', () => {
-    const panelIds = panelTags.map((t) => attrs(t).id);
-    expect(panelIds).toContain('configStepLayout');
-    expect(panelIds).toContain('configStepPrint');
-    expect(panelIds).toContain('configStepSummary');
-    expect(configScreen).not.toContain('id="configStepPages"');
+  it('has no step panels, step buttons, step dots or duplicate back links left in the markup', () => {
+    for (const id of [
+      'configStepPrint',
+      'configStepSummary',
+      'step1NextBtn',
+      'step2NextBtn',
+      'step2BackLink',
+      'step3GenerateBtn',
+      'step3BackLink',
+      'stitchStepNav',
+      'stitchNextHint',
+      'configBackBtn',
+      'stitchStepSubtitle',
+      'summarySpecCard',
+      'printPresetModeGroup',
+      'toggleDetailedSettingsBtn',
+    ]) {
+      expect(indexHtml, `#${id} should be gone`).not.toContain(`id="${id}"`);
+    }
+    expect(configScreen).not.toContain('⬅');
   });
 
-  it('starts on Step 1: Layout visible, Print and Summary panels hidden', () => {
-    const visible = panelTags.filter((t) => !/(^|\s)hidden(\s|$)/.test(attrs(t).class ?? ''));
-    expect(visible.map((t) => attrs(t).id)).toEqual(['configStepLayout']);
+  it('has no step-switching or swipe logic left in app.ts', () => {
+    expect(appCode).not.toContain('switchConfigTab');
+    expect(appCode).not.toContain('currentConfigTab');
+    expect(appCode).not.toContain('updateStitchDock');
+    expect(appCode).not.toMatch(/configBody\.addEventListener\('touch/);
   });
 
-  it('includes back button, title, and subtitle in the top header', () => {
-    expect(configScreen).toContain('id="configBackBtn"');
-    expect(configScreen).toContain('stitch-back-btn');
-    expect(configScreen).toContain('stitch-header-title');
-    expect(configScreen).toContain('id="stitchStepSubtitle"');
-  });
-
-  it('implements switchConfigTab with 3 steps in app.ts', () => {
-    const body = blockAfter(appTs, "function switchConfigTab(tab: 'layout' | 'print' | 'summary'): void {");
-    expect(body).toContain("panel: configStepLayout, name: 'layout'");
-    expect(body).toContain("panel: configStepPrint, name: 'print'");
-    expect(body).toContain("panel: configStepSummary, name: 'summary'");
-    expect(body).toContain('updateStitchDock(tab);');
-    expect(appTs).not.toContain("const configStepPages = byId<HTMLDivElement>('configStepPages');");
-    expect(appTs).not.toContain("const configStepCover = byId<HTMLDivElement>('configStepCover');");
-  });
-});
-
-describe('Stitch 2-step prototype restoration — bottom dock & conditional CTA', () => {
-  it('declares 2 step dots in #stitchStepNav', () => {
-    const navMatch = configScreen.match(/<div[^>]*id="stitchStepNav"[^>]*>([\s\S]*?)<\/div>/);
-    expect(navMatch).not.toBeNull();
-    const dots = [...navMatch![1].matchAll(/<button[^>]*class="stitch-step-dot[^"]*"[^>]*>/g)];
-    expect(dots).toHaveLength(2);
-    expect(dots.map((d) => attrs(d[0])['data-step'])).toEqual(['1', '2']);
-  });
-
-  it('initializes generateBtn with .hidden on Step 1', () => {
-    const genBtnMatch = configScreen.match(/<button[^>]*id="generateBtn"[^>]*>/);
-    expect(genBtnMatch).not.toBeNull();
-    expect(genBtnMatch![0]).toContain('hidden');
-  });
-
-  it('hides generateBtn on Step 1 and reveals it only on Step 2 in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
-    expect(dockFn).toContain('current.step === 3 || current.step === 2');
-    expect(dockFn).toContain("generateBtn.classList.remove('hidden')");
-    expect(dockFn).toContain("generateBtn.classList.add('hidden')");
-    expect(dockFn).toContain("stitchNextHint.classList.add('hidden')");
-    expect(dockFn).toContain("stitchNextHint.classList.remove('hidden')");
-  });
-
-  it('updates elongated pill and inactive dots in updateStitchDock', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
-    expect(dockFn).toContain("dot.classList.toggle('is-active', isActive)");
-    expect(dockFn).toContain("dot.classList.toggle('stitch-step-pill-active', isActive)");
-    expect(dockFn).toContain("dot.setAttribute('aria-selected', String(isActive))");
-  });
-
-  it('highlights dot 2 on step 3 (summary) while keeping 2 dots in #stitchStepNav', () => {
-    const dockFn = blockAfter(appTs, "function updateStitchDock(tab: 'layout' | 'print' | 'summary'): void {");
-    expect(dockFn).toContain('summary: { step: 3,');
-    expect(dockFn).toContain('stepNum === Math.min(current.step, 2)');
+  it('uses the shared top bar (title + back) instead of a private header', () => {
+    const hideList = stylesCss.slice(
+      stylesCss.indexOf('/* 1. Shell Integration when #screen-hub is active */'),
+      stylesCss.indexOf('#screen-hub {'),
+    );
+    expect(hideList).not.toContain('#screen-config');
+    expect(stylesCss).toContain('.app:has(#screen-config:not(.hidden)) .top-bar,\n.app:has(#screen-result:not(.hidden)) .top-bar {');
+    expect(stylesCss).toContain(
+      '.app:has(#screen-config:not(.hidden)) .top-bar-title,\n.app:has(#screen-result:not(.hidden)) .top-bar-title {',
+    );
   });
 });
 
-describe('Stitch 2-step prototype restoration — gesture & dot navigation', () => {
-  it('wires dots in stitchStepNav to switchConfigTab', () => {
-    const navAt = appTs.indexOf("const stepTabs: Array<'layout' | 'print' | 'summary'>");
-    expect(navAt).toBeGreaterThan(0);
-    const navBlock = stripTsComments(appTs.slice(navAt, navAt + 500));
-    expect(navBlock).toContain("['layout', 'print', 'summary']");
-    expect(navBlock).toContain('switchConfigTab(stepTabs[idx])');
+describe('settings screen — bottom action bar', () => {
+  const footer = configScreen.slice(configScreen.indexOf('id="configStickyFooter"'));
+
+  it('holds the live yield line and the generate button, both in the bar', () => {
+    expect(footer).toContain('id="configSummary"');
+    expect(footer).toContain('id="generateBtn"');
+    expect(footer.indexOf('id="configSummary"')).toBeLessThan(footer.indexOf('id="generateBtn"'));
   });
 
-  it('wires stitchNextHint to step from layout -> print', () => {
-    const hintAt = appTs.indexOf("stitchNextHint.addEventListener('click'");
-    expect(hintAt).toBeGreaterThan(0);
-    const hintBlock = stripTsComments(appTs.slice(hintAt, hintAt + 300));
-    expect(hintBlock).toContain("currentConfigTab === 'layout'");
-    expect(hintBlock).toContain("switchConfigTab('print')");
+  it('shows the generate button from the start (no step gates it)', () => {
+    const tag = configScreen.match(/<button[^>]*id="generateBtn"[^>]*>/);
+    expect(tag).not.toBeNull();
+    expect(attrs(tag![0]).class).not.toMatch(/(^|\s)hidden(\s|$)/);
   });
 
-  it('wires configBackBtn to step back print -> layout -> picker', () => {
-    const backBlock = stripTsComments(blockAfter(appTs, 'if (configBackBtn) {'));
-    expect(backBlock).toContain("currentConfigTab === 'print'");
-    expect(backBlock).toContain("switchConfigTab('layout')");
-    expect(backBlock).toContain("showScreen('picker')");
+  it('is laid out as a visible, non-shrinking bar under the scrolling panel', () => {
+    const bar = cssRule(stylesCss, '#configStickyFooter');
+    expect(bar).not.toContain('display: none');
+    expect(bar).toContain('flex-shrink: 0');
+    expect(bar).toContain('env(safe-area-inset-bottom');
+    expect(cssRule(stylesCss, '#configStickyFooter #generateBtn')).toContain('background: var(--stitch-primary)');
   });
 
-  it('supports horizontal swipe gestures between 2 steps starting over cards and buttons while excluding sliders', () => {
-    const bodySwipe = stripTsComments(blockAfter(appTs, 'if (configBody) {'));
-    expect(bodySwipe).toContain("currentConfigTab === 'layout'");
-    expect(bodySwipe).toContain("switchConfigTab('print')");
-    expect(bodySwipe).toContain("currentConfigTab === 'print'");
-    expect(bodySwipe).toContain("switchConfigTab('layout')");
-    expect(bodySwipe).toContain('input[type="range"]');
-    expect(bodySwipe).not.toContain("target.closest('input, textarea, select, button");
-    expect(bodySwipe).toContain("window.addEventListener('click'");
-  });
-
-  it('updates formaBadge with exact page count without multiplying by 4', () => {
-    const badgeBlock = stripTsComments(blockAfter(appTs, 'function updateFormaBadge(): void {'));
-    expect(badgeBlock).toContain('formaBadge.textContent = `${bookletSignature} ${pagesSuffix}`;');
-    expect(badgeBlock).not.toContain('sheets * 4');
+  it('keeps the scroll inside the panel, not the screen', () => {
+    const screen = cssRule(stylesCss, '#screen-config');
+    expect(screen).toContain('overflow: hidden');
+    expect(screen).toContain('height: 100%');
+    expect(cssRule(stylesCss, '.config-body')).toContain('overflow: hidden');
+    const panel = cssRule(stylesCss, '.config-step-panel');
+    expect(panel).toContain('overflow-y: auto');
+    expect(panel).toContain('overscroll-behavior: contain');
   });
 });
 
-describe('Stitch 2-step prototype restoration — invalid blank-page input jumps to Step 2 (print)', () => {
-  const generateBlock = stripTsComments(blockAfter(appTs, "generateBtn.addEventListener('click', async () => {"));
+describe('settings screen — advanced print settings behind one row', () => {
+  it('puts the disclosure row and its panel inside the settings panel, collapsed', () => {
+    const panelStart = configScreen.indexOf('id="configStepLayout"');
+    const toggleAt = configScreen.indexOf('id="advancedToggle"');
+    const panelAt = configScreen.indexOf('id="advancedPanel"');
+    const footerAt = configScreen.indexOf('id="configStickyFooter"');
+    expect(toggleAt).toBeGreaterThan(panelStart);
+    expect(panelAt).toBeGreaterThan(toggleAt);
+    expect(footerAt).toBeGreaterThan(panelAt);
 
-  it('lands on Step 2 (print) when parseInsertBlank() rejects the input', () => {
+    const toggle = attrs(configScreen.match(/<button[^>]*id="advancedToggle"[^>]*>/)![0]);
+    expect(toggle.class).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(toggle['aria-expanded']).toBe('false');
+    expect(toggle['aria-controls']).toBe('advancedPanel');
+    const panel = attrs(configScreen.match(/<section[^>]*id="advancedPanel"[^>]*>/)![0]);
+    expect(panel.class).toMatch(/(^|\s)hidden(\s|$)/);
+  });
+
+  it('opens and closes through one function that keeps aria-expanded in step', () => {
+    const body = blockAfter(appTs, 'function setAdvancedOpen(open: boolean): void {');
+    expect(body).toContain("advancedPanel.classList.toggle('hidden', !open)");
+    expect(body).toContain("advancedToggle.setAttribute('aria-expanded', String(open))");
+    const click = blockAfter(appTs, "advancedToggle.addEventListener('click', () => {");
+    expect(click).toContain('setAdvancedOpen(willOpen)');
+  });
+
+  it('says "Recommended" or "Modified" from isAdvancedModified, which ignores the on-screen binding and flip edge', () => {
+    const badge = blockAfter(appTs, 'function updateAdvancedBadge(): void {');
+    expect(badge).toContain('isAdvancedModified()');
+    expect(badge).toContain("advancedBadge.classList.toggle('hidden', !modified)");
+    expect(badge).toContain("advancedDefaultLabel.classList.toggle('hidden', modified)");
+    const modified = stripTsComments(blockAfter(appTs, 'function isAdvancedModified(): boolean {'));
+    expect(modified).not.toContain('bookletFlipEdge');
+    expect(modified).not.toContain('bookletBinding');
+    expect(modified).toContain('gutterSlider');
+    expect(modified).toContain('insertBlankInput');
+  });
+
+  it('opens the advanced section when the blank-page field is invalid at generate time', () => {
+    const generateBlock = stripTsComments(blockAfter(appTs, "generateBtn.addEventListener('click', async () => {"));
     const parseAt = generateBlock.indexOf('if (insertBlankAfter === null)');
     expect(parseAt).toBeGreaterThanOrEqual(0);
-    const branch = generateBlock.slice(parseAt);
-    const jumpAt = branch.indexOf('switchConfigTab(');
-    expect(jumpAt).toBeGreaterThanOrEqual(0);
-    expect(branch.slice(jumpAt, jumpAt + 40)).toContain("switchConfigTab('print')");
-  });
-
-  it('keeps visible error affordances on validation failure', () => {
-    const parseAt = generateBlock.indexOf('if (insertBlankAfter === null)');
     const branch = generateBlock.slice(parseAt, parseAt + 600);
+    expect(branch).toContain('setAdvancedOpen(true)');
     expect(branch).toContain("t('config.insertBlankError')");
     expect(branch).toContain("insertBlankError.classList.remove('hidden')");
     expect(branch).toContain("insertBlankInput.setAttribute('aria-invalid', 'true')");
@@ -266,81 +256,89 @@ describe('Stitch 2-step prototype restoration — invalid blank-page input jumps
   });
 });
 
-describe('Stitch prototype restoration — Stitch card classes & indigo palette', () => {
-  it('renders the config steps as Stitch cards', () => {
-    expect(configScreen.match(/class="[^"]*\bstitch-card\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
-    expect(configScreen).toContain('stitch-card-head');
-    expect(configScreen).toContain('stitch-card-title');
-    expect(configScreen).toContain('stitch-card-divider');
-    expect(configScreen).toContain('stitch-step-nav');
-    expect(configScreen).toContain('stitch-back-btn');
+describe('settings screen — signature sizes and touch targets', () => {
+  const group = configScreen.match(/<div[^>]*id="signatureSizeGroup"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/);
+
+  it('shows Auto, Single and Other on one row, with 4/8/16/32 on a hidden sub-row', () => {
+    expect(group).not.toBeNull();
+    const html = group![1];
+    const mainRow = html.slice(0, html.indexOf('id="signatureSizeMore"'));
+    const subRow = html.slice(html.indexOf('id="signatureSizeMore"'));
+    expect([...mainRow.matchAll(/data-sig="([^"]+)"/g)].map((m) => m[1])).toEqual(['auto', 'single']);
+    expect(mainRow).toContain('id="signatureMoreBtn"');
+    expect([...subRow.matchAll(/data-sig="([^"]+)"/g)].map((m) => m[1])).toEqual(['4', '8', '16', '32']);
+    expect(configScreen).toMatch(/<div class="stitch-sub-segmented hidden" id="signatureSizeMore">/);
   });
 
-  it('defines the terracotta brand token set from Atölye theme', () => {
+  it('lights "Other" and keeps its row open while a numeric size is selected', () => {
+    const body = stripTsComments(blockAfter(appTs, 'function syncSignatureMore(open?: boolean): void {'));
+    expect(body).toContain("const numeric = bookletSignature !== 'auto' && bookletSignature !== 'single';");
+    expect(body).toContain('const show = numeric ||');
+    expect(body).toContain("signatureMoreBtn.classList.toggle('is-active', numeric)");
+    expect(body).toContain("signatureMoreBtn.setAttribute('aria-expanded', String(show))");
+    const click = stripTsComments(blockAfter(appTs, "signatureSizeGroup.addEventListener('click',"));
+    expect(click.indexOf('btn === signatureMoreBtn')).toBeLessThan(click.indexOf('bookletSignature = sig'));
+  });
+
+  it('exposes the "What is a signature?" explainer next to the signature title', () => {
+    const forma = configScreen.slice(configScreen.indexOf('data-i18n="config.signatureSize"'), configScreen.indexOf('id="signatureSizeGroup"'));
+    const btn = forma.match(/<button[^>]*id="signatureInfoBtn"[^>]*>/);
+    expect(btn).not.toBeNull();
+    expect(attrs(btn![0]).class).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(attrs(btn![0])['aria-hidden']).toBeUndefined();
+  });
+
+  it('gives segmented pills at least 40px and text links at least 44px of height', () => {
+    const pill = cssRule(stylesCss, '.stitch-pill-btn,\n#screen-config .segmented-btn');
+    const pillH = Number(pill.match(/min-height:\s*(\d+)px/)?.[1] ?? 0);
+    expect(pillH).toBeGreaterThanOrEqual(40);
+    const link = cssRule(stylesCss, '.stitch-info-link');
+    expect(Number(link.match(/min-height:\s*(\d+)px/)?.[1] ?? 0)).toBeGreaterThanOrEqual(44);
+  });
+
+  it('keeps the binding icons outside the translated text so a language pass cannot wipe them', () => {
+    const binding = configScreen.match(/<div[^>]*id="bindingGroup"[^>]*>([\s\S]*?)<\/div>/)![1];
+    const buttons = [...binding.matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
+    expect(buttons).toHaveLength(2);
+    for (const b of buttons) expect(b['data-i18n']).toBeUndefined();
+    expect(binding.match(/<svg class="stitch-pill-icon"/g)).toHaveLength(2);
+    expect(binding).toContain('<span data-i18n="config.binding.ltr">');
+    expect(binding).toContain('<span data-i18n="config.binding.rtl">');
+  });
+});
+
+describe('booklet flow — picker and shared design tokens', () => {
+  it('does not use CSS variables that are never defined (they rendered square, shadowless buttons)', () => {
+    for (const name of ['--radius-pill', '--atelier-terracotta-glow']) {
+      const used = stylesCss.includes(`var(${name})`);
+      const defined = new RegExp(`${name}\\s*:`).test(stylesCss);
+      expect(used && !defined, `${name} is used but never defined`).toBe(false);
+    }
+  });
+
+  it('drops the picker Continue button to the bottom once a file is chosen, privacy line above it', () => {
+    expect(cssRule(stylesCss, '#screen-picker[data-state="ready"] .picker-slot-continue,\n#screen-picker[data-state="reading"] .picker-slot-continue')).toContain('order: 2');
+    expect(cssRule(stylesCss, '#screen-picker[data-state="ready"] .workshop-privacy-footer,\n#screen-picker[data-state="reading"] .workshop-privacy-footer')).toContain('order: 1');
+    expect(cssRule(stylesCss, '#screen-picker[data-state="ready"] .picker-stage,\n#screen-picker[data-state="reading"] .picker-stage')).toContain('margin-block: auto');
+  });
+
+  it('defines the terracotta brand token set', () => {
     const stitchSection = stylesCss.slice(
       stylesCss.indexOf('Stitch Design Language Tokens'),
       stylesCss.indexOf('Container enclosing the entire configuration flow'),
     );
     expect(stitchSection.length).toBeGreaterThan(1000);
     expect(stitchSection).toContain('--stitch-primary: #9a401d;');
-    expect(stitchSection).toContain('--stitch-primary-hover: #8a3819;');
-    expect(stitchSection).toContain('--stitch-primary-tint-50: #FAF0EC;');
     expect(stitchSection).toContain('--stitch-primary-glow: rgba(154, 64, 29, 0.28);');
-    expect(stitchSection).toContain('--stitch-step-dot-active: #9a401d;');
-  });
-
-  it('paints from the Stitch tokens', () => {
-    const stitchSection = stylesCss.slice(
-      stylesCss.indexOf('Stitch Design Language Tokens'),
-      stylesCss.indexOf('Container enclosing the entire configuration flow'),
-    );
-    expect(stitchSection).toContain('--stitch-primary: #9a401d;');
-    const cta = cssRule(stylesCss, '#configStickyFooter #generateBtn');
-    expect(cta).toContain('background: var(--stitch-primary)');
-  });
-
-  it('keeps the zero-scroll viewport contract that the design depends on', () => {
-    const screen = cssRule(stylesCss, '#screen-config');
-    expect(screen).toContain('overflow: hidden');
-    expect(screen).toContain('height: 100%');
-    expect(cssRule(stylesCss, '.config-body')).toContain('overflow: hidden');
-    const panel = cssRule(stylesCss, '.config-step-panel');
-    expect(panel).toContain('overflow-y: auto');
-    expect(panel).toContain('overscroll-behavior: contain');
-    const footer = cssRule(stylesCss, '#configStickyFooter');
-    expect(footer).toContain('flex-shrink: 0');
   });
 });
 
-describe('Stitch 3-step prototype restoration — no regression for essential wiring', () => {
-  const bindingPoints = [
-    'paperSizeGroup',
-    'signatureSizeGroup',
-    'signatureInfoBtn',
-    'signatureHintText',
-    'bindingGroup',
-    'flipEdgeGroup',
-    'coverModeGroup',
-    'insertBlankInput',
-    'insertBlankError',
-    'sheetOrderGroup',
-    'instructionsGroup',
-    'gutterSlider',
-    'creepSlider',
-    'marksGroup',
-  ];
-
-  it('keeps all 14 essential control IDs on the config screen', () => {
-    for (const id of bindingPoints) {
-      expect(configScreen, `missing control #${id}`).toContain(`id="${id}"`);
-    }
-  });
-
-  it('keeps all legacy feature IDs (excluding deleted top stepper tabs and inline wrap cover)', () => {
-    const legacy = `
+describe('settings screen — no regression for essential wiring', () => {
+  it('keeps every control the generator reads', () => {
+    const ids = `
       screen-config configStepLayout
       paperSizeGroup signatureInfoBtn signatureSizeGroup signatureHintText bindingGroup flipEdgeGroup
-      configStepPrint advancedToggle advancedBadge advancedPanel gutterValueLabel gutterSlider
+      advancedToggle advancedBadge advancedPanel gutterValueLabel gutterSlider
       creepValueLabel creepSlider creepPaperGsm creepPaperTypeGroup coverModeGroup coverHintText
       marksGroup marksHintText sheetOrderGroup instructionsGroup insertBlankInput insertBlankError
       configStickyFooter configSummary configPreflightWarning configPreflightWarningText
@@ -348,72 +346,40 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     `
       .trim()
       .split(/\s+/);
-    const missing = legacy.filter((id) => !configScreen.includes(`id="${id}"`));
-    expect(missing, `IDs dropped by restoration: ${missing.join(', ')}`).toEqual([]);
+    const missing = ids.filter((id) => !configScreen.includes(`id="${id}"`));
+    expect(missing, `IDs dropped: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('ships EN + TR strings for step labels, hints, and subtitles', () => {
-    const keys = [
-      'config.stitchTitle',
-      'config.stitchStepSubtitle',
-      'config.stitchStepSubtitle1',
-      'config.stitchStepSubtitle2',
-      'config.stitchStepSubtitle3',
-      'config.stitchNextHint1',
-      'config.stitchNextHint2',
-      'config.backBtnLabel',
-      'cover.spineBasisDesc',
-    ];
-    for (const key of keys) {
+  it('ships EN + TR strings for the new labels', () => {
+    for (const key of ['config.advancedPrint', 'config.advancedDefault', 'config.advancedModified', 'config.signatureWhat', 'config.signature.more']) {
       const occurrences = i18nTs.split(`'${key}':`).length - 1;
       expect(occurrences, `${key} must exist in both dictionaries`).toBe(2);
-      expect(i18nTs).not.toContain(`'${key}': '${key}'`);
     }
-    expect(indexHtml).toContain('id="stitchStepSubtitle" data-i18n="config.stitchStepSubtitle"');
-    expect(indexHtml).toContain('data-i18n-aria-label="config.backBtnLabel"');
   });
 
-  it('removes inline wrap-cover markup while keeping separate-cover and signature-info anchors inside #screen-config', () => {
-    const slice = indexHtml.slice(indexHtml.indexOf('id="screen-config"'), indexHtml.indexOf('id="advancedPanel"'));
-    expect(slice).not.toContain('id="wrapCoverToggleGroup"');
-    expect(slice).not.toContain('id="wrapCoverOptions"');
-    expect(slice).not.toContain('id="configStepCover"');
-    expect(slice).toContain('id="coverModeGroup"');
-    expect(slice).toContain('id="coverHintText"');
-    expect(slice).toContain('id="signatureInfoBtn"');
+  it('keeps the separate-cover anchors inside #screen-config', () => {
+    expect(configScreen).toContain('id="coverModeGroup"');
+    expect(configScreen).toContain('id="coverHintText"');
+    expect(configScreen).not.toContain('id="wrapCoverToggleGroup"');
   });
 
-  it('restores data-paper="source" and data-sig="auto" default pills and aligns static is-active defaults with resetPicker()', () => {
+  it('aligns static is-active defaults with resetPicker()', () => {
     const paperGroup = configScreen.match(/<div[^>]*id="paperSizeGroup"[^>]*>([\s\S]*?)<\/div>/);
-    expect(paperGroup).not.toBeNull();
     const paperButtons = [...paperGroup![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
-    const sourcePill = paperButtons.find((b) => b['data-paper'] === 'source');
-    expect(sourcePill).toBeDefined();
-    expect(sourcePill?.['data-i18n']).toBe('config.paperSource');
-    expect(paperButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-paper'])).toEqual([
-      'A4',
-    ]);
+    expect(paperButtons.find((b) => b['data-paper'] === 'source')?.['data-i18n']).toBe('config.paperSource');
+    expect(paperButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-paper'])).toEqual(['A4']);
 
-    const sigGroup = configScreen.match(/<div[^>]*id="signatureSizeGroup"[^>]*>([\s\S]*?)<\/div>/);
-    expect(sigGroup).not.toBeNull();
-    const sigButtons = [...sigGroup![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
-    const singlePill = sigButtons.find((b) => b['data-sig'] === 'single');
-    expect(singlePill).toBeDefined();
-    expect(singlePill?.['data-i18n']).toBe('config.signature.single');
-    const autoPill = sigButtons.find((b) => b['data-sig'] === 'auto');
-    expect(autoPill).toBeDefined();
-    expect(autoPill?.['data-i18n']).toBe('config.signature.auto');
-    expect(sigButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-sig'])).toEqual([
-      'auto',
-    ]);
+    const sigButtons = [...configScreen.match(/<div[^>]*id="signatureSizeGroup"[^>]*>([\s\S]*?)<\/div>/)![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
+    expect(sigButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-sig'])).toEqual(['auto']);
 
     const resetBody = blockAfter(appTs, 'function resetPicker(): void {');
     expect(resetBody).toContain("setActiveSegment(paperSizeGroup, 'paper', 'A4')");
     expect(resetBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', 'auto')");
+    expect(resetBody).toContain('syncSignatureMore(false)');
 
     const applyBody = blockAfter(appTs, 'function applyStoredBookletSettings(settings: StoredBookletSettings): void {');
     expect(applyBody).toContain("options.signatureSize === undefined ? 'single' : String(options.signatureSize)");
-    expect(applyBody).toContain("setActiveSegment(paperSizeGroup, 'paper', typeof bookletPaperSize === 'string' ? bookletPaperSize : '')");
     expect(applyBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', bookletSignature)");
+    expect(applyBody).toContain('syncSignatureMore();');
   });
 });
