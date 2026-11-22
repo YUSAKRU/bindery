@@ -1876,6 +1876,7 @@ export function initApp(): void {
     bookletSourceSheetSize = null;
     refreshConfigSummary();
     fileNameLabel.textContent = name;
+    fileNameLabel.title = name;
     fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${t('picker.reading')}`;
 
     setPickerState('reading');

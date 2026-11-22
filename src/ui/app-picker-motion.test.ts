@@ -93,6 +93,64 @@ describe('Picker Fluid Motion & Dynamic Sizing (feat/atelier-picker)', () => {
       expect(sizeBlock).toContain('text-overflow: ellipsis');
     });
 
+    it('constrains picker grid tracks and clamps .file-card-name to 2 lines with wrapping so long file names truncate without horizontal overflow', () => {
+      const stageIdx = stylesCss.indexOf('#screen-picker .picker-stage {');
+      expect(stageIdx).toBeGreaterThan(0);
+      const stageBlock = stylesCss.slice(stageIdx, stageIdx + 250);
+      expect(stageBlock).toContain('grid-template-columns: minmax(0, 1fr)');
+      expect(stageBlock).toContain('min-width: 0');
+
+      const slotIdx = stylesCss.indexOf('#screen-picker .picker-slot {');
+      expect(slotIdx).toBeGreaterThan(0);
+      const slotBlock = stylesCss.slice(slotIdx, slotIdx + 300);
+      expect(slotBlock).toContain('grid-template-columns: minmax(0, 1fr)');
+      expect(slotBlock).toContain('min-width: 0');
+
+      const clipIdx = stylesCss.indexOf('#screen-picker .picker-slot-clip {');
+      expect(clipIdx).toBeGreaterThan(0);
+      const clipBlock = stylesCss.slice(clipIdx, clipIdx + 300);
+      expect(clipBlock).toContain('min-width: 0');
+
+      const cardIdx = stylesCss.indexOf('#screen-picker .file-card {\n  background:');
+      expect(cardIdx).toBeGreaterThan(0);
+      const cardEnd = stylesCss.indexOf('}', cardIdx);
+      const cardBlock = stylesCss.slice(cardIdx, cardEnd + 1);
+      expect(cardBlock).toContain('display: flex');
+      expect(cardBlock).toContain('align-items: center');
+
+      const nameIdx = stylesCss.indexOf('#screen-picker .file-card-name {');
+      expect(nameIdx).toBeGreaterThan(0);
+      const nameEnd = stylesCss.indexOf('}', nameIdx);
+      const nameBlock = stylesCss.slice(nameIdx, nameEnd + 1);
+      expect(nameBlock).toContain('display: -webkit-box');
+      expect(nameBlock).toContain('-webkit-box-orient: vertical');
+      expect(nameBlock).toContain('-webkit-line-clamp: 2');
+      expect(nameBlock).toContain('line-clamp: 2');
+      expect(nameBlock).toContain('white-space: normal');
+      expect(nameBlock).not.toContain('white-space: nowrap');
+      expect(nameBlock).toContain('overflow: hidden');
+      expect(nameBlock).toContain('overflow-wrap: anywhere');
+      expect(nameBlock).toContain('text-overflow: ellipsis');
+    });
+
+    it('keeps a >=40px touch target on .btn-clear-file and scales the file card modestly on <=380px viewports', () => {
+      const clearIdx = stylesCss.indexOf('#screen-picker .btn-clear-file {');
+      expect(clearIdx).toBeGreaterThan(0);
+      const clearEnd = stylesCss.indexOf('}', clearIdx);
+      const clearBlock = stylesCss.slice(clearIdx, clearEnd + 1);
+      expect(clearBlock).toContain('width: 40px');
+      expect(clearBlock).toContain('height: 40px');
+      expect(clearBlock).toContain('min-width: 40px');
+      expect(clearBlock).toContain('min-height: 40px');
+      expect(clearBlock).toContain('flex-shrink: 0');
+
+      const mediaIdx = stylesCss.indexOf('@media (max-width: 380px) {\n  #screen-picker .file-card');
+      expect(mediaIdx).toBeGreaterThan(0);
+      const mediaSlice = stylesCss.slice(mediaIdx, mediaIdx + 450);
+      expect(mediaSlice).toContain('#screen-picker .file-card-icon');
+      expect(mediaSlice).toContain('#screen-picker .file-card-name');
+    });
+
     it('guarantees zero dead-freeze delay in prefers-reduced-motion override', () => {
       const reducedMotionIdx = stylesCss.lastIndexOf('@media (prefers-reduced-motion: reduce)');
       expect(reducedMotionIdx).toBeGreaterThan(0);
