@@ -574,6 +574,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.pdfSource.device': 'Device Files',
     'modal.pdfSource.deviceDesc': 'Choose a PDF file from your device storage.',
     'modal.binderyPicker.title': 'Select PDF',
+    'modal.binderyPicker.root': 'Bindery Documents',
+    'modal.binderyPicker.up': 'Up one folder',
+    'modal.binderyPicker.path': 'Folder path',
+    'modal.binderyPicker.folder.booklets': 'Booklets',
+    'modal.binderyPicker.folder.scans': 'Scans',
     'toast.addFailed': 'Could not be added — {reason}',
     'toast.invalidFileName': 'Please enter a valid file name.',
     'toast.cameraPermissionDenied':
@@ -1344,6 +1349,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.pdfSource.device': 'Cihaz Dosyaları',
     'modal.pdfSource.deviceDesc': 'Cihazınızın hafızasından bir PDF seçin.',
     'modal.binderyPicker.title': 'PDF Seç',
+    'modal.binderyPicker.root': 'Bindery Belgeleri',
+    'modal.binderyPicker.up': 'Üst klasöre dön',
+    'modal.binderyPicker.path': 'Klasör yolu',
+    'modal.binderyPicker.folder.booklets': 'Kitapçıklar',
+    'modal.binderyPicker.folder.scans': 'Taramalar',
     'toast.addFailed': 'Eklenemedi — {reason}',
     'toast.invalidFileName': 'Lütfen geçerli bir dosya adı girin.',
     'toast.cameraPermissionDenied':
