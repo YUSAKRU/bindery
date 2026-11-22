@@ -7205,13 +7205,18 @@ button.book-page-label:active {
 }
 
 #screen-picker .file-card-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-weight: 600;
   font-size: 0.94rem;
+  line-height: 1.3;
   color: var(--atelier-ink-black);
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   margin-bottom: 3px;
   letter-spacing: -0.01em;
 }

@@ -93,7 +93,7 @@ describe('Picker Fluid Motion & Dynamic Sizing (feat/atelier-picker)', () => {
       expect(sizeBlock).toContain('text-overflow: ellipsis');
     });
 
-    it('constrains picker grid tracks with minmax(0, 1fr) and min-width: 0 so long file names truncate without horizontal overflow', () => {
+    it('constrains picker grid tracks and clamps .file-card-name to 2 lines with wrapping so long file names truncate without horizontal overflow', () => {
       const stageIdx = stylesCss.indexOf('#screen-picker .picker-stage {');
       expect(stageIdx).toBeGreaterThan(0);
       const stageBlock = stylesCss.slice(stageIdx, stageIdx + 250);
@@ -111,11 +111,25 @@ describe('Picker Fluid Motion & Dynamic Sizing (feat/atelier-picker)', () => {
       const clipBlock = stylesCss.slice(clipIdx, clipIdx + 300);
       expect(clipBlock).toContain('min-width: 0');
 
+      const cardIdx = stylesCss.indexOf('#screen-picker .file-card {\n  background:');
+      expect(cardIdx).toBeGreaterThan(0);
+      const cardEnd = stylesCss.indexOf('}', cardIdx);
+      const cardBlock = stylesCss.slice(cardIdx, cardEnd + 1);
+      expect(cardBlock).toContain('display: flex');
+      expect(cardBlock).toContain('align-items: center');
+
       const nameIdx = stylesCss.indexOf('#screen-picker .file-card-name {');
       expect(nameIdx).toBeGreaterThan(0);
-      const nameBlock = stylesCss.slice(nameIdx, nameIdx + 300);
-      expect(nameBlock).toContain('white-space: nowrap');
+      const nameEnd = stylesCss.indexOf('}', nameIdx);
+      const nameBlock = stylesCss.slice(nameIdx, nameEnd + 1);
+      expect(nameBlock).toContain('display: -webkit-box');
+      expect(nameBlock).toContain('-webkit-box-orient: vertical');
+      expect(nameBlock).toContain('-webkit-line-clamp: 2');
+      expect(nameBlock).toContain('line-clamp: 2');
+      expect(nameBlock).toContain('white-space: normal');
+      expect(nameBlock).not.toContain('white-space: nowrap');
       expect(nameBlock).toContain('overflow: hidden');
+      expect(nameBlock).toContain('overflow-wrap: anywhere');
       expect(nameBlock).toContain('text-overflow: ellipsis');
     });
 
