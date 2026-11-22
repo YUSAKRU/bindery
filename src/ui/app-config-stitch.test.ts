@@ -383,7 +383,7 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     expect(slice).toContain('id="signatureInfoBtn"');
   });
 
-  it('restores data-paper="source" and data-sig="single" pills and aligns static is-active defaults with resetPicker()', () => {
+  it('restores data-paper="source" and data-sig="auto" default pills and aligns static is-active defaults with resetPicker()', () => {
     const paperGroup = configScreen.match(/<div[^>]*id="paperSizeGroup"[^>]*>([\s\S]*?)<\/div>/);
     expect(paperGroup).not.toBeNull();
     const paperButtons = [...paperGroup![1].matchAll(/<button[^>]*>/g)].map((m) => attrs(m[0]));
@@ -400,13 +400,16 @@ describe('Stitch 3-step prototype restoration — no regression for essential wi
     const singlePill = sigButtons.find((b) => b['data-sig'] === 'single');
     expect(singlePill).toBeDefined();
     expect(singlePill?.['data-i18n']).toBe('config.signature.single');
+    const autoPill = sigButtons.find((b) => b['data-sig'] === 'auto');
+    expect(autoPill).toBeDefined();
+    expect(autoPill?.['data-i18n']).toBe('config.signature.auto');
     expect(sigButtons.filter((b) => /(^|\s)is-active(\s|$)/.test(b.class ?? '')).map((b) => b['data-sig'])).toEqual([
-      'single',
+      'auto',
     ]);
 
     const resetBody = blockAfter(appTs, 'function resetPicker(): void {');
     expect(resetBody).toContain("setActiveSegment(paperSizeGroup, 'paper', 'A4')");
-    expect(resetBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', 'single')");
+    expect(resetBody).toContain("setActiveSegment(signatureSizeGroup, 'sig', 'auto')");
 
     const applyBody = blockAfter(appTs, 'function applyStoredBookletSettings(settings: StoredBookletSettings): void {');
     expect(applyBody).toContain("options.signatureSize === undefined ? 'single' : String(options.signatureSize)");

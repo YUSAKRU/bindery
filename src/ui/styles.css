@@ -8658,6 +8658,36 @@ button.book-page-label:active {
   color: var(--stitch-text-body);
 }
 
+#screen-config .config-signature-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--stitch-radius-segmented);
+  background: #FAF0EC;
+  border: 1px solid #ECC9BD;
+  color: #8C3717;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  gap: 9px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#screen-config .config-signature-warning .warning-banner-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: currentColor;
+}
+
+:root:not(.light-theme) #screen-config .config-signature-warning,
+.dark-theme #screen-config .config-signature-warning {
+  background: rgba(154, 64, 29, 0.16);
+  border-color: rgba(224, 142, 98, 0.35);
+  color: #f2b797;
+}
+
 /* Segmented Pill Controls */
 .stitch-segmented,
 #screen-config .segmented-group {
@@ -8983,13 +9013,6 @@ button.book-page-label:active {
 .stitch-step-hint svg {
   width: 14px;
   height: 14px;
-}
-
-#configStickyFooter .warning-banner {
-  margin: 0;
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  width: 100%;
 }
 
 /* Primary Sticky CTA */
