@@ -8445,7 +8445,7 @@ button.book-page-label:active {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--atelier-border-hairline, #DCD5C9);
+  border-bottom: 1px solid var(--stitch-card-border);
 }
 
 .colophon-title-wrap {
@@ -8455,7 +8455,7 @@ button.book-page-label:active {
 }
 
 .colophon-craft-icon {
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   flex-shrink: 0;
 }
 
@@ -8463,7 +8463,7 @@ button.book-page-label:active {
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--atelier-ink-black, #1C1A18);
+  color: var(--stitch-text-title);
   letter-spacing: -0.01em;
 }
 
@@ -8471,10 +8471,17 @@ button.book-page-label:active {
   padding: 3px 10px;
   border-radius: var(--stitch-radius-pill);
   background: var(--stitch-primary-tint-50, #FAF0EC);
-  color: var(--stitch-primary, #9a401d);
+  color: var(--stitch-text-brand);
   font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid rgba(154, 64, 29, 0.2);
+}
+
+:root:not(.light-theme) .colophon-badge,
+.dark-theme .colophon-badge {
+  background: rgba(154, 64, 29, 0.2);
+  border-color: rgba(224, 142, 98, 0.3);
+  color: var(--stitch-text-brand);
 }
 
 .colophon-spec-list {
@@ -8505,7 +8512,7 @@ button.book-page-label:active {
   align-items: center;
   gap: 0.375rem;
   font-size: 0.96em;
-  color: var(--atelier-ink-muted, #78716c);
+  color: var(--stitch-text-muted);
   font-weight: 500;
   /* Match .stitch-card background in both light and dark themes to mask the leader cleanly */
   background: var(--stitch-card-bg);
@@ -8516,7 +8523,7 @@ button.book-page-label:active {
 }
 
 .colophon-spec-label svg {
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   opacity: 0.85;
   flex-shrink: 0;
   width: 1.05em;
@@ -8537,7 +8544,7 @@ button.book-page-label:active {
    * - Any wrapped row has H >= 2.90em (> 1.82em), so 2*H - 1.82em > H and overflow:hidden clips it cleanly.
    */
   top: calc(200% - 1.82em);
-  border-bottom: 1px dashed var(--atelier-paper-edge, #D8CDB4);
+  border-bottom: 1px dashed var(--stitch-card-border-hover);
   opacity: 0.65;
   pointer-events: none;
   z-index: 0;
@@ -8548,7 +8555,7 @@ button.book-page-label:active {
   z-index: 1;
   font-size: 1em;
   font-weight: 600;
-  color: var(--atelier-ink-black, #1C1A18);
+  color: var(--stitch-text-title);
   background: var(--stitch-card-bg);
   padding-left: 0.375rem;
   margin-left: auto;
@@ -8566,8 +8573,14 @@ button.book-page-label:active {
   border-radius: 10px;
   background: rgba(154, 64, 29, 0.08);
   border: 1px solid rgba(154, 64, 29, 0.16);
-  color: var(--atelier-primary, #9a401d);
+  color: var(--stitch-text-brand);
   margin-top: 4px;
+}
+
+:root:not(.light-theme) .colophon-yield-banner,
+.dark-theme .colophon-yield-banner {
+  background: rgba(154, 64, 29, 0.18);
+  border-color: rgba(224, 142, 98, 0.25);
 }
 
 .colophon-yield-banner svg {
