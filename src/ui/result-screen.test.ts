@@ -9,7 +9,7 @@ vi.hoisted(() => {
 });
 
 import { setLanguage } from '../i18n';
-import { formatResultSummary, normalizePrinterMode, printerModeTargets } from './app';
+import { formatResultSummary, normalizePrinterMode, printerModeTargets, printStatusKey } from './app';
 
 const root = resolve(__dirname, '../..');
 const read = (rel: string): string => readFileSync(resolve(root, rel), 'utf-8');
@@ -160,5 +160,14 @@ describe('#screen-result markup', () => {
     expect(resultSection).not.toContain('stat-grid');
     expect(resultSection).not.toContain('booklet.printHint');
     expect(resultSection).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+});
+
+describe('printStatusKey (what to tell the user after Print)', () => {
+  it('maps every print outcome to its own instruction', () => {
+    expect(printStatusKey('dialog')).toBe('status.printed');
+    expect(printStatusKey('share-sheet')).toBe('status.print.shareSheet');
+    expect(printStatusKey('opened')).toBe('status.print.opened');
+    expect(printStatusKey('downloaded')).toBe('status.print.downloaded');
   });
 });
