@@ -3572,6 +3572,7 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-config,
 #screen-result,
 #pdfSourceModal,
+#binderyFilePickerModal,
 #confirmModal,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
@@ -3614,6 +3615,7 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-config,
   :root:not(.light-theme) #screen-result,
   :root:not(.light-theme) #pdfSourceModal,
+  :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
@@ -3651,6 +3653,7 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-config,
 :root.dark-theme #screen-result,
 :root.dark-theme #pdfSourceModal,
+:root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
@@ -9267,6 +9270,399 @@ button.book-page-label:active {
   }
 }
 /* End Atelier PDF Source Modal */
+
+/* Atelier Bindery Picker Modal (#binderyFilePickerModal) */
+#binderyFilePickerModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+#binderyFilePickerModal .modal-card {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  max-width: 380px;
+  width: 100%;
+  min-width: 0;
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+  padding: 22px 20px 14px;
+  gap: 14px;
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+#binderyFilePickerModal .bp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+#binderyFilePickerModal .bp-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#binderyFilePickerModal .modal-title {
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: clamp(1.38rem, 4.8vw, 1.58rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0;
+}
+
+#binderyFilePickerModal .bp-up {
+  appearance: none;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -6px 0 0 -10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--atelier-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#binderyFilePickerModal .bp-up.hidden {
+  display: none;
+}
+
+#binderyFilePickerModal .bp-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  margin-left: -6px;
+}
+
+#binderyFilePickerModal .bp-crumbs::-webkit-scrollbar {
+  display: none;
+}
+
+#binderyFilePickerModal .bp-crumb {
+  appearance: none;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--atelier-primary);
+  min-height: 32px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#binderyFilePickerModal .bp-crumb.is-current {
+  color: var(--atelier-ink-muted);
+  font-weight: 500;
+  cursor: default;
+}
+
+#binderyFilePickerModal .bp-crumb:disabled {
+  opacity: 1;
+}
+
+#binderyFilePickerModal .bp-crumb-sep {
+  flex-shrink: 0;
+  color: var(--atelier-ink-muted);
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+#binderyFilePickerModal .modal-body {
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#binderyFilePickerModal .bp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  max-height: min(56dvh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--atelier-paper-edge) transparent;
+  /* room for focus rings */
+  padding: 3px;
+  margin: -3px;
+}
+
+#binderyFilePickerModal .bp-item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.12s ease;
+}
+
+#binderyFilePickerModal .bp-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#binderyFilePickerModal .bp-item-icon svg {
+  display: block;
+}
+
+#binderyFilePickerModal .bp-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#binderyFilePickerModal .bp-item-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#binderyFilePickerModal .bp-item-meta {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--atelier-ink-muted);
+}
+
+#binderyFilePickerModal .bp-item-trail {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--atelier-ink-muted);
+  opacity: 0.7;
+}
+
+#binderyFilePickerModal .bp-item-trail:empty {
+  display: none;
+}
+
+/* Multi-select: the check only shows on chosen rows. */
+#binderyFilePickerModal .bp-item:not(.is-folder):not(.is-selected) .bp-item-trail {
+  visibility: hidden;
+}
+
+#binderyFilePickerModal .bp-item.is-selected {
+  border-color: var(--atelier-primary);
+  background: color-mix(in srgb, var(--atelier-primary) 10%, var(--atelier-surface-cream));
+}
+
+#binderyFilePickerModal .bp-item.is-selected .bp-item-trail {
+  color: var(--atelier-primary);
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  #binderyFilePickerModal .bp-item:hover {
+    border-color: var(--atelier-primary);
+    background: var(--atelier-card2-bg);
+  }
+
+  #binderyFilePickerModal .bp-item:hover .bp-item-trail {
+    color: var(--atelier-primary);
+    opacity: 1;
+  }
+
+  #binderyFilePickerModal .bp-up:hover,
+  #binderyFilePickerModal .bp-crumb:not(.is-current):hover {
+    background: color-mix(in srgb, var(--atelier-primary) 8%, transparent);
+  }
+}
+
+#binderyFilePickerModal .bp-item:active {
+  border-color: var(--atelier-primary);
+  background: color-mix(in srgb, var(--atelier-primary) 10%, var(--atelier-surface-cream));
+  transform: scale(0.985);
+}
+
+#binderyFilePickerModal .bp-item:focus:not(:focus-visible),
+#binderyFilePickerModal .bp-up:focus:not(:focus-visible),
+#binderyFilePickerModal .bp-crumb:focus:not(:focus-visible),
+#binderyFilePickerModal .btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+#binderyFilePickerModal .bp-item:focus-visible,
+#binderyFilePickerModal .bp-up:focus-visible,
+#binderyFilePickerModal .bp-crumb:focus-visible,
+#binderyFilePickerModal .btn:focus-visible {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: 2px;
+}
+
+#binderyFilePickerModal .bp-empty {
+  margin: 0;
+  padding: 20px 12px;
+  border: 1px dashed var(--atelier-paper-edge);
+  border-radius: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--atelier-ink-muted);
+}
+
+#binderyFilePickerModal .bp-empty.hidden {
+  display: none;
+}
+
+#binderyFilePickerModal .modal-actions {
+  margin-top: 0;
+  padding-top: 2px;
+  gap: 8px;
+}
+
+#binderyFilePickerModal .btn-text {
+  color: var(--atelier-primary);
+  background: transparent;
+  padding: 10px 14px;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+#binderyFilePickerModal .btn-primary {
+  background: var(--atelier-primary);
+  color: #fff8f5;
+  border: none;
+  min-height: 44px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+#binderyFilePickerModal .btn-primary:disabled {
+  background: var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #binderyFilePickerModal .bp-item {
+    transition: none;
+  }
+  #binderyFilePickerModal .bp-item:active {
+    transform: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #binderyFilePickerModal .modal-card {
+    box-shadow:
+      0 22px 52px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 248, 240, 0.06);
+  }
+
+  :root:not(.light-theme) #binderyFilePickerModal .bp-item-icon,
+  :root:not(.light-theme) #binderyFilePickerModal .bp-up,
+  :root:not(.light-theme) #binderyFilePickerModal .bp-crumb:not(.is-current),
+  :root:not(.light-theme) #binderyFilePickerModal .btn-text {
+    color: var(--atelier-gold-foil);
+  }
+
+  :root:not(.light-theme) #binderyFilePickerModal .bp-item.is-selected {
+    border-color: var(--atelier-gold-foil);
+    background: color-mix(in srgb, var(--atelier-gold-foil) 12%, var(--atelier-surface-cream));
+  }
+
+  :root:not(.light-theme) #binderyFilePickerModal .bp-item.is-selected .bp-item-trail {
+    color: var(--atelier-gold-foil);
+  }
+
+  :root:not(.light-theme) #binderyFilePickerModal .btn-primary:not(:disabled) {
+    background: #c4683c;
+    color: #161412;
+  }
+}
+
+:root.dark-theme #binderyFilePickerModal .modal-card {
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 248, 240, 0.06);
+}
+
+:root.dark-theme #binderyFilePickerModal .bp-item-icon,
+:root.dark-theme #binderyFilePickerModal .bp-up,
+:root.dark-theme #binderyFilePickerModal .bp-crumb:not(.is-current),
+:root.dark-theme #binderyFilePickerModal .btn-text {
+  color: var(--atelier-gold-foil);
+}
+
+:root.dark-theme #binderyFilePickerModal .bp-item.is-selected {
+  border-color: var(--atelier-gold-foil);
+  background: color-mix(in srgb, var(--atelier-gold-foil) 12%, var(--atelier-surface-cream));
+}
+
+:root.dark-theme #binderyFilePickerModal .bp-item.is-selected .bp-item-trail {
+  color: var(--atelier-gold-foil);
+}
+
+:root.dark-theme #binderyFilePickerModal .btn-primary:not(:disabled) {
+  background: #c4683c;
+  color: #161412;
+}
+/* End Atelier Bindery Picker Modal */
 
 /* Atelier Confirm Modal (#confirmModal) */
 #confirmModal {

@@ -211,6 +211,34 @@ export function isBrowsableEntry(item: { type: 'file' | 'directory'; name: strin
   return item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf');
 }
 
+/** Picker order: folders first, then files, each by name (numeric-aware). */
+export function sortPickerEntries<T extends { type: 'file' | 'directory'; name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
+const KNOWN_PICKER_FOLDERS = new Set(['booklets', 'scans']);
+
+/**
+ * Label shown for a folder in the Bindery picker. Only the app's own top-level
+ * folders are translated; the folder on disk keeps its name, and folders the
+ * user named are shown as they are.
+ */
+export function pickerFolderLabel(name: string, depth: number): string {
+  return depth === 0 && KNOWN_PICKER_FOLDERS.has(name) ? t(`modal.binderyPicker.folder.${name}`) : name;
+}
+
+const PICKER_ICON_FOLDER =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>';
+const PICKER_ICON_FILE =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>';
+const PICKER_ICON_CHEVRON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>';
+const PICKER_ICON_CHECK =
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+
 /**
  * Resolves a caught error to user-facing, localized text. Engine failures carry a
  * `code` translated via `t('error.' + code, params)`; anything else (native plugin
@@ -387,7 +415,8 @@ export function initApp(): void {
   const pdfSourceCancelBtn = byId<HTMLButtonElement>('pdfSourceCancelBtn');
 
   const binderyFilePickerModal = byId<HTMLDivElement>('binderyFilePickerModal');
-  const binderyPickerBreadcrumb = byId<HTMLDivElement>('binderyPickerBreadcrumb');
+  const binderyPickerBreadcrumb = byId<HTMLElement>('binderyPickerBreadcrumb');
+  const binderyPickerUpBtn = byId<HTMLButtonElement>('binderyPickerUpBtn');
   const binderyPickerList = byId<HTMLDivElement>('binderyPickerList');
   const binderyPickerEmptyHint = byId<HTMLParagraphElement>('binderyPickerEmptyHint');
   const binderyPickerCancelBtn = byId<HTMLButtonElement>('binderyPickerCancelBtn');
@@ -1562,98 +1591,117 @@ export function initApp(): void {
 
   function renderBinderyPickerBreadcrumb(): void {
     binderyPickerBreadcrumb.innerHTML = '';
-    const btn = document.createElement('button');
-    btn.className = 'breadcrumb-item';
-    btn.textContent = t('files.root');
-    btn.addEventListener('click', () => {
-      currentPickerPath = '';
-      void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
-    });
-    binderyPickerBreadcrumb.appendChild(btn);
+    const parts = currentPickerPath ? currentPickerPath.split('/') : [];
+    const allowMultiple = !binderyPickerConfirmBtn.classList.contains('hidden');
+    binderyPickerUpBtn.classList.toggle('hidden', parts.length === 0);
 
-    if (currentPickerPath) {
-      const parts = currentPickerPath.split('/');
-      let pathAcc = '';
-      parts.forEach((part) => {
-        pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
-        const currentPath = pathAcc;
-        const separator = document.createElement('span');
-        separator.className = 'breadcrumb-separator';
-        separator.textContent = ' › ';
-        binderyPickerBreadcrumb.appendChild(separator);
-
-        const folderBtn = document.createElement('button');
-        folderBtn.className = 'breadcrumb-item';
-        folderBtn.textContent = part;
-        folderBtn.addEventListener('click', () => {
-          currentPickerPath = currentPath;
-          void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
+    const addSegment = (label: string, targetPath: string, isCurrent: boolean): void => {
+      const seg = document.createElement('button');
+      seg.type = 'button';
+      seg.className = 'bp-crumb';
+      seg.textContent = label;
+      if (isCurrent) {
+        seg.classList.add('is-current');
+        seg.setAttribute('aria-current', 'location');
+        seg.disabled = true;
+      } else {
+        seg.addEventListener('click', () => {
+          currentPickerPath = targetPath;
+          void renderBinderyPickerList(allowMultiple);
         });
-        binderyPickerBreadcrumb.appendChild(folderBtn);
-      });
-    }
+      }
+      binderyPickerBreadcrumb.appendChild(seg);
+    };
+
+    addSegment(t('modal.binderyPicker.root'), '', parts.length === 0);
+    let pathAcc = '';
+    parts.forEach((part, idx) => {
+      pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
+      const sep = document.createElement('span');
+      sep.className = 'bp-crumb-sep';
+      sep.textContent = '›';
+      sep.ariaHidden = 'true';
+      binderyPickerBreadcrumb.appendChild(sep);
+      addSegment(pickerFolderLabel(part, idx), pathAcc, idx === parts.length - 1);
+    });
+    // Deep paths overflow: keep the current folder, the end of the trail, in view.
+    binderyPickerBreadcrumb.scrollLeft = binderyPickerBreadcrumb.scrollWidth;
   }
+
+  binderyPickerUpBtn.addEventListener('click', () => {
+    const parts = currentPickerPath.split('/');
+    parts.pop();
+    currentPickerPath = parts.join('/');
+    void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
+  });
 
   async function renderBinderyPickerList(allowMultiple: boolean): Promise<void> {
     renderBinderyPickerBreadcrumb();
     const items = await listPrivateFolder(currentPickerPath);
     binderyPickerList.innerHTML = '';
+    binderyPickerList.scrollTop = 0;
 
-    const pdfItems = items.filter(isBrowsableEntry);
+    const pdfItems = sortPickerEntries(items.filter(isBrowsableEntry));
     const isEmpty = pdfItems.length === 0;
     binderyPickerEmptyHint.classList.toggle('hidden', !isEmpty);
+    const depth = currentPickerPath ? currentPickerPath.split('/').length : 0;
 
     for (const item of pdfItems) {
       const isDir = item.type === 'directory';
 
-      const card = document.createElement('div');
-      card.className = 'file-item-card';
-      if (isDir) card.classList.add('is-folder');
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'bp-item';
+      if (isDir) row.classList.add('is-folder');
 
       const icon = document.createElement('span');
-      icon.className = 'file-item-icon';
-      icon.textContent = isDir ? '📂' : '📄';
+      icon.className = 'bp-item-icon';
       icon.ariaHidden = 'true';
-      card.appendChild(icon);
+      icon.innerHTML = isDir ? PICKER_ICON_FOLDER : PICKER_ICON_FILE;
+      row.appendChild(icon);
 
-      const details = document.createElement('div');
-      details.className = 'file-item-details';
+      const details = document.createElement('span');
+      details.className = 'bp-item-text';
 
       const nameEl = document.createElement('span');
-      nameEl.className = 'file-item-name';
-      nameEl.textContent = item.name;
+      nameEl.className = 'bp-item-name';
+      nameEl.textContent = isDir ? pickerFolderLabel(item.name, depth) : item.name;
       details.appendChild(nameEl);
 
       const meta = document.createElement('span');
-      meta.className = 'file-item-meta';
-      if (isDir) {
-        meta.textContent = t('common.folder');
-      } else {
-        meta.textContent = formatBytes(item.size);
-      }
+      meta.className = 'bp-item-meta';
+      meta.textContent = isDir ? t('common.folder') : formatBytes(item.size);
       details.appendChild(meta);
+      row.appendChild(details);
 
-      card.appendChild(details);
+      const trail = document.createElement('span');
+      trail.className = 'bp-item-trail';
+      trail.ariaHidden = 'true';
+      trail.innerHTML = isDir ? PICKER_ICON_CHEVRON : allowMultiple ? PICKER_ICON_CHECK : '';
+      row.appendChild(trail);
 
-      const isSelected = selectedPickerFiles.some((f) => f.uri === item.uri);
-      if (!isDir && isSelected) {
-        card.classList.add('is-selected');
+      if (!isDir && allowMultiple) {
+        const isSelected = selectedPickerFiles.some((f) => f.uri === item.uri);
+        row.classList.toggle('is-selected', isSelected);
+        row.setAttribute('aria-pressed', String(isSelected));
       }
 
-      card.addEventListener('click', async () => {
+      row.addEventListener('click', async () => {
         if (isDir) {
           currentPickerPath = currentPickerPath ? `${currentPickerPath}/${item.name}` : item.name;
-          void renderBinderyPickerList(allowMultiple);
+          await renderBinderyPickerList(allowMultiple);
+          binderyPickerList.querySelector<HTMLElement>('.bp-item')?.focus();
         } else {
           if (allowMultiple) {
             const idx = selectedPickerFiles.findIndex((f) => f.uri === item.uri);
             if (idx >= 0) {
               selectedPickerFiles.splice(idx, 1);
-              card.classList.remove('is-selected');
             } else {
               selectedPickerFiles.push({ name: item.name, uri: item.uri });
-              card.classList.add('is-selected');
             }
+            const nowSelected = idx < 0;
+            row.classList.toggle('is-selected', nowSelected);
+            row.setAttribute('aria-pressed', String(nowSelected));
             binderyPickerConfirmBtn.disabled = selectedPickerFiles.length === 0;
           } else {
             closeModal(binderyFilePickerModal);
@@ -1673,7 +1721,7 @@ export function initApp(): void {
         }
       });
 
-      binderyPickerList.appendChild(card);
+      binderyPickerList.appendChild(row);
     }
   }
 

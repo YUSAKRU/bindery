@@ -1966,13 +1966,18 @@
     <div class="modal-overlay hidden" id="binderyFilePickerModal"
          role="dialog" aria-modal="true" aria-labelledby="binderyPickerModalTitle">
       <div class="modal-card">
-        <h3 class="modal-title" id="binderyPickerModalTitle" data-i18n="modal.binderyPicker.title">Select PDF</h3>
-        <div class="modal-body">
-          <div class="files-explorer-header">
-            <div class="files-breadcrumb" id="binderyPickerBreadcrumb"></div>
+        <div class="bp-head">
+          <button type="button" class="bp-up hidden" id="binderyPickerUpBtn" aria-label="Up one folder" data-i18n-aria-label="modal.binderyPicker.up">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <div class="bp-head-text">
+            <h3 class="modal-title" id="binderyPickerModalTitle" data-i18n="modal.binderyPicker.title">Select PDF</h3>
+            <nav class="bp-crumbs" id="binderyPickerBreadcrumb" aria-label="Folder path" data-i18n-aria-label="modal.binderyPicker.path"></nav>
           </div>
-          <div class="folder-select-list" id="binderyPickerList"></div>
-          <p class="empty-hint hidden" id="binderyPickerEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
+        </div>
+        <div class="modal-body">
+          <div class="bp-list" id="binderyPickerList"></div>
+          <p class="bp-empty hidden" id="binderyPickerEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-text" id="binderyPickerCancelBtn" data-i18n="common.cancel">Cancel</button>
