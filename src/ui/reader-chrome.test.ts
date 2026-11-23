@@ -342,6 +342,35 @@ describe('reader search panel', () => {
       'rgba(200, 157, 83, .2)',
     );
   });
+
+  it('fits input, count and 32px icon buttons in one row at 320px', () => {
+    const input = rule('.reader-search-input');
+    expect(input).toMatch(/\bflex:\s*1\b/);
+    expect(input).toMatch(/\bmin-width:\s*0\b/);
+
+    const count = rule('.reader-search-count');
+    expect(count).toMatch(/\bflex-shrink:\s*0\b/);
+    expect(count).toMatch(/\bwhite-space:\s*nowrap\b/);
+
+    const btn = rule('.reader-search-panel .icon-btn-sm');
+    expect(btn).toMatch(/\bflex-shrink:\s*0\b/);
+    expect(btn).toMatch(/\bmin-width:\s*32px\b/);
+    expect(btn).toMatch(/\bmin-height:\s*32px\b/);
+    const pad = Number(btn.match(/\bpadding:\s*(\d+)px/)?.[1]);
+    expect(pad).toBeGreaterThanOrEqual(7);
+
+    const svg = rule('.reader-search-panel .icon-svg');
+    expect(svg).toMatch(/\bwidth:\s*18px\b/);
+    expect(svg).toMatch(/\bheight:\s*18px\b/);
+
+    const panel = rule('.reader-search-panel');
+    const hPad = Number(panel.match(/\bpadding:\s*\d+px\s+(\d+)px/)?.[1]);
+    const gap = Number(panel.match(/\bgap:\s*(\d+)px/)?.[1]);
+    const countMin = Number(count.match(/\bmin-width:\s*(\d+)px/)?.[1]);
+    const svgW = Number(svg.match(/\bwidth:\s*(\d+)px/)?.[1]);
+    const btnSize = Math.max(32, svgW + 2 * pad);
+    expect(2 * hPad + 4 * gap + countMin + 3 * btnSize).toBeLessThanOrEqual(200);
+  });
 });
 
 describe('reader page list spacing', () => {

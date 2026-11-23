@@ -2149,6 +2149,7 @@ dialog.modal-sheet::backdrop {
 
 .reader-search-input {
   flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -2179,6 +2180,7 @@ dialog.modal-sheet::backdrop {
   color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
   min-width: 42px;
+  flex-shrink: 0;
   text-align: center;
 }
 
@@ -2189,6 +2191,18 @@ dialog.modal-sheet::backdrop {
 
 .reader-search-count.no-results {
   color: #e57373;
+}
+
+.reader-search-panel .icon-btn-sm {
+  flex-shrink: 0;
+  padding: 7px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.reader-search-panel .icon-svg {
+  width: 18px;
+  height: 18px;
 }
 
 #readerSearchBtn.search-active {
