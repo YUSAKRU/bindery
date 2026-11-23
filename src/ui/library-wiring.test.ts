@@ -8,7 +8,7 @@ vi.hoisted(() => {
   }
 });
 
-import { isBrowsableEntry } from './app';
+import { isBrowsableEntry, LIBRARY_SESSION_SOURCE_MAX, setSessionSource } from './app';
 
 // Source-level assertions, like app.dom.test.ts: the booklet save/share
 // handlers and the picker are closures inside initApp() and there is no DOM in
@@ -61,6 +61,55 @@ describe('library hooks in the booklet result handlers', () => {
     const body = extractBlock("generateBtn.addEventListener('click', async () =>");
     const reset = body.indexOf('currentLibraryRecordId = null');
     expect(reset).toBeGreaterThan(body.indexOf('await makeBooklet('));
+  });
+
+  it('recordBookletInLibrary caches kind:none source bytes in librarySessionSources and refreshes hub count after upsert', () => {
+    const body = extractBlock('async function recordBookletInLibrary(', '): Promise<void> {');
+    const upsertIdx = body.indexOf('await upsertRecord(draft)');
+    const sessionIdx = body.indexOf('setSessionSource(librarySessionSources, record.id,');
+    const refreshIdx = body.indexOf('refreshHubSavedCount()');
+    expect(upsertIdx).toBeGreaterThan(-1);
+    expect(body).toContain("record.source.kind === 'none'");
+    expect(sessionIdx).toBeGreaterThan(upsertIdx);
+    expect(refreshIdx).toBeGreaterThan(upsertIdx);
+  });
+
+  it('relinkLibraryRecord uses setSessionSource for kind:none and removeLibraryRecord refreshes hub count after remove', () => {
+    const relink = extractBlock('async function relinkLibraryRecord(', '): Promise<LibraryRecord | null> {');
+    expect(relink).toContain("if (source.kind === 'none') setSessionSource(librarySessionSources, record.id, picked);");
+
+    const remove = extractBlock('async function removeLibraryRecord(', '): Promise<boolean> {');
+    const removeIdx = remove.indexOf('await removeRecord(record.id)');
+    const refreshIdx = remove.indexOf('refreshHubSavedCount()');
+    expect(removeIdx).toBeGreaterThan(-1);
+    expect(refreshIdx).toBeGreaterThan(removeIdx);
+  });
+
+  it('visibilitychange refreshes hub count when the page becomes visible on the hub screen', () => {
+    const vis = extractBlock("document.addEventListener('visibilitychange', () =>");
+    expect(vis).toContain("getCurrentScreenId() === 'hub'");
+    expect(vis).toContain('refreshHubSavedCount()');
+  });
+});
+
+describe('setSessionSource', () => {
+  it('caps librarySessionSources at 3 entries and evicts the oldest', () => {
+    expect(LIBRARY_SESSION_SOURCE_MAX).toBe(3);
+    const map = new Map<string, { name: string; bytes: Uint8Array }>();
+    const pdf = (n: number) => ({ name: `f${n}.pdf`, bytes: new Uint8Array([n]) });
+    setSessionSource(map, 'a', pdf(1));
+    setSessionSource(map, 'b', pdf(2));
+    setSessionSource(map, 'c', pdf(3));
+    expect([...map.keys()]).toEqual(['a', 'b', 'c']);
+
+    setSessionSource(map, 'd', pdf(4));
+    expect([...map.keys()]).toEqual(['b', 'c', 'd']);
+
+    // Updating an existing entry promotes it so the next eviction drops the truly oldest entry.
+    setSessionSource(map, 'b', pdf(20));
+    setSessionSource(map, 'e', pdf(5));
+    expect([...map.keys()]).toEqual(['d', 'b', 'e']);
+    expect(map.get('b')?.name).toBe('f20.pdf');
   });
 });
 

@@ -225,13 +225,17 @@ export function newRecordId(): string {
 
 /** All records, newest (by `updatedAt`) first. */
 export async function getLibrary(): Promise<LibraryRecord[]> {
-  const records = await readAll();
-  return records.sort(byUpdatedDesc);
+  return enqueue(async () => {
+    const records = await readAll();
+    return records.sort(byUpdatedDesc);
+  });
 }
 
 export async function getRecord(id: string): Promise<LibraryRecord | null> {
-  const records = await readAll();
-  return records.find((r) => r.id === id) ?? null;
+  return enqueue(async () => {
+    const records = await readAll();
+    return records.find((r) => r.id === id) ?? null;
+  });
 }
 
 /**

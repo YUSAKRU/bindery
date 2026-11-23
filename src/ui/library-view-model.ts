@@ -159,6 +159,7 @@ export type DetailFieldKey =
   | 'cover'
   | 'source'
   | 'saved'
+  | 'outputNone'
   | 'date';
 
 export interface DetailField {
@@ -226,6 +227,12 @@ export function detailFields(record: LibraryRecord, ctx: DetailContext): DetailF
       key: 'saved',
       label: t('library.detail.saved'),
       value: ['Bindery', ...record.output.relPath.split('/').filter(Boolean)].join(' › '),
+    });
+  } else {
+    fields.push({
+      key: 'outputNone',
+      label: t('library.detail.saved'),
+      value: t('library.output.none'),
     });
   }
   fields.push({ key: 'date', label: t('library.detail.date'), value: ctx.formatDate(record.createdAt) });

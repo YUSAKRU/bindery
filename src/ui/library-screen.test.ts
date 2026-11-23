@@ -307,6 +307,48 @@ describe('library screen controller', () => {
     expect(els.libraryDetailSourceState.classList.contains('hidden')).toBe(true);
   });
 
+  it('shows webSession note only when source is missing, not while linked in the current tab', async () => {
+    const probe = vi.fn(async (r: LibraryRecord) => (r.id === 'linked' ? ('ok' as const) : ('missing' as const)));
+    const { controller, els } = setup({ platform: 'web', probeSource: probe }, [
+      record('linked', { source: { kind: 'none' } }),
+      record('gone', { source: { kind: 'none' } }),
+    ]);
+    await controller.show('books');
+    const [rowLinked, rowGone] = rows(els.libraryBookList, 'library-row');
+
+    rowLinked.click();
+    await flush();
+    expect(els.libraryDetailSourceState.classList.contains('hidden')).toBe(true);
+    expect(els.libraryDetailSourceState.textContent).toBe('');
+
+    rowGone.click();
+    await flush();
+    expect(els.libraryDetailSourceState.classList.contains('hidden')).toBe(false);
+    expect(els.libraryDetailSourceState.textContent).toContain('library.source.missing');
+    expect(els.libraryDetailSourceState.textContent).toContain('library.source.webSession');
+  });
+
+  it('renders library.output.none with muted meta row styling when output is null and hides it otherwise', async () => {
+    const { controller, els } = setup({}, [
+      record('no-out', { output: null }),
+      record('has-out', { output: { relPath: 'booklets/has-out' } }),
+    ]);
+    await controller.show('books');
+    const [rowNoOut, rowHasOut] = rows(els.libraryBookList, 'library-row');
+
+    rowNoOut.click();
+    await flush();
+    const noneRow = els.libraryDetailSpecs.querySelector('.library-spec-outputNone');
+    expect(noneRow).not.toBeNull();
+    expect(noneRow!.classList.contains('library-spec-source')).toBe(true);
+    expect(noneRow!.textContent).toContain('library.output.none');
+
+    rowHasOut.click();
+    await flush();
+    expect(els.libraryDetailSpecs.querySelector('.library-spec-outputNone')).toBeNull();
+    expect(els.libraryDetailSpecs.textContent).not.toContain('library.output.none');
+  });
+
   it('a slow probe for a previous record does not overwrite the record now shown', async () => {
     let finishA: (state: 'missing') => void = () => {};
     const probe = vi.fn((r: LibraryRecord) =>

@@ -122,7 +122,23 @@ describe('library view model', () => {
 
     it('omits separate cover and the cover line when they were not part of the booklet', () => {
       const keys = detailFields(record(), ctx).map((f) => f.key);
-      expect(keys).toEqual(['pages', 'signatures', 'sheets', 'binding', 'source', 'date']);
+      expect(keys).toEqual(['pages', 'signatures', 'sheets', 'binding', 'source', 'outputNone', 'date']);
+    });
+
+    it('shows library.output.none when output is null and hides it when output exists', () => {
+      const withoutOutput = detailFields(record({ output: null }), ctx);
+      const outputNone = withoutOutput.find((f) => f.key === 'outputNone');
+      expect(outputNone).toEqual({ key: 'outputNone', label: 'Saved in', value: 'No saved print files' });
+      expect(withoutOutput.find((f) => f.key === 'saved')).toBeUndefined();
+
+      setLanguage('tr');
+      const trNone = detailFields(record({ output: null }), ctx).find((f) => f.key === 'outputNone');
+      expect(trNone?.value).toBe('Kaydedilmiş baskı dosyası yok');
+
+      setLanguage('en');
+      const withOutput = detailFields(record({ output: { relPath: 'booklets/Rapor' } }), ctx);
+      expect(withOutput.find((f) => f.key === 'outputNone')).toBeUndefined();
+      expect(withOutput.find((f) => f.key === 'saved')?.value).toBe('Bindery › booklets › Rapor');
     });
 
     it('shows separate cover, the wrap cover and the saved folder when stored', () => {
