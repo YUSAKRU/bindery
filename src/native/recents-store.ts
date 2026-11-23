@@ -171,3 +171,19 @@ export async function removeRecent(identity: { uri: string | null; name: string 
     await writeAll(entries.filter((e) => entryId(e) !== id));
   });
 }
+
+/**
+ * Removes every entry whose uri equals `uri` or sits under `uri/` (whole path
+ * segments only: `booklets/x` covers `booklets/x/a.pdf`, never
+ * `booklets/xy/a.pdf`). Entries with `uri === null` are left untouched.
+ */
+export async function removeRecentsUnder(uri: string): Promise<void> {
+  const base = uri.replace(/\/+$/, '');
+  if (!base) return;
+  const prefix = `${base}/`;
+  return enqueue(async () => {
+    const entries = await readAll();
+    const next = entries.filter((e) => e.uri === null || (e.uri !== base && !e.uri.startsWith(prefix)));
+    if (next.length !== entries.length) await writeAll(next);
+  });
+}

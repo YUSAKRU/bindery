@@ -158,6 +158,9 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   // Bumped on every detail open, so a slow probe for a previous record cannot
   // overwrite the state of the one now shown.
   let detailToken = 0;
+  // Bumped on every reload/hide, so a slow load cannot overwrite newer data or
+  // restart observers after the screen is hidden.
+  let loadToken = 0;
   let shelfObserver: ObserverLike | null = null;
   let thumbObserver: ObserverLike | null = null;
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,7 +205,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     if (kids) Array.from(kids).forEach((child) => child.remove());
   }
 
-  function setTab(next: LibraryTab): void {
+  function applyTab(next: LibraryTab): void {
     tab = next;
     for (const id of TAB_ORDER) {
       const active = id === next;
@@ -222,6 +225,13 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     storeTab(next);
     renderNoMatch();
     deps.onTabChange?.(next);
+  }
+
+  function setTab(next: LibraryTab): void {
+    applyTab(next);
+    if (next === 'books' || next === 'desk') {
+      void reload();
+    }
   }
 
   function renderCounts(): void {
@@ -715,20 +725,27 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   deskReadBtn.addEventListener('click', onDeskReadClick);
   deskRemoveBtn.addEventListener('click', onDeskRemoveBtn);
 
-  async function show(requested?: LibraryTab): Promise<void> {
-    setTab(requested ?? readStoredTab());
+  async function reload(): Promise<void> {
+    const token = ++loadToken;
     const [loadedBooks, loadedDesk] = await Promise.all([
       deps.loadBooks().catch(() => [] as LibraryRecord[]),
       deps.loadDesk().catch(() => [] as RecentEntry[]),
     ]);
+    if (token !== loadToken) return;
     books = loadedBooks;
-    desk = loadedDesk;
+    desk = loadedDesk.filter((entry) => entry.uri !== null);
     renderCounts();
     renderBooks();
     renderDesk();
   }
 
+  async function show(requested?: LibraryTab): Promise<void> {
+    applyTab(requested ?? readStoredTab());
+    await reload();
+  }
+
   function hide(): void {
+    loadToken++;
     closeDetail();
     closeDeskSheet();
     shelfObserver?.disconnect();
@@ -778,7 +795,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     deskRemoveBtn.removeEventListener('click', onDeskRemoveBtn);
   }
 
-  setTab(tab);
+  applyTab(tab);
 
   return { show, hide, selectTab: setTab, refreshTexts, isDetailOpen, closeDetail, isSearchOpen, closeSearch, destroy };
 }

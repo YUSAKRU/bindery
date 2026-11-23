@@ -440,13 +440,17 @@ function downloadPdfInBrowser(bytes: Uint8Array, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Writes a PDF to the device's Documents directory for permanent storage. */
-export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string> {
-  const uri = await writeFileChunked(filename, Directory.Documents, bytes);
+/**
+ * Writes a PDF to the device's Documents directory for permanent storage on
+ * native platforms. On web, triggers a browser download without writing a
+ * hidden copy to IndexedDB and returns `null`.
+ */
+export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string | null> {
   if (Capacitor.getPlatform() === 'web') {
     downloadPdfInBrowser(bytes, filename);
+    return null;
   }
-  return uri;
+  return writeFileChunked(filename, Directory.Documents, bytes);
 }
 
 /** Checks whether a file or folder already exists at the given path inside Directory.Data. */
