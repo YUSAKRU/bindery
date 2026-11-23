@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bindery-pwa-v1';
+const CACHE_NAME = 'bindery-pwa-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
