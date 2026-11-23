@@ -507,3 +507,132 @@ describe('Atelier Tool Screens — Phase 3 (Result Screens & Error Screen)', () 
     expect(phase3Css).toContain(':root.dark-theme #rotateSaveBtn');
   });
 });
+
+const PHASE4_IDS = [
+  'toast',
+  'openInToolSheet',
+  'moveDocModal',
+  'saveDocModal',
+  'downloadPdfModal',
+  'goToPageModal',
+  'growthReviewDialog',
+] as const;
+
+describe('Atelier Shared Overlays & Modals — Phase 4', () => {
+  const phase4Css = extractSection(
+    css,
+    '/* Atelier Shared Overlays & Modals — Phase 4 */',
+    '/* End Atelier Shared Overlays & Modals — Phase 4 */',
+  );
+
+  it('registers #toast and all 6 Phase 4 modals/dialogs in all three Atelier token lists', () => {
+    const { light, prefersDark, darkClass } = extractTokenSelectorBlocks();
+    const parseSelectorList = (raw: string): string[] =>
+      raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    const lightSelectors = parseSelectorList(light.slice(0, light.indexOf('{')));
+    const prefersDarkSelectors = parseSelectorList(
+      prefersDark.slice(
+        prefersDark.indexOf(':root:not(.light-theme)'),
+        prefersDark.indexOf('{', prefersDark.indexOf(':root:not(.light-theme)')),
+      ),
+    );
+    const darkClassSelectors = parseSelectorList(darkClass.slice(0, darkClass.indexOf('{')));
+
+    for (const id of PHASE4_IDS) {
+      const sel = `#${id}`;
+      expect(lightSelectors, `light token block missing ${sel}`).toContain(sel);
+      expect(
+        prefersDarkSelectors,
+        `prefersDark token block missing :root:not(.light-theme) ${sel}`,
+      ).toContain(`:root:not(.light-theme) ${sel}`);
+      expect(
+        darkClassSelectors,
+        `darkClass token block missing :root.dark-theme ${sel}`,
+      ).toContain(`:root.dark-theme ${sel}`);
+    }
+  });
+
+  it('uses zero indigo/purple literals or legacy primary tokens in Phase 4 CSS and defines all custom properties', () => {
+    expect(phase4Css).not.toMatch(FORBIDDEN_INDIGO_RE);
+    const usedVars = new Set([...phase4Css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+    for (const v of usedVars) {
+      expect(css, `CSS variable ${v} must be defined`).toContain(`${v}:`);
+    }
+  });
+
+  it('removes emojis from #openInToolSheet, #moveDocModal, #growthReviewDialog, and replaces "create" in review copy', () => {
+    const openInHtml = extractTagBlock(html, 'id="openInToolSheet"', 'div');
+    const moveDocHtml = extractTagBlock(html, 'id="moveDocModal"', 'div');
+    const reviewHtml = extractTagBlock(html, 'id="growthReviewDialog"', 'dialog');
+
+    expect(openInHtml).not.toMatch(EMOJI_RE);
+    expect(moveDocHtml).not.toMatch(EMOJI_RE);
+    expect(reviewHtml).not.toMatch(EMOJI_RE);
+    expect(reviewHtml).toContain('class="tool-icon"');
+
+    const toolListHtml = extractTagBlock(openInHtml, 'id="openInToolList"', 'div');
+    const buttons = [...toolListHtml.matchAll(/<button[^>]*data-tool-id="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)];
+    expect(buttons.map((b) => b[1])).toEqual([
+      'reader',
+      'booklet',
+      'organize',
+      'rotate',
+      'page-numbers',
+      'watermark',
+      'merge',
+    ]);
+    for (const [, toolId, inner] of buttons) {
+      expect(inner, `${toolId} option should contain <svg class="tool-icon">`).toContain('class="tool-icon"');
+      expect(inner, `${toolId} option should wrap label in data-i18n span`).toContain('<span data-i18n="');
+      if (toolId === 'merge') {
+        expect(inner).toContain('<rect x="8" y="6" width="13" height="15" rx="2"/>');
+      }
+    }
+
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+    vi.stubGlobal('document', { documentElement: {}, querySelectorAll: () => [] });
+    try {
+      setLanguage('en');
+      expect(t('modal.moveDoc.hint')).not.toMatch(EMOJI_RE);
+      expect(t('modal.openIn.reader')).toBe('Reader');
+      expect(t('growth.reviewPromptText')).not.toMatch(/\bcreate\b/i);
+      setLanguage('tr');
+      expect(t('modal.moveDoc.hint')).not.toMatch(EMOJI_RE);
+      expect(t('modal.openIn.reader')).toBe('Okuyucu');
+    } finally {
+      setLanguage('en');
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('leaves global .toast and .modal-card intact while scoping light & dark Atelier styles to Phase 4 overlays', () => {
+    const globalToast = css.match(/^\.toast\s*\{([^}]+)\}/m);
+    expect(globalToast).not.toBeNull();
+    expect(globalToast![1]).toContain('background: var(--color-on-surface);');
+
+    const globalModalCard = css.match(/^\.modal-card\s*\{([^}]+)\}/m);
+    expect(globalModalCard).not.toBeNull();
+    expect(globalModalCard![1]).toContain('background: var(--color-surface);');
+
+    for (const sel of [
+      '#toast',
+      '#openInToolSheet .folder-select-list',
+      '#openInToolSheet .modal-card',
+      '#moveDocModal .folder-select-list',
+      '#moveDocModal .modal-card',
+      '#saveDocModal .modal-card',
+      '#downloadPdfModal .modal-card',
+      '#goToPageModal .modal-card',
+      '#growthReviewDialog',
+      ':root:not(.light-theme) #growthReviewDialog',
+      ':root.dark-theme #growthReviewDialog',
+    ]) {
+      expect(phase4Css, `missing Phase 4 selector ${sel}`).toContain(sel);
+    }
+  });
+});

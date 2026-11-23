@@ -3952,6 +3952,13 @@ body:has(#screen-hub:not(.hidden)) {
 #confirmModal,
 #signatureInfoSheet,
 #onboardingOverlay,
+#toast,
+#openInToolSheet,
+#moveDocModal,
+#saveDocModal,
+#downloadPdfModal,
+#goToPageModal,
+#growthReviewDialog,
 #screen-reader,
 .app:has(#screen-reader:not(.hidden)) .top-bar,
 #fileActionsModal,
@@ -4051,6 +4058,13 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) #signatureInfoSheet,
   :root:not(.light-theme) #onboardingOverlay,
+  :root:not(.light-theme) #toast,
+  :root:not(.light-theme) #openInToolSheet,
+  :root:not(.light-theme) #moveDocModal,
+  :root:not(.light-theme) #saveDocModal,
+  :root:not(.light-theme) #downloadPdfModal,
+  :root:not(.light-theme) #goToPageModal,
+  :root:not(.light-theme) #growthReviewDialog,
   :root:not(.light-theme) #screen-reader,
   :root:not(.light-theme) .app:has(#screen-reader:not(.hidden)) .top-bar,
   :root:not(.light-theme) #fileActionsModal,
@@ -4145,6 +4159,13 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #confirmModal,
 :root.dark-theme #signatureInfoSheet,
 :root.dark-theme #onboardingOverlay,
+:root.dark-theme #toast,
+:root.dark-theme #openInToolSheet,
+:root.dark-theme #moveDocModal,
+:root.dark-theme #saveDocModal,
+:root.dark-theme #downloadPdfModal,
+:root.dark-theme #goToPageModal,
+:root.dark-theme #growthReviewDialog,
 :root.dark-theme #screen-reader,
 :root.dark-theme .app:has(#screen-reader:not(.hidden)) .top-bar,
 :root.dark-theme #fileActionsModal,
@@ -12601,6 +12622,392 @@ button.book-page-label:active {
   border-color: rgba(244, 140, 128, 0.3);
 }
 /* End Atelier Tool Screens — Phase 3 */
+
+/* Atelier Shared Overlays & Modals — Phase 4 */
+#toast {
+  background: #231f1c;
+  color: #fff8f5;
+  border: 1px solid rgba(255, 248, 245, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(28, 26, 24, 0.24);
+}
+
+#toast .toast-action {
+  color: #e08e62;
+}
+
+#openInToolSheet,
+#moveDocModal,
+#saveDocModal,
+#downloadPdfModal,
+#goToPageModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+#openInToolSheet .modal-card,
+#moveDocModal .modal-card,
+#saveDocModal .modal-card,
+#downloadPdfModal .modal-card,
+#goToPageModal .modal-card {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+#openInToolSheet .modal-title,
+#moveDocModal .modal-title,
+#saveDocModal .modal-title,
+#downloadPdfModal .modal-title,
+#goToPageModal .modal-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#moveDocModal .modal-label,
+#saveDocModal .modal-label,
+#downloadPdfModal .modal-label,
+#goToPageModal .modal-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+}
+
+#saveDocModal .modal-input,
+#downloadPdfModal .modal-input,
+#goToPageModal #goToPageInput {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+
+#saveDocModal .modal-input:focus,
+#downloadPdfModal .modal-input:focus,
+#goToPageModal #goToPageInput:focus {
+  outline: none;
+  border-color: var(--atelier-primary);
+}
+
+#saveDocModal .modal-radio-label {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  color: var(--atelier-ink-black);
+}
+
+#saveDocModal .modal-radio-label:has(input:checked) {
+  border-color: var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.08);
+}
+
+#saveDocModal .modal-radio-label input[type='radio'] {
+  accent-color: var(--atelier-primary);
+}
+
+#saveDocModal .modal-radio-desc {
+  color: var(--atelier-ink-muted);
+}
+
+#moveDocModal .modal-hint,
+#saveDocModal .modal-hint {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-border-hairline);
+  color: var(--atelier-ink-muted);
+  border-radius: 10px;
+}
+
+#openInToolSheet .folder-select-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  max-height: min(460px, 58vh);
+  gap: 8px;
+}
+
+#moveDocModal .folder-select-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  max-height: min(280px, 44vh);
+  gap: 8px;
+}
+
+#openInToolSheet .folder-select-item,
+#moveDocModal .folder-select-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+#openInToolSheet .folder-select-item:active,
+#moveDocModal .folder-select-item:active {
+  background: rgba(154, 64, 29, 0.08);
+  border-color: var(--atelier-primary);
+}
+
+#moveDocModal .folder-select-item.is-selected {
+  border-color: var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.1);
+}
+
+#openInToolSheet .open-in-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(154, 64, 29, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#openInToolSheet .open-in-icon .tool-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#openInToolSheet .btn-text,
+#moveDocModal .btn-text,
+#saveDocModal .btn-text,
+#downloadPdfModal .btn-text,
+#goToPageModal .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+#moveDocModal .btn-primary,
+#saveDocModal .btn-primary,
+#downloadPdfModal .btn-primary,
+#goToPageModal .btn-primary {
+  background: var(--atelier-primary);
+  color: #fff8f5;
+  border-radius: 12px;
+  min-height: 44px;
+  box-shadow: none;
+}
+
+#moveDocModal .btn-primary:disabled,
+#saveDocModal .btn-primary:disabled,
+#downloadPdfModal .btn-primary:disabled,
+#goToPageModal .btn-primary:disabled {
+  background: var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+  opacity: 1;
+}
+
+#growthReviewDialog {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+#growthReviewDialog::backdrop {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+}
+
+#growthReviewDialog .hero-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 4px;
+  border-radius: 18px;
+  background: rgba(200, 157, 83, 0.16);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#growthReviewDialog .hero-icon .tool-icon {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#growthReviewDialog h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#growthReviewDialog .hero-subtitle {
+  color: var(--atelier-ink-muted);
+}
+
+#growthReviewDialog .btn-primary {
+  background: var(--atelier-primary);
+  color: #fff8f5;
+  border-radius: 14px;
+  min-height: 46px;
+}
+
+#growthReviewDialog .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #toast {
+    background: #2e2924;
+    color: #f5efe6;
+    border-color: var(--atelier-paper-edge);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .modal-card,
+  :root:not(.light-theme) #moveDocModal .modal-card,
+  :root:not(.light-theme) #saveDocModal .modal-card,
+  :root:not(.light-theme) #downloadPdfModal .modal-card,
+  :root:not(.light-theme) #goToPageModal .modal-card,
+  :root:not(.light-theme) #growthReviewDialog {
+    box-shadow:
+      0 22px 52px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 248, 240, 0.06);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .open-in-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .open-in-icon .tool-icon,
+  :root:not(.light-theme) #growthReviewDialog .hero-icon .tool-icon,
+  :root:not(.light-theme) #openInToolSheet .btn-text,
+  :root:not(.light-theme) #moveDocModal .btn-text,
+  :root:not(.light-theme) #saveDocModal .btn-text,
+  :root:not(.light-theme) #downloadPdfModal .btn-text,
+  :root:not(.light-theme) #goToPageModal .btn-text {
+    color: #d9875f;
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-radio-label:has(input:checked),
+  :root:not(.light-theme) #moveDocModal .folder-select-item.is-selected {
+    border-color: #d9875f;
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-radio-label input[type='radio'] {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-input:focus,
+  :root:not(.light-theme) #downloadPdfModal .modal-input:focus,
+  :root:not(.light-theme) #goToPageModal #goToPageInput:focus {
+    border-color: #d9875f;
+  }
+
+  :root:not(.light-theme) #moveDocModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #saveDocModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #downloadPdfModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #goToPageModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #growthReviewDialog .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+}
+
+:root.dark-theme #toast {
+  background: #2e2924;
+  color: #f5efe6;
+  border-color: var(--atelier-paper-edge);
+}
+
+:root.dark-theme #openInToolSheet .modal-card,
+:root.dark-theme #moveDocModal .modal-card,
+:root.dark-theme #saveDocModal .modal-card,
+:root.dark-theme #downloadPdfModal .modal-card,
+:root.dark-theme #goToPageModal .modal-card,
+:root.dark-theme #growthReviewDialog {
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 248, 240, 0.06);
+}
+
+:root.dark-theme #openInToolSheet .open-in-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #openInToolSheet .open-in-icon .tool-icon,
+:root.dark-theme #growthReviewDialog .hero-icon .tool-icon,
+:root.dark-theme #openInToolSheet .btn-text,
+:root.dark-theme #moveDocModal .btn-text,
+:root.dark-theme #saveDocModal .btn-text,
+:root.dark-theme #downloadPdfModal .btn-text,
+:root.dark-theme #goToPageModal .btn-text {
+  color: #d9875f;
+  stroke: #d9875f;
+}
+
+:root.dark-theme #saveDocModal .modal-radio-label:has(input:checked),
+:root.dark-theme #moveDocModal .folder-select-item.is-selected {
+  border-color: #d9875f;
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #saveDocModal .modal-radio-label input[type='radio'] {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #saveDocModal .modal-input:focus,
+:root.dark-theme #downloadPdfModal .modal-input:focus,
+:root.dark-theme #goToPageModal #goToPageInput:focus {
+  border-color: #d9875f;
+}
+
+:root.dark-theme #moveDocModal .btn-primary:not(:disabled),
+:root.dark-theme #saveDocModal .btn-primary:not(:disabled),
+:root.dark-theme #downloadPdfModal .btn-primary:not(:disabled),
+:root.dark-theme #goToPageModal .btn-primary:not(:disabled),
+:root.dark-theme #growthReviewDialog .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+/* End Atelier Shared Overlays & Modals — Phase 4 */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

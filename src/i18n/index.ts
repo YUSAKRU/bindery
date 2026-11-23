@@ -358,7 +358,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
       'Check out Bindery — 100% private, on-device booklet imposition and PDF tools:\nWeb / iOS: {webUrl}\nAndroid (Google Play): {url}',
     'growth.reviewPromptTitle': 'Enjoying Bindery?',
     'growth.reviewPromptText':
-      'If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!',
+      'If Bindery helped you make booklets or organize PDFs, a quick review on Google Play helps others discover it!',
     'growth.reviewPromptRate': 'Rate on Google Play',
     'growth.reviewPromptLater': 'Maybe Later',
     'pwa.bannerTitle': 'Install Bindery App',
@@ -399,7 +399,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'modal.moveDoc.title': 'Move Document',
     'modal.moveDoc.selectFolder': 'Select Destination Folder',
-    'modal.moveDoc.hint': '💡 Your document will be moved to the selected folder.',
+    'modal.moveDoc.hint': 'Your document will be moved to the selected folder.',
     'modal.moveDoc.move': 'Move',
     'modal.saveDoc.title': 'Save Document',
     'modal.saveDoc.saveOption': 'Save Option',
@@ -639,6 +639,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.select': 'Select',
     'common.ok': 'OK',
     'modal.openIn.title': 'Open in…',
+    'modal.openIn.reader': 'Reader',
     'toast.selectingSource': 'Selecting source…',
     'toast.openingDownloadModal': 'Opening download dialog…',
     'confirm.discardResult': 'You have an unsaved result. Go back and discard it?',
@@ -1188,7 +1189,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'modal.moveDoc.title': 'Belgeyi Taşı',
     'modal.moveDoc.selectFolder': 'Hedef Klasör Seçin',
-    'modal.moveDoc.hint': '💡 Seçtiğiniz belge seçilen klasöre taşınacaktır.',
+    'modal.moveDoc.hint': 'Seçtiğiniz belge seçilen klasöre taşınacaktır.',
     'modal.moveDoc.move': 'Taşı',
     'modal.saveDoc.title': 'Belgeyi Kaydet',
     'modal.saveDoc.saveOption': 'Kaydetme Seçeneği',
@@ -1428,6 +1429,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.select': 'Seç',
     'common.ok': 'Tamam',
     'modal.openIn.title': 'Şununla aç…',
+    'modal.openIn.reader': 'Okuyucu',
     'toast.selectingSource': 'Kaynak seçiliyor…',
     'toast.openingDownloadModal': 'İndirme penceresi açılıyor…',
     'confirm.discardResult': 'Kaydedilmemiş sonucunuz var. Geri dönmek ve silmek istiyor musunuz?',

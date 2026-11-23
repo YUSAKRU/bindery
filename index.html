@@ -1895,7 +1895,7 @@
         <div class="modal-body">
           <p class="modal-label" data-i18n="modal.moveDoc.selectFolder">Select Destination Folder</p>
           <div class="folder-select-list" id="moveDocFolderList"></div>
-          <p class="modal-hint" data-i18n="modal.moveDoc.hint">💡 Your document will be moved to the selected folder.</p>
+          <p class="modal-hint" data-i18n="modal.moveDoc.hint">Your document will be moved to the selected folder.</p>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-text" id="moveDocCancelBtn" data-i18n="common.cancel">Cancel</button>
@@ -1925,13 +1925,34 @@
         <h3 class="modal-title" id="openInToolTitle" data-i18n="modal.openIn.title">Open in…</h3>
         <div class="modal-body">
           <div class="folder-select-list" id="openInToolList">
-            <button type="button" class="folder-select-item" data-tool-id="reader">📖 Reader</button>
-            <button type="button" class="folder-select-item" data-tool-id="booklet">📚 Booklet</button>
-            <button type="button" class="folder-select-item" data-tool-id="organize">🗂️ Organize Pages</button>
-            <button type="button" class="folder-select-item" data-tool-id="rotate">🔄 Rotate</button>
-            <button type="button" class="folder-select-item" data-tool-id="page-numbers">🔢 Page Numbers</button>
-            <button type="button" class="folder-select-item" data-tool-id="watermark">💧 Watermark</button>
-            <button type="button" class="folder-select-item" data-tool-id="merge">📎 Merge</button>
+            <button type="button" class="folder-select-item" data-tool-id="reader">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <span data-i18n="modal.openIn.reader">Reader</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="booklet">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+              <span data-i18n="tool.booklet.title">Booklet</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="organize">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+              <span data-i18n="tool.organize.title">Organize Pages</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="rotate">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+              <span data-i18n="tool.rotate.title">Rotate</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="page-numbers">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+              <span data-i18n="tool.pageNumbers.title">Page Numbers</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="watermark">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+              <span data-i18n="tool.watermark.title">Watermark</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="merge">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><rect x="8" y="6" width="13" height="15" rx="2"/><path d="M14.5 11v5"/><path d="M12 13.5h5"/></svg></span>
+              <span data-i18n="tool.merge.title">Merge</span>
+            </button>
           </div>
         </div>
         <div class="modal-actions">
@@ -2177,9 +2198,9 @@
     <!-- Review prompt dialog -->
     <dialog class="modal-sheet" id="growthReviewDialog">
       <div class="modal-sheet-content">
-        <div class="hero-icon" aria-hidden="true">⭐</div>
+        <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
         <h2 data-i18n="growth.reviewPromptTitle">Enjoying Bindery?</h2>
-        <p class="hero-subtitle" data-i18n="growth.reviewPromptText">If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!</p>
+        <p class="hero-subtitle" data-i18n="growth.reviewPromptText">If Bindery helped you make booklets or organize PDFs, a quick review on Google Play helps others discover it!</p>
         <div class="modal-sheet-actions">
           <button class="btn btn-primary" id="growthReviewRateBtn" data-i18n="growth.reviewPromptRate">Rate on Google Play</button>
           <button class="btn btn-tonal" id="growthReviewLaterBtn" data-i18n="growth.reviewPromptLater">Maybe Later</button>
