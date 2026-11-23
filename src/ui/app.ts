@@ -464,7 +464,6 @@ export function initApp(): void {
   let openInToolUri: string | null = null;
   let openInToolRelPath: string | null = null;
 
-  const bottomNav = byId<HTMLElement>('bottomNav');
   const toast = byId<HTMLDivElement>('toast');
   // Only the All-Tools rows use this navigate-or-"coming soon"
   // handler. The reader tools sheet and the files sort sheet reuse the .tool-row
@@ -1139,14 +1138,6 @@ export function initApp(): void {
       'hub') as ScreenId;
   }
 
-  function updateBottomNavActive(tab: string): void {
-    bottomNav.querySelectorAll('.bottom-nav-item').forEach((item) => {
-      const btn = item as HTMLButtonElement;
-      const isActive = btn.dataset.nav === tab;
-      btn.classList.toggle('is-active', isActive);
-    });
-  }
-
   let mdFlow: { reset: () => void } | null = null;
   let atelierHub: AtelierHubController | null = null;
   let libraryScreen: LibraryScreenController | null = null;
@@ -1217,8 +1208,7 @@ export function initApp(): void {
     topBarTitle.textContent = t(SCREEN_TITLES[id]);
     topBarTitle.title = id === 'reader' ? (readerName || '') : '';
 
-    const isTab = id === 'hub' || id === 'files' || id === 'settings';
-    backBtn.hidden = isTab;
+    backBtn.hidden = id === 'hub';
 
     const isReader = id === 'reader';
     savePdfBtn.hidden = !isReader;
@@ -1230,11 +1220,6 @@ export function initApp(): void {
     if (id !== 'hub') {
       // The hub is leaving the screen, so there is nothing to animate.
       atelierHub?.closeMenu({ immediate: true });
-    }
-
-    bottomNav.classList.toggle('hidden', !isTab || id === 'hub');
-    if (isTab && id !== 'hub') {
-      updateBottomNavActive(id);
     }
 
     if (id === 'reader') {
@@ -1594,15 +1579,6 @@ export function initApp(): void {
         return;
       }
       showToast(t('toast.comingSoon'));
-    });
-  });
-
-  bottomNav.querySelectorAll<HTMLButtonElement>('.bottom-nav-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const nav = item.dataset.nav as ScreenId;
-      if (nav) {
-        showScreen(nav);
-      }
     });
   });
 
@@ -6295,7 +6271,7 @@ export function initApp(): void {
       void renderFilesList();
       return;
     }
-    if (current === 'hub' || current === 'files' || current === 'settings') {
+    if (current === 'hub') {
       // Back on a root screen sends the app to the background, as other
       // Android apps do, rather than exiting: an open document is not lost
       // and coming back is instant.

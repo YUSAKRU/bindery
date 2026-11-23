@@ -235,12 +235,6 @@ body {
   pointer-events: none !important;
 }
 
-/* Only reserve bottom-nav space while the nav is actually shown (it is
-   display:none on non-tab screens such as the reader and result screens). */
-.app:has(.bottom-nav:not(.hidden)) .screen-container {
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 8px) + 76px);
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -708,16 +702,6 @@ body {
   stroke: var(--color-primary);
 }
 
-.bottom-nav-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
 .tool-row.is-soon {
   cursor: pointer;
 }
@@ -743,51 +727,6 @@ body {
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
-}
-
-.bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
-  border-top: 1px solid var(--color-surface-variant);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  /* Opaque for the reason given on .top-bar. */
-  background: var(--color-surface);
-  padding: 8px 8px max(env(safe-area-inset-bottom), 8px);
-}
-
-.bottom-nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  font-family: inherit;
-  padding: 6px 4px;
-  color: var(--color-on-surface-variant);
-  cursor: pointer;
-}
-
-.bottom-nav-item .nav-icon {
-  font-size: 1.2rem;
-}
-
-.bottom-nav-item .nav-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.bottom-nav-item.is-active {
-  color: var(--color-primary);
-}
-
-.bottom-nav-item.is-disabled {
-  opacity: 0.5;
 }
 
 .merge-empty-hint {
@@ -3708,8 +3647,7 @@ dialog.modal-sheet::backdrop {
 
 /* 1. Shell Integration when #screen-hub is active */
 .app:has(#screen-hub:not(.hidden)) .top-bar,
-.app:has(#screen-library:not(.hidden)) .top-bar,
-.app:has(#screen-hub:not(.hidden)) .bottom-nav {
+.app:has(#screen-library:not(.hidden)) .top-bar {
   display: none;
 }
 
