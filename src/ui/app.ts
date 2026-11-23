@@ -26,6 +26,7 @@ import {
   resolveAtelierBackAction,
   type AtelierHubController,
 } from './atelier-hub';
+import { isWithinLanding, resolveFilesBack } from './files-back';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
 import { canPrint } from '../native/print';
@@ -657,6 +658,7 @@ export function initApp(): void {
    */
   let bookletSourceSheetSize: [number, number] | null = null;
   let returnScreenOnError: ScreenId = 'picker';
+  let returnLibraryTabOnError: LibraryTab | null = null;
 
   let mergeFiles: PickedPdf[] = [];
   let mergedPdf: Uint8Array | null = null;
@@ -1144,6 +1146,19 @@ export function initApp(): void {
   let filesLandingPath: string | null = null;
   let readerReturnLibraryTab: LibraryTab | null = null;
 
+  function clearFilesBackTarget(): void {
+    filesBackTarget = null;
+    filesLandingPath = null;
+  }
+
+  function navigateFilesFolder(nextPath: string): void {
+    currentFolderPath = nextPath;
+    if (filesLandingPath !== null && !isWithinLanding(nextPath, filesLandingPath)) {
+      clearFilesBackTarget();
+    }
+    void renderFilesList();
+  }
+
   function openLibrary(
     tab: LibraryTab,
     opts: { folderPath?: string; backTarget?: FilesBackTarget | null } = {},
@@ -1155,8 +1170,7 @@ export function initApp(): void {
       filesBackTarget = opts.backTarget;
       filesLandingPath = opts.backTarget ? currentFolderPath : null;
     } else if (opts.folderPath !== undefined) {
-      filesBackTarget = null;
-      filesLandingPath = null;
+      clearFilesBackTarget();
     }
     if (getCurrentScreenId() === 'library') {
       libraryScreen?.selectTab(tab);
@@ -1174,10 +1188,14 @@ export function initApp(): void {
    */
   function handleLibraryFilesBack(): boolean {
     if (getCurrentScreenId() !== 'library' || currentLibraryTab !== 'files') return false;
-    if (filesLandingPath !== null && currentFolderPath === filesLandingPath && filesBackTarget) {
+    const action = resolveFilesBack({
+      path: currentFolderPath,
+      landing: filesLandingPath,
+      hasTarget: filesBackTarget !== null,
+    });
+    if (action === 'target' && filesBackTarget) {
       const target = filesBackTarget;
-      filesBackTarget = null;
-      filesLandingPath = null;
+      clearFilesBackTarget();
       if ('screen' in target) {
         showScreen(target.screen);
       } else {
@@ -1185,12 +1203,7 @@ export function initApp(): void {
       }
       return true;
     }
-    const isDeeperThanLanding =
-      filesLandingPath === null ||
-      (filesLandingPath === ''
-        ? currentFolderPath !== ''
-        : currentFolderPath.startsWith(`${filesLandingPath}/`));
-    if (currentFolderPath !== '' && isDeeperThanLanding) {
+    if (action === 'climb') {
       currentFolderPath = currentFolderPath.includes('/')
         ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))
         : '';
@@ -1626,6 +1639,8 @@ export function initApp(): void {
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
     returnScreenOnError = returnTo;
+    returnLibraryTabOnError =
+      returnTo === 'library' && readerReturnLibraryTab === 'files' ? 'files' : null;
     errorTitle.textContent = title;
     errorMessage.textContent = message;
     showScreen('error');
@@ -4976,6 +4991,10 @@ export function initApp(): void {
     returnLibraryTab: LibraryTab | null = null,
   ): Promise<void> {
     if (isOpeningReader) return;
+    if (returnLibraryTab !== 'files') {
+      clearFilesBackTarget();
+    }
+    readerReturnLibraryTab = returnLibraryTab;
     isOpeningReader = true;
     showReaderOpening();
     try {
@@ -4997,7 +5016,6 @@ export function initApp(): void {
       readerUri = sourceUri;
       readerRelPath = relPath;
       readerReturnTo = returnTo;
-      readerReturnLibraryTab = returnLibraryTab;
       const savedNightMode = await Preferences.get({ key: 'readerNightMode' });
       readerNightMode = savedNightMode.value === 'true';
       readerNightModeBtn.classList.toggle('is-active', readerNightMode);
@@ -6092,7 +6110,17 @@ export function initApp(): void {
     }
   }
 
-  retryBtn.addEventListener('click', () => showScreen(returnScreenOnError));
+  function returnFromError(): void {
+    const returnTab = returnLibraryTabOnError;
+    returnLibraryTabOnError = null;
+    if (returnScreenOnError === 'library' && returnTab) {
+      openLibrary(returnTab);
+    } else {
+      showScreen(returnScreenOnError);
+    }
+  }
+
+  retryBtn.addEventListener('click', returnFromError);
 
   function hasUnsavedResultPdf(): boolean {
     switch (getCurrentScreenId()) {
@@ -6109,7 +6137,7 @@ export function initApp(): void {
   backBtn.addEventListener('click', async () => {
     const current = getCurrentScreenId();
     if (current === 'error') {
-      showScreen(returnScreenOnError);
+      returnFromError();
       return;
     }
     if (current === 'crop') {
@@ -6477,8 +6505,7 @@ export function initApp(): void {
       homeBtn.disabled = true;
     } else {
       homeBtn.addEventListener('click', () => {
-        currentFolderPath = '';
-        void renderFilesList();
+        navigateFilesFolder('');
       });
     }
     filesBreadcrumb.appendChild(homeBtn);
@@ -6502,8 +6529,7 @@ export function initApp(): void {
         segBtn.disabled = true;
       } else {
         segBtn.addEventListener('click', () => {
-          currentFolderPath = targetPath;
-          void renderFilesList();
+          navigateFilesFolder(targetPath);
         });
       }
       filesBreadcrumb.appendChild(segBtn);
@@ -6805,8 +6831,7 @@ export function initApp(): void {
       // Card click: navigate into folder or open PDF
       card.addEventListener('click', async () => {
         if (isDir) {
-          currentFolderPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
-          void renderFilesList();
+          navigateFilesFolder(currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name);
         } else {
           try {
             const picked = await readForReader(item.uri);
@@ -7473,6 +7498,7 @@ export function initApp(): void {
   // Opens the current session's document in the book reader. Runs on every
   // entry to the book screen; a session already shown is left alone.
   async function startBookSession(): Promise<void> {
+    clearFilesBackTarget();
     const session = bookSession;
     if (!bookReader || bookSessionShown === session) return;
     if (!session) {
@@ -7663,6 +7689,7 @@ export function initApp(): void {
     },
     onTabChange: (tab) => {
       currentLibraryTab = tab;
+      if (tab !== 'files') clearFilesBackTarget();
       if (tab === 'files') void renderFilesList();
       setErrorScreen(`library:${tab}`);
     },

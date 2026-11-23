@@ -175,7 +175,9 @@ describe('Files browser inside Library (T-12 steps 3+4)', () => {
   it('shares handleLibraryFilesBack between top-bar back and Android back, and closes search first on Android', () => {
     const shared = extractBlock(appSource, 'function handleLibraryFilesBack(): boolean');
     expect(shared).toContain("getCurrentScreenId() !== 'library' || currentLibraryTab !== 'files'");
-    expect(shared).toContain('filesLandingPath !== null && currentFolderPath === filesLandingPath && filesBackTarget');
+    expect(shared).toContain('resolveFilesBack({');
+    expect(shared).not.toContain('isDeeperThanLanding');
+    expect(shared).toContain('clearFilesBackTarget()');
     expect(shared).toContain('libraryScreen?.selectTab(target.tab)');
     expect(shared).toContain('showScreen(target.screen)');
     expect(shared).toContain('void renderFilesList();');
@@ -190,6 +192,60 @@ describe('Files browser inside Library (T-12 steps 3+4)', () => {
     expect(androidBack).toContain('libraryScreen.closeSearch();');
     expect(filesBackIdx).toBeGreaterThan(searchIdx);
     expect(androidBack).not.toContain("current === 'files'");
+  });
+
+  it('clears the back target when leaving the Files tab, stepping outside landing, or opening non-Files reader/book', () => {
+    const clearHelper = extractBlock(appSource, 'function clearFilesBackTarget(): void');
+    expect(clearHelper).toContain('filesBackTarget = null;');
+    expect(clearHelper).toContain('filesLandingPath = null;');
+
+    const lib = extractBlock(appSource, 'libraryScreen = createLibraryScreen', '({');
+    expect(lib).toMatch(/onTabChange:\s*\(tab\)\s*=>\s*\{[^}]*if \(tab !== 'files'\) clearFilesBackTarget\(\);/s);
+
+    const navHelper = extractBlock(appSource, 'function navigateFilesFolder(nextPath: string): void');
+    expect(navHelper).toContain('currentFolderPath = nextPath;');
+    expect(navHelper).toContain('filesLandingPath !== null && !isWithinLanding(nextPath, filesLandingPath)');
+    expect(navHelper).toContain('clearFilesBackTarget();');
+    expect(navHelper).toContain('void renderFilesList();');
+
+    const breadcrumb = extractBlock(appSource, 'function renderFilesBreadcrumb(): void');
+    expect(breadcrumb).toContain("navigateFilesFolder('')");
+    expect(breadcrumb).toContain('navigateFilesFolder(targetPath)');
+    expect(breadcrumb).not.toContain('currentFolderPath =');
+
+    const filesList = extractBlock(appSource, 'async function renderFilesList(): Promise<void>');
+    expect(filesList).toContain('navigateFilesFolder(');
+    expect(filesList).not.toContain('currentFolderPath =');
+
+    const openReader = extractBlock(appSource, 'async function openReaderWithBytes(');
+    const clearGuardIdx = openReader.indexOf("if (returnLibraryTab !== 'files')");
+    const clearCallIdx = openReader.indexOf('clearFilesBackTarget();', clearGuardIdx);
+    const returnTabAssignIdx = openReader.indexOf('readerReturnLibraryTab = returnLibraryTab;');
+    const openDocIdx = openReader.indexOf('openReaderDocument(bytes)');
+    expect(clearGuardIdx).toBeGreaterThanOrEqual(0);
+    expect(clearCallIdx).toBeGreaterThan(clearGuardIdx);
+    expect(returnTabAssignIdx).toBeGreaterThanOrEqual(0);
+    expect(openDocIdx).toBeGreaterThan(returnTabAssignIdx);
+
+    const bookStart = extractBlock(appSource, 'async function startBookSession(): Promise<void>');
+    expect(bookStart).toContain('clearFilesBackTarget();');
+  });
+
+  it('restores the Files tab when returning from an error raised while opening a Files PDF', () => {
+    const goToErrorBody = extractBlock(appSource, 'function goToError(');
+    const saveTabIdx = goToErrorBody.indexOf("returnTo === 'library' && readerReturnLibraryTab === 'files'");
+    const showErrorIdx = goToErrorBody.indexOf("showScreen('error')");
+    expect(saveTabIdx).toBeGreaterThanOrEqual(0);
+    expect(showErrorIdx).toBeGreaterThan(saveTabIdx);
+
+    const returnBody = extractBlock(appSource, 'function returnFromError(): void');
+    expect(returnBody).toContain("returnScreenOnError === 'library' && returnTab");
+    expect(returnBody).toContain('openLibrary(returnTab)');
+    expect(returnBody).toContain('showScreen(returnScreenOnError)');
+
+    expect(appSource).toContain("retryBtn.addEventListener('click', returnFromError);");
+    const backHandler = extractBlock(appSource, "backBtn.addEventListener('click', async () =>");
+    expect(backHandler).toMatch(/if \(current === 'error'\)\s*\{\s*returnFromError\(\);\s*return;\s*\}/);
   });
 
   it('opens and closes the files sort sheet through openModal and closeModal', () => {

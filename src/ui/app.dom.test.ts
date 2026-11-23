@@ -174,6 +174,8 @@ describe('Android back button on a root screen', () => {
     const rootDecision = afterSubfolder.slice(0, afterSubfolder.indexOf('} else {'));
     expect(rootDecision).not.toContain("'files'");
     expect(rootDecision).not.toContain("'settings'");
+    expect(rootDecision).not.toContain("'library'");
+    expect(afterSubfolder).not.toContain("'library'");
   });
 
   it('still exits from the first onboarding page', () => {
