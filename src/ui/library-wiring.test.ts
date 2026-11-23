@@ -110,7 +110,9 @@ describe('library screen replaces the recents screen (D1–D3)', () => {
 
   it('the hub menu entry and card 2 lead to the library', () => {
     const hub = extractBlock('atelierHub = initAtelierHub', '({');
-    expect(hub).toContain("showScreen(target === 'recents' ? 'library' : target)");
+    expect(hub).toMatch(/target === 'files'\)\s*\{\s*openLibrary\('files', \{ folderPath: '' \}\);/);
+    expect(hub).toMatch(/target === 'recents'\)\s*\{[^}]*showScreen\('library'\);/);
+    expect(hub).toContain('showScreen(target);');
     expect(hub).toMatch(/moduleIndex === 1\) \{\s*showScreen\('library'\);/);
   });
 

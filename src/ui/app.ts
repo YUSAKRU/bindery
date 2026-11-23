@@ -26,6 +26,7 @@ import {
   resolveAtelierBackAction,
   type AtelierHubController,
 } from './atelier-hub';
+import { isWithinLanding, resolveFilesBack } from './files-back';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
 import { canPrint } from '../native/print';
@@ -81,7 +82,7 @@ import {
 } from '../native/library-store';
 import { deleteLibraryThumb, readLibraryThumb, writeLibraryThumb } from '../native/library-thumbs';
 import { buildRecordDraft, canReopen, type BookletResultMeta } from './library-record';
-import { createLibraryScreen, type LibraryScreenController } from './library-screen';
+import { createLibraryScreen, type LibraryScreenController, type LibraryTab } from './library-screen';
 import { createBookReader, type BookReaderController } from './book-reader';
 import { computeFormaMap, type PhysicalPage } from '../engine/forma-map';
 import {
@@ -142,7 +143,6 @@ type ScreenId =
   | 'library'
   | 'book'
   | 'tools-all'
-  | 'files'
   | 'settings'
   | 'error-log'
   | 'md-to-pdf';
@@ -167,7 +167,6 @@ const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   library: 'hub',
   book: 'library',
   'tools-all': 'hub',
-  files: 'hub',
   settings: 'hub',
   'error-log': 'settings',
   'md-to-pdf': 'hub',
@@ -284,7 +283,6 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   library: 'library.title',
   book: 'book.title',
   'tools-all': 'tools.allTitle',
-  files: 'screenTitle.files',
   settings: 'settings.title',
   'error-log': 'errorLog.title',
   'md-to-pdf': 'tool.mdToPdf.title',
@@ -387,7 +385,6 @@ export function initApp(): void {
     library: byId('screen-library'),
     book: byId('screen-book'),
     'tools-all': byId('screen-tools-all'),
-    files: byId('screen-files'),
     settings: byId('screen-settings'),
     'error-log': byId('screen-error-log'),
     'md-to-pdf': byId('screen-md-to-pdf'),
@@ -464,7 +461,6 @@ export function initApp(): void {
   let openInToolUri: string | null = null;
   let openInToolRelPath: string | null = null;
 
-  const bottomNav = byId<HTMLElement>('bottomNav');
   const toast = byId<HTMLDivElement>('toast');
   // Only the All-Tools rows use this navigate-or-"coming soon"
   // handler. The reader tools sheet and the files sort sheet reuse the .tool-row
@@ -662,6 +658,7 @@ export function initApp(): void {
    */
   let bookletSourceSheetSize: [number, number] | null = null;
   let returnScreenOnError: ScreenId = 'picker';
+  let returnLibraryTabOnError: LibraryTab | null = null;
 
   let mergeFiles: PickedPdf[] = [];
   let mergedPdf: Uint8Array | null = null;
@@ -1139,17 +1136,82 @@ export function initApp(): void {
       'hub') as ScreenId;
   }
 
-  function updateBottomNavActive(tab: string): void {
-    bottomNav.querySelectorAll('.bottom-nav-item').forEach((item) => {
-      const btn = item as HTMLButtonElement;
-      const isActive = btn.dataset.nav === tab;
-      btn.classList.toggle('is-active', isActive);
-    });
-  }
-
   let mdFlow: { reset: () => void } | null = null;
   let atelierHub: AtelierHubController | null = null;
   let libraryScreen: LibraryScreenController | null = null;
+  type FilesBackTarget = { screen: ScreenId } | { tab: LibraryTab };
+  let pendingLibraryTab: LibraryTab | null = null;
+  let currentLibraryTab: LibraryTab = 'books';
+  let filesBackTarget: FilesBackTarget | null = null;
+  let filesLandingPath: string | null = null;
+  let readerReturnLibraryTab: LibraryTab | null = null;
+
+  function clearFilesBackTarget(): void {
+    filesBackTarget = null;
+    filesLandingPath = null;
+  }
+
+  function navigateFilesFolder(nextPath: string): void {
+    currentFolderPath = nextPath;
+    if (filesLandingPath !== null && !isWithinLanding(nextPath, filesLandingPath)) {
+      clearFilesBackTarget();
+    }
+    void renderFilesList();
+  }
+
+  function openLibrary(
+    tab: LibraryTab,
+    opts: { folderPath?: string; backTarget?: FilesBackTarget | null } = {},
+  ): void {
+    if (opts.folderPath !== undefined) {
+      currentFolderPath = opts.folderPath;
+    }
+    if (opts.backTarget !== undefined) {
+      filesBackTarget = opts.backTarget;
+      filesLandingPath = opts.backTarget ? currentFolderPath : null;
+    } else if (opts.folderPath !== undefined) {
+      clearFilesBackTarget();
+    }
+    if (getCurrentScreenId() === 'library') {
+      libraryScreen?.selectTab(tab);
+    } else {
+      pendingLibraryTab = tab;
+      showScreen('library');
+    }
+  }
+
+  /**
+   * Handles Files-tab back navigation inside the Library screen: returns to the
+   * recorded back target at the landing folder, or climbs one folder when
+   * deeper than the landing path (or below root when no landing path is set).
+   * Returns true when back navigation was handled.
+   */
+  function handleLibraryFilesBack(): boolean {
+    if (getCurrentScreenId() !== 'library' || currentLibraryTab !== 'files') return false;
+    const action = resolveFilesBack({
+      path: currentFolderPath,
+      landing: filesLandingPath,
+      hasTarget: filesBackTarget !== null,
+    });
+    if (action === 'target' && filesBackTarget) {
+      const target = filesBackTarget;
+      clearFilesBackTarget();
+      if ('screen' in target) {
+        showScreen(target.screen);
+      } else {
+        libraryScreen?.selectTab(target.tab);
+      }
+      return true;
+    }
+    if (action === 'climb') {
+      currentFolderPath = currentFolderPath.includes('/')
+        ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))
+        : '';
+      void renderFilesList();
+      return true;
+    }
+    return false;
+  }
   let bookReader: BookReaderController | null = null;
   interface BookSession {
     bytes: Uint8Array;
@@ -1184,6 +1246,11 @@ export function initApp(): void {
 
   function showScreen(id: ScreenId): void {
     triggerScreenTransitionGuard();
+    if (id !== 'library' && id !== 'reader' && id !== 'book') {
+      filesBackTarget = null;
+      filesLandingPath = null;
+      readerReturnLibraryTab = null;
+    }
     if (getCurrentScreenId() === 'library' && id !== 'library') {
       libraryScreen?.hide();
     }
@@ -1217,8 +1284,7 @@ export function initApp(): void {
     topBarTitle.textContent = t(SCREEN_TITLES[id]);
     topBarTitle.title = id === 'reader' ? (readerName || '') : '';
 
-    const isTab = id === 'hub' || id === 'files' || id === 'settings';
-    backBtn.hidden = isTab;
+    backBtn.hidden = id === 'hub';
 
     const isReader = id === 'reader';
     savePdfBtn.hidden = !isReader;
@@ -1232,11 +1298,6 @@ export function initApp(): void {
       atelierHub?.closeMenu({ immediate: true });
     }
 
-    bottomNav.classList.toggle('hidden', !isTab || id === 'hub');
-    if (isTab && id !== 'hub') {
-      updateBottomNavActive(id);
-    }
-
     if (id === 'reader') {
       void ScreenOrientation.unlock().catch(() => {});
     } else if (id === 'book') {
@@ -1246,9 +1307,9 @@ export function initApp(): void {
     } else if (id === 'hub') {
       void refreshHubSavedCount();
     } else if (id === 'library') {
-      void libraryScreen?.show();
-    } else if (id === 'files') {
-      void renderFilesList();
+      const tabToShow = pendingLibraryTab ?? undefined;
+      pendingLibraryTab = null;
+      void libraryScreen?.show(tabToShow);
     } else if (id === 'error-log') {
       void renderErrorLog();
     } else if (id === 'config') {
@@ -1578,6 +1639,8 @@ export function initApp(): void {
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
     returnScreenOnError = returnTo;
+    returnLibraryTabOnError =
+      returnTo === 'library' && readerReturnLibraryTab === 'files' ? 'files' : null;
     errorTitle.textContent = title;
     errorMessage.textContent = message;
     showScreen('error');
@@ -1594,15 +1657,6 @@ export function initApp(): void {
         return;
       }
       showToast(t('toast.comingSoon'));
-    });
-  });
-
-  bottomNav.querySelectorAll<HTMLButtonElement>('.bottom-nav-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const nav = item.dataset.nav as ScreenId;
-      if (nav) {
-        showScreen(nav);
-      }
     });
   });
 
@@ -2667,8 +2721,10 @@ export function initApp(): void {
   });
 
   bookletGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = `booklets/${safeBaseName(bookletFileNameInput.value)}`;
-    showScreen('files');
+    openLibrary('files', {
+      folderPath: `booklets/${safeBaseName(bookletFileNameInput.value)}`,
+      backTarget: { screen: 'result' },
+    });
   });
 
   newFileBtn.addEventListener('click', async () => {
@@ -2859,8 +2915,7 @@ export function initApp(): void {
   mergeSaveBtn.addEventListener('click', mergeSaveFlow.save);
 
   mergeGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'merges';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'merges', backTarget: { screen: 'merge-result' } });
   });
 
   mergeShareBtn.addEventListener('click', async () => {
@@ -3073,8 +3128,7 @@ export function initApp(): void {
   organizeSaveBtn.addEventListener('click', organizeSaveFlow.save);
 
   organizeGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'organize-result' } });
   });
 
   organizeShareBtn.addEventListener('click', async () => {
@@ -3281,8 +3335,7 @@ export function initApp(): void {
   rotateSaveBtn.addEventListener('click', rotateSaveFlow.save);
 
   rotateGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'rotate-result' } });
   });
 
   rotateShareBtn.addEventListener('click', async () => {
@@ -3475,8 +3528,7 @@ export function initApp(): void {
   pageNumbersSaveBtn.addEventListener('click', pageNumbersSaveFlow.save);
 
   pageNumbersGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'page-numbers-result' } });
   });
 
   pageNumbersShareBtn.addEventListener('click', async () => {
@@ -3703,8 +3755,7 @@ export function initApp(): void {
   watermarkSaveBtn.addEventListener('click', watermarkSaveFlow.save);
 
   watermarkGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'watermark-result' } });
   });
 
   watermarkShareBtn.addEventListener('click', async () => {
@@ -4937,8 +4988,13 @@ export function initApp(): void {
     returnTo: ScreenId = 'hub',
     initialPage: number = 1,
     relPath: string | null = null,
+    returnLibraryTab: LibraryTab | null = null,
   ): Promise<void> {
     if (isOpeningReader) return;
+    if (returnLibraryTab !== 'files') {
+      clearFilesBackTarget();
+    }
+    readerReturnLibraryTab = returnLibraryTab;
     isOpeningReader = true;
     showReaderOpening();
     try {
@@ -6054,7 +6110,17 @@ export function initApp(): void {
     }
   }
 
-  retryBtn.addEventListener('click', () => showScreen(returnScreenOnError));
+  function returnFromError(): void {
+    const returnTab = returnLibraryTabOnError;
+    returnLibraryTabOnError = null;
+    if (returnScreenOnError === 'library' && returnTab) {
+      openLibrary(returnTab);
+    } else {
+      showScreen(returnScreenOnError);
+    }
+  }
+
+  retryBtn.addEventListener('click', returnFromError);
 
   function hasUnsavedResultPdf(): boolean {
     switch (getCurrentScreenId()) {
@@ -6071,7 +6137,7 @@ export function initApp(): void {
   backBtn.addEventListener('click', async () => {
     const current = getCurrentScreenId();
     if (current === 'error') {
-      showScreen(returnScreenOnError);
+      returnFromError();
       return;
     }
     if (current === 'crop') {
@@ -6095,7 +6161,16 @@ export function initApp(): void {
         readerToolsSheet.classList.add('hidden');
         return;
       }
-      showScreen(readerReturnTo);
+      if (readerReturnTo === 'library' && readerReturnLibraryTab) {
+        const returnTab = readerReturnLibraryTab;
+        readerReturnLibraryTab = null;
+        openLibrary(returnTab);
+      } else {
+        showScreen(readerReturnTo);
+      }
+      return;
+    }
+    if (current === 'library' && handleLibraryFilesBack()) {
       return;
     }
     if (current === 'book') {
@@ -6288,14 +6363,14 @@ export function initApp(): void {
         return;
       }
     }
-    if (current === 'files' && currentFolderPath !== '') {
-      currentFolderPath = currentFolderPath.includes('/')
-        ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))
-        : '';
-      void renderFilesList();
+    if (current === 'library' && libraryScreen?.isSearchOpen()) {
+      libraryScreen.closeSearch();
       return;
     }
-    if (current === 'hub' || current === 'files' || current === 'settings') {
+    if (current === 'library' && handleLibraryFilesBack()) {
+      return;
+    }
+    if (current === 'hub') {
       // Back on a root screen sends the app to the background, as other
       // Android apps do, rather than exiting: an open document is not lost
       // and coming back is instant.
@@ -6413,22 +6488,24 @@ export function initApp(): void {
     return [header, ...blocks].join('\n\n');
   }
 
-  /** Renders the tappable breadcrumb trail (🏠 › folder › subfolder) for the current path. */
+  const FILES_ICON_HOME =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+  /** Renders the tappable breadcrumb trail (root › folder › subfolder) for the current path. */
   function renderFilesBreadcrumb(): void {
     filesBreadcrumb.innerHTML = '';
     const parts = currentFolderPath ? currentFolderPath.split('/') : [];
 
     const homeBtn = document.createElement('button');
     homeBtn.className = 'breadcrumb-segment';
-    homeBtn.textContent = '🏠';
+    homeBtn.innerHTML = FILES_ICON_HOME;
     homeBtn.ariaLabel = t('files.goToRoot');
     if (parts.length === 0) {
       homeBtn.classList.add('is-current');
       homeBtn.disabled = true;
     } else {
       homeBtn.addEventListener('click', () => {
-        currentFolderPath = '';
-        void renderFilesList();
+        navigateFilesFolder('');
       });
     }
     filesBreadcrumb.appendChild(homeBtn);
@@ -6452,8 +6529,7 @@ export function initApp(): void {
         segBtn.disabled = true;
       } else {
         segBtn.addEventListener('click', () => {
-          currentFolderPath = targetPath;
-          void renderFilesList();
+          navigateFilesFolder(targetPath);
         });
       }
       filesBreadcrumb.appendChild(segBtn);
@@ -6465,7 +6541,7 @@ export function initApp(): void {
     (bytes: Uint8Array, name: string, uri: string, relPath: string | null) => Promise<void>
   > = {
     reader: async (bytes, name, uri, relPath) => {
-      await openReaderWithBytes(bytes, name, uri, 'files', 1, relPath);
+      await openReaderWithBytes(bytes, name, uri, 'library', 1, relPath, 'files');
     },
     booklet: async (bytes, name, uri, relPath) => {
       showScreen('picker');
@@ -6510,15 +6586,33 @@ export function initApp(): void {
     }
   }
 
+  const FILES_ACTION_ICON_OPEN_IN =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+  const FILES_ACTION_ICON_SHARE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>';
+  const FILES_ACTION_ICON_MOVE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-1.73"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg>';
+  const FILES_ACTION_ICON_RENAME =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
+  const FILES_ACTION_ICON_DELETE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+
   /** Opens the "⋮" overflow menu listing the available actions for one file or folder row. */
   function openFileActionsModal(item: FileEntryInfo, isDir: boolean): void {
     fileActionsTitle.textContent = item.name;
     fileActionsList.innerHTML = '';
 
-    const addAction = (icon: string, label: string, onClick: () => void | Promise<void>) => {
+    const addAction = (iconSvg: string, label: string, onClick: () => void | Promise<void>) => {
       const btn = document.createElement('button');
       btn.className = 'folder-select-item';
-      btn.textContent = `${icon} ${label}`;
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'folder-select-icon';
+      iconSpan.setAttribute('aria-hidden', 'true');
+      iconSpan.innerHTML = iconSvg;
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = label;
+      btn.appendChild(iconSpan);
+      btn.appendChild(labelSpan);
       btn.addEventListener('click', () => {
         closeModal(fileActionsModal);
         void onClick();
@@ -6527,13 +6621,13 @@ export function initApp(): void {
     };
 
     if (!isDir) {
-      addAction('↗️', 'Open in...', () => {
+      addAction(FILES_ACTION_ICON_OPEN_IN, 'Open in...', () => {
         openInToolUri = item.uri;
         openInToolRelPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         openModal(openInToolSheet);
       });
 
-      addAction('📤', t('common.share'), async () => {
+      addAction(FILES_ACTION_ICON_SHARE, t('common.share'), async () => {
         try {
           const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
           if ((await sharePdf(picked.bytes, item.name, t('common.share'))) === 'canceled') return;
@@ -6543,7 +6637,7 @@ export function initApp(): void {
         }
       });
 
-      addAction('📋', t('action.move'), async () => {
+      addAction(FILES_ACTION_ICON_MOVE, t('action.move'), async () => {
         moveSourceFile = item;
         moveTargetFolder = null;
         moveDocConfirmBtn.disabled = true;
@@ -6552,7 +6646,7 @@ export function initApp(): void {
       });
     }
 
-    addAction('✏️', t('action.rename'), async () => {
+    addAction(FILES_ACTION_ICON_RENAME, t('action.rename'), async () => {
       const currentName = item.name;
       const input = prompt(
         isDir ? t('common.newFolderPrompt') : t('common.newFileNamePrompt'),
@@ -6587,7 +6681,7 @@ export function initApp(): void {
       }
     });
 
-    addAction('🗑️', t('action.delete'), async () => {
+    addAction(FILES_ACTION_ICON_DELETE, t('action.delete'), async () => {
       const label = isDir
         ? t('files.deleteConfirmFolder', { name: item.name })
         : t('files.deleteConfirmFile', { name: item.name });
@@ -6737,13 +6831,12 @@ export function initApp(): void {
       // Card click: navigate into folder or open PDF
       card.addEventListener('click', async () => {
         if (isDir) {
-          currentFolderPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
-          void renderFilesList();
+          navigateFilesFolder(currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name);
         } else {
           try {
             const picked = await readForReader(item.uri);
             const relPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
-            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files', 1, relPath);
+            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'library', 1, relPath, 'files');
           } catch (error) {
             recordError('caught', error);
             showToast(t('toast.fileOpenError'));
@@ -6884,18 +6977,18 @@ export function initApp(): void {
     filesSortRows.forEach((row) => {
       row.classList.toggle('is-selected', row.dataset.sort === filesSortMode);
     });
-    filesSortSheet.classList.remove('hidden');
+    openModal(filesSortSheet, filesSortBtn);
   });
 
   filesSortBackdrop.addEventListener('click', () => {
-    filesSortSheet.classList.add('hidden');
+    closeModal(filesSortSheet);
   });
 
   filesSortRows.forEach((row) => {
     row.addEventListener('click', () => {
       filesSortMode = (row.dataset.sort as FileSortMode) ?? 'date-desc';
       localStorage.setItem('bindery.filesSort', filesSortMode);
-      filesSortSheet.classList.add('hidden');
+      closeModal(filesSortSheet);
       void renderFilesList();
     });
   });
@@ -6955,7 +7048,7 @@ export function initApp(): void {
       closeModal(downloadPdfModal);
       
       // Auto-open in reader
-      await openReaderWithBytes(bytes, filename, savedUri, 'files', 1, targetPath);
+      await openReaderWithBytes(bytes, filename, savedUri, 'library', 1, targetPath, 'files');
       void renderFilesList();
     } catch (error) {
       const message = errorText(error);
@@ -7405,6 +7498,7 @@ export function initApp(): void {
   // Opens the current session's document in the book reader. Runs on every
   // entry to the book screen; a session already shown is left alone.
   async function startBookSession(): Promise<void> {
+    clearFilesBackTarget();
     const session = bookSession;
     if (!bookReader || bookSessionShown === session) return;
     if (!session) {
@@ -7591,8 +7685,13 @@ export function initApp(): void {
     onRelink: relinkLibraryRecord,
     onOpenOutput: (record) => {
       if (!record.output) return;
-      currentFolderPath = record.output.relPath;
-      showScreen('files');
+      openLibrary('files', { folderPath: record.output.relPath, backTarget: { tab: 'books' } });
+    },
+    onTabChange: (tab) => {
+      currentLibraryTab = tab;
+      if (tab !== 'files') clearFilesBackTarget();
+      if (tab === 'files') void renderFilesList();
+      setErrorScreen(`library:${tab}`);
     },
     onRemove: removeLibraryRecord,
     onRemoveDesk: async (entry) => {
@@ -7696,8 +7795,14 @@ export function initApp(): void {
       modalStack.length === 0 &&
       onboardingOverlay.classList.contains('hidden'),
     onNavigateScreen: (target) => {
-      // The hub still names its menu entry 'recents'; the library replaced that screen.
-      showScreen(target === 'recents' ? 'library' : target);
+      if (target === 'files') {
+        openLibrary('files', { folderPath: '' });
+      } else if (target === 'recents') {
+        // The hub still names its menu entry 'recents'; the library replaced that screen.
+        showScreen('library');
+      } else {
+        showScreen(target);
+      }
     },
     onSelectModule: (moduleIndex) => {
       if (moduleIndex === 0) {

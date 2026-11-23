@@ -235,12 +235,6 @@ body {
   pointer-events: none !important;
 }
 
-/* Only reserve bottom-nav space while the nav is actually shown (it is
-   display:none on non-tab screens such as the reader and result screens). */
-.app:has(.bottom-nav:not(.hidden)) .screen-container {
-  padding-bottom: calc(max(env(safe-area-inset-bottom), 8px) + 76px);
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -708,16 +702,6 @@ body {
   stroke: var(--color-primary);
 }
 
-.bottom-nav-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
 .tool-row.is-soon {
   cursor: pointer;
 }
@@ -743,51 +727,6 @@ body {
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
-}
-
-.bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  display: flex;
-  border-top: 1px solid var(--color-surface-variant);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  /* Opaque for the reason given on .top-bar. */
-  background: var(--color-surface);
-  padding: 8px 8px max(env(safe-area-inset-bottom), 8px);
-}
-
-.bottom-nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  font-family: inherit;
-  padding: 6px 4px;
-  color: var(--color-on-surface-variant);
-  cursor: pointer;
-}
-
-.bottom-nav-item .nav-icon {
-  font-size: 1.2rem;
-}
-
-.bottom-nav-item .nav-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.bottom-nav-item.is-active {
-  color: var(--color-primary);
-}
-
-.bottom-nav-item.is-disabled {
-  opacity: 0.5;
 }
 
 .merge-empty-hint {
@@ -2160,174 +2099,7 @@ dialog.modal-sheet::backdrop {
   margin-top: 8px;
 }
 
-/* Settings switch and style updates */
-.settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 16px;
-}
-
-.settings-group {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface-variant);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-outline);
-  overflow: hidden;
-}
-
-.settings-group-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  margin: 16px 16px 8px;
-}
-
-.settings-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
-}
-
-.settings-row:last-child {
-  border-bottom: none;
-}
-
-.settings-row-btn {
-  appearance: none;
-  background: none;
-  border: none;
-  color: var(--color-on-surface);
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 16px;
-  width: 100%;
-  cursor: pointer;
-  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
-  font-family: inherit;
-}
-
-.settings-row-btn:last-child {
-  border-bottom: none;
-}
-
-.settings-row-btn:active {
-  background: rgba(var(--color-primary-rgb), 0.05);
-}
-
-.settings-btn-label {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.settings-btn-sub {
-  font-size: 0.75rem;
-  color: var(--color-on-surface-variant);
-}
-
-.settings-row-info {
-  display: flex;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
-  font-size: 0.9rem;
-}
-
-.settings-row-info:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  color: var(--color-on-surface-variant);
-}
-
-.info-value {
-  font-weight: 600;
-}
-
-/* Switch UI */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.switch .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--color-outline);
-  transition: .3s;
-}
-
-.switch .slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: .3s;
-}
-
-.switch input:checked + .slider {
-  background-color: var(--color-primary);
-}
-
-.switch input:checked + .slider:before {
-  transform: translateX(20px);
-}
-
-.switch .slider.round {
-  border-radius: 24px;
-}
-
-.switch .slider.round:before {
-  border-radius: 50%;
-}
-
-.settings-lang-switch {
-  display: flex;
-  gap: 2px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-.settings-lang-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--color-on-surface-variant);
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.settings-lang-btn.is-selected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
+/* Settings and Error Log styles moved to Atelier scoped sections at end of file. */
 
 /* Files dedicated styling */
 .empty-hint {
@@ -2335,69 +2107,6 @@ dialog.modal-sheet::backdrop {
   font-size: 0.9rem;
   color: var(--color-on-surface-variant);
   margin-top: 40px;
-}
-
-/* Error log */
-.error-log-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.error-log-row {
-  background: var(--color-surface-variant);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.error-log-head {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.error-log-meta {
-  font-size: 0.75rem;
-  color: var(--color-on-surface-variant);
-}
-
-.error-log-summary {
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.error-log-detail {
-  margin: 0;
-  padding: 12px;
-  border-top: 1px solid var(--color-outline);
-  font-family: monospace;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: var(--color-on-surface-variant);
-  /* A stack trace is long in both directions; let it scroll rather than
-     stretch the page or get folded into unreadable wrapped lines. */
-  white-space: pre;
-  overflow-x: auto;
-}
-
-.error-log-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.error-log-actions .btn {
-  flex: 1;
 }
 
 /* ==========================================================================
@@ -2624,6 +2333,12 @@ dialog.modal-sheet::backdrop {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.folder-select-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .folder-select-item:active, .folder-select-item.is-selected {
@@ -3708,8 +3423,7 @@ dialog.modal-sheet::backdrop {
 
 /* 1. Shell Integration when #screen-hub is active */
 .app:has(#screen-hub:not(.hidden)) .top-bar,
-.app:has(#screen-library:not(.hidden)) .top-bar,
-.app:has(#screen-hub:not(.hidden)) .bottom-nav {
+.app:has(#screen-library:not(.hidden)) .top-bar {
   display: none;
 }
 
@@ -3752,11 +3466,14 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-picker,
 #screen-config,
 #screen-result,
+#screen-settings,
+#screen-error-log,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
 #screen-reader,
 .app:has(#screen-reader:not(.hidden)) .top-bar,
+#fileActionsModal,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3766,7 +3483,11 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .screen-container,
 .app:has(#screen-result:not(.hidden)) .top-bar,
-.app:has(#screen-result:not(.hidden)) .screen-container {
+.app:has(#screen-result:not(.hidden)) .screen-container,
+.app:has(#screen-settings:not(.hidden)) .top-bar,
+.app:has(#screen-settings:not(.hidden)) .screen-container,
+.app:has(#screen-error-log:not(.hidden)) .top-bar,
+.app:has(#screen-error-log:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3797,11 +3518,14 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-picker,
   :root:not(.light-theme) #screen-config,
   :root:not(.light-theme) #screen-result,
+  :root:not(.light-theme) #screen-settings,
+  :root:not(.light-theme) #screen-error-log,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) #screen-reader,
   :root:not(.light-theme) .app:has(#screen-reader:not(.hidden)) .top-bar,
+  :root:not(.light-theme) #fileActionsModal,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3811,7 +3535,11 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-config:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-config:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-result:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-result:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-settings:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-settings:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3837,11 +3565,14 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-picker,
 :root.dark-theme #screen-config,
 :root.dark-theme #screen-result,
+:root.dark-theme #screen-settings,
+:root.dark-theme #screen-error-log,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
 :root.dark-theme #screen-reader,
 :root.dark-theme .app:has(#screen-reader:not(.hidden)) .top-bar,
+:root.dark-theme #fileActionsModal,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3851,7 +3582,11 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-config:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-config:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-result:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-result:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-settings:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-settings:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-error-log:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-error-log:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -5522,6 +5257,15 @@ body:has(#screen-hub:not(.hidden)) {
      lighter on the dark theme's near-black, where plain primary disappears. */
   color: color-mix(in srgb, var(--atelier-primary) 60%, var(--atelier-ink-black));
   font-weight: 600;
+}
+
+@media (max-width: 380px) {
+  .library-tabs {
+    gap: 12px;
+  }
+  .library-tab svg {
+    display: none;
+  }
 }
 
 .library-no-match,
@@ -7901,6 +7645,8 @@ button.book-page-label:active {
    printer needs. Scoped to #screen-result and its parent container.
    ========================================================================== */
 
+.app:has(#screen-settings:not(.hidden)) .top-bar,
+.app:has(#screen-error-log:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -7908,6 +7654,8 @@ button.book-page-label:active {
   color: var(--atelier-ink-black);
 }
 
+.app:has(#screen-settings:not(.hidden)) .top-bar-title,
+.app:has(#screen-error-log:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -7917,6 +7665,8 @@ button.book-page-label:active {
   font-weight: 600;
 }
 
+.app:has(#screen-settings:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-error-log:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -10130,6 +9880,650 @@ button.book-page-label:active {
   }
 }
 /* End Atelier Confirm Modal */
+
+/* Atelier Files Tab (#libraryFilesPanel & #fileActionsModal) */
+#libraryFilesPanel .files-explorer-header {
+  padding: 4px 0 0;
+  gap: 6px;
+}
+
+#libraryFilesPanel .files-explorer-header .icon-btn-sm {
+  color: var(--atelier-ink-muted);
+  border-radius: 10px;
+}
+
+#libraryFilesPanel .files-explorer-header .icon-btn-sm:active,
+#libraryFilesPanel .icon-btn-sm:active {
+  background: rgba(154, 64, 29, 0.12);
+}
+
+#libraryFilesPanel .icon-btn-sm {
+  color: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .breadcrumb-segment {
+  color: var(--atelier-primary);
+}
+
+#libraryFilesPanel .breadcrumb-segment.is-current {
+  color: var(--atelier-ink-black);
+}
+
+#libraryFilesPanel .breadcrumb-segment .icon-svg,
+#libraryFilesPanel .breadcrumb-sep {
+  color: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .files-search {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  color: var(--atelier-ink-black);
+}
+
+#libraryFilesPanel .files-search::placeholder {
+  color: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .files-search:focus {
+  outline: 2px solid var(--atelier-primary);
+  outline-offset: -1px;
+  border-color: var(--atelier-primary);
+}
+
+#libraryFilesPanel .files-list {
+  padding: 0 0 24px;
+  gap: 10px;
+}
+
+#libraryFilesPanel .file-item-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+  color: var(--atelier-ink-black);
+}
+
+#libraryFilesPanel .file-item-card:active {
+  background: var(--atelier-paper-edge);
+}
+
+#libraryFilesPanel .file-item-card.is-selected {
+  background: var(--atelier-paper-edge) !important;
+  border-color: var(--atelier-primary) !important;
+}
+
+#libraryFilesPanel .file-item-thumb {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-border-hairline);
+  border-radius: 10px;
+}
+
+#libraryFilesPanel .file-item-thumb .tool-icon {
+  stroke: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .file-item-thumb--folder {
+  background: rgba(154, 64, 29, 0.1);
+  border-color: rgba(154, 64, 29, 0.16);
+}
+
+#libraryFilesPanel .file-item-thumb--folder .tool-icon {
+  stroke: var(--atelier-primary);
+}
+
+#libraryFilesPanel .file-item-name {
+  color: var(--atelier-ink-black);
+}
+
+#libraryFilesPanel .file-item-meta {
+  color: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .empty-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#libraryFilesPanel .files-sort-backdrop {
+  background: rgba(28, 26, 24, 0.48);
+}
+
+#libraryFilesPanel .files-sort-panel {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border-top: 1px solid var(--atelier-paper-edge);
+  box-shadow: 0 -8px 28px rgba(28, 26, 24, 0.14);
+}
+
+#libraryFilesPanel .files-sort-panel .tool-rows {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+}
+
+#libraryFilesPanel .files-sort-panel .tool-row {
+  color: var(--atelier-ink-black);
+  border-bottom: 1px solid var(--atelier-paper-edge);
+}
+
+#libraryFilesPanel .files-sort-panel .tool-row:last-child {
+  border-bottom: none;
+}
+
+#libraryFilesPanel .files-sort-panel .tool-row:active,
+#libraryFilesPanel .files-sort-panel .tool-row.is-selected {
+  background: rgba(154, 64, 29, 0.1);
+}
+
+#libraryFilesPanel .files-sort-panel .tool-row-icon {
+  background: rgba(154, 64, 29, 0.1);
+}
+
+#libraryFilesPanel .files-sort-panel .tool-icon,
+#libraryFilesPanel .files-sort-panel .tool-row:hover .tool-icon,
+#libraryFilesPanel .files-sort-panel .tool-row:active .tool-icon {
+  stroke: var(--atelier-primary);
+}
+
+#libraryFilesPanel .files-sort-panel .tool-row-title {
+  color: var(--atelier-ink-black);
+}
+
+#fileActionsModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+}
+
+#fileActionsModal .modal-card {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1);
+}
+
+#fileActionsModal .modal-title {
+  color: var(--atelier-ink-black);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+#fileActionsModal .folder-select-list {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 0;
+  gap: 0;
+}
+
+#fileActionsModal .folder-select-item {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border-bottom: 1px solid var(--atelier-paper-edge);
+  border-radius: 0;
+  padding: 12px 14px;
+  min-height: 44px;
+}
+
+#fileActionsModal .folder-select-item:last-child {
+  border-bottom: none;
+}
+
+#fileActionsModal .folder-select-icon {
+  color: var(--atelier-ink-muted);
+}
+
+#fileActionsModal .folder-select-item:active,
+#fileActionsModal .folder-select-item.is-selected {
+  background: rgba(154, 64, 29, 0.12);
+  color: var(--atelier-ink-black);
+}
+
+#fileActionsModal .btn-text {
+  color: var(--atelier-primary);
+  border-radius: 10px;
+}
+
+#fileActionsModal .btn-text:active {
+  background: rgba(154, 64, 29, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #libraryFilesPanel .breadcrumb-segment {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .breadcrumb-segment.is-current {
+    color: var(--atelier-ink-black);
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .files-search:focus {
+    outline-color: #d9875f;
+    border-color: #d9875f;
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .file-item-card.is-selected {
+    border-color: #d9875f !important;
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .file-item-thumb--folder {
+    background: rgba(217, 135, 95, 0.16);
+    border-color: rgba(217, 135, 95, 0.24);
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .file-item-thumb--folder .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .icon-btn-sm:active,
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-row:active,
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-row.is-selected,
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-row-icon {
+    background: rgba(217, 135, 95, 0.16);
+  }
+
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-icon,
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-row:hover .tool-icon,
+  :root:not(.light-theme) #libraryFilesPanel .files-sort-panel .tool-row:active .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #fileActionsModal .folder-select-item:active,
+  :root:not(.light-theme) #fileActionsModal .folder-select-item.is-selected,
+  :root:not(.light-theme) #fileActionsModal .btn-text:active {
+    background: rgba(217, 135, 95, 0.16);
+  }
+
+  :root:not(.light-theme) #fileActionsModal .btn-text {
+    color: #d9875f;
+  }
+}
+
+:root.dark-theme #libraryFilesPanel .breadcrumb-segment {
+  color: #d9875f;
+}
+
+:root.dark-theme #libraryFilesPanel .breadcrumb-segment.is-current {
+  color: var(--atelier-ink-black);
+}
+
+:root.dark-theme #libraryFilesPanel .files-search:focus {
+  outline-color: #d9875f;
+  border-color: #d9875f;
+}
+
+:root.dark-theme #libraryFilesPanel .file-item-card.is-selected {
+  border-color: #d9875f !important;
+}
+
+:root.dark-theme #libraryFilesPanel .file-item-thumb--folder {
+  background: rgba(217, 135, 95, 0.16);
+  border-color: rgba(217, 135, 95, 0.24);
+}
+
+:root.dark-theme #libraryFilesPanel .file-item-thumb--folder .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #libraryFilesPanel .icon-btn-sm:active,
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-row:active,
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-row.is-selected,
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-row-icon {
+  background: rgba(217, 135, 95, 0.16);
+}
+
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-icon,
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-row:hover .tool-icon,
+:root.dark-theme #libraryFilesPanel .files-sort-panel .tool-row:active .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #fileActionsModal .folder-select-item:active,
+:root.dark-theme #fileActionsModal .folder-select-item.is-selected,
+:root.dark-theme #fileActionsModal .btn-text:active {
+  background: rgba(217, 135, 95, 0.16);
+}
+
+:root.dark-theme #fileActionsModal .btn-text {
+  color: #d9875f;
+}
+/* End Atelier Files Tab */
+
+/* Atelier Settings & Recent Errors (#screen-settings & #screen-error-log) */
+.app:has(#screen-settings:not(.hidden)) .screen-container,
+.app:has(#screen-error-log:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+#screen-settings,
+#screen-error-log {
+  color: var(--atelier-ink-black);
+}
+
+#screen-settings .settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 0 24px;
+}
+
+#screen-settings .settings-group {
+  display: flex;
+  flex-direction: column;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+}
+
+#screen-settings .settings-group-title {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+  margin: 14px 16px 6px;
+}
+
+#screen-settings .settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+}
+
+#screen-settings .settings-row:last-child {
+  border-bottom: none;
+}
+
+#screen-settings .settings-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--atelier-ink-black);
+}
+
+#screen-settings .settings-row-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--atelier-ink-black);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  width: 100%;
+  cursor: pointer;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  font-family: inherit;
+  transition: background-color 0.15s ease;
+}
+
+#screen-settings .settings-row-btn:last-child {
+  border-bottom: none;
+}
+
+#screen-settings .settings-row-btn:active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-settings .settings-btn-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#screen-settings .settings-btn-sub {
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-settings .settings-row-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  font-size: 0.9rem;
+}
+
+#screen-settings .settings-row-info:last-child {
+  border-bottom: none;
+}
+
+#screen-settings .info-label {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-settings .info-value {
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.82rem;
+}
+
+#screen-settings .switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+#screen-settings .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+#screen-settings .switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 24px;
+  appearance: none;
+  accent-color: auto;
+  border-radius: 24px;
+  background: var(--atelier-paper-edge);
+  transition: background-color 0.25s ease;
+}
+
+#screen-settings .switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  bottom: 3px;
+  background-color: #fff8f5;
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+#screen-settings .switch input:checked + .slider {
+  background-color: var(--atelier-primary);
+}
+
+#screen-settings .switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+#screen-settings .switch .slider.round {
+  border-radius: 24px;
+}
+
+#screen-settings .switch .slider.round:before {
+  border-radius: 50%;
+}
+
+#screen-settings .settings-lang-switch {
+  display: flex;
+  gap: 2px;
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  padding: 2px;
+}
+
+#screen-settings .settings-lang-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--atelier-ink-muted);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#screen-settings .settings-lang-btn.is-selected {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+#screen-error-log .error-log-intro {
+  margin: 4px 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-error-log .error-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#screen-error-log .error-log-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+}
+
+#screen-error-log .error-log-head {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--atelier-ink-black);
+  font: inherit;
+  transition: background-color 0.15s ease;
+}
+
+#screen-error-log .error-log-head:active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-error-log .error-log-meta {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-error-log .error-log-summary {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--atelier-ink-black);
+}
+
+#screen-error-log .error-log-detail {
+  margin: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--atelier-border-hairline);
+  background: var(--atelier-bg);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--atelier-ink-muted);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+#screen-error-log .empty-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-error-log .error-log-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+#screen-error-log .error-log-actions .btn,
+#screen-error-log .error-log-actions .btn-tonal {
+  flex: 1;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+  transition: background-color 0.15s ease;
+}
+
+#screen-error-log .error-log-actions .btn:active,
+#screen-error-log .error-log-actions .btn-tonal:active {
+  background: var(--atelier-paper-edge);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-settings .settings-lang-btn.is-selected {
+    background: #d9875f;
+    color: #1c1a18;
+  }
+
+  :root:not(.light-theme) #screen-settings .switch input:checked + .slider {
+    background-color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-settings .switch input:checked + .slider:before {
+    background-color: #1c1a18;
+  }
+}
+
+:root.dark-theme #screen-settings .settings-lang-btn.is-selected {
+  background: #d9875f;
+  color: #1c1a18;
+}
+
+:root.dark-theme #screen-settings .switch input:checked + .slider {
+  background-color: #d9875f;
+}
+
+:root.dark-theme #screen-settings .switch input:checked + .slider:before {
+  background-color: #1c1a18;
+}
+/* End Atelier Settings & Recent Errors */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

@@ -1464,6 +1464,10 @@
               <span data-i18n="library.tab.desk">My Desk</span>
               <span class="library-tab-badge" id="libraryDeskBadge">0</span>
             </button>
+            <button type="button" class="library-tab" id="libraryTabFiles" role="tab" aria-selected="false" aria-controls="libraryFilesPanel" tabindex="-1">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/></svg>
+              <span data-i18n="library.tab.files">Files</span>
+            </button>
           </div>
 
           <p class="library-no-match hidden" id="libraryNoMatch" role="status"></p>
@@ -1496,6 +1500,52 @@
             </button>
             <ul class="library-list" id="libraryDeskList"></ul>
             <p class="library-empty-text hidden" id="libraryDeskEmpty" data-i18n="library.deskEmpty">PDFs you open appear here.</p>
+          </section>
+
+          <section class="library-panel hidden" id="libraryFilesPanel" role="tabpanel" aria-labelledby="libraryTabFiles">
+            <div class="files-explorer-header">
+              <div class="files-breadcrumb" id="filesBreadcrumb"></div>
+              <button class="icon-btn-sm" id="filesSortBtn" aria-label="Sort" title="Sort" data-i18n-aria-label="files.sort"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg></button>
+              <button class="icon-btn-sm" id="filesDownloadBtn" aria-label="Download PDF from URL" title="Download PDF from URL" data-i18n-aria-label="files.downloadPdf"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
+              <button class="icon-btn-sm" id="filesNewFolderBtn" aria-label="New Folder" title="New Folder" data-i18n-aria-label="files.newFolder"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></button>
+            </div>
+
+            <input
+              type="text"
+              class="hub-search files-search"
+              id="filesSearchInput"
+              placeholder="Search files..."
+              aria-label="Search files"
+              data-i18n-aria-label="files.searchAriaLabel"
+              data-i18n-placeholder="files.searchPlaceholder"
+            />
+
+            <div class="files-list" id="filesList"></div>
+            <p class="empty-hint hidden" id="filesEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
+
+            <div class="files-sort-sheet hidden" id="filesSortSheet">
+              <div class="files-sort-backdrop" id="filesSortBackdrop"></div>
+              <div class="files-sort-panel">
+                <div class="tool-rows">
+                  <button type="button" class="tool-row" data-sort="name-asc">
+                    <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></svg></span>
+                    <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameAsc">Name (A→Z)</span></span>
+                  </button>
+                  <button type="button" class="tool-row" data-sort="name-desc">
+                    <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M15 4h5l-5 6h5"/><path d="M15 20v-3.5a2.5 2.5 0 0 1 5 0V20"/><path d="M20 18h-5"/></svg></span>
+                    <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameDesc">Name (Z→A)</span></span>
+                  </button>
+                  <button type="button" class="tool-row" data-sort="date-desc">
+                    <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+                    <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateDesc">Newest first</span></span>
+                  </button>
+                  <button type="button" class="tool-row" data-sort="date-asc">
+                    <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+                    <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateAsc">Oldest first</span></span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
 
           <div class="library-sheet-backdrop hidden" id="libraryDetailSheet" role="dialog" aria-modal="true" aria-labelledby="libraryDetailTitle">
@@ -1610,61 +1660,8 @@
           </footer>
         </section>
 
-        <!-- Files Screen -->
-        <section class="screen hidden" id="screen-files">
-          <div class="files-explorer-header">
-            <div class="files-breadcrumb" id="filesBreadcrumb"></div>
-            <button class="icon-btn-sm" id="filesSortBtn" aria-label="Sort" title="Sort" data-i18n-aria-label="files.sort"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg></button>
-            <button class="icon-btn-sm" id="filesDownloadBtn" aria-label="Download PDF from URL" title="Download PDF from URL" data-i18n-aria-label="files.downloadPdf"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
-            <button class="icon-btn-sm" id="filesNewFolderBtn" aria-label="New Folder" title="New Folder" data-i18n-aria-label="files.newFolder"><svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></button>
-          </div>
-
-          <input
-            type="text"
-            class="hub-search files-search"
-            id="filesSearchInput"
-            placeholder="Search files..."
-            aria-label="Search files"
-            data-i18n-aria-label="files.searchAriaLabel"
-            data-i18n-placeholder="files.searchPlaceholder"
-          />
-
-          <div class="files-list" id="filesList"></div>
-          <p class="empty-hint hidden" id="filesEmptyHint" data-i18n="files.emptyFolder">This folder is empty.</p>
-
-          <div class="files-sort-sheet hidden" id="filesSortSheet">
-            <div class="files-sort-backdrop" id="filesSortBackdrop"></div>
-            <div class="files-sort-panel">
-              <div class="tool-rows">
-                <button type="button" class="tool-row" data-sort="name-asc">
-                  <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></svg></span>
-                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameAsc">Name (A→Z)</span></span>
-                </button>
-                <button type="button" class="tool-row" data-sort="name-desc">
-                  <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M15 4h5l-5 6h5"/><path d="M15 20v-3.5a2.5 2.5 0 0 1 5 0V20"/><path d="M20 18h-5"/></svg></span>
-                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortNameDesc">Name (Z→A)</span></span>
-                </button>
-                <button type="button" class="tool-row" data-sort="date-desc">
-                  <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
-                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateDesc">Newest first</span></span>
-                </button>
-                <button type="button" class="tool-row" data-sort="date-asc">
-                  <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
-                  <span class="tool-row-meta"><span class="tool-row-title" data-i18n="files.sortDateAsc">Oldest first</span></span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- Ayarlar (Settings) Screen -->
         <section class="screen hidden" id="screen-settings">
-          <div class="hero">
-            <div class="hero-icon" aria-hidden="true">⚙️</div>
-            <h2 data-i18n="settings.title">Settings</h2>
-            <p class="hero-subtitle" data-i18n="settings.subtitle">Manage your app preferences.</p>
-          </div>
-
           <div class="settings-list">
             <div class="settings-group">
               <h3 class="settings-group-title" data-i18n="settings.group.appearance">Appearance</h3>
@@ -1727,11 +1724,7 @@
         </section>
 
         <section class="screen hidden" id="screen-error-log">
-          <div class="hero">
-            <div class="hero-icon" aria-hidden="true">🩺</div>
-            <h2 data-i18n="errorLog.title">Recent Errors</h2>
-            <p class="hero-subtitle" data-i18n="errorLog.subtitle">These stay on your device. Share them only if you are reporting a problem.</p>
-          </div>
+          <p class="error-log-intro" data-i18n="errorLog.subtitle">These stay on your device. Share them only if you are reporting a problem.</p>
 
           <div class="error-log-list" id="errorLogList"></div>
           <p class="empty-hint hidden" id="errorLogEmptyHint" data-i18n="errorLog.emptyHint">Nothing has gone wrong. There is nothing to report.</p>
@@ -1751,21 +1744,6 @@
           <button class="btn btn-primary btn-large" id="retryBtn" data-i18n="common.retry">Try Again</button>
         </section>
       </main>
-
-      <nav class="bottom-nav" id="bottomNav">
-        <button type="button" class="bottom-nav-item" data-nav="files">
-          <span class="nav-icon" aria-hidden="true"><svg aria-hidden="true" class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
-          <span class="nav-label" data-i18n="nav.files">Files</span>
-        </button>
-        <button type="button" class="bottom-nav-item is-active" id="navTools" data-nav="hub">
-          <span class="nav-icon" aria-hidden="true"><svg aria-hidden="true" class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg></span>
-          <span class="nav-label" data-i18n="nav.hub">Hub</span>
-        </button>
-        <button type="button" class="bottom-nav-item" data-nav="settings">
-          <span class="nav-icon" aria-hidden="true"><svg aria-hidden="true" class="bottom-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></span>
-          <span class="nav-label" data-i18n="nav.settings">Settings</span>
-        </button>
-      </nav>
     </div>
 
     <!-- First-launch Onboarding Overlay -->

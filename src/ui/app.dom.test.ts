@@ -161,14 +161,21 @@ describe('refreshConfigSummary sheets-per-signature breakdown (bonus)', () => {
 describe('Android back button on a root screen', () => {
   const body = extractFunctionBody("App.addListener('backButton', ");
 
-  it('minimizes the app on hub, files and settings instead of exiting', () => {
-    const rootIndex = body.indexOf(
-      "if (current === 'hub' || current === 'files' || current === 'settings') {",
-    );
-    expect(rootIndex, 'expected the root-screen branch in the back handler').toBeGreaterThanOrEqual(0);
+  it('minimizes the app only on hub instead of exiting', () => {
+    const rootIndex = body.indexOf("if (current === 'hub') {");
+    expect(rootIndex, 'expected the hub-only root-screen branch in the back handler').toBeGreaterThanOrEqual(0);
     const rootBranch = body.slice(rootIndex, body.indexOf('} else {', rootIndex));
     expect(rootBranch).toContain('App.minimizeApp()');
     expect(rootBranch).not.toContain('App.exitApp()');
+
+    const libraryBackIdx = body.indexOf('handleLibraryFilesBack()');
+    expect(libraryBackIdx, 'expected handleLibraryFilesBack() in the Android back handler').toBeGreaterThanOrEqual(0);
+    const afterSubfolder = body.slice(libraryBackIdx);
+    const rootDecision = afterSubfolder.slice(0, afterSubfolder.indexOf('} else {'));
+    expect(rootDecision).not.toContain("'files'");
+    expect(rootDecision).not.toContain("'settings'");
+    expect(rootDecision).not.toContain("'library'");
+    expect(afterSubfolder).not.toContain("'library'");
   });
 
   it('still exits from the first onboarding page', () => {
