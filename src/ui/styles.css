@@ -3145,6 +3145,15 @@ dialog.modal-sheet::backdrop {
   color: var(--atelier-ink-muted);
 }
 
+:root:not(.reader-night) #screen-reader .reader-subbar .icon-btn-sm:active {
+  background: rgba(var(--reader-accent-rgb), 0.16);
+}
+
+:root:not(.reader-night) #screen-reader .reader-subbar #readerSearchBtn.search-active {
+  color: var(--reader-accent);
+  background: rgba(var(--reader-accent-rgb), 0.15);
+}
+
 :root:not(.reader-night) #screen-reader .reader-subbar .btn-tonal {
   background: var(--atelier-surface-cream);
   color: var(--reader-accent);
@@ -3245,9 +3254,16 @@ dialog.modal-sheet::backdrop {
   color: #e0e0e0;
   background: rgba(255, 255, 255, .08);
 }
+.reader-night .reader-subbar .icon-btn-sm:active {
+  background: rgba(200, 157, 83, .2);
+}
 .reader-night .reader-subbar .icon-btn-sm.is-active {
-  background: rgba(187, 134, 252, .25);
-  color: #d0aaff;
+  background: rgba(200, 157, 83, .25);
+  color: #e6c07b;
+}
+.reader-night .reader-subbar #readerSearchBtn.search-active {
+  color: #e6c07b;
+  background: rgba(200, 157, 83, .25);
 }
 
 /* ── Reduced Motion ─────────────────────────────────────────────────────────── */
