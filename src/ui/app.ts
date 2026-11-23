@@ -62,7 +62,7 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { getRecents, recordOpened, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
   getLibrary,
@@ -1007,15 +1007,37 @@ export function initApp(): void {
 
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function showToast(message: string, opts?: { type?: 'info' | 'error' }): void {
+  interface ToastAction {
+    label: string;
+    onClick: () => void;
+  }
+
+  function showToast(
+    message: string,
+    opts?: { type?: 'info' | 'error'; action?: ToastAction; durationMs?: number },
+  ): void {
     if (opts?.type === 'error') {
       errorLiveRegion.textContent = '';
       requestAnimationFrame(() => { errorLiveRegion.textContent = message; });
     }
-    toast.textContent = message;
-    toast.classList.remove('hidden');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
+    toast.textContent = message;
+    const action = opts?.action;
+    toast.classList.toggle('has-action', Boolean(action));
+    if (action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toast-action';
+      button.textContent = action.label;
+      button.addEventListener('click', () => {
+        if (toastTimer) clearTimeout(toastTimer);
+        toast.classList.add('hidden');
+        action.onClick();
+      });
+      toast.appendChild(button);
+    }
+    toast.classList.remove('hidden');
+    toastTimer = setTimeout(() => toast.classList.add('hidden'), opts?.durationMs ?? 2500);
   }
 
   // ── Modal focus trap ────────────────────────────────────────────────────────
@@ -5050,7 +5072,10 @@ export function initApp(): void {
     const returnTo: ScreenId = getCurrentScreenId() === 'library' ? 'library' : 'hub';
     try {
       const picked = await readForReader(entry.uri);
-      await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
+      // Keep the name the desk already knows. The one read back from the uri
+      // is a guess (stat, else the uri's last segment, else "document.pdf"),
+      // and recording it would overwrite a good name with a worse one.
+      await openReaderWithBytes(picked.bytes, entry.name || picked.name, entry.uri, returnTo, entry.lastPage);
     } catch (error) {
       recordError('caught', error);
       showToast(t('toast.fileNoLongerAccessible'));
@@ -7556,7 +7581,22 @@ export function initApp(): void {
       showScreen('files');
     },
     onRemove: removeLibraryRecord,
-    onRemoveDesk: (entry) => removeRecent(entry),
+    onRemoveDesk: async (entry) => {
+      await removeRecent(entry);
+      showToast(t('library.desk.removed'), {
+        durationMs: 5000,
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void restoreRecent(entry)
+              .then(() => {
+                if (getCurrentScreenId() === 'library') return libraryScreen?.show('desk');
+              })
+              .catch((error) => console.warn('Could not put the entry back on the desk:', error));
+          },
+        },
+      });
+    },
     openModal: (el, trigger) => openModal(el, trigger ?? document.activeElement),
     closeModal,
     matchMedia: (query) => window.matchMedia(query),

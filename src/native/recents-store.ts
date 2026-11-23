@@ -78,6 +78,23 @@ export async function updateLastPage(identity: { uri: string | null; name: strin
   });
 }
 
+/**
+ * Puts a removed entry back exactly as it was (same openedAt and lastPage),
+ * in its place by openedAt — the undo of `removeRecent`. Does nothing when an
+ * entry with the same identity is already there, e.g. the file was opened
+ * again before the undo.
+ */
+export async function restoreRecent(entry: RecentEntry): Promise<void> {
+  return enqueue(async () => {
+    const entries = await readAll();
+    const id = entryId(entry);
+    if (entries.some((e) => entryId(e) === id)) return;
+    const restored: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: entry.lastPage, openedAt: entry.openedAt };
+    const next = [...entries, restored].sort((a, b) => b.openedAt - a.openedAt);
+    await writeAll(next.slice(0, MAX_ENTRIES));
+  });
+}
+
 export async function removeRecent(identity: { uri: string | null; name: string }): Promise<void> {
   return enqueue(async () => {
     const entries = await readAll();

@@ -6,6 +6,7 @@ import {
   coverInitials,
   detailFields,
   filterDesk,
+  isImposedOutput,
   filterRecords,
   formatLine,
   rowMeta,
@@ -201,5 +202,48 @@ describe('library view model', () => {
     expect(coverInitials('ılık şiirler')).toBe('IŞ');
     expect(coverInitials('Rapor')).toBe('R');
     expect(coverInitials('  ')).toBe('');
+  });
+});
+
+describe('isImposedOutput', () => {
+  const is = (uri: string | null) => isImposedOutput({ uri });
+
+  it('recognises the booklet outputs saved under booklets/<name>/', () => {
+    expect(is('/DATA/booklets/Deneme/Front Side.pdf')).toBe(true);
+    expect(is('/DATA/booklets/Deneme/Back Side.pdf')).toBe(true);
+    expect(is('/DATA/booklets/Deneme/Combined Booklet.pdf')).toBe(true);
+    // The cover is imposed too: one wrap-around sheet.
+    expect(is('/DATA/booklets/Deneme/Cover.pdf')).toBe(true);
+    expect(is('file:///data/user/0/com.eduplayconnect.bindery/files/booklets/Deneme/Front Side.pdf')).toBe(true);
+  });
+
+  it('reads percent-encoded uris, including encoded slashes', () => {
+    expect(is('file:///data/files/booklets/Deneme%20Kitap%C3%A7%C4%B1%C4%9F%C4%B1/Front%20Side.pdf')).toBe(true);
+    expect(is('content://com.android.externalstorage.documents/document/primary%3ADocuments%2Fbooklets%2FX%2FBack%20Side.pdf')).toBe(true);
+  });
+
+  it('counts a renamed file that still sits in a booklet folder', () => {
+    expect(is('/DATA/booklets/Deneme/print me.pdf')).toBe(true);
+  });
+
+  it('leaves the plain instructions document out', () => {
+    expect(is('/DATA/booklets/Deneme/Instructions.pdf')).toBe(false);
+    expect(is('/DATA/booklets/Deneme/instructions.PDF')).toBe(false);
+  });
+
+  it('leaves everything outside a booklet folder out', () => {
+    expect(is(null)).toBe(false);
+    expect(is('content://com.android.providers.downloads.documents/document/msf%3A1001')).toBe(false);
+    expect(is('/DATA/scans/Scan.pdf')).toBe(false);
+    expect(is('/DATA/Front Side.pdf')).toBe(false);
+    // A file directly in booklets/ is not inside a booklet's folder.
+    expect(is('/DATA/booklets/Front Side.pdf')).toBe(false);
+    expect(is('/DATA/booklets')).toBe(false);
+    expect(is('/DATA/notebooklets/X/Front Side.pdf')).toBe(false);
+  });
+
+  it('survives a malformed escape', () => {
+    expect(is('/DATA/booklets/100%/Front Side.pdf')).toBe(true);
+    expect(is('/DATA/scans/100%.pdf')).toBe(false);
   });
 });
