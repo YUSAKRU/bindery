@@ -3941,6 +3941,12 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-image-to-pdf,
 #screen-md-to-pdf,
 #screen-crop,
+#screen-merge-result,
+#screen-organize-result,
+#screen-rotate-result,
+#screen-page-numbers-result,
+#screen-watermark-result,
+#screen-error,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
@@ -3980,7 +3986,19 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
 .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
 .app:has(#screen-crop:not(.hidden)) .top-bar,
-.app:has(#screen-crop:not(.hidden)) .screen-container {
+.app:has(#screen-crop:not(.hidden)) .screen-container,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar,
+.app:has(#screen-merge-result:not(.hidden)) .screen-container,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar,
+.app:has(#screen-organize-result:not(.hidden)) .screen-container,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+.app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+.app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+.app:has(#screen-error:not(.hidden)) .top-bar,
+.app:has(#screen-error:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -4022,6 +4040,12 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-image-to-pdf,
   :root:not(.light-theme) #screen-md-to-pdf,
   :root:not(.light-theme) #screen-crop,
+  :root:not(.light-theme) #screen-merge-result,
+  :root:not(.light-theme) #screen-organize-result,
+  :root:not(.light-theme) #screen-rotate-result,
+  :root:not(.light-theme) #screen-page-numbers-result,
+  :root:not(.light-theme) #screen-watermark-result,
+  :root:not(.light-theme) #screen-error,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
@@ -4061,7 +4085,19 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-merge-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-merge-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-organize-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-organize-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-error:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-error:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -4098,6 +4134,12 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-image-to-pdf,
 :root.dark-theme #screen-md-to-pdf,
 :root.dark-theme #screen-crop,
+:root.dark-theme #screen-merge-result,
+:root.dark-theme #screen-organize-result,
+:root.dark-theme #screen-rotate-result,
+:root.dark-theme #screen-page-numbers-result,
+:root.dark-theme #screen-watermark-result,
+:root.dark-theme #screen-error,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
@@ -4137,7 +4179,19 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-crop:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-crop:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-crop:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-merge-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-merge-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-organize-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-organize-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-error:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-error:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -8221,6 +8275,12 @@ button.book-page-label:active {
 .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
 .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
 .app:has(#screen-crop:not(.hidden)) .top-bar,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+.app:has(#screen-error:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -8239,6 +8299,12 @@ button.book-page-label:active {
 .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar-title,
 .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar-title,
 .app:has(#screen-crop:not(.hidden)) .top-bar-title,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-error:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -8259,6 +8325,12 @@ button.book-page-label:active {
 .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-crop:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-merge-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-organize-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-error:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -12162,6 +12234,373 @@ button.book-page-label:active {
   border-color: #d9875f;
 }
 /* End Atelier Tool Screens — Phase 2 */
+
+/* Atelier Tool Screens — Phase 3 (Result Screens & Error Screen) */
+.app:has(#screen-merge-result:not(.hidden)) .screen-container,
+.app:has(#screen-organize-result:not(.hidden)) .screen-container,
+.app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+.app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+.app:has(#screen-error:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-merge-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-error:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-merge-result,
+#screen-organize-result,
+#screen-rotate-result,
+#screen-page-numbers-result,
+#screen-watermark-result,
+#screen-error {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 28px;
+  min-height: 100%;
+}
+
+#screen-error {
+  justify-content: center;
+}
+
+#screen-merge-result .result-banner,
+#screen-organize-result .result-banner,
+#screen-rotate-result .result-banner,
+#screen-page-numbers-result .result-banner,
+#screen-watermark-result .result-banner {
+  text-align: center;
+  padding: 20px 8px 4px;
+}
+
+#screen-merge-result .result-banner h2,
+#screen-organize-result .result-banner h2,
+#screen-rotate-result .result-banner h2,
+#screen-page-numbers-result .result-banner h2,
+#screen-watermark-result .result-banner h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.55rem, 5vw + 0.25rem, 1.9rem);
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  margin: 0;
+}
+
+#screen-merge-result .result-icon,
+#screen-organize-result .result-icon,
+#screen-rotate-result .result-icon,
+#screen-page-numbers-result .result-icon,
+#screen-watermark-result .result-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: rgba(43, 107, 69, 0.12);
+  color: #2b6b45;
+  border: 1px solid rgba(43, 107, 69, 0.25);
+  font-size: 1.5rem;
+}
+
+#screen-merge-result .stat-grid,
+#screen-organize-result .stat-grid,
+#screen-rotate-result .stat-grid,
+#screen-page-numbers-result .stat-grid,
+#screen-watermark-result .stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+#screen-merge-result .stat-card,
+#screen-organize-result .stat-card,
+#screen-rotate-result .stat-card,
+#screen-page-numbers-result .stat-card,
+#screen-watermark-result .stat-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+#screen-merge-result .stat-value,
+#screen-organize-result .stat-value,
+#screen-rotate-result .stat-value,
+#screen-page-numbers-result .stat-value,
+#screen-watermark-result .stat-value {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--atelier-primary);
+}
+
+#screen-merge-result .stat-label,
+#screen-organize-result .stat-label,
+#screen-rotate-result .stat-label,
+#screen-page-numbers-result .stat-label,
+#screen-watermark-result .stat-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-merge-result .modal-label,
+#screen-organize-result .modal-label,
+#screen-rotate-result .modal-label,
+#screen-page-numbers-result .modal-label,
+#screen-watermark-result .modal-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-merge-result .modal-input,
+#screen-organize-result .modal-input,
+#screen-rotate-result .modal-input,
+#screen-page-numbers-result .modal-input,
+#screen-watermark-result .modal-input {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: inherit;
+}
+
+#screen-merge-result .action-row,
+#screen-organize-result .action-row,
+#screen-rotate-result .action-row,
+#screen-page-numbers-result .action-row,
+#screen-watermark-result .action-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--atelier-ink-black);
+  flex-wrap: wrap;
+}
+
+#screen-merge-result .action-label,
+#screen-organize-result .action-label,
+#screen-rotate-result .action-label,
+#screen-page-numbers-result .action-label,
+#screen-watermark-result .action-label {
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+}
+
+#screen-merge-result .action-status,
+#screen-organize-result .action-status,
+#screen-rotate-result .action-status,
+#screen-page-numbers-result .action-status,
+#screen-watermark-result .action-status {
+  color: var(--atelier-ink-muted);
+}
+
+#mergeSaveBtn,
+#organizeSaveBtn,
+#rotateSaveBtn,
+#pageNumbersSaveBtn,
+#watermarkSaveBtn {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+
+#mergeShareBtn,
+#organizeShareBtn,
+#rotateShareBtn,
+#pageNumbersShareBtn,
+#watermarkShareBtn,
+#mergeGoToLocationBtn,
+#organizeGoToLocationBtn,
+#rotateGoToLocationBtn,
+#pageNumbersGoToLocationBtn,
+#watermarkGoToLocationBtn {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-merge-result .tool-action-icon,
+#screen-organize-result .tool-action-icon,
+#screen-rotate-result .tool-action-icon,
+#screen-page-numbers-result .tool-action-icon,
+#screen-watermark-result .tool-action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+#screen-merge-result .btn-text,
+#screen-organize-result .btn-text,
+#screen-rotate-result .btn-text,
+#screen-page-numbers-result .btn-text,
+#screen-watermark-result .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-error .error-banner {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 26px;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04);
+}
+
+#screen-error .error-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(186, 26, 26, 0.12);
+  color: #9a241d;
+  border: 1px solid rgba(186, 26, 26, 0.25);
+}
+
+#screen-error .error-banner h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  margin: 0 0 8px;
+}
+
+#screen-error .error-banner p {
+  color: var(--atelier-ink-muted);
+  margin: 0;
+  line-height: 1.48;
+}
+
+#screen-error #retryBtn {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-merge-result .result-icon,
+  :root:not(.light-theme) #screen-organize-result .result-icon,
+  :root:not(.light-theme) #screen-rotate-result .result-icon,
+  :root:not(.light-theme) #screen-page-numbers-result .result-icon,
+  :root:not(.light-theme) #screen-watermark-result .result-icon {
+    background: rgba(143, 217, 164, 0.14);
+    color: #8fd9a4;
+    border-color: rgba(143, 217, 164, 0.28);
+  }
+
+  :root:not(.light-theme) #screen-merge-result .stat-value,
+  :root:not(.light-theme) #screen-organize-result .stat-value,
+  :root:not(.light-theme) #screen-rotate-result .stat-value,
+  :root:not(.light-theme) #screen-page-numbers-result .stat-value,
+  :root:not(.light-theme) #screen-watermark-result .stat-value,
+  :root:not(.light-theme) #screen-merge-result .btn-text,
+  :root:not(.light-theme) #screen-organize-result .btn-text,
+  :root:not(.light-theme) #screen-rotate-result .btn-text,
+  :root:not(.light-theme) #screen-page-numbers-result .btn-text,
+  :root:not(.light-theme) #screen-watermark-result .btn-text {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #mergeSaveBtn,
+  :root:not(.light-theme) #organizeSaveBtn,
+  :root:not(.light-theme) #rotateSaveBtn,
+  :root:not(.light-theme) #pageNumbersSaveBtn,
+  :root:not(.light-theme) #watermarkSaveBtn,
+  :root:not(.light-theme) #screen-error #retryBtn {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-error .error-banner {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-error .error-icon {
+    background: rgba(244, 140, 128, 0.16);
+    color: #f4a498;
+    border-color: rgba(244, 140, 128, 0.3);
+  }
+}
+
+:root.dark-theme #screen-merge-result .result-icon,
+:root.dark-theme #screen-organize-result .result-icon,
+:root.dark-theme #screen-rotate-result .result-icon,
+:root.dark-theme #screen-page-numbers-result .result-icon,
+:root.dark-theme #screen-watermark-result .result-icon {
+  background: rgba(143, 217, 164, 0.14);
+  color: #8fd9a4;
+  border-color: rgba(143, 217, 164, 0.28);
+}
+
+:root.dark-theme #screen-merge-result .stat-value,
+:root.dark-theme #screen-organize-result .stat-value,
+:root.dark-theme #screen-rotate-result .stat-value,
+:root.dark-theme #screen-page-numbers-result .stat-value,
+:root.dark-theme #screen-watermark-result .stat-value,
+:root.dark-theme #screen-merge-result .btn-text,
+:root.dark-theme #screen-organize-result .btn-text,
+:root.dark-theme #screen-rotate-result .btn-text,
+:root.dark-theme #screen-page-numbers-result .btn-text,
+:root.dark-theme #screen-watermark-result .btn-text {
+  color: #d9875f;
+}
+
+:root.dark-theme #mergeSaveBtn,
+:root.dark-theme #organizeSaveBtn,
+:root.dark-theme #rotateSaveBtn,
+:root.dark-theme #pageNumbersSaveBtn,
+:root.dark-theme #watermarkSaveBtn,
+:root.dark-theme #screen-error #retryBtn {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-error .error-banner {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-error .error-icon {
+  background: rgba(244, 140, 128, 0.16);
+  color: #f4a498;
+  border-color: rgba(244, 140, 128, 0.3);
+}
+/* End Atelier Tool Screens — Phase 3 */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

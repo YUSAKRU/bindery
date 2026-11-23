@@ -131,7 +131,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.fileName': 'File Name',
     'common.fileNamePlaceholder': 'Enter a file name',
     'common.format': 'Format',
-    'common.goToLocation': '📁 Go to Location',
+    'common.goToLocation': 'Go to Location',
 
     'reader.nightMode': 'Night mode',
     'reader.search': 'Search',
@@ -920,7 +920,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'common.fileName': 'Dosya Adı',
     'common.fileNamePlaceholder': 'Dosya adı girin',
     'common.format': 'Format',
-    'common.goToLocation': '📁 Konuma Git',
+    'common.goToLocation': 'Konuma Git',
 
     'reader.nightMode': 'Gece modu',
     'reader.search': 'Ara',

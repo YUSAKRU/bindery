@@ -382,3 +382,128 @@ describe('Atelier Tool Screens — Phase 2 (Working States, Image/MD & Crop)', (
     expect(globalSliderMatch![1]).toContain('height: 4px;');
   });
 });
+
+const PHASE3_SCREENS = [
+  'screen-merge-result',
+  'screen-organize-result',
+  'screen-rotate-result',
+  'screen-page-numbers-result',
+  'screen-watermark-result',
+  'screen-error',
+] as const;
+
+describe('Atelier Tool Screens — Phase 3 (Result Screens & Error Screen)', () => {
+  const phase3Css = extractSection(
+    css,
+    '/* Atelier Tool Screens — Phase 3 (Result Screens & Error Screen) */',
+    '/* End Atelier Tool Screens — Phase 3 */',
+  );
+
+  it('registers all 6 Phase 3 screens in all three Atelier token lists and top-bar groups', () => {
+    const { light, prefersDark, darkClass } = extractTokenSelectorBlocks();
+    const parseSelectorList = (raw: string): string[] =>
+      raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    const lightSelectors = parseSelectorList(light.slice(0, light.indexOf('{')));
+    const prefersDarkSelectors = parseSelectorList(
+      prefersDark.slice(
+        prefersDark.indexOf(':root:not(.light-theme)'),
+        prefersDark.indexOf('{', prefersDark.indexOf(':root:not(.light-theme)')),
+      ),
+    );
+    const darkClassSelectors = parseSelectorList(darkClass.slice(0, darkClass.indexOf('{')));
+
+    const headerPos = css.indexOf('printer needs. Scoped to #screen-result and its parent container.');
+    expect(headerPos).toBeGreaterThan(-1);
+    const start = css.indexOf('*/', headerPos) + 2;
+    const end = css.indexOf('/* Clear the absolute top bar;', start);
+    const ruleSelectors = [...css.slice(start, end).matchAll(/([^{}]+)\{/g)].map((m) =>
+      parseSelectorList(m[1]),
+    );
+    expect(ruleSelectors).toHaveLength(3);
+
+    for (const screenId of PHASE3_SCREENS) {
+      for (const sel of [
+        `#${screenId}`,
+        `.app:has(#${screenId}:not(.hidden)) .top-bar`,
+        `.app:has(#${screenId}:not(.hidden)) .screen-container`,
+      ]) {
+        expect(lightSelectors, `light token block missing ${sel}`).toContain(sel);
+        expect(
+          prefersDarkSelectors,
+          `prefersDark token block missing :root:not(.light-theme) ${sel}`,
+        ).toContain(`:root:not(.light-theme) ${sel}`);
+        expect(
+          darkClassSelectors,
+          `darkClass token block missing :root.dark-theme ${sel}`,
+        ).toContain(`:root.dark-theme ${sel}`);
+      }
+      expect(ruleSelectors[0]).toContain(`.app:has(#${screenId}:not(.hidden)) .top-bar`);
+      expect(ruleSelectors[1]).toContain(`.app:has(#${screenId}:not(.hidden)) .top-bar-title`);
+      expect(ruleSelectors[2]).toContain(
+        `.app:has(#${screenId}:not(.hidden)) .top-bar .icon-btn:not([hidden])`,
+      );
+      expect(phase3Css).toContain(`.app:has(#${screenId}:not(.hidden)) .screen-container`);
+    }
+  });
+
+  it('uses zero indigo/purple literals or legacy primary tokens in Phase 3 CSS and defines all custom properties', () => {
+    expect(phase3Css).not.toMatch(FORBIDDEN_INDIGO_RE);
+    const usedVars = new Set([...phase3Css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+    for (const v of usedVars) {
+      expect(css, `CSS variable ${v} must be defined`).toContain(`${v}:`);
+    }
+  });
+
+  it('removes 📁 emoji from common.goToLocation and places inline folder SVG beside i18n span in all 5 Go-to-Location buttons', () => {
+    const goToIds = [
+      'mergeGoToLocationBtn',
+      'organizeGoToLocationBtn',
+      'rotateGoToLocationBtn',
+      'pageNumbersGoToLocationBtn',
+      'watermarkGoToLocationBtn',
+    ];
+    for (const btnId of goToIds) {
+      const re = new RegExp(`<button[^>]*id="${btnId}"[^>]*>([\\s\\S]*?)<\\/button>`);
+      const match = html.match(re);
+      expect(match, `missing #${btnId}`).not.toBeNull();
+      expect(match![0], `#${btnId} should not have data-i18n directly on <button>`).not.toMatch(
+        /<button[^>]*data-i18n="/,
+      );
+      expect(match![1], `#${btnId} should contain inline folder SVG`).toContain('<svg');
+      expect(match![1], `#${btnId} should contain inner data-i18n span`).toContain(
+        '<span data-i18n="common.goToLocation">',
+      );
+      expect(match![0]).not.toMatch(EMOJI_RE);
+    }
+
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+    vi.stubGlobal('document', { documentElement: {}, querySelectorAll: () => [] });
+    try {
+      setLanguage('en');
+      expect(t('common.goToLocation')).toBe('Go to Location');
+      expect(t('common.goToLocation')).not.toMatch(EMOJI_RE);
+      setLanguage('tr');
+      expect(t('common.goToLocation')).toBe('Konuma Git');
+      expect(t('common.goToLocation')).not.toMatch(EMOJI_RE);
+    } finally {
+      setLanguage('en');
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('includes adaptive .stat-grid, .result-icon, .stat-card, #screen-error .error-banner, and dark overrides in Phase 3 CSS', () => {
+    expect(phase3Css).toContain('repeat(auto-fit, minmax(130px, 1fr))');
+    expect(phase3Css).toContain('.result-icon');
+    expect(phase3Css).toContain('.stat-card');
+    expect(phase3Css).toContain('#screen-error .error-banner');
+    expect(phase3Css).toContain(':root:not(.light-theme) #screen-error .error-banner');
+    expect(phase3Css).toContain(':root.dark-theme #screen-error .error-banner');
+    expect(phase3Css).toContain(':root:not(.light-theme) #rotateSaveBtn');
+    expect(phase3Css).toContain(':root.dark-theme #rotateSaveBtn');
+  });
+});
