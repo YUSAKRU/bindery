@@ -20,6 +20,13 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'onboarding.theme.dark': 'Dark',
     'onboarding.next': 'Next',
     'onboarding.start': 'Get Started',
+    'onboarding.skip': 'Skip',
+    'onboarding.how.title': 'How it works',
+    'onboarding.how.step1': 'Pick your PDF',
+    'onboarding.how.step2': 'Bindery puts the pages in booklet order',
+    'onboarding.how.step3': 'Print, fold and bind',
+    'onboarding.how.more': 'Your booklets stay in My Library · plus merge, rotate, watermark and more',
+    'onboarding.quickStartNote': "We've added a Quick Start guide to your Files.",
 
     'nav.tools': 'Tools',
     'nav.recents': 'Recent',
@@ -800,6 +807,13 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'onboarding.theme.dark': 'Koyu',
     'onboarding.next': 'İleri',
     'onboarding.start': 'Başla',
+    'onboarding.skip': 'Atla',
+    'onboarding.how.title': 'Nasıl çalışır?',
+    'onboarding.how.step1': "PDF'inizi seçin",
+    'onboarding.how.step2': 'Bindery sayfaları kitapçık sırasına dizer',
+    'onboarding.how.step3': 'Yazdırın, katlayın, dikin',
+    'onboarding.how.more': "Kitapçıklarınız Kitaplığım'da saklanır · birleştirme, döndürme, filigran ve fazlası",
+    'onboarding.quickStartNote': "Dosyalar'a bir Hızlı Başlangıç kılavuzu ekledik.",
 
     'nav.tools': 'Araçlar',
     'nav.recents': 'Son',
@@ -1606,7 +1620,23 @@ export function setLanguage(lang: Lang): void {
   applyLanguageToDom();
 }
 
+export function languageFromLocale(locale: string | undefined): Lang {
+  if (!locale) return 'en';
+  const normalized = locale.trim().toLowerCase();
+  return normalized === 'tr' || normalized.startsWith('tr-') || normalized.startsWith('tr_')
+    ? 'tr'
+    : 'en';
+}
+
 export function initLanguage(): void {
-  currentLang = localStorage.getItem(STORAGE_KEY) === 'tr' ? 'tr' : 'en';
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === 'tr' || stored === 'en') {
+    currentLang = stored;
+  } else if (stored !== null) {
+    currentLang = 'en';
+  } else {
+    const locale = typeof navigator !== 'undefined' ? navigator.language : undefined;
+    currentLang = languageFromLocale(locale);
+  }
   applyLanguageToDom();
 }

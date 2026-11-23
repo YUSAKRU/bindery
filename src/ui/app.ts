@@ -467,6 +467,7 @@ export function initApp(): void {
   const onboardingTrack = byId<HTMLDivElement>('onboardingTrack');
   const onboardingDots = byId<HTMLDivElement>('onboardingDots');
   const onboardingNextBtn = byId<HTMLButtonElement>('onboardingNextBtn');
+  const onboardingSkipBtn = byId<HTMLButtonElement>('onboardingSkipBtn');
   const onboardingThemeBtns = Array.from(
     document.querySelectorAll<HTMLButtonElement>('.onboarding-theme-btn'),
   );
@@ -7152,7 +7153,18 @@ export function initApp(): void {
 
 
   // Dark mode init
+  let currentDarkMode = false;
+
+  function syncOnboardingThemeButtons(dark: boolean): void {
+    onboardingThemeBtns.forEach((b) => {
+      const selected = (b.dataset.theme === 'dark') === dark;
+      b.classList.toggle('is-selected', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
+  }
+
   function applyThemePreference(active: boolean): void {
+    currentDarkMode = active;
     document.documentElement.classList.toggle('dark-theme', active);
     document.documentElement.classList.toggle('light-theme', !active);
     if (bookReader && bookReader.isOpen()) {
@@ -7160,14 +7172,21 @@ export function initApp(): void {
     }
   }
 
-  const isDarkMode = localStorage.getItem('bindery.darkmode') === 'true';
+  const storedDarkMode = localStorage.getItem('bindery.darkmode');
+  const isDarkMode =
+    storedDarkMode !== null
+      ? storedDarkMode === 'true'
+      : typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
   settingsDarkModeToggle.checked = isDarkMode;
   applyThemePreference(isDarkMode);
+  syncOnboardingThemeButtons(isDarkMode);
 
   settingsDarkModeToggle.addEventListener('change', () => {
     const active = settingsDarkModeToggle.checked;
     localStorage.setItem('bindery.darkmode', String(active));
     applyThemePreference(active);
+    syncOnboardingThemeButtons(active);
   });
 
   function syncSettingsLangButtons(): void {
@@ -7197,15 +7216,21 @@ export function initApp(): void {
   let onboardingTouchStartY = 0;
 
   function renderOnboarding(): void {
+    const isLast = onboardingIndex === ONBOARDING_PAGE_COUNT - 1;
     onboardingTrack.style.transform = `translateX(-${onboardingIndex * (100 / ONBOARDING_PAGE_COUNT)}%)`;
     Array.from(onboardingDots.querySelectorAll<HTMLSpanElement>('.onboarding-dot')).forEach((dot, i) => {
       dot.classList.toggle('is-active', i === onboardingIndex);
     });
-    onboardingNextBtn.textContent = onboardingIndex === ONBOARDING_PAGE_COUNT - 1 ? t('onboarding.start') : t('onboarding.next');
+    onboardingNextBtn.textContent = isLast ? t('onboarding.start') : t('onboarding.next');
+    onboardingSkipBtn.hidden = isLast;
   }
 
   function syncOnboardingLangButtons(): void {
-    onboardingLangBtns.forEach((b) => b.classList.toggle('is-selected', b.dataset.lang === getLanguage()));
+    onboardingLangBtns.forEach((b) => {
+      const selected = b.dataset.lang === getLanguage();
+      b.classList.toggle('is-selected', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
   }
 
   function applyLanguageChange(lang: Lang): void {
@@ -7230,6 +7255,7 @@ export function initApp(): void {
   function startOnboarding(): void {
     onboardingIndex = 0;
     syncOnboardingLangButtons();
+    syncOnboardingThemeButtons(currentDarkMode);
     renderOnboarding();
     onboardingOverlay.classList.remove('hidden');
   }
@@ -7252,9 +7278,17 @@ export function initApp(): void {
 
   function finishOnboarding(): void {
     localStorage.setItem('bindery.onboarded', 'true');
+    if (localStorage.getItem('bindery.darkmode') === null) {
+      localStorage.setItem('bindery.darkmode', String(currentDarkMode));
+    }
+    settingsDarkModeToggle.checked = currentDarkMode;
     onboardingOverlay.classList.add('hidden');
     seedQuickStartFile();
   }
+
+  onboardingSkipBtn.addEventListener('click', () => {
+    finishOnboarding();
+  });
 
   onboardingNextBtn.addEventListener('click', () => {
     if (onboardingIndex < ONBOARDING_PAGE_COUNT - 1) {
@@ -7268,9 +7302,9 @@ export function initApp(): void {
   onboardingThemeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const active = btn.dataset.theme === 'dark';
-      onboardingThemeBtns.forEach((b) => b.classList.toggle('is-selected', b === btn));
       localStorage.setItem('bindery.darkmode', String(active));
       applyThemePreference(active);
+      syncOnboardingThemeButtons(active);
       settingsDarkModeToggle.checked = active;
     });
   });

@@ -1749,56 +1749,90 @@
 
     <!-- First-launch Onboarding Overlay -->
     <div class="onboarding-overlay hidden" id="onboardingOverlay">
+      <div class="onboarding-topbar">
+        <button type="button" class="onboarding-skip-btn" id="onboardingSkipBtn" data-i18n="onboarding.skip">Skip</button>
+      </div>
       <div class="onboarding-track" id="onboardingTrack">
         <section class="onboarding-page">
-          <div class="onboarding-lang-switch" id="onboardingLangSwitch">
-            <button type="button" class="onboarding-lang-btn is-selected" data-lang="en">English</button>
-            <button type="button" class="onboarding-lang-btn" data-lang="tr">Türkçe</button>
+          <div class="onboarding-page-inner">
+            <div class="onboarding-lang-switch" id="onboardingLangSwitch">
+              <button type="button" class="onboarding-lang-btn is-selected" data-lang="en" aria-pressed="true">English</button>
+              <button type="button" class="onboarding-lang-btn" data-lang="tr" aria-pressed="false">Türkçe</button>
+            </div>
+            <img src="favicon.svg" alt="" aria-hidden="true" class="onboarding-logo" width="96" height="96" />
+            <h2 class="onboarding-title" data-i18n="onboarding.page1.title">Welcome to Bindery</h2>
+            <p class="onboarding-text" data-i18n="onboarding.page1.text">
+              Merge scans, build booklets, and get pages print-ready — entirely on your device, nothing uploaded.
+            </p>
+            <p class="onboarding-privacy">
+              <svg aria-hidden="true" class="icon-svg onboarding-privacy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+            </p>
           </div>
-          <div class="onboarding-illustration" aria-hidden="true">📚</div>
-          <h2 class="onboarding-title" data-i18n="onboarding.page1.title">Welcome to Bindery</h2>
-          <p class="onboarding-text" data-i18n="onboarding.page1.text">
-            Merge scans, build booklets, and get pages print-ready — entirely on your device, nothing uploaded.
-          </p>
         </section>
         <section class="onboarding-page">
-          <h2 class="onboarding-title" data-i18n="onboarding.page2.title">What Can You Do?</h2>
-          <ul class="onboarding-feature-list">
-            <li><span aria-hidden="true">📖</span> <span data-i18n="onboarding.feature.booklet">Booklet — lay out pages for printing</span></li>
-            <li><span aria-hidden="true">🧩</span> <span data-i18n="onboarding.feature.merge">Merge — combine PDFs into one</span></li>
-            <li><span aria-hidden="true">🗂️</span> <span data-i18n="onboarding.feature.organize">Organize Pages — reorder or delete</span></li>
-            <li><span aria-hidden="true">💧</span> <span data-i18n="onboarding.feature.watermark">Watermark — stamp your document</span></li>
-            <li><span aria-hidden="true">🖼️</span> <span data-i18n="onboarding.feature.imageToPdf">Image to PDF — turn photos into pages</span></li>
-            <li><span aria-hidden="true">🔄</span> <span data-i18n="onboarding.feature.rotate">Rotate — fix page orientation</span></li>
-            <li><span aria-hidden="true">🔢</span> <span data-i18n="onboarding.feature.pageNumbers">Page Numbers — number every page</span></li>
-            <li><span aria-hidden="true">🔒</span> <span data-i18n="onboarding.feature.reader">Offline Reader — read & search, zero uploads</span></li>
-          </ul>
+          <div class="onboarding-page-inner">
+            <h2 class="onboarding-title" data-i18n="onboarding.how.title">How it works</h2>
+            <ol class="onboarding-steps">
+              <li class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">01</span>
+                <span class="onboarding-step-icon-box" aria-hidden="true">
+                  <svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                </span>
+                <span class="onboarding-step-text" data-i18n="onboarding.how.step1">Pick your PDF</span>
+              </li>
+              <li class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">02</span>
+                <span class="onboarding-step-icon-box" aria-hidden="true">
+                  <svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                </span>
+                <span class="onboarding-step-text" data-i18n="onboarding.how.step2">Bindery puts the pages in booklet order</span>
+              </li>
+              <li class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">03</span>
+                <span class="onboarding-step-icon-box" aria-hidden="true">
+                  <svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                </span>
+                <span class="onboarding-step-text" data-i18n="onboarding.how.step3">Print, fold and bind</span>
+              </li>
+            </ol>
+            <p class="onboarding-note" data-i18n="onboarding.how.more">Your booklets stay in My Library · plus merge, rotate, watermark and more</p>
+          </div>
         </section>
         <section class="onboarding-page">
-          <h2 class="onboarding-title" data-i18n="onboarding.page3.title">Light or Dark?</h2>
-          <p class="onboarding-text" data-i18n="onboarding.page3.text">
-            You can change this anytime from Settings.
-          </p>
-          <div class="onboarding-theme-choice">
-            <button type="button" class="onboarding-theme-btn is-selected" data-theme="light">
-              <span class="onboarding-theme-icon" aria-hidden="true">☀️</span>
-              <span data-i18n="onboarding.theme.light">Light</span>
-            </button>
-            <button type="button" class="onboarding-theme-btn" data-theme="dark">
-              <span class="onboarding-theme-icon" aria-hidden="true">🌙</span>
-              <span data-i18n="onboarding.theme.dark">Dark</span>
-            </button>
+          <div class="onboarding-page-inner">
+            <h2 class="onboarding-title" data-i18n="onboarding.page3.title">Light or Dark?</h2>
+            <p class="onboarding-text" data-i18n="onboarding.page3.text">
+              You can change this anytime from Settings.
+            </p>
+            <div class="onboarding-theme-choice">
+              <button type="button" class="onboarding-theme-btn is-selected" data-theme="light" aria-pressed="true">
+                <span class="onboarding-theme-icon" aria-hidden="true">
+                  <svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </span>
+                <span data-i18n="onboarding.theme.light">Light</span>
+              </button>
+              <button type="button" class="onboarding-theme-btn" data-theme="dark" aria-pressed="false">
+                <span class="onboarding-theme-icon" aria-hidden="true">
+                  <svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                </span>
+                <span data-i18n="onboarding.theme.dark">Dark</span>
+              </button>
+            </div>
+            <p class="onboarding-note" data-i18n="onboarding.quickStartNote">We've added a Quick Start guide to your Files.</p>
           </div>
         </section>
       </div>
-      <div class="onboarding-dots" id="onboardingDots">
-        <span class="onboarding-dot is-active"></span>
-        <span class="onboarding-dot"></span>
-        <span class="onboarding-dot"></span>
+      <div class="onboarding-footer">
+        <div class="onboarding-dots" id="onboardingDots">
+          <span class="onboarding-dot is-active"></span>
+          <span class="onboarding-dot"></span>
+          <span class="onboarding-dot"></span>
+        </div>
+        <button type="button" class="onboarding-next-btn" id="onboardingNextBtn">
+          Next
+        </button>
       </div>
-      <button type="button" class="btn btn-primary btn-large onboarding-next-btn" id="onboardingNextBtn">
-        Next
-      </button>
     </div>
 
     <!-- Move File Modal Dialog -->
