@@ -140,6 +140,11 @@ const IDS = [
   'libraryRelinkBtn',
   'libraryOpenOutputBtn',
   'libraryRemoveBtn',
+  'libraryDeskSheet',
+  'libraryDeskSheetTitle',
+  'libraryDeskSheetCloseBtn',
+  'libraryDeskReadBtn',
+  'libraryDeskRemoveBtn',
 ] as const;
 
 function record(id: string, overrides: Partial<LibraryRecord> = {}): LibraryRecord {
@@ -197,6 +202,7 @@ function setup(overrides: Partial<LibraryScreenDeps> = {}, books: LibraryRecord[
     els[id] = el;
   }
   els.libraryDetailSheet.classList.add('hidden');
+  els.libraryDeskSheet.classList.add('hidden');
   els.libraryDeskPanel.classList.add('hidden');
   const store = new Map<string, string>();
   const deps: LibraryScreenDeps = {
@@ -421,28 +427,86 @@ describe('library screen controller', () => {
     expect(els.librarySearchWrap.classList.contains('is-open')).toBe(false);
   });
 
-  it('desk rows open the entry and the remove button drops it', async () => {
+  it('desk rows open the entry; "Remove from desk" in the row menu drops it', async () => {
     const { controller, els, deps } = setup();
     await controller.show('desk');
     rows(els.libraryDeskList, 'library-desk-row')[0].click();
     expect(deps.onOpenDesk).toHaveBeenCalledWith(desk[0]);
-    rows(els.libraryDeskList, 'library-desk-remove')[1].click();
+    rows(els.libraryDeskList, 'library-desk-more')[1].click();
+    expect(deps.openModal).toHaveBeenCalledWith(els.libraryDeskSheet, expect.anything());
+    expect(els.libraryDeskSheetTitle.textContent).toBe('b.pdf');
+    els.libraryDeskRemoveBtn.click();
     await flush();
+    expect(deps.closeModal).toHaveBeenCalledWith(els.libraryDeskSheet);
     expect(deps.onRemoveDesk).toHaveBeenCalledWith(desk[1]);
     expect(rows(els.libraryDeskList, 'library-desk-row')).toHaveLength(1);
+    expect(els.libraryDeskBadge.textContent).toBe('1');
     els.libraryOpenPdfBtn.click();
     expect(deps.onOpenPdf).toHaveBeenCalled();
   });
 
-  it('desk rows offer "read as a book" as a second action', async () => {
+  it('each desk row has one labelled menu button and no direct remove or book button', async () => {
+    const { controller, els } = setup();
+    await controller.show('desk');
+    const more = rows(els.libraryDeskList, 'library-desk-more');
+    expect(more).toHaveLength(2);
+    expect(more[1].getAttribute('aria-label')).toBe('library.desk.more: b.pdf');
+    expect(more[1].getAttribute('aria-haspopup')).toBe('dialog');
+    expect(rows(els.libraryDeskList, 'library-desk-remove')).toHaveLength(0);
+    expect(rows(els.libraryDeskList, 'library-desk-book')).toHaveLength(0);
+  });
+
+  it('"Read as a book" in the row menu closes the sheet and hands the entry over', async () => {
     const { controller, els, deps } = setup();
     await controller.show('desk');
-    const buttons = rows(els.libraryDeskList, 'library-desk-book');
-    expect(buttons).toHaveLength(2);
-    expect(buttons[1].getAttribute('aria-label')).toBe('library.action.readDesk: b.pdf');
-    buttons[1].click();
+    rows(els.libraryDeskList, 'library-desk-more')[1].click();
+    expect(els.libraryDeskReadBtn.classList.contains('hidden')).toBe(false);
+    els.libraryDeskReadBtn.click();
+    expect(els.libraryDeskSheet.classList.contains('hidden')).toBe(true);
     expect(deps.onReadDeskAsBook).toHaveBeenCalledWith(desk[1]);
     expect(deps.onOpenDesk).not.toHaveBeenCalled();
+  });
+
+  it('imposed booklet outputs are marked and never offered "Read as a book"', async () => {
+    const imposedDesk: RecentEntry[] = [
+      { uri: '/DATA/booklets/Deneme/Front Side.pdf', name: 'Front Side.pdf', lastPage: 1, openedAt: 3 },
+      { uri: 'content://plain', name: 'plain.pdf', lastPage: 1, openedAt: 2 },
+    ];
+    const { controller, els, deps } = setup({ loadDesk: async () => imposedDesk });
+    await controller.show('desk');
+    const icons = rows(els.libraryDeskList, 'library-desk-icon');
+    expect(icons[0].classList.contains('is-imposed')).toBe(true);
+    expect(icons[1].classList.contains('is-imposed')).toBe(false);
+    const tags = rows(els.libraryDeskList, 'library-desk-tag');
+    expect(tags).toHaveLength(1);
+    expect(tags[0].textContent).toBe('library.desk.imposedTag');
+
+    rows(els.libraryDeskList, 'library-desk-more')[0].click();
+    expect(els.libraryDeskReadBtn.classList.contains('hidden')).toBe(true);
+    els.libraryDeskReadBtn.click();
+    expect(deps.onReadDeskAsBook).not.toHaveBeenCalled();
+
+    rows(els.libraryDeskList, 'library-desk-more')[1].click();
+    expect(els.libraryDeskReadBtn.classList.contains('hidden')).toBe(false);
+  });
+
+  it('desk meta puts the page first, and leaves page 1 out', async () => {
+    const { controller, els } = setup();
+    await controller.show('desk');
+    const metas = rows(els.libraryDeskList, 'library-desk-meta');
+    // desk[0] is on page 3, desk[1] on page 1.
+    expect(metas[0].children[0].classList.contains('library-desk-page')).toBe(true);
+    expect(metas[0].textContent).toBe('recents.pageAbbrev:{"n":3}·@2');
+    expect(rows(metas[1], 'library-desk-page')).toHaveLength(0);
+    expect(metas[1].textContent).toBe('@1');
+  });
+
+  it('hide() also closes the desk sheet', async () => {
+    const { controller, els } = setup();
+    await controller.show('desk');
+    rows(els.libraryDeskList, 'library-desk-more')[0].click();
+    controller.hide();
+    expect(els.libraryDeskSheet.classList.contains('hidden')).toBe(true);
   });
 
   it('the unreachable-source dot says what it means', async () => {

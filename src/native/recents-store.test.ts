@@ -118,4 +118,47 @@ describe('recents-store', () => {
     const uris = entries.map((e) => e.uri).sort();
     expect(uris).toEqual(['content://x', 'content://y']);
   });
+
+  it('restoreRecent puts a removed entry back exactly, in its place by openedAt', async () => {
+    const { recordOpened, removeRecent, restoreRecent, getRecents } = await importStore();
+    await recordOpened({ uri: 'content://old', name: 'old.pdf' });
+    await recordOpened({ uri: 'content://mid', name: 'mid.pdf' });
+    await recordOpened({ uri: 'content://new', name: 'new.pdf' });
+    const before = await getRecents();
+    const mid = { ...before.find((e) => e.uri === 'content://mid')!, lastPage: 7 };
+    // Stamp distinct times so the order cannot come from insertion order.
+    store.set(STORAGE_KEY, JSON.stringify(before.map((e, i) => (e.uri === 'content://mid' ? { ...mid, openedAt: 200 } : { ...e, openedAt: i === 0 ? 300 : 100 }))));
+    const removed = (await getRecents()).find((e) => e.uri === 'content://mid')!;
+    await removeRecent(removed);
+    expect((await getRecents()).map((e) => e.uri)).toEqual(['content://new', 'content://old']);
+
+    await restoreRecent(removed);
+    const after = await getRecents();
+    expect(after.map((e) => e.uri)).toEqual(['content://new', 'content://mid', 'content://old']);
+    expect(after[1]).toEqual({ uri: 'content://mid', name: 'mid.pdf', lastPage: 7, openedAt: 200 });
+  });
+
+  it('restoreRecent does nothing when the entry is already back', async () => {
+    const { recordOpened, restoreRecent, getRecents } = await importStore();
+    await recordOpened({ uri: 'content://a', name: 'a.pdf' });
+    const [entry] = await getRecents();
+    await restoreRecent({ ...entry, lastPage: 99 });
+    const after = await getRecents();
+    expect(after).toHaveLength(1);
+    expect(after[0].lastPage).toBe(1);
+  });
+
+  it('restoreRecent keeps the cap of 8, dropping the oldest', async () => {
+    const { recordOpened, removeRecent, restoreRecent, getRecents } = await importStore();
+    for (let i = 0; i < 8; i++) await recordOpened({ uri: `content://${i}`, name: `${i}.pdf` });
+    const all = await getRecents();
+    store.set(STORAGE_KEY, JSON.stringify(all.map((e, i) => ({ ...e, openedAt: 1000 - i }))));
+    const oldest = (await getRecents())[7];
+    await removeRecent(oldest);
+    await recordOpened({ uri: 'content://fresh', name: 'fresh.pdf' });
+    await restoreRecent(oldest);
+    const after = await getRecents();
+    expect(after).toHaveLength(8);
+    expect(after.some((e) => e.uri === oldest.uri)).toBe(false);
+  });
 });

@@ -1544,6 +1544,26 @@
               </div>
             </div>
           </div>
+          <div class="library-sheet-backdrop hidden" id="libraryDeskSheet" role="dialog" aria-modal="true" aria-labelledby="libraryDeskSheetTitle">
+            <div class="library-sheet-panel library-desk-sheet">
+              <header class="library-sheet-head">
+                <span class="library-desk-sheet-title" id="libraryDeskSheetTitle"></span>
+                <button type="button" class="library-sheet-close" id="libraryDeskSheetCloseBtn" aria-label="Close" data-i18n-aria-label="common.close">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+              </header>
+              <div class="library-sheet-body library-desk-sheet-body">
+                <button type="button" class="library-desk-action" id="libraryDeskReadBtn">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>
+                  <span class="library-desk-action-text"><span class="library-desk-action-label" data-i18n="library.action.readDesk">Read as a book</span></span>
+                </button>
+                <button type="button" class="library-desk-action is-remove" id="libraryDeskRemoveBtn">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                  <span class="library-desk-action-text"><span class="library-desk-action-label" data-i18n="library.desk.remove">Remove from desk</span><span class="library-desk-action-hint" data-i18n="library.desk.removeHint">The file stays on your device.</span></span>
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- Book reader: two facing pages, as the folded booklet opens -->

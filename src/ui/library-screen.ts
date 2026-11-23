@@ -7,6 +7,7 @@ import {
   filterDesk,
   filterRecords,
   formatLine,
+  isImposedOutput,
   rowMeta,
   shelfSlice,
   type SourceState,
@@ -42,7 +43,7 @@ export interface LibraryScreenDeps {
   formatDate: (timestamp: number) => string;
   onOpenPdf: () => void;
   onOpenDesk: (entry: RecentEntry) => void;
-  /** Desk entry in the book reader — spreads only, no signature view. */
+  /** Desk entry in the book reader — spreads only, no signature view. Never offered for imposed outputs. */
   onReadDeskAsBook: (entry: RecentEntry) => void;
   onProduce: () => void;
   onRead: (record: LibraryRecord) => void;
@@ -78,8 +79,9 @@ const SHELF_FRONT_RATIO = 0.6;
 
 const SVG_NS_ATTRS = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
 const ICON_DOC = `<svg ${SVG_NS_ATTRS}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
-const ICON_CLOSE = `<svg ${SVG_NS_ATTRS}><path d="M6 6l12 12M18 6L6 18"/></svg>`;
-const ICON_BOOK = `<svg ${SVG_NS_ATTRS}><path d="M3 5.5C5.5 4.3 8.6 4.3 12 6c3.4-1.7 6.5-1.7 9-.5V19c-2.5-1.2-5.6-1.2-9 .5-3.4-1.7-6.5-1.7-9-.5z"/><path d="M12 6v13.5"/></svg>`;
+// Two pages side by side on one sheet, with the fold between them.
+const ICON_SHEET = `<svg ${SVG_NS_ATTRS}><rect x="2.5" y="6" width="19" height="13" rx="1.5"/><path d="M12 6v13" stroke-dasharray="2 2"/></svg>`;
+const ICON_MORE = `<svg ${SVG_NS_ATTRS}><circle cx="5.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>`;
 
 export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenController {
   const root = deps.root ?? document;
@@ -126,12 +128,18 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   const relinkBtn = q<HTMLButtonElement>('libraryRelinkBtn');
   const openOutputBtn = q<HTMLButtonElement>('libraryOpenOutputBtn');
   const removeBtn = q<HTMLButtonElement>('libraryRemoveBtn');
+  const deskSheet = q('libraryDeskSheet');
+  const deskSheetTitle = q('libraryDeskSheetTitle');
+  const deskSheetCloseBtn = q<HTMLButtonElement>('libraryDeskSheetCloseBtn');
+  const deskReadBtn = q<HTMLButtonElement>('libraryDeskReadBtn');
+  const deskRemoveBtn = q<HTMLButtonElement>('libraryDeskRemoveBtn');
 
   let books: LibraryRecord[] = [];
   let desk: RecentEntry[] = [];
   let tab: LibraryTab = readStoredTab();
   let query = '';
   let detailRecord: LibraryRecord | null = null;
+  let deskSheetEntry: RecentEntry | null = null;
   let detailState: SourceState = 'checking';
   // Bumped on every detail open, so a slow probe for a previous record cannot
   // overwrite the state of the one now shown.
@@ -322,44 +330,39 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   function renderDeskList(entries: RecentEntry[]): void {
     clear(deskList);
     for (const entry of entries) {
+      const imposed = isImposedOutput(entry);
       const li = el('li', 'library-desk-item');
       const row = el('button', 'library-desk-row');
       row.setAttribute('type', 'button');
-      const icon = el('span', 'library-desk-icon');
-      icon.innerHTML = ICON_DOC;
+      const icon = el('span', imposed ? 'library-desk-icon is-imposed' : 'library-desk-icon');
+      icon.innerHTML = imposed ? ICON_SHEET : ICON_DOC;
       row.appendChild(icon);
       const text = el('span', 'library-row-text');
       text.appendChild(el('span', 'library-row-title', entry.name));
-      text.appendChild(
-        el(
-          'span',
-          'library-row-meta',
-          `${deps.formatDate(entry.openedAt)} · ${t('recents.pageAbbrev', { n: entry.lastPage })}`,
-        ),
-      );
+      // Page first: when the line is too long, the date gives way, not the
+      // place the reader stopped. Page 1 is where every file starts, so it is
+      // not worth a mention.
+      const meta = el('span', 'library-row-meta library-desk-meta');
+      const parts: HTMLElement[] = [];
+      if (entry.lastPage > 1) parts.push(el('span', 'library-desk-page', t('recents.pageAbbrev', { n: entry.lastPage })));
+      if (imposed) parts.push(el('span', 'library-desk-tag', t('library.desk.imposedTag')));
+      parts.push(el('span', 'library-desk-date', deps.formatDate(entry.openedAt)));
+      parts.forEach((part, i) => {
+        if (i > 0) meta.appendChild(el('span', 'library-desk-sep', '·'));
+        meta.appendChild(part);
+      });
+      text.appendChild(meta);
       row.appendChild(text);
       row.addEventListener('click', () => deps.onOpenDesk(entry));
       li.appendChild(row);
 
-      const asBook = el('button', 'library-desk-book');
-      asBook.setAttribute('type', 'button');
-      asBook.setAttribute('aria-label', `${t('library.action.readDesk')}: ${entry.name}`);
-      asBook.setAttribute('title', t('library.action.readDesk'));
-      asBook.innerHTML = ICON_BOOK;
-      asBook.addEventListener('click', () => deps.onReadDeskAsBook(entry));
-      li.appendChild(asBook);
-
-      const remove = el('button', 'library-desk-remove');
-      remove.setAttribute('type', 'button');
-      remove.setAttribute('aria-label', t('recents.removeFromHistory'));
-      remove.innerHTML = ICON_CLOSE;
-      remove.addEventListener('click', async () => {
-        await deps.onRemoveDesk(entry);
-        desk = desk.filter((d) => d !== entry);
-        renderCounts();
-        renderDesk();
-      });
-      li.appendChild(remove);
+      const more = el('button', 'library-desk-more');
+      more.setAttribute('type', 'button');
+      more.setAttribute('aria-haspopup', 'dialog');
+      more.setAttribute('aria-label', `${t('library.desk.more')}: ${entry.name}`);
+      more.innerHTML = ICON_MORE;
+      more.addEventListener('click', () => openDeskSheet(entry, more));
+      li.appendChild(more);
       deskList.appendChild(li);
     }
   }
@@ -532,6 +535,39 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     renderBooks();
   }
 
+  // ── Desk actions sheet ────────────────────────────────────────────────────
+
+  function openDeskSheet(entry: RecentEntry, trigger: Element | null): void {
+    deskSheetEntry = entry;
+    deskSheetTitle.textContent = entry.name;
+    // An imposed output is already laid out on sheets; reading it as a book
+    // would impose it a second time.
+    deskReadBtn.classList.toggle('hidden', isImposedOutput(entry));
+    if (deskSheet.classList.contains('hidden')) deps.openModal(deskSheet, trigger);
+  }
+
+  function closeDeskSheet(): void {
+    if (!deskSheet.classList.contains('hidden')) deps.closeModal(deskSheet);
+  }
+
+  function onDeskReadClick(): void {
+    const entry = deskSheetEntry;
+    if (!entry || isImposedOutput(entry)) return;
+    closeDeskSheet();
+    deps.onReadDeskAsBook(entry);
+  }
+
+  async function onDeskRemoveClick(): Promise<void> {
+    const entry = deskSheetEntry;
+    if (!entry) return;
+    closeDeskSheet();
+    deskSheetEntry = null;
+    await deps.onRemoveDesk(entry);
+    desk = desk.filter((d) => d !== entry);
+    renderCounts();
+    renderDesk();
+  }
+
   // ── Events ────────────────────────────────────────────────────────────────
 
   const onTabBooks = (): void => setTab('books');
@@ -607,6 +643,11 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   };
   const onRelinkBtn = (): void => void onRelinkClick();
   const onRemoveBtn = (): void => void onRemoveClick();
+  const onDeskSheetClose = (): void => closeDeskSheet();
+  const onDeskSheetClick = (event: Event): void => {
+    if (event.target === deskSheet) closeDeskSheet();
+  };
+  const onDeskRemoveBtn = (): void => void onDeskRemoveClick();
 
   tabBooks.addEventListener('click', onTabBooks);
   tabDesk.addEventListener('click', onTabDesk);
@@ -625,6 +666,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   relinkBtn.addEventListener('click', onRelinkBtn);
   openOutputBtn.addEventListener('click', onOutput);
   removeBtn.addEventListener('click', onRemoveBtn);
+  deskSheetCloseBtn.addEventListener('click', onDeskSheetClose);
+  deskSheet.addEventListener('click', onDeskSheetClick);
+  deskReadBtn.addEventListener('click', onDeskReadClick);
+  deskRemoveBtn.addEventListener('click', onDeskRemoveBtn);
 
   async function show(requested?: LibraryTab): Promise<void> {
     setTab(requested ?? readStoredTab());
@@ -641,6 +686,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
   function hide(): void {
     closeDetail();
+    closeDeskSheet();
     shelfObserver?.disconnect();
     shelfObserver = null;
     thumbObserver?.disconnect();
@@ -680,6 +726,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     relinkBtn.removeEventListener('click', onRelinkBtn);
     openOutputBtn.removeEventListener('click', onOutput);
     removeBtn.removeEventListener('click', onRemoveBtn);
+    deskSheetCloseBtn.removeEventListener('click', onDeskSheetClose);
+    deskSheet.removeEventListener('click', onDeskSheetClick);
+    deskReadBtn.removeEventListener('click', onDeskReadClick);
+    deskRemoveBtn.removeEventListener('click', onDeskRemoveBtn);
   }
 
   setTab(tab);

@@ -51,6 +51,30 @@ export function filterDesk(entries: readonly RecentEntry[], query: string, lang:
   return matches.sort((a, b) => b.openedAt - a.openedAt);
 }
 
+/**
+ * Whether a desk entry is one of the booklet's own outputs — Front Side, Back
+ * Side, Combined Booklet or Cover, all already imposed onto sheets — judged by
+ * where it lives: inside a folder under Bindery's `booklets/` directory. Read
+ * as a book, such a file would be imposed a second time. Instructions.pdf
+ * sits in the same folder but is a plain document, so it does not count.
+ * Decided at render time, so entries recorded before this rule are covered.
+ */
+export function isImposedOutput(entry: Pick<RecentEntry, 'uri'>): boolean {
+  if (!entry.uri) return false;
+  let path = entry.uri;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // A malformed escape: judge the uri as written.
+  }
+  const segments = path.split(/[?#]/)[0].split(/[/\\]/);
+  const root = segments.lastIndexOf('booklets');
+  // booklets/<booklet folder>/<file>: the file sits two levels below.
+  if (root < 0 || root > segments.length - 3) return false;
+  const fileName = segments[segments.length - 1].toLowerCase();
+  return fileName.endsWith('.pdf') && fileName !== 'instructions.pdf';
+}
+
 /** The books the shelf row shows: at most `SHELF_MAX`, newest first. */
 export function shelfSlice(records: readonly LibraryRecord[]): LibraryRecord[] {
   return [...records].sort(byUpdatedDesc).slice(0, SHELF_MAX);
