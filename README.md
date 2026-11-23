@@ -9,6 +9,8 @@
 <a name="-english"></a>
 ## English
 
+![Bindery — Make Print-Ready Booklets](assets/brand/play-store-feature-1024x500-en.png)
+
 Bindery is a privacy-focused PDF toolkit for Android. Every core tool — booklet making, merging, page management, watermarking — runs entirely on your device.
 
 ### Get it
@@ -22,16 +24,15 @@ Every operation on your existing files — merging, page management, conversion,
 ### Features
 
 - **Booklet Maker** — Turns a PDF into a foldable booklet layout
-  - Multi-signature imposition for thick documents (8/16/32-page or auto signatures, per-signature creep, evenly balanced signatures)
+  - Multi-signature imposition for thick documents (**Auto** balanced signatures by default, plus 8/16/32-page presets and per-signature creep)
   - Paper size selection (A4 / Letter / A5 / A3 / source size), duplex flip-edge (short/long) support
-  - Print-ready input: pages are imposed at their trim box (bleed and printer's marks left out) and with their /Rotate applied
+  - Print-ready input: pages are imposed at their trim box (bleed and printer's marks left out) and with their `/Rotate` applied
   - Gutter that shrinks pages instead of cutting the outer edge; creep set by hand or from paper weight, clipped at the fold
   - Right-to-left (RTL) binding, separate cover export for heavier stock
   - Blank page insertion at chosen positions, printed instructions sheet with a reading-order check
   - Optional assembly marks — a dashed fold guide, plus stepped spine marks whose even spacing breaks when a signature is missing or out of order
   - Reversed sheet order for printers with an automatic folding unit
   - Interactive "what is a signature?" explainer with a live 3D folding animation
-- **Booklet Cover Studio** — Front and back covers with the spine width computed from the sheet count, fold marks, theme palettes, and a two-sheet split cover for home A4 printers that cannot print a full wrap
 - **Markdown to Booklet** — Turns one or more `.md` files into a print-ready A5 booklet: headings, tables, code blocks and box-drawing diagrams, three calibrated type sizes (Compact 8pt / Standard 9.5pt / Comfortable 11pt), and optional recto chapter starts
 - **PDF Merge** — Combines multiple PDFs into a single file
 - **Page Management** — Add, delete, and reorder pages
@@ -39,22 +40,23 @@ Every operation on your existing files — merging, page management, conversion,
 - **Page Numbering**
 - **Watermarking**
 - **Image-to-PDF + Perspective Correction** — Convert photos to clean PDF with automatic perspective correction
-- **Built-in PDF Reader**:
+- **Built-in PDF & Book Reader**:
+  - Two-page **Book View** spread mode with page scrubber and signature navigation
   - Night mode (canvas-level smart color inversion)
   - Text selection / copying
   - In-document text search
-  - Resume from last-read page (recents resume-to-page)
-- **Local File Folders** — Sorting in the Files tab and opening tools directly from a file
+  - Resume from last-read page
+- **Unified Library & Local Files** — Saved booklets, recents, and local folders in one shelf, with sorting and direct tool actions
 
 ### Screenshots
 
-| Home | Booklet Result |
+| Atelier Hub | Booklet Result |
 |---|---|
-| ![Home Screen](screenshots/home.png) | ![Booklet Result](screenshots/booklet.png) |
+| ![Atelier Hub](screenshots/en/hub.png) | ![Booklet Result](screenshots/en/booklet-result.png) |
 
-| Settings | Reader (Night Mode) |
+| My Library | Book View Reader |
 |---|---|
-| ![Settings](screenshots/settings.png) | ![Reader - Night Mode](screenshots/reader-night.png) |
+| ![My Library](screenshots/en/library.png) | ![Book View Reader](screenshots/en/book-reader.png) |
 
 ### Development & Build
 
@@ -75,6 +77,8 @@ This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the ful
 <a name="-türkçe"></a>
 ## Türkçe
 
+![Bindery — Yazdırılabilir Kitapçık Hazırla](assets/brand/play-store-feature-1024x500-tr.png)
+
 Bindery, Android için gizlilik odaklı bir PDF araç setidir. Kitapçık oluşturma, birleştirme, sayfa düzenleme, filigran gibi tüm çekirdek araçlar tamamen cihazınızda çalışır.
 
 ### Nereden indirilir
@@ -88,16 +92,15 @@ Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düze
 ### Özellikler
 
 - **Kitapçık (Booklet) Oluşturucu** — PDF'i katlanabilir kitapçık düzenine getirir
-  - Kalın belgeler için çoklu imza dizgisi (8/16/32 sayfalık veya otomatik imzalar, imza başına creep, imzalara dengeli yaprak dağıtımı)
+  - Kalın belgeler için çoklu forma dizgisi (varsayılan **Otomatik** dengeli formalar, 8/16/32 sayfalık seçenekler ve forma başına creep)
   - Kağıt boyutu seçimi (A4 / Letter / A5 / A3 / kaynak boyutu), duplex çevirme kenarı (kısa/uzun) desteği
-  - Baskıya hazır girdi: sayfalar kesim kutusuna (TrimBox) göre, taşma payı ve kesim işaretleri dışarıda bırakılarak ve /Rotate döndürmesi uygulanarak yerleştirilir
+  - Baskıya hazır girdi: sayfalar kesim kutusuna (TrimBox) göre, taşma payı ve kesim işaretleri dışarıda bırakılarak ve `/Rotate` döndürmesi uygulanarak yerleştirilir
   - Dış kenarı kesmek yerine sayfayı küçülten orta boşluk; elle ya da kağıt gramajından ayarlanan, katlama çizgisinde kırpılan creep
   - Sağdan (RTL) ciltleme, kalın kağıt için ayrı kapak çıktısı
   - İstenen konuma boş sayfa ekleme, okuma sırası kontrolü içeren baskı talimat sayfası
-  - İsteğe bağlı montaj işaretleri — kesikli katlama kılavuzu ve eksik ya da sırası bozuk imzada düzenli basamak aralığı bozulan sırt işaretleri
+  - İsteğe bağlı montaj işaretleri — kesikli katlama kılavuzu ve eksik ya da sırası bozuk formada düzenli basamak aralığı bozulan sırt işaretleri
   - Otomatik katlama üniteli yazıcılar için ters yaprak sırası
-  - Canlı 3B katlama animasyonuyla interaktif "imza nedir?" açıklaması
-- **Kitapçık Kapak Stüdyosu** — Ön ve arka kapak, yaprak sayısından sırt kalınlığının otomatik hesabı, katlama işaretleri, tema paletleri ve tam sarma kapak basamayan ev tipi A4 yazıcılar için iki yapraklı bölünmüş kapak
+  - Canlı 3B katlama animasyonuyla interaktif "forma nedir?" açıklaması
 - **Markdown'dan Kitapçık** — Bir ya da daha fazla `.md` dosyasını basıma hazır A5 kitapçığa dönüştürür: başlıklar, tablolar, kod blokları ve kutu çizgili şemalar; üç kalibre edilmiş punto (Kompakt 8pt / Standart 9,5pt / Rahat 11pt) ve istenirse bölümleri tek sayfadan başlatma
 - **PDF Birleştir** — Birden fazla PDF'i tek dosyada birleştirir
 - **Sayfa Yönetimi** — Sayfa ekleme, silme, yeniden sıralama
@@ -105,22 +108,23 @@ Var olan dosyalarınız üzerindeki tüm işlemler — birleştirme, sayfa düze
 - **Sayfa Numarası Ekleme**
 - **Filigran (Watermark) Ekleme**
 - **Görselden PDF + Perspektif Düzeltme** — Fotoğraflardan PDF oluşturma, otomatik perspektif düzeltme
-- **Dahili PDF Okuyucu**:
+- **Dahili PDF & Kitap Okuyucu**:
+  - Sayfa çubuğu ve forma görünümüyle iki sayfalık **Kitap Görünümü** okuyucu
   - Gece modu (canvas seviyesinde akıllı renk tersine çevirme)
   - Metin seçme / kopyalama
   - Belge içi metin arama
-  - Son okunan sayfadan devam etme (recents resume-to-page)
-- **Yerel Dosya Klasörleri** — Files sekmesinde sıralama ve dosyadan doğrudan araç açma
+  - Son okunan sayfadan devam etme
+- **Birleşik Kütüphane & Yerel Dosyalar** — Kayıtlı kitapçıklar, son belgeler ve yerel klasörler tek rafta; sıralama ve doğrudan araç açma desteği
 
 ### Ekran Görüntüleri
 
-| Ana Ekran | Kitapçık Sonuç Ekranı |
+| Atölye Ana Ekran | Kitapçık Sonuç Ekranı |
 |---|---|
-| ![Ana Ekran](screenshots/home.png) | ![Kitapçık Sonuç Ekranı](screenshots/booklet.png) |
+| ![Atölye Ana Ekran](screenshots/tr/hub.png) | ![Kitapçık Sonuç Ekranı](screenshots/tr/booklet-result.png) |
 
-| Ayarlar | Okuyucu (Gece Modu) |
+| Kütüphanem | Kitap Görünümü Okuyucu |
 |---|---|
-| ![Ayarlar](screenshots/settings.png) | ![Okuyucu - Gece Modu](screenshots/reader-night.png) |
+| ![Kütüphanem](screenshots/tr/library.png) | ![Kitap Görünümü Okuyucu](screenshots/tr/book-reader.png) |
 
 ### Geliştirme & Derleme
 
