@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import type { LibraryRecord } from '../native/library-store';
 import type { RecentEntry } from '../native/recents-store';
@@ -109,6 +111,7 @@ const IDS = [
   'libraryCount',
   'libraryTabBooks',
   'libraryTabDesk',
+  'libraryTabFiles',
   'libraryBooksBadge',
   'libraryDeskBadge',
   'librarySearchWrap',
@@ -118,6 +121,7 @@ const IDS = [
   'libraryNoMatch',
   'libraryBooksPanel',
   'libraryDeskPanel',
+  'libraryFilesPanel',
   'libraryShelfSection',
   'libraryShelf',
   'libraryAllSection',
@@ -204,6 +208,7 @@ function setup(overrides: Partial<LibraryScreenDeps> = {}, books: LibraryRecord[
   els.libraryDetailSheet.classList.add('hidden');
   els.libraryDeskSheet.classList.add('hidden');
   els.libraryDeskPanel.classList.add('hidden');
+  els.libraryFilesPanel.classList.add('hidden');
   const store = new Map<string, string>();
   const deps: LibraryScreenDeps = {
     root: root as unknown as ParentNode,
@@ -533,5 +538,121 @@ describe('library screen controller', () => {
     fire([{ target: books[1], isIntersecting: true, intersectionRatio: 0.9 }]);
     expect(books[1].classList.contains('is-front')).toBe(true);
     expect(books[0].classList.contains('is-before')).toBe(true);
+  });
+
+  it('clicking the Files tab selects it, shows only its panel, and updates roving tabindex', async () => {
+    const { controller, els } = setup();
+    await controller.show('books');
+
+    els.librarySearch.value = 'zzz';
+    els.librarySearch.dispatch('input');
+    expect(els.libraryNoMatch.classList.contains('hidden')).toBe(false);
+
+    els.libraryTabFiles.click();
+
+    expect(els.libraryTabBooks.getAttribute('aria-selected')).toBe('false');
+    expect(els.libraryTabDesk.getAttribute('aria-selected')).toBe('false');
+    expect(els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(els.libraryTabBooks.classList.contains('is-active')).toBe(false);
+    expect(els.libraryTabDesk.classList.contains('is-active')).toBe(false);
+    expect(els.libraryTabFiles.classList.contains('is-active')).toBe(true);
+    expect(els.libraryTabBooks.getAttribute('tabindex')).toBe('-1');
+    expect(els.libraryTabDesk.getAttribute('tabindex')).toBe('-1');
+    expect(els.libraryTabFiles.getAttribute('tabindex')).toBe('0');
+    expect(els.libraryBooksPanel.classList.contains('hidden')).toBe(true);
+    expect(els.libraryDeskPanel.classList.contains('hidden')).toBe(true);
+    expect(els.libraryFilesPanel.classList.contains('hidden')).toBe(false);
+    expect(els.librarySearch.getAttribute('aria-controls')).toBe('libraryFilesPanel');
+    expect(els.libraryNoMatch.classList.contains('hidden')).toBe(true);
+  });
+
+  it('supports 3-way keyboard navigation (ArrowRight, ArrowLeft with wrap, Home, End) and moves focus', async () => {
+    const { controller, els } = setup();
+    const focusBooks = vi.spyOn(els.libraryTabBooks, 'focus');
+    const focusDesk = vi.spyOn(els.libraryTabDesk, 'focus');
+    const focusFiles = vi.spyOn(els.libraryTabFiles, 'focus');
+
+    await controller.show('desk');
+    els.libraryTabDesk.dispatch('keydown', { key: 'ArrowRight' });
+    expect(els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(els.libraryFilesPanel.classList.contains('hidden')).toBe(false);
+    expect(els.libraryDeskPanel.classList.contains('hidden')).toBe(true);
+    expect(focusFiles).toHaveBeenCalledTimes(1);
+
+    els.libraryTabFiles.dispatch('keydown', { key: 'ArrowRight' });
+    expect(els.libraryTabBooks.getAttribute('aria-selected')).toBe('true');
+    expect(els.libraryBooksPanel.classList.contains('hidden')).toBe(false);
+    expect(els.libraryFilesPanel.classList.contains('hidden')).toBe(true);
+    expect(focusBooks).toHaveBeenCalledTimes(1);
+
+    els.libraryTabBooks.dispatch('keydown', { key: 'ArrowLeft' });
+    expect(els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(els.libraryFilesPanel.classList.contains('hidden')).toBe(false);
+    expect(focusFiles).toHaveBeenCalledTimes(2);
+
+    els.libraryTabFiles.dispatch('keydown', { key: 'ArrowLeft' });
+    expect(els.libraryTabDesk.getAttribute('aria-selected')).toBe('true');
+    expect(focusDesk).toHaveBeenCalledTimes(1);
+
+    els.libraryTabDesk.dispatch('keydown', { key: 'End' });
+    expect(els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(focusFiles).toHaveBeenCalledTimes(3);
+
+    els.libraryTabFiles.dispatch('keydown', { key: 'Home' });
+    expect(els.libraryTabBooks.getAttribute('aria-selected')).toBe('true');
+    expect(focusBooks).toHaveBeenCalledTimes(2);
+  });
+
+  it('never stores "files" in storage, reads a stored "files" back as "books", and honours show("files")', async () => {
+    const raw = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => raw.get(k) ?? null,
+      setItem: vi.fn((k: string, v: string) => void raw.set(k, v)),
+    };
+    const { controller, els } = setup({ storage });
+    await controller.show('desk');
+    expect(raw.get(LIBRARY_TAB_STORAGE_KEY)).toBe('desk');
+
+    els.libraryTabFiles.click();
+    expect(raw.get(LIBRARY_TAB_STORAGE_KEY)).toBe('desk');
+    expect(storage.setItem).not.toHaveBeenCalledWith(LIBRARY_TAB_STORAGE_KEY, 'files');
+
+    raw.set(LIBRARY_TAB_STORAGE_KEY, 'files');
+    const second = setup({ storage });
+    await second.controller.show();
+    expect(second.els.libraryTabBooks.getAttribute('aria-selected')).toBe('true');
+    expect(second.els.libraryBooksPanel.classList.contains('hidden')).toBe(false);
+
+    raw.set(LIBRARY_TAB_STORAGE_KEY, 'desk');
+    await second.controller.show('files');
+    expect(second.els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(second.els.libraryFilesPanel.classList.contains('hidden')).toBe(false);
+    expect(raw.get(LIBRARY_TAB_STORAGE_KEY)).toBe('desk');
+  });
+
+  it('ships three tabs with no badge on Files in index.html and a 380px rule in styles.css', () => {
+    const html = readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf-8');
+    const css = readFileSync(fileURLToPath(new URL('./styles.css', import.meta.url)), 'utf-8');
+
+    const tabsStart = html.indexOf('id="libraryTabs"');
+    const tabsEnd = html.indexOf('id="libraryNoMatch"', tabsStart);
+    expect(tabsStart).toBeGreaterThan(-1);
+    expect(tabsEnd).toBeGreaterThan(tabsStart);
+    const tabsBlock = html.slice(tabsStart, tabsEnd);
+    expect(tabsBlock.match(/role="tab"/g)).toHaveLength(3);
+    expect(tabsBlock).toContain('id="libraryTabBooks"');
+    expect(tabsBlock).toContain('id="libraryTabDesk"');
+    expect(tabsBlock).toContain('id="libraryTabFiles"');
+
+    const filesTabStart = tabsBlock.indexOf('id="libraryTabFiles"');
+    const filesTabEnd = tabsBlock.indexOf('</button>', filesTabStart);
+    const filesTabBlock = tabsBlock.slice(filesTabStart, filesTabEnd);
+    expect(filesTabBlock).not.toContain('library-tab-badge');
+    expect(filesTabBlock).toContain('data-i18n="library.tab.files"');
+    expect(html).toContain('id="libraryFilesPanel"');
+
+    const mediaIdx = css.indexOf('@media (max-width: 380px)');
+    expect(mediaIdx).toBeGreaterThan(-1);
+    expect(css).toMatch(/@media\s*\(max-width:\s*380px\)\s*\{[^}]*\.library-tabs\s*\{[^}]*gap:\s*12px;[^}]*\}[^}]*\.library-tab\s+svg\s*\{[^}]*display:\s*none;[^}]*\}/s);
   });
 });

@@ -13,7 +13,9 @@ import {
   type SourceState,
 } from './library-view-model';
 
-export type LibraryTab = 'books' | 'desk';
+export type LibraryTab = 'books' | 'desk' | 'files';
+
+const TAB_ORDER: readonly LibraryTab[] = ['books', 'desk', 'files'];
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -97,6 +99,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   const countEl = q('libraryCount');
   const tabBooks = q<HTMLButtonElement>('libraryTabBooks');
   const tabDesk = q<HTMLButtonElement>('libraryTabDesk');
+  const tabFiles = q<HTMLButtonElement>('libraryTabFiles');
   const booksBadge = q('libraryBooksBadge');
   const deskBadge = q('libraryDeskBadge');
   const searchWrap = root.querySelector<HTMLElement>('#librarySearchWrap');
@@ -106,6 +109,13 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   const noMatch = q('libraryNoMatch');
   const booksPanel = q('libraryBooksPanel');
   const deskPanel = q('libraryDeskPanel');
+  const filesPanel = q('libraryFilesPanel');
+
+  const tabEntries: Record<LibraryTab, { tab: HTMLButtonElement; panel: HTMLElement; panelId: string }> = {
+    books: { tab: tabBooks, panel: booksPanel, panelId: 'libraryBooksPanel' },
+    desk: { tab: tabDesk, panel: deskPanel, panelId: 'libraryDeskPanel' },
+    files: { tab: tabFiles, panel: filesPanel, panelId: 'libraryFilesPanel' },
+  };
   const shelfSection = q('libraryShelfSection');
   const shelf = q('libraryShelf');
   const allSection = q('libraryAllSection');
@@ -149,7 +159,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingThumbs = new Map<Element, string>();
 
-  function readStoredTab(): LibraryTab {
+  function readStoredTab(): 'books' | 'desk' {
     try {
       return deps.storage?.getItem(LIBRARY_TAB_STORAGE_KEY) === 'desk' ? 'desk' : 'books';
     } catch {
@@ -158,6 +168,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
   }
 
   function storeTab(value: LibraryTab): void {
+    if (value === 'files') return;
     try {
       deps.storage?.setItem(LIBRARY_TAB_STORAGE_KEY, value);
     } catch {
@@ -189,15 +200,15 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
   function setTab(next: LibraryTab): void {
     tab = next;
-    tabBooks.setAttribute('aria-selected', String(next === 'books'));
-    tabDesk.setAttribute('aria-selected', String(next === 'desk'));
-    tabBooks.classList.toggle('is-active', next === 'books');
-    tabDesk.classList.toggle('is-active', next === 'desk');
-    tabBooks.setAttribute('tabindex', next === 'books' ? '0' : '-1');
-    tabDesk.setAttribute('tabindex', next === 'desk' ? '0' : '-1');
-    booksPanel.classList.toggle('hidden', next !== 'books');
-    deskPanel.classList.toggle('hidden', next !== 'desk');
-    searchInput.setAttribute('aria-controls', next === 'books' ? 'libraryBooksPanel' : 'libraryDeskPanel');
+    for (const id of TAB_ORDER) {
+      const active = id === next;
+      const entry = tabEntries[id];
+      entry.tab.setAttribute('aria-selected', String(active));
+      entry.tab.classList.toggle('is-active', active);
+      entry.tab.setAttribute('tabindex', active ? '0' : '-1');
+      entry.panel.classList.toggle('hidden', !active);
+    }
+    searchInput.setAttribute('aria-controls', tabEntries[next].panelId);
     storeTab(next);
     renderNoMatch();
   }
@@ -412,10 +423,11 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     const trimmed = query.trim();
     let none = false;
     if (trimmed) {
-      none =
-        tab === 'books'
-          ? books.length > 0 && filterRecords(books, trimmed, deps.getLang()).length === 0
-          : desk.length > 0 && filterDesk(desk, trimmed, deps.getLang()).length === 0;
+      if (tab === 'books') {
+        none = books.length > 0 && filterRecords(books, trimmed, deps.getLang()).length === 0;
+      } else if (tab === 'desk') {
+        none = desk.length > 0 && filterDesk(desk, trimmed, deps.getLang()).length === 0;
+      }
     }
     noMatch.textContent = none ? t('library.noMatch', { query: trimmed }) : '';
     noMatch.classList.toggle('hidden', !none);
@@ -572,13 +584,19 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
   const onTabBooks = (): void => setTab('books');
   const onTabDesk = (): void => setTab('desk');
+  const onTabFiles = (): void => setTab('files');
   const onTabKey = (event: Event): void => {
     const key = (event as KeyboardEvent).key;
-    if (key !== 'ArrowLeft' && key !== 'ArrowRight') return;
+    const idx = TAB_ORDER.indexOf(tab);
+    let next: LibraryTab | undefined;
+    if (key === 'ArrowRight') next = TAB_ORDER[(idx + 1) % TAB_ORDER.length];
+    else if (key === 'ArrowLeft') next = TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length];
+    else if (key === 'Home') next = TAB_ORDER[0];
+    else if (key === 'End') next = TAB_ORDER[TAB_ORDER.length - 1];
+    if (!next) return;
     event.preventDefault?.();
-    const next: LibraryTab = tab === 'books' ? 'desk' : 'books';
     setTab(next);
-    (next === 'books' ? tabBooks : tabDesk).focus?.();
+    tabEntries[next].tab.focus?.();
   };
   const applySearch = (): void => {
     query = searchInput.value;
@@ -651,8 +669,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
   tabBooks.addEventListener('click', onTabBooks);
   tabDesk.addEventListener('click', onTabDesk);
+  tabFiles.addEventListener('click', onTabFiles);
   tabBooks.addEventListener('keydown', onTabKey);
   tabDesk.addEventListener('keydown', onTabKey);
+  tabFiles.addEventListener('keydown', onTabKey);
   searchToggle?.addEventListener('click', onSearchToggleClick);
   searchClose?.addEventListener('click', onSearchCloseClick);
   searchInput.addEventListener('input', onSearchInput);
@@ -711,8 +731,10 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     hide();
     tabBooks.removeEventListener('click', onTabBooks);
     tabDesk.removeEventListener('click', onTabDesk);
+    tabFiles.removeEventListener('click', onTabFiles);
     tabBooks.removeEventListener('keydown', onTabKey);
     tabDesk.removeEventListener('keydown', onTabKey);
+    tabFiles.removeEventListener('keydown', onTabKey);
     searchToggle?.removeEventListener('click', onSearchToggleClick);
     searchClose?.removeEventListener('click', onSearchCloseClick);
     searchInput.removeEventListener('input', onSearchInput);

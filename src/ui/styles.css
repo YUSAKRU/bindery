@@ -5462,6 +5462,15 @@ body:has(#screen-hub:not(.hidden)) {
   font-weight: 600;
 }
 
+@media (max-width: 380px) {
+  .library-tabs {
+    gap: 12px;
+  }
+  .library-tab svg {
+    display: none;
+  }
+}
+
 .library-no-match,
 .library-empty-text {
   margin: 8px 0;
