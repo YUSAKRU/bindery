@@ -401,7 +401,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.saveDoc.privateDesc': 'Stored inside the app, appears in Recently Opened.',
     'modal.saveDoc.public': 'Save to Device Documents (Local)',
     'modal.saveDoc.publicDesc': "Saved to the device's \"Documents\" folder, accessible from the file manager.",
-    'modal.saveDoc.hint': '💡 To save to a different folder or to Google Drive, use the Share (📤) button in the reader.',
+    'modal.saveDoc.hint': 'To save to a different folder or to Google Drive, use the Share button in the reader.',
 
     'common.pageWord': 'Page',
     'common.pageWordPlural': 'Pages',
@@ -1182,7 +1182,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'modal.saveDoc.privateDesc': 'Uygulama içinde saklanır, son okunanlarda görünür.',
     'modal.saveDoc.public': 'Cihaz Belgelerine Kaydet (Yerel)',
     'modal.saveDoc.publicDesc': 'Cihazın "Documents" klasörüne kaydedilir, dosya yöneticisinden erişilebilir.',
-    'modal.saveDoc.hint': "💡 Farklı klasörler veya Google Drive'a kaydetmek için okuyucudaki Paylaş (📤) butonunu kullanabilirsiniz.",
+    'modal.saveDoc.hint': "Farklı klasörler veya Google Drive'a kaydetmek için okuyucudaki Paylaş butonunu kullanabilirsiniz.",
 
     'common.pageWord': 'Sayfa',
     'common.pageWordPlural': 'Sayfa',

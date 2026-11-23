@@ -1206,6 +1206,25 @@ body {
   color: var(--color-on-primary-container);
   font-size: 0.85rem;
   font-weight: 600;
+  /* "12 / 148" must stay on one line; the icons give way first. */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Narrow phones (320–360px): page badge, four icons and "Tools" in one row. */
+@media (max-width: 360px) {
+  .reader-subbar {
+    gap: 4px;
+    padding: 0 12px;
+  }
+
+  .reader-subbar .icon-btn-sm {
+    padding: 5px;
+  }
+
+  .reader-subbar .btn-tonal {
+    padding: 8px 12px;
+  }
 }
 
 .reader-scroll {
@@ -1290,8 +1309,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px 0 max(env(safe-area-inset-bottom), 16px);
+  gap: 12px;
+  padding: 12px 0 max(env(safe-area-inset-bottom), 16px);
   /* When zoomed the pages get wider than the viewport; sizing the list to
      its content keeps the left edge reachable (a centered flex child
      overflowing both sides would clip the left side unscrollably). */
@@ -3038,6 +3057,119 @@ dialog.modal-sheet::backdrop {
   animation: spin 0.75s linear infinite;
 }
 
+/* ── Reader Atelier Chrome (T-10) ─────────────────────────────────────────────
+   The reader's top bar, sub-bar and page desk in the atelier language: warm
+   paper tones and the terracotta accent instead of the old indigo theme. The
+   desk the pages sit on follows the theme — a warm light grey under white
+   pages in the light theme (white on white would hide where a page ends),
+   dark in the dark theme. Every rule is guarded with :not(.reader-night) so
+   the reader's own night mode (Reader Night Chrome, below) keeps its look:
+   these selectors carry an id and would otherwise outrank it. */
+#screen-reader {
+  --reader-desk: #e7e0d4;
+  --reader-page-blank: #fffdf9;
+  --reader-page-shadow: 0 1px 2px rgba(28, 26, 24, 0.14), 0 6px 16px rgba(28, 26, 24, 0.08);
+  --reader-accent: var(--atelier-primary);
+  --reader-accent-rgb: 154, 64, 29;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-reader {
+    --reader-desk: #141210;
+    --reader-page-blank: #2a2622;
+    --reader-page-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --reader-accent: #d9875f;
+    --reader-accent-rgb: 217, 135, 95;
+  }
+}
+
+:root.dark-theme #screen-reader {
+  --reader-desk: #141210;
+  --reader-page-blank: #2a2622;
+  --reader-page-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --reader-accent: #d9875f;
+  --reader-accent-rgb: 217, 135, 95;
+}
+
+:root:not(.reader-night) .app:has(#screen-reader:not(.hidden)) .top-bar {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+  color: var(--atelier-ink-black);
+}
+
+:root:not(.reader-night) .app:has(#screen-reader:not(.hidden)) .top-bar-title {
+  color: var(--atelier-ink-black);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+:root:not(.reader-night) .app:has(#screen-reader:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.04);
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+:root:not(.reader-night) .app:has(#screen-reader:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+  transform: scale(0.96);
+}
+
+:root:not(.reader-night) #screen-reader .reader-subbar {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+}
+
+:root:not(.reader-night) #screen-reader .reader-page-indicator {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 6px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+:root:not(.reader-night) #screen-reader .reader-subbar .icon-btn-sm {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-subbar .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--reader-accent);
+  border: 1px solid var(--atelier-paper-edge);
+  font-weight: 600;
+}
+
+:root:not(.reader-night) #screen-reader .reader-scrubber-thumb {
+  background: rgba(var(--reader-accent-rgb), 0.9);
+}
+
+:root:not(.reader-night) #screen-reader .reader-scroll {
+  background: var(--reader-desk);
+}
+
+:root:not(.reader-night) #screen-reader .reader-page {
+  background: var(--reader-page-blank);
+  box-shadow: var(--reader-page-shadow);
+}
+
+#screen-reader:not(.night-mode) .textLayer ::selection,
+#screen-reader:not(.night-mode) .textLayer span::selection {
+  background: rgba(var(--reader-accent-rgb), 0.3);
+}
+
 /* ── Reader Night Chrome ─────────────────────────────────────────────────────── */
 .reader-night .top-bar {
   background: #181818;
@@ -3060,7 +3192,7 @@ dialog.modal-sheet::backdrop {
   background: rgba(255, 255, 255, .08);
 }
 .reader-night .reader-scrubber-thumb {
-  background: rgba(187, 134, 252, .85);
+  background: rgba(200, 157, 83, .85);
 }
 .reader-night .reader-nav-panel,
 .reader-night .reader-tools-panel {
@@ -3607,6 +3739,8 @@ body:has(#screen-hub:not(.hidden)) {
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
+#screen-reader,
+.app:has(#screen-reader:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .top-bar,
 .app:has(#screen-library:not(.hidden)) .screen-container,
 .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3650,6 +3784,8 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
+  :root:not(.light-theme) #screen-reader,
+  :root:not(.light-theme) .app:has(#screen-reader:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-library:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-book:not(.hidden)) .top-bar,
@@ -3688,6 +3824,8 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
+:root.dark-theme #screen-reader,
+:root.dark-theme .app:has(#screen-reader:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-library:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-book:not(.hidden)) .top-bar,
