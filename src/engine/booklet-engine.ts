@@ -8,6 +8,7 @@ import {
   rectangle,
   rgb,
 } from 'pdf-lib';
+import { IMPOSED_KEYWORD } from './imposed-mark';
 import type { PDFEmbeddedPage, PDFPage } from 'pdf-lib';
 import { loadAndValidatePdf } from './validator';
 import { BookletError } from './types';
@@ -746,6 +747,7 @@ async function imposeSheets(
   const S = flatSheets.length;
   const frontIndices = Array.from({ length: S }, (_, j) => 2 * j);
   const backIndices = Array.from({ length: S }, (_, j) => 2 * j + 1);
+  combined.setKeywords([IMPOSED_KEYWORD]);
   const combinedPdf = await combined.save();
   if (!withSides) return { combinedPdf };
   const frontPdf = await saveSubset(combined, frontIndices);
@@ -758,6 +760,8 @@ async function saveSubset(doc: PDFDocument, indices: number[]): Promise<Uint8Arr
   const out = await PDFDocument.create();
   const pages = await out.copyPages(doc, indices);
   for (const page of pages) out.addPage(page);
+  // Front and back are imposed sheets too; the mark does not copy with pages.
+  out.setKeywords([IMPOSED_KEYWORD]);
   return out.save();
 }
 

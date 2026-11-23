@@ -240,6 +240,16 @@ async function readFileChunked(uri: string, expectedSize: number | null): Promis
 }
 
 /** Reads an arbitrary `content://`/`file://` URI (e.g. from Android's "Open with") into bytes. */
+/** The decoded last path segment of a uri, without its query; "" when there is none. */
+function lastUriSegment(uri: string): string {
+  const segment = (uri.split('?')[0].split('/').pop() ?? '').trim();
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
   // stat() is unreliable on raw content:// URIs (may throw on some Android versions
   // and may return a path segment rather than a display name). Try it first for the
@@ -258,10 +268,11 @@ export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
 
   const bytes = await readFileChunked(uri, statSize);
 
-  // Safe name fallback: decode the last path segment of the URI.
-  const name =
-    (statName ?? decodeURIComponent(uri.split('/').pop() ?? '').split('?')[0]) ||
-    'document.pdf';
+  // stat's name first, then the uri's last segment, then a generic name. An
+  // empty name counts as none: the web Filesystem's stat always reports ""
+  // for a file, and `??` let that through, so every file opened from the
+  // Files screen on the web was called "document.pdf".
+  const name = statName || lastUriSegment(uri) || 'document.pdf';
 
   return { name, bytes };
 }

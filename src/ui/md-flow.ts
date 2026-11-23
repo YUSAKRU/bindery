@@ -21,7 +21,7 @@ export interface MdFlowCallbacks {
   goToError: (title: string, msg: string, returnScreen?: string) => void;
   openReaderWithBytes: (bytes: Uint8Array, filename: string, uri: string, returnScreen: string) => Promise<void>;
   savePdfPrivately: (bytes: Uint8Array, relPath: string) => Promise<string>;
-  rememberSaved: (uri: string, filename: string) => Promise<void>;
+  rememberSaved: (uri: string, filename: string, bytes: Uint8Array) => Promise<void>;
   /** `privateUri`/`relPath` locate the copy just saved under `documents/`. */
   onBookletGenerated: (bytes: Uint8Array, filename: string, privateUri: string, relPath: string) => Promise<void>;
   formatError?: (err: unknown) => string;
@@ -320,7 +320,7 @@ export function initMdFlow(callbacks: MdFlowCallbacks): {
       const filename = `Doc_${dateStr}_${timeStr}.pdf`;
       const relPath = `documents/${filename}`;
       const privateUri = await callbacks.savePdfPrivately(pdfBytes, relPath);
-      await callbacks.rememberSaved(privateUri, filename);
+      await callbacks.rememberSaved(privateUri, filename, pdfBytes);
 
       if (isBooklet) {
         await callbacks.onBookletGenerated(pdfBytes, filename, privateUri, relPath);

@@ -242,6 +242,15 @@ describe('isImposedOutput', () => {
     expect(is('/DATA/notebooklets/X/Front Side.pdf')).toBe(false);
   });
 
+  it('trusts the engine mark wherever the file now lives', () => {
+    expect(isImposedOutput({ uri: 'content://downloads/msf%3A12', imposed: true })).toBe(true);
+    expect(isImposedOutput({ uri: null, imposed: true })).toBe(true);
+    // A known-unmarked file still falls back to where it lives: outputs made
+    // before the mark existed carry none.
+    expect(isImposedOutput({ uri: '/DATA/booklets/Deneme/Front Side.pdf', imposed: false })).toBe(true);
+    expect(isImposedOutput({ uri: 'content://downloads/msf%3A12', imposed: false })).toBe(false);
+  });
+
   it('survives a malformed escape', () => {
     expect(is('/DATA/booklets/100%/Front Side.pdf')).toBe(true);
     expect(is('/DATA/scans/100%.pdf')).toBe(false);

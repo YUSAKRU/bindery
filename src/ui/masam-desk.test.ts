@@ -144,6 +144,55 @@ describe('app wiring', () => {
   });
 });
 
+describe('desk bookkeeping in app.ts', () => {
+  it('every recordOpened in app.ts carries a fingerprint of the bytes at hand', () => {
+    const calls = [...app.matchAll(/recordOpened\(\{[^}]*\}\)/g)].map((m) => m[0]);
+    expect(calls.length).toBeGreaterThanOrEqual(4);
+    for (const call of calls) expect(call, call).toMatch(/fp: fingerprintPdf\(\w+\)/);
+    expect(app).toContain('async function rememberSaved(uri: string, name: string, bytes: Uint8Array)');
+  });
+
+  it('rename and move follow the file with rekeyRecent instead of remove + record', () => {
+    expect(app.match(/rekeyRecent\(/g)?.length).toBe(3);
+    expect(app).not.toMatch(/removeRecent\([^)]*\);\s*await recordOpened\(/);
+    expect(app).toContain('await rekeyRecent({ uri: readerUri, name: readerName }, { uri: newUri, name: newName });');
+    expect(app).toContain('await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });');
+    expect(app).toContain('await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });');
+  });
+});
+
+describe('reader bookkeeping', () => {
+  it('a rename inside the reader is not recorded again after rekeyRecent', () => {
+    const at = app.indexOf('await rekeyRecent({ uri: readerUri, name: readerName }');
+    expect(at).toBeGreaterThan(-1);
+    // Up to the toast that ends the private-save branch.
+    const rest = app.slice(at, app.indexOf("showToast(t('toast.savedToBindery'))", at));
+    const elseAt = rest.indexOf('} else {');
+    const rename = rest.slice(0, elseAt);
+    // The else block itself (a new copy in scans/), by brace matching.
+    const copy = block(rest.slice(elseAt + 1), 'else');
+    const after = rest.slice(elseAt + 1 + rest.slice(elseAt + 1).indexOf(copy) + copy.length);
+    expect(rename).not.toMatch(/rememberSaved|recordOpened/);
+    expect(copy).toContain('await rememberSaved(newUri, newName, readerBytes);');
+    expect(after).not.toMatch(/rememberSaved|recordOpened/);
+  });
+
+  it('an open without its own page resumes where the desk says the file was left', () => {
+    expect(app).toContain('const recorded = await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });');
+    expect(app).toMatch(/if \(initialPage <= 1 && recorded\.lastPage > 1 && readerDoc\) \{\s*readerScroll\.scrollTop = readerScrollTopForPage\(Math\.min\(recorded\.lastPage, readerDoc\.proxy\.numPages\)\);/);
+  });
+});
+
+describe('imposed mark in the reader', () => {
+  it('reads the Keywords through pdf.js and records what it found', () => {
+    // Behaviour lives in imposedFromInfo (unit-tested in booklet-engine.test.ts);
+    // this pins that the reader uses it and hands the result to the desk.
+    expect(app).toContain("import { imposedFromInfo } from '../engine/imposed-mark';");
+    expect(app).toContain('const readerImposed = imposedFromInfo((await readerDoc.proxy.getMetadata().catch(() => null))?.info);');
+    expect(app).toContain('fp: fingerprintPdf(bytes), imposed: readerImposed });');
+  });
+});
+
 describe('desk strings', () => {
   const keys = [
     'library.desk.more',

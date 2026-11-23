@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { fingerprintPdf } from '../native/fingerprint';
 import { safeFileName } from './filename';
 
 /**
@@ -54,7 +55,7 @@ export interface SaveFlowElements {
 export interface SaveFlowDeps {
   pathExists(path: string): Promise<boolean>;
   savePdfPrivately(bytes: Uint8Array, relPath: string): Promise<string>;
-  recordOpened(entry: { uri: string | null; name: string }): Promise<void>;
+  recordOpened(entry: { uri: string | null; name: string; fp?: string }): Promise<unknown>;
   showConfirmDialog(message: string): Promise<boolean>;
   showToast(message: string): void;
   errorText(error: unknown): string;
@@ -127,7 +128,7 @@ export function createSaveFlow(options: SaveFlowOptions, deps: SaveFlowDeps): Sa
       // saved" — the one message guaranteed to be false at this point, and it
       // sent the user back to save again over a file that already existed.
       try {
-        await deps.recordOpened({ uri: savedUri, name: filename });
+        await deps.recordOpened({ uri: savedUri, name: filename, fp: fingerprintPdf(resultPdf) });
       } catch (error) {
         console.warn('Saved, but could not add to recents:', error);
       }

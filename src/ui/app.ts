@@ -62,7 +62,8 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { getRecents, recordOpened, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { imposedFromInfo } from '../engine/imposed-mark';
+import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
   getLibrary,
@@ -3880,7 +3881,7 @@ export function initApp(): void {
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
       const scanRelPath = `scans/${filename}`;
       const privateUri = await savePdfPrivately(pdfBytes, scanRelPath);
-      await rememberSaved(privateUri, filename);
+      await rememberSaved(privateUri, filename, pdfBytes);
 
       await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
@@ -4844,9 +4845,9 @@ export function initApp(): void {
    * that is certainly untrue — and sending them back to save a file that
    * already exists.
    */
-  async function rememberSaved(uri: string, name: string): Promise<void> {
+  async function rememberSaved(uri: string, name: string, bytes: Uint8Array): Promise<void> {
     try {
-      await recordOpened({ uri, name });
+      await recordOpened({ uri, name, fp: fingerprintPdf(bytes) });
     } catch (error) {
       console.warn('Saved, but could not add to recents:', error);
     }
@@ -4950,6 +4951,10 @@ export function initApp(): void {
       readerOutline = (await readerDoc.proxy.getOutline().catch(() => null)) as
         | OutlineItem[]
         | null;
+      // The booklet engine marks its imposed outputs; the desk uses it to keep
+      // "Read as a book" away from them wherever they are opened from.
+      // A failed read stays "unknown" (undefined), never "not marked".
+      const readerImposed = imposedFromInfo((await readerDoc.proxy.getMetadata().catch(() => null))?.info);
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
@@ -4972,7 +4977,14 @@ export function initApp(): void {
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
-      await recordOpened({ uri: sourceUri, name });
+      const recorded = await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });
+      // Opened without a page of its own (picker, Files, share) but known to
+      // the desk — possibly under another uri, matched by fingerprint: resume
+      // there. Otherwise the reader sits on page 1 and its page-save timer
+      // would overwrite the remembered page with 1.
+      if (initialPage <= 1 && recorded.lastPage > 1 && readerDoc) {
+        readerScroll.scrollTop = readerScrollTopForPage(Math.min(recorded.lastPage, readerDoc.proxy.numPages));
+      }
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
@@ -6165,11 +6177,16 @@ export function initApp(): void {
           const dir = lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
           const newRelPath = dir ? `${dir}/${newName}` : newName;
           newUri = await movePrivateItem(readerRelPath, newRelPath);
-          await removeRecent({ uri: readerUri, name: readerName });
+          // Same file under a new name: the desk keeps its page and place.
+          await rekeyRecent({ uri: readerUri, name: readerName }, { uri: newUri, name: newName });
           readerRelPath = newRelPath;
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
           readerRelPath = `scans/${newName}`;
+          // A new copy, so a new desk entry. A rename above was followed by
+          // rekeyRecent and must not be recorded again: that would move it to
+          // the top and stamp a new openedAt.
+          await rememberSaved(newUri, newName, readerBytes);
         }
 
         readerName = newName;
@@ -6177,7 +6194,6 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         topBarTitle.title = readerName;
 
-        await rememberSaved(newUri, newName);
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
@@ -6188,7 +6204,7 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         topBarTitle.title = readerName;
 
-        await recordOpened({ uri: publicUri, name: newName });
+        await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });
         showToast(t('toast.savedToDevice'));
       }
 
@@ -6555,8 +6571,7 @@ export function initApp(): void {
         const newUri = await movePrivateItem(oldPath, newPath);
         if (!isDir) {
           try {
-            await removeRecent({ uri: item.uri, name: currentName });
-            await recordOpened({ uri: newUri, name: newName });
+            await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });
           } catch {
             // not in recents, ignore
           }
@@ -6934,7 +6949,7 @@ export function initApp(): void {
     try {
       const bytes = await downloadPdfFromUrl(url);
       const savedUri = await savePdfPrivately(bytes, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
+      await recordOpened({ uri: savedUri, name: filename, fp: fingerprintPdf(bytes) });
       
       showToast(t('toast.downloadSuccess'));
       closeModal(downloadPdfModal);
@@ -6993,8 +7008,7 @@ export function initApp(): void {
       const newUri = await movePrivateItem(sourceDir, destDir);
       // Update recents with new URI
       try {
-        await removeRecent(moveSourceFile);
-        await recordOpened({ uri: newUri, name: moveSourceFile.name });
+        await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });
       } catch {
         // not in recents, ignore
       }
