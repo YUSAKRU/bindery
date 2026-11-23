@@ -3933,11 +3933,32 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-settings,
 #screen-error-log,
 #screen-tools-all,
+#screen-merge-picker,
+#screen-organize,
+#screen-rotate,
+#screen-page-numbers,
+#screen-watermark,
+#screen-image-to-pdf,
+#screen-md-to-pdf,
+#screen-crop,
+#screen-merge-result,
+#screen-organize-result,
+#screen-rotate-result,
+#screen-page-numbers-result,
+#screen-watermark-result,
+#screen-error,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
 #signatureInfoSheet,
 #onboardingOverlay,
+#toast,
+#openInToolSheet,
+#moveDocModal,
+#saveDocModal,
+#downloadPdfModal,
+#goToPageModal,
+#growthReviewDialog,
 #screen-reader,
 .app:has(#screen-reader:not(.hidden)) .top-bar,
 #fileActionsModal,
@@ -3956,7 +3977,35 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
 .app:has(#screen-error-log:not(.hidden)) .screen-container,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-.app:has(#screen-tools-all:not(.hidden)) .screen-container {
+.app:has(#screen-tools-all:not(.hidden)) .screen-container,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+.app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+.app:has(#screen-organize:not(.hidden)) .top-bar,
+.app:has(#screen-organize:not(.hidden)) .screen-container,
+.app:has(#screen-rotate:not(.hidden)) .top-bar,
+.app:has(#screen-rotate:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+.app:has(#screen-watermark:not(.hidden)) .top-bar,
+.app:has(#screen-watermark:not(.hidden)) .screen-container,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-crop:not(.hidden)) .top-bar,
+.app:has(#screen-crop:not(.hidden)) .screen-container,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar,
+.app:has(#screen-merge-result:not(.hidden)) .screen-container,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar,
+.app:has(#screen-organize-result:not(.hidden)) .screen-container,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+.app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+.app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+.app:has(#screen-error:not(.hidden)) .top-bar,
+.app:has(#screen-error:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3990,11 +4039,32 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-settings,
   :root:not(.light-theme) #screen-error-log,
   :root:not(.light-theme) #screen-tools-all,
+  :root:not(.light-theme) #screen-merge-picker,
+  :root:not(.light-theme) #screen-organize,
+  :root:not(.light-theme) #screen-rotate,
+  :root:not(.light-theme) #screen-page-numbers,
+  :root:not(.light-theme) #screen-watermark,
+  :root:not(.light-theme) #screen-image-to-pdf,
+  :root:not(.light-theme) #screen-md-to-pdf,
+  :root:not(.light-theme) #screen-crop,
+  :root:not(.light-theme) #screen-merge-result,
+  :root:not(.light-theme) #screen-organize-result,
+  :root:not(.light-theme) #screen-rotate-result,
+  :root:not(.light-theme) #screen-page-numbers-result,
+  :root:not(.light-theme) #screen-watermark-result,
+  :root:not(.light-theme) #screen-error,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) #signatureInfoSheet,
   :root:not(.light-theme) #onboardingOverlay,
+  :root:not(.light-theme) #toast,
+  :root:not(.light-theme) #openInToolSheet,
+  :root:not(.light-theme) #moveDocModal,
+  :root:not(.light-theme) #saveDocModal,
+  :root:not(.light-theme) #downloadPdfModal,
+  :root:not(.light-theme) #goToPageModal,
+  :root:not(.light-theme) #growthReviewDialog,
   :root:not(.light-theme) #screen-reader,
   :root:not(.light-theme) .app:has(#screen-reader:not(.hidden)) .top-bar,
   :root:not(.light-theme) #fileActionsModal,
@@ -4013,7 +4083,35 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-organize:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-organize:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-rotate:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-rotate:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-merge-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-merge-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-organize-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-organize-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-error:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-error:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -4042,11 +4140,32 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-settings,
 :root.dark-theme #screen-error-log,
 :root.dark-theme #screen-tools-all,
+:root.dark-theme #screen-merge-picker,
+:root.dark-theme #screen-organize,
+:root.dark-theme #screen-rotate,
+:root.dark-theme #screen-page-numbers,
+:root.dark-theme #screen-watermark,
+:root.dark-theme #screen-image-to-pdf,
+:root.dark-theme #screen-md-to-pdf,
+:root.dark-theme #screen-crop,
+:root.dark-theme #screen-merge-result,
+:root.dark-theme #screen-organize-result,
+:root.dark-theme #screen-rotate-result,
+:root.dark-theme #screen-page-numbers-result,
+:root.dark-theme #screen-watermark-result,
+:root.dark-theme #screen-error,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
 :root.dark-theme #signatureInfoSheet,
 :root.dark-theme #onboardingOverlay,
+:root.dark-theme #toast,
+:root.dark-theme #openInToolSheet,
+:root.dark-theme #moveDocModal,
+:root.dark-theme #saveDocModal,
+:root.dark-theme #downloadPdfModal,
+:root.dark-theme #goToPageModal,
+:root.dark-theme #growthReviewDialog,
 :root.dark-theme #screen-reader,
 :root.dark-theme .app:has(#screen-reader:not(.hidden)) .top-bar,
 :root.dark-theme #fileActionsModal,
@@ -4065,7 +4184,35 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-error-log:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-error-log:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-organize:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-organize:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-rotate:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-rotate:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-crop:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-crop:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-merge-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-merge-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-organize-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-organize-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-error:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-error:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -8141,6 +8288,20 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar,
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+.app:has(#screen-organize:not(.hidden)) .top-bar,
+.app:has(#screen-rotate:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+.app:has(#screen-watermark:not(.hidden)) .top-bar,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-crop:not(.hidden)) .top-bar,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar,
+.app:has(#screen-error:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -8151,6 +8312,20 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar-title,
 .app:has(#screen-error-log:not(.hidden)) .top-bar-title,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar-title,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar-title,
+.app:has(#screen-organize:not(.hidden)) .top-bar-title,
+.app:has(#screen-rotate:not(.hidden)) .top-bar-title,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar-title,
+.app:has(#screen-watermark:not(.hidden)) .top-bar-title,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar-title,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar-title,
+.app:has(#screen-crop:not(.hidden)) .top-bar-title,
+.app:has(#screen-merge-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar-title,
+.app:has(#screen-error:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -8163,6 +8338,20 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-error-log:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-tools-all:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-organize:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-rotate:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-watermark:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-crop:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-merge-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-organize-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-error:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -11168,6 +11357,1657 @@ button.book-page-label:active {
   stroke: var(--atelier-ink-muted);
 }
 /* End Atelier All Tools */
+
+/* Atelier Tool Screens — Phase 1 (Empty / Picker States) */
+.app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+.app:has(#screen-organize:not(.hidden)) .screen-container,
+.app:has(#screen-rotate:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+.app:has(#screen-watermark:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-organize:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-rotate:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-watermark:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-merge-picker,
+#screen-organize,
+#screen-rotate,
+#screen-page-numbers,
+#screen-watermark {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 24px;
+  min-height: 100%;
+}
+
+#screen-organize:not(:has(> .hero.hidden)),
+#screen-rotate:not(:has(> .hero.hidden)),
+#screen-page-numbers:not(:has(> .hero.hidden)),
+#screen-watermark:not(:has(> .hero.hidden)),
+#screen-merge-picker:not(:has(.merge-file-list > *)) {
+  justify-content: center;
+}
+
+#screen-merge-picker .hero,
+#screen-organize .hero,
+#screen-rotate .hero,
+#screen-page-numbers .hero,
+#screen-watermark .hero {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 28px;
+  text-align: center;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#screen-merge-picker .hero-icon,
+#screen-organize .hero-icon,
+#screen-rotate .hero-icon,
+#screen-page-numbers .hero-icon,
+#screen-watermark .hero-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: rgba(154, 64, 29, 0.1);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#screen-merge-picker .hero-icon .tool-icon,
+#screen-organize .hero-icon .tool-icon,
+#screen-rotate .hero-icon .tool-icon,
+#screen-page-numbers .hero-icon .tool-icon,
+#screen-watermark .hero-icon .tool-icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#screen-merge-picker .tool-hero-kicker,
+#screen-organize .tool-hero-kicker,
+#screen-rotate .tool-hero-kicker,
+#screen-page-numbers .tool-hero-kicker,
+#screen-watermark .tool-hero-kicker {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--atelier-tertiary);
+  margin-bottom: 6px;
+}
+
+#screen-merge-picker .hero h2,
+#screen-organize .hero h2,
+#screen-rotate .hero h2,
+#screen-page-numbers .hero h2,
+#screen-watermark .hero h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.65rem, 5vw + 0.3rem, 2.05rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0 0 10px;
+}
+
+#screen-merge-picker .hero-subtitle,
+#screen-organize .hero-subtitle,
+#screen-rotate .hero-subtitle,
+#screen-page-numbers .hero-subtitle,
+#screen-watermark .hero-subtitle {
+  margin: 0 auto 24px;
+  color: var(--atelier-ink-muted);
+  font-size: 0.94rem;
+  line-height: 1.48;
+  max-width: 310px;
+}
+
+#screen-merge-picker .btn-primary,
+#screen-organize .btn-primary,
+#screen-rotate .btn-primary,
+#screen-page-numbers .btn-primary,
+#screen-watermark .btn-primary {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 14px 28px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+#screen-merge-picker .hero .btn-primary,
+#screen-organize .hero .btn-primary,
+#screen-rotate .hero .btn-primary,
+#screen-page-numbers .hero .btn-primary,
+#screen-watermark .hero .btn-primary {
+  max-width: 270px;
+  margin: 0 auto;
+}
+
+#screen-merge-picker .btn-primary:disabled,
+#screen-organize .btn-primary:disabled,
+#screen-rotate .btn-primary:disabled,
+#screen-page-numbers .btn-primary:disabled,
+#screen-watermark .btn-primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+#screen-merge-picker .btn-tonal,
+#screen-organize .btn-tonal,
+#screen-rotate .btn-tonal,
+#screen-page-numbers .btn-tonal,
+#screen-watermark .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-merge-picker .btn-text,
+#screen-organize .btn-text,
+#screen-rotate .btn-text,
+#screen-page-numbers .btn-text,
+#screen-watermark .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-merge-picker .merge-empty-hint {
+  color: var(--atelier-ink-muted);
+  font-size: 0.86rem;
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+#screen-merge-picker .tool-privacy-footer,
+#screen-organize .tool-privacy-footer,
+#screen-rotate .tool-privacy-footer,
+#screen-page-numbers .tool-privacy-footer,
+#screen-watermark .tool-privacy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+  text-align: center;
+}
+
+#screen-merge-picker .tool-privacy-footer svg,
+#screen-organize .tool-privacy-footer svg,
+#screen-rotate .tool-privacy-footer svg,
+#screen-page-numbers .tool-privacy-footer svg,
+#screen-watermark .tool-privacy-footer svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+#screen-organize:has(> .hero.hidden) .tool-privacy-footer,
+#screen-rotate:has(> .hero.hidden) .tool-privacy-footer,
+#screen-page-numbers:has(> .hero.hidden) .tool-privacy-footer,
+#screen-watermark:has(> .hero.hidden) .tool-privacy-footer,
+#screen-merge-picker:has(.merge-file-list > *) .tool-privacy-footer {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-merge-picker .hero,
+  :root:not(.light-theme) #screen-organize .hero,
+  :root:not(.light-theme) #screen-rotate .hero,
+  :root:not(.light-theme) #screen-page-numbers .hero,
+  :root:not(.light-theme) #screen-watermark .hero {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .hero-icon,
+  :root:not(.light-theme) #screen-organize .hero-icon,
+  :root:not(.light-theme) #screen-rotate .hero-icon,
+  :root:not(.light-theme) #screen-page-numbers .hero-icon,
+  :root:not(.light-theme) #screen-watermark .hero-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-organize .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-rotate .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-page-numbers .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-watermark .hero-icon .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .btn-primary,
+  :root:not(.light-theme) #screen-organize .btn-primary,
+  :root:not(.light-theme) #screen-rotate .btn-primary,
+  :root:not(.light-theme) #screen-page-numbers .btn-primary,
+  :root:not(.light-theme) #screen-watermark .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .btn-text,
+  :root:not(.light-theme) #screen-organize .btn-text,
+  :root:not(.light-theme) #screen-rotate .btn-text,
+  :root:not(.light-theme) #screen-page-numbers .btn-text,
+  :root:not(.light-theme) #screen-watermark .btn-text {
+    color: #d9875f;
+  }
+}
+
+:root.dark-theme #screen-merge-picker .hero,
+:root.dark-theme #screen-organize .hero,
+:root.dark-theme #screen-rotate .hero,
+:root.dark-theme #screen-page-numbers .hero,
+:root.dark-theme #screen-watermark .hero {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-merge-picker .hero-icon,
+:root.dark-theme #screen-organize .hero-icon,
+:root.dark-theme #screen-rotate .hero-icon,
+:root.dark-theme #screen-page-numbers .hero-icon,
+:root.dark-theme #screen-watermark .hero-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #screen-merge-picker .hero-icon .tool-icon,
+:root.dark-theme #screen-organize .hero-icon .tool-icon,
+:root.dark-theme #screen-rotate .hero-icon .tool-icon,
+:root.dark-theme #screen-page-numbers .hero-icon .tool-icon,
+:root.dark-theme #screen-watermark .hero-icon .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-merge-picker .btn-primary,
+:root.dark-theme #screen-organize .btn-primary,
+:root.dark-theme #screen-rotate .btn-primary,
+:root.dark-theme #screen-page-numbers .btn-primary,
+:root.dark-theme #screen-watermark .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-merge-picker .btn-text,
+:root.dark-theme #screen-organize .btn-text,
+:root.dark-theme #screen-rotate .btn-text,
+:root.dark-theme #screen-page-numbers .btn-text,
+:root.dark-theme #screen-watermark .btn-text {
+  color: #d9875f;
+}
+/* End Atelier Tool Screens — Phase 1 */
+
+/* Atelier Tool Screens — Phase 2 (Working States, Image/MD & Crop) */
+.app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-crop:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-crop:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-image-to-pdf,
+#screen-md-to-pdf,
+#screen-crop {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 24px;
+  min-height: 100%;
+}
+
+#screen-image-to-pdf:not(:has(.image-grid > *)),
+#screen-md-to-pdf:not(:has(#mdFileList > *)) {
+  justify-content: center;
+}
+
+#screen-image-to-pdf .hero,
+#screen-md-to-pdf .hero {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 28px;
+  text-align: center;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#screen-image-to-pdf .hero-icon,
+#screen-md-to-pdf .hero-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: rgba(154, 64, 29, 0.1);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#screen-image-to-pdf .hero-icon .tool-icon,
+#screen-md-to-pdf .hero-icon .tool-icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#screen-image-to-pdf .tool-hero-kicker,
+#screen-md-to-pdf .tool-hero-kicker {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--atelier-tertiary);
+  margin-bottom: 6px;
+}
+
+#screen-image-to-pdf .hero h2,
+#screen-md-to-pdf .hero h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.65rem, 5vw + 0.3rem, 2.05rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0 0 10px;
+}
+
+#screen-image-to-pdf .hero-subtitle,
+#screen-md-to-pdf .hero-subtitle {
+  margin: 0 auto 24px;
+  color: var(--atelier-ink-muted);
+  font-size: 0.94rem;
+  line-height: 1.48;
+  max-width: 310px;
+}
+
+#screen-image-to-pdf .image-actions,
+#screen-md-to-pdf .image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  justify-content: center;
+}
+
+#screen-image-to-pdf .image-actions .btn,
+#screen-md-to-pdf .image-actions .btn {
+  flex: 1 1 130px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+
+#screen-image-to-pdf .tool-action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+#screen-image-to-pdf .btn-primary,
+#screen-md-to-pdf .btn-primary,
+#screen-crop .btn-primary {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 14px 24px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+#screen-image-to-pdf .btn-primary:disabled,
+#screen-md-to-pdf .btn-primary:disabled,
+#screen-crop .btn-primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+#screen-image-to-pdf .btn-tonal,
+#screen-md-to-pdf .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-image-to-pdf .btn-text,
+#screen-md-to-pdf .btn-text,
+#screen-crop .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-image-to-pdf .tool-privacy-footer,
+#screen-md-to-pdf .tool-privacy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+  text-align: center;
+}
+
+#screen-image-to-pdf .tool-privacy-footer svg,
+#screen-md-to-pdf .tool-privacy-footer svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+#screen-image-to-pdf:has(.image-grid > *) .tool-privacy-footer,
+#screen-md-to-pdf:has(#mdFileList > *) .tool-privacy-footer {
+  display: none;
+}
+
+/* Working states across all 7 tool screens */
+#screen-merge-picker .merge-file-list,
+#screen-organize .merge-file-list,
+#screen-rotate .merge-file-list,
+#screen-md-to-pdf .merge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#screen-merge-picker .merge-file-row,
+#screen-organize .organize-row,
+#screen-rotate .organize-row,
+#screen-md-to-pdf .merge-file-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--atelier-ink-black);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.04);
+}
+
+#screen-merge-picker .merge-file-index,
+#screen-md-to-pdf .merge-file-index {
+  background: rgba(154, 64, 29, 0.12);
+  color: var(--atelier-primary);
+}
+
+#screen-merge-picker .merge-file-size,
+#screen-organize .organize-thumb-placeholder,
+#screen-rotate .rotate-angle-label,
+#screen-md-to-pdf .merge-file-size,
+#screen-image-to-pdf .merge-empty-hint,
+#screen-md-to-pdf .merge-empty-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-image-to-pdf .merge-empty-hint,
+#screen-md-to-pdf .merge-empty-hint {
+  font-size: 0.86rem;
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+#screen-organize .organize-thumb,
+#screen-rotate .organize-thumb {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-merge-picker .merge-file-actions .icon-btn-sm,
+#screen-organize .merge-file-actions .icon-btn-sm,
+#screen-rotate .rotate-row-actions .icon-btn-sm,
+#screen-md-to-pdf .merge-file-actions .icon-btn-sm {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-page-numbers .pagenum-preview-card,
+#screen-watermark .pagenum-preview-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(28, 26, 24, 0.06);
+}
+
+#screen-page-numbers .pagenum-overlay {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+#screen-page-numbers .settings-panel .setting-card,
+#screen-watermark .settings-panel .setting-card,
+#screen-md-to-pdf .md-options-panel {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--atelier-ink-black);
+}
+
+#screen-page-numbers .setting-row,
+#screen-watermark .setting-row,
+#screen-md-to-pdf .config-label {
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+}
+
+#screen-page-numbers .setting-value,
+#screen-watermark .setting-value {
+  color: var(--atelier-primary);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+#screen-page-numbers .setting-hint,
+#screen-watermark .setting-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-page-numbers .segmented-btn,
+#screen-watermark .segmented-btn,
+#screen-md-to-pdf .segmented-btn {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+#screen-page-numbers .segmented-btn.is-active,
+#screen-watermark .segmented-btn.is-active,
+#screen-md-to-pdf .segmented-btn.is-active {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-color: var(--atelier-primary);
+}
+
+#screen-page-numbers .number-input,
+#screen-watermark .number-input {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+}
+
+#screen-watermark .slider {
+  background: var(--atelier-paper-edge);
+  accent-color: var(--atelier-primary);
+}
+
+#screen-watermark .slider::-webkit-slider-thumb {
+  background: var(--atelier-primary);
+}
+
+#screen-md-to-pdf .checkbox-row {
+  color: var(--atelier-ink-black);
+}
+
+#screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+  accent-color: var(--atelier-primary);
+}
+
+#screen-image-to-pdf .image-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+}
+
+#screen-image-to-pdf .image-card-thumb {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-image-to-pdf .image-card-badge {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+#screen-image-to-pdf .image-card-actions .icon-btn-sm {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+  background: rgba(154, 64, 29, 0.12);
+  color: #9a241d;
+  border-color: rgba(154, 64, 29, 0.28);
+}
+
+/* Crop screen (#screen-crop) */
+#screen-crop .crop-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#screen-crop .crop-container {
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+}
+
+#screen-crop .crop-polygon {
+  fill: rgba(154, 64, 29, 0.28);
+}
+
+#screen-crop .crop-line {
+  stroke: var(--atelier-primary);
+}
+
+#screen-crop .crop-handle {
+  fill: var(--atelier-primary);
+  stroke: #fff8f5;
+}
+
+#screen-crop .crop-handle:active {
+  fill: var(--atelier-gold-foil);
+}
+
+#screen-crop .crop-loupe {
+  border-color: var(--atelier-primary);
+}
+
+#screen-crop .crop-hint {
+  color: var(--atelier-ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-image-to-pdf .hero,
+  :root:not(.light-theme) #screen-md-to-pdf .hero {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .hero-icon,
+  :root:not(.light-theme) #screen-md-to-pdf .hero-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-md-to-pdf .hero-icon .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .btn-primary,
+  :root:not(.light-theme) #screen-md-to-pdf .btn-primary,
+  :root:not(.light-theme) #screen-crop .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .btn-text,
+  :root:not(.light-theme) #screen-md-to-pdf .btn-text,
+  :root:not(.light-theme) #screen-crop .btn-text {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .merge-file-index,
+  :root:not(.light-theme) #screen-md-to-pdf .merge-file-index {
+    background: rgba(217, 135, 95, 0.16);
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-page-numbers .setting-value,
+  :root:not(.light-theme) #screen-watermark .setting-value {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-page-numbers .pagenum-overlay,
+  :root:not(.light-theme) #screen-page-numbers .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-watermark .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-md-to-pdf .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-image-to-pdf .image-card-badge {
+    background: #c4683c;
+    border-color: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-watermark .slider {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-watermark .slider::-webkit-slider-thumb {
+    background: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+    background: rgba(217, 95, 75, 0.18);
+    color: #f4a498;
+    border-color: rgba(217, 95, 75, 0.32);
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-polygon {
+    fill: rgba(217, 135, 95, 0.3);
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-line {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-handle {
+    fill: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-loupe {
+    border-color: #d9875f;
+  }
+}
+
+:root.dark-theme #screen-image-to-pdf .hero,
+:root.dark-theme #screen-md-to-pdf .hero {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-image-to-pdf .hero-icon,
+:root.dark-theme #screen-md-to-pdf .hero-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #screen-image-to-pdf .hero-icon .tool-icon,
+:root.dark-theme #screen-md-to-pdf .hero-icon .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-image-to-pdf .btn-primary,
+:root.dark-theme #screen-md-to-pdf .btn-primary,
+:root.dark-theme #screen-crop .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-image-to-pdf .btn-text,
+:root.dark-theme #screen-md-to-pdf .btn-text,
+:root.dark-theme #screen-crop .btn-text {
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-merge-picker .merge-file-index,
+:root.dark-theme #screen-md-to-pdf .merge-file-index {
+  background: rgba(217, 135, 95, 0.16);
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-page-numbers .setting-value,
+:root.dark-theme #screen-watermark .setting-value {
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-page-numbers .pagenum-overlay,
+:root.dark-theme #screen-page-numbers .segmented-btn.is-active,
+:root.dark-theme #screen-watermark .segmented-btn.is-active,
+:root.dark-theme #screen-md-to-pdf .segmented-btn.is-active,
+:root.dark-theme #screen-image-to-pdf .image-card-badge {
+  background: #c4683c;
+  border-color: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-watermark .slider {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #screen-watermark .slider::-webkit-slider-thumb {
+  background: #c4683c;
+}
+
+:root.dark-theme #screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+  background: rgba(217, 95, 75, 0.18);
+  color: #f4a498;
+  border-color: rgba(217, 95, 75, 0.32);
+}
+
+:root.dark-theme #screen-crop .crop-polygon {
+  fill: rgba(217, 135, 95, 0.3);
+}
+
+:root.dark-theme #screen-crop .crop-line {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-crop .crop-handle {
+  fill: #d9875f;
+}
+
+:root.dark-theme #screen-crop .crop-loupe {
+  border-color: #d9875f;
+}
+/* End Atelier Tool Screens — Phase 2 */
+
+/* Atelier Tool Screens — Phase 3 (Result Screens & Error Screen) */
+.app:has(#screen-merge-result:not(.hidden)) .screen-container,
+.app:has(#screen-organize-result:not(.hidden)) .screen-container,
+.app:has(#screen-rotate-result:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers-result:not(.hidden)) .screen-container,
+.app:has(#screen-watermark-result:not(.hidden)) .screen-container,
+.app:has(#screen-error:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-merge-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-organize-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-rotate-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-page-numbers-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-watermark-result:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-error:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-merge-result,
+#screen-organize-result,
+#screen-rotate-result,
+#screen-page-numbers-result,
+#screen-watermark-result,
+#screen-error {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 28px;
+  min-height: 100%;
+}
+
+#screen-error {
+  justify-content: center;
+}
+
+#screen-merge-result .result-banner,
+#screen-organize-result .result-banner,
+#screen-rotate-result .result-banner,
+#screen-page-numbers-result .result-banner,
+#screen-watermark-result .result-banner {
+  text-align: center;
+  padding: 20px 8px 4px;
+}
+
+#screen-merge-result .result-banner h2,
+#screen-organize-result .result-banner h2,
+#screen-rotate-result .result-banner h2,
+#screen-page-numbers-result .result-banner h2,
+#screen-watermark-result .result-banner h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.55rem, 5vw + 0.25rem, 1.9rem);
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  margin: 0;
+}
+
+#screen-merge-result .result-icon,
+#screen-organize-result .result-icon,
+#screen-rotate-result .result-icon,
+#screen-page-numbers-result .result-icon,
+#screen-watermark-result .result-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: rgba(43, 107, 69, 0.12);
+  color: #2b6b45;
+  border: 1px solid rgba(43, 107, 69, 0.25);
+  font-size: 1.5rem;
+}
+
+#screen-merge-result .stat-grid,
+#screen-organize-result .stat-grid,
+#screen-rotate-result .stat-grid,
+#screen-page-numbers-result .stat-grid,
+#screen-watermark-result .stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+#screen-merge-result .stat-card,
+#screen-organize-result .stat-card,
+#screen-rotate-result .stat-card,
+#screen-page-numbers-result .stat-card,
+#screen-watermark-result .stat-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+#screen-merge-result .stat-value,
+#screen-organize-result .stat-value,
+#screen-rotate-result .stat-value,
+#screen-page-numbers-result .stat-value,
+#screen-watermark-result .stat-value {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--atelier-primary);
+}
+
+#screen-merge-result .stat-label,
+#screen-organize-result .stat-label,
+#screen-rotate-result .stat-label,
+#screen-page-numbers-result .stat-label,
+#screen-watermark-result .stat-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-merge-result .modal-label,
+#screen-organize-result .modal-label,
+#screen-rotate-result .modal-label,
+#screen-page-numbers-result .modal-label,
+#screen-watermark-result .modal-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+}
+
+#screen-merge-result .modal-input,
+#screen-organize-result .modal-input,
+#screen-rotate-result .modal-input,
+#screen-page-numbers-result .modal-input,
+#screen-watermark-result .modal-input {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: inherit;
+}
+
+#screen-merge-result .action-row,
+#screen-organize-result .action-row,
+#screen-rotate-result .action-row,
+#screen-page-numbers-result .action-row,
+#screen-watermark-result .action-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--atelier-ink-black);
+  flex-wrap: wrap;
+}
+
+#screen-merge-result .action-label,
+#screen-organize-result .action-label,
+#screen-rotate-result .action-label,
+#screen-page-numbers-result .action-label,
+#screen-watermark-result .action-label {
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+}
+
+#screen-merge-result .action-status,
+#screen-organize-result .action-status,
+#screen-rotate-result .action-status,
+#screen-page-numbers-result .action-status,
+#screen-watermark-result .action-status {
+  color: var(--atelier-ink-muted);
+}
+
+#mergeSaveBtn,
+#organizeSaveBtn,
+#rotateSaveBtn,
+#pageNumbersSaveBtn,
+#watermarkSaveBtn {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+
+#mergeShareBtn,
+#organizeShareBtn,
+#rotateShareBtn,
+#pageNumbersShareBtn,
+#watermarkShareBtn,
+#mergeGoToLocationBtn,
+#organizeGoToLocationBtn,
+#rotateGoToLocationBtn,
+#pageNumbersGoToLocationBtn,
+#watermarkGoToLocationBtn {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-merge-result .tool-action-icon,
+#screen-organize-result .tool-action-icon,
+#screen-rotate-result .tool-action-icon,
+#screen-page-numbers-result .tool-action-icon,
+#screen-watermark-result .tool-action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+#screen-merge-result .btn-text,
+#screen-organize-result .btn-text,
+#screen-rotate-result .btn-text,
+#screen-page-numbers-result .btn-text,
+#screen-watermark-result .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-error .error-banner {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 26px;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04);
+}
+
+#screen-error .error-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(186, 26, 26, 0.12);
+  color: #9a241d;
+  border: 1px solid rgba(186, 26, 26, 0.25);
+}
+
+#screen-error .error-banner h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+  margin: 0 0 8px;
+}
+
+#screen-error .error-banner p {
+  color: var(--atelier-ink-muted);
+  margin: 0;
+  line-height: 1.48;
+}
+
+#screen-error #retryBtn {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-merge-result .result-icon,
+  :root:not(.light-theme) #screen-organize-result .result-icon,
+  :root:not(.light-theme) #screen-rotate-result .result-icon,
+  :root:not(.light-theme) #screen-page-numbers-result .result-icon,
+  :root:not(.light-theme) #screen-watermark-result .result-icon {
+    background: rgba(143, 217, 164, 0.14);
+    color: #8fd9a4;
+    border-color: rgba(143, 217, 164, 0.28);
+  }
+
+  :root:not(.light-theme) #screen-merge-result .stat-value,
+  :root:not(.light-theme) #screen-organize-result .stat-value,
+  :root:not(.light-theme) #screen-rotate-result .stat-value,
+  :root:not(.light-theme) #screen-page-numbers-result .stat-value,
+  :root:not(.light-theme) #screen-watermark-result .stat-value,
+  :root:not(.light-theme) #screen-merge-result .btn-text,
+  :root:not(.light-theme) #screen-organize-result .btn-text,
+  :root:not(.light-theme) #screen-rotate-result .btn-text,
+  :root:not(.light-theme) #screen-page-numbers-result .btn-text,
+  :root:not(.light-theme) #screen-watermark-result .btn-text {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #mergeSaveBtn,
+  :root:not(.light-theme) #organizeSaveBtn,
+  :root:not(.light-theme) #rotateSaveBtn,
+  :root:not(.light-theme) #pageNumbersSaveBtn,
+  :root:not(.light-theme) #watermarkSaveBtn,
+  :root:not(.light-theme) #screen-error #retryBtn {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-error .error-banner {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-error .error-icon {
+    background: rgba(244, 140, 128, 0.16);
+    color: #f4a498;
+    border-color: rgba(244, 140, 128, 0.3);
+  }
+}
+
+:root.dark-theme #screen-merge-result .result-icon,
+:root.dark-theme #screen-organize-result .result-icon,
+:root.dark-theme #screen-rotate-result .result-icon,
+:root.dark-theme #screen-page-numbers-result .result-icon,
+:root.dark-theme #screen-watermark-result .result-icon {
+  background: rgba(143, 217, 164, 0.14);
+  color: #8fd9a4;
+  border-color: rgba(143, 217, 164, 0.28);
+}
+
+:root.dark-theme #screen-merge-result .stat-value,
+:root.dark-theme #screen-organize-result .stat-value,
+:root.dark-theme #screen-rotate-result .stat-value,
+:root.dark-theme #screen-page-numbers-result .stat-value,
+:root.dark-theme #screen-watermark-result .stat-value,
+:root.dark-theme #screen-merge-result .btn-text,
+:root.dark-theme #screen-organize-result .btn-text,
+:root.dark-theme #screen-rotate-result .btn-text,
+:root.dark-theme #screen-page-numbers-result .btn-text,
+:root.dark-theme #screen-watermark-result .btn-text {
+  color: #d9875f;
+}
+
+:root.dark-theme #mergeSaveBtn,
+:root.dark-theme #organizeSaveBtn,
+:root.dark-theme #rotateSaveBtn,
+:root.dark-theme #pageNumbersSaveBtn,
+:root.dark-theme #watermarkSaveBtn,
+:root.dark-theme #screen-error #retryBtn {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-error .error-banner {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-error .error-icon {
+  background: rgba(244, 140, 128, 0.16);
+  color: #f4a498;
+  border-color: rgba(244, 140, 128, 0.3);
+}
+/* End Atelier Tool Screens — Phase 3 */
+
+/* Atelier Shared Overlays & Modals — Phase 4 */
+#toast {
+  background: #231f1c;
+  color: #fff8f5;
+  border: 1px solid rgba(255, 248, 245, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(28, 26, 24, 0.24);
+}
+
+#toast .toast-action {
+  color: #e08e62;
+}
+
+#openInToolSheet,
+#moveDocModal,
+#saveDocModal,
+#downloadPdfModal,
+#goToPageModal {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+
+#openInToolSheet .modal-card,
+#moveDocModal .modal-card,
+#saveDocModal .modal-card,
+#downloadPdfModal .modal-card,
+#goToPageModal .modal-card {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.24),
+    0 4px 12px rgba(28, 26, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+#openInToolSheet .modal-title,
+#moveDocModal .modal-title,
+#saveDocModal .modal-title,
+#downloadPdfModal .modal-title,
+#goToPageModal .modal-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#moveDocModal .modal-label,
+#saveDocModal .modal-label,
+#downloadPdfModal .modal-label,
+#goToPageModal .modal-label {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+}
+
+#saveDocModal .modal-input,
+#downloadPdfModal .modal-input,
+#goToPageModal #goToPageInput {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+
+#saveDocModal .modal-input:focus,
+#downloadPdfModal .modal-input:focus,
+#goToPageModal #goToPageInput:focus {
+  outline: none;
+  border-color: var(--atelier-primary);
+}
+
+#saveDocModal .modal-radio-label {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  color: var(--atelier-ink-black);
+}
+
+#saveDocModal .modal-radio-label:has(input:checked) {
+  border-color: var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.08);
+}
+
+#saveDocModal .modal-radio-label input[type='radio'] {
+  accent-color: var(--atelier-primary);
+}
+
+#saveDocModal .modal-radio-desc {
+  color: var(--atelier-ink-muted);
+}
+
+#moveDocModal .modal-hint,
+#saveDocModal .modal-hint {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-border-hairline);
+  color: var(--atelier-ink-muted);
+  border-radius: 10px;
+}
+
+#openInToolSheet .folder-select-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  max-height: min(460px, 58vh);
+  gap: 8px;
+}
+
+#moveDocModal .folder-select-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  max-height: min(280px, 44vh);
+  gap: 8px;
+}
+
+#openInToolSheet .folder-select-item,
+#moveDocModal .folder-select-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+#openInToolSheet .folder-select-item:active,
+#moveDocModal .folder-select-item:active {
+  background: rgba(154, 64, 29, 0.08);
+  border-color: var(--atelier-primary);
+}
+
+#moveDocModal .folder-select-item.is-selected {
+  border-color: var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.1);
+}
+
+#openInToolSheet .open-in-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(154, 64, 29, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#openInToolSheet .open-in-icon .tool-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#openInToolSheet .btn-text,
+#moveDocModal .btn-text,
+#saveDocModal .btn-text,
+#downloadPdfModal .btn-text,
+#goToPageModal .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+#moveDocModal .btn-primary,
+#saveDocModal .btn-primary,
+#downloadPdfModal .btn-primary,
+#goToPageModal .btn-primary {
+  background: var(--atelier-primary);
+  color: #fff8f5;
+  border-radius: 12px;
+  min-height: 44px;
+  box-shadow: none;
+}
+
+#moveDocModal .btn-primary:disabled,
+#saveDocModal .btn-primary:disabled,
+#downloadPdfModal .btn-primary:disabled,
+#goToPageModal .btn-primary:disabled {
+  background: var(--atelier-paper-edge);
+  color: var(--atelier-ink-muted);
+  opacity: 1;
+}
+
+#growthReviewDialog {
+  background: linear-gradient(180deg, var(--atelier-bg) 0%, var(--atelier-card2-bg) 100%);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 48px rgba(28, 26, 24, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+#growthReviewDialog::backdrop {
+  background: rgba(28, 26, 24, 0.52);
+  backdrop-filter: blur(5px);
+}
+
+#growthReviewDialog .hero-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 4px;
+  border-radius: 18px;
+  background: rgba(200, 157, 83, 0.16);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#growthReviewDialog .hero-icon .tool-icon {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#growthReviewDialog h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#growthReviewDialog .hero-subtitle {
+  color: var(--atelier-ink-muted);
+}
+
+#growthReviewDialog .btn-primary {
+  background: var(--atelier-primary);
+  color: #fff8f5;
+  border-radius: 14px;
+  min-height: 46px;
+}
+
+#growthReviewDialog .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #toast {
+    background: #2e2924;
+    color: #f5efe6;
+    border-color: var(--atelier-paper-edge);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .modal-card,
+  :root:not(.light-theme) #moveDocModal .modal-card,
+  :root:not(.light-theme) #saveDocModal .modal-card,
+  :root:not(.light-theme) #downloadPdfModal .modal-card,
+  :root:not(.light-theme) #goToPageModal .modal-card,
+  :root:not(.light-theme) #growthReviewDialog {
+    box-shadow:
+      0 22px 52px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 248, 240, 0.06);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .open-in-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #openInToolSheet .open-in-icon .tool-icon,
+  :root:not(.light-theme) #growthReviewDialog .hero-icon .tool-icon,
+  :root:not(.light-theme) #openInToolSheet .btn-text,
+  :root:not(.light-theme) #moveDocModal .btn-text,
+  :root:not(.light-theme) #saveDocModal .btn-text,
+  :root:not(.light-theme) #downloadPdfModal .btn-text,
+  :root:not(.light-theme) #goToPageModal .btn-text {
+    color: #d9875f;
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-radio-label:has(input:checked),
+  :root:not(.light-theme) #moveDocModal .folder-select-item.is-selected {
+    border-color: #d9875f;
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-radio-label input[type='radio'] {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #saveDocModal .modal-input:focus,
+  :root:not(.light-theme) #downloadPdfModal .modal-input:focus,
+  :root:not(.light-theme) #goToPageModal #goToPageInput:focus {
+    border-color: #d9875f;
+  }
+
+  :root:not(.light-theme) #moveDocModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #saveDocModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #downloadPdfModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #goToPageModal .btn-primary:not(:disabled),
+  :root:not(.light-theme) #growthReviewDialog .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+}
+
+:root.dark-theme #toast {
+  background: #2e2924;
+  color: #f5efe6;
+  border-color: var(--atelier-paper-edge);
+}
+
+:root.dark-theme #openInToolSheet .modal-card,
+:root.dark-theme #moveDocModal .modal-card,
+:root.dark-theme #saveDocModal .modal-card,
+:root.dark-theme #downloadPdfModal .modal-card,
+:root.dark-theme #goToPageModal .modal-card,
+:root.dark-theme #growthReviewDialog {
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 248, 240, 0.06);
+}
+
+:root.dark-theme #openInToolSheet .open-in-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #openInToolSheet .open-in-icon .tool-icon,
+:root.dark-theme #growthReviewDialog .hero-icon .tool-icon,
+:root.dark-theme #openInToolSheet .btn-text,
+:root.dark-theme #moveDocModal .btn-text,
+:root.dark-theme #saveDocModal .btn-text,
+:root.dark-theme #downloadPdfModal .btn-text,
+:root.dark-theme #goToPageModal .btn-text {
+  color: #d9875f;
+  stroke: #d9875f;
+}
+
+:root.dark-theme #saveDocModal .modal-radio-label:has(input:checked),
+:root.dark-theme #moveDocModal .folder-select-item.is-selected {
+  border-color: #d9875f;
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #saveDocModal .modal-radio-label input[type='radio'] {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #saveDocModal .modal-input:focus,
+:root.dark-theme #downloadPdfModal .modal-input:focus,
+:root.dark-theme #goToPageModal #goToPageInput:focus {
+  border-color: #d9875f;
+}
+
+:root.dark-theme #moveDocModal .btn-primary:not(:disabled),
+:root.dark-theme #saveDocModal .btn-primary:not(:disabled),
+:root.dark-theme #downloadPdfModal .btn-primary:not(:disabled),
+:root.dark-theme #goToPageModal .btn-primary:not(:disabled),
+:root.dark-theme #growthReviewDialog .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+/* End Atelier Shared Overlays & Modals — Phase 4 */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

@@ -318,7 +318,7 @@
             <h3 class="tool-category-title" data-i18n="hub.category.combine">Combine</h3>
             <div class="tool-rows">
               <button type="button" class="tool-row" data-tool="merge" data-enabled="true">
-                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><rect x="8" y="6" width="13" height="15" rx="2"/><path d="M14.5 11v5"/><path d="M12 13.5h5"/></svg></span>
                 <span class="tool-row-meta">
                   <span class="tool-row-title" data-i18n="tool.merge.title">Merge</span>
                   <span class="tool-row-desc" data-i18n="tool.merge.desc">Combine multiple PDFs into one file</span>
@@ -337,7 +337,7 @@
           </div>
 
           <div class="tool-category" id="categoryEkleme">
-            <h3 class="tool-category-title" data-i18n="hub.category.add">Add</h3>
+            <h3 class="tool-category-title" data-i18n="hub.category.add">Stamp &amp; Convert</h3>
             <div class="tool-rows">
               <button type="button" class="tool-row" data-tool="watermark" data-enabled="true">
                 <span class="tool-row-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
@@ -436,7 +436,7 @@
                   <span class="reader-tool-tile-title" data-i18n="tool.watermark.title">Watermark</span>
                 </button>
                 <button type="button" class="tool-row reader-tool-tile" data-tool="merge">
-                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></span>
+                  <span class="reader-tool-tile-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><rect x="8" y="6" width="13" height="15" rx="2"/><path d="M14.5 11v5"/><path d="M12 13.5h5"/></svg></span>
                   <span class="reader-tool-tile-title" data-i18n="tool.merge.title">Merge</span>
                 </button>
                 <button type="button" class="tool-row reader-tool-tile" data-tool="booklet">
@@ -596,12 +596,12 @@
 
         <section class="screen hidden" id="screen-merge-picker">
           <div class="hero">
-            <div class="hero-icon" aria-hidden="true">🧩</div>
-            <h2 data-i18n="merge.title">Merge PDFs</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><rect x="8" y="6" width="13" height="15" rx="2"/><path d="M14.5 11v5"/><path d="M12 13.5h5"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.combine">Combine</div>
+            <h2 data-i18n="merge.title">Combine your PDFs</h2>
             <p class="hero-subtitle" data-i18n="merge.subtitle">Add at least two PDFs, set their order, and combine them into one file.</p>
+            <button class="btn btn-primary btn-large" id="mergeAddFileBtn" data-i18n="merge.addFile">+ Add File</button>
           </div>
-
-          <button class="btn btn-primary btn-large" id="mergeAddFileBtn" data-i18n="merge.addFile">+ Add File</button>
 
           <p class="merge-empty-hint hidden" id="mergeEmptyHint" data-i18n="merge.emptyHint">No files added yet.</p>
 
@@ -611,6 +611,11 @@
             <span id="mergeRunBtnLabel" data-i18n="tool.merge.title">Merge</span>
             <span class="spinner hidden" id="mergeRunSpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-merge-result">
@@ -650,19 +655,22 @@
 
           <p class="action-status" id="mergeActionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="mergeGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-tonal btn-large hidden" id="mergeGoToLocationBtn">
+            <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span data-i18n="common.goToLocation">Go to Location</span>
+          </button>
 
           <button class="btn btn-text btn-large" id="mergeNewBtn" data-i18n="merge.newMerge">New Merge</button>
         </section>
 
         <section class="screen hidden" id="screen-organize">
           <div class="hero" id="organizeHero">
-            <div class="hero-icon" aria-hidden="true">🗂️</div>
-            <h2 data-i18n="organize.title">Organize pages</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.pageOps">Page Operations</div>
+            <h2 data-i18n="organize.title">Arrange your pages</h2>
             <p class="hero-subtitle" data-i18n="organize.subtitle">Pick a PDF; delete pages or change their order.</p>
+            <button class="btn btn-primary btn-large" id="organizePickBtn" data-i18n="common.pickPdf">Select PDF</button>
           </div>
-
-          <button class="btn btn-primary btn-large" id="organizePickBtn" data-i18n="common.pickPdf">Select PDF</button>
 
           <div class="merge-file-list" id="organizePageList"></div>
 
@@ -670,6 +678,11 @@
             <span id="organizeApplyBtnLabel" data-i18n="common.apply">Apply</span>
             <span class="spinner hidden" id="organizeApplySpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-organize-result">
@@ -709,19 +722,22 @@
 
           <p class="action-status" id="organizeActionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="organizeGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-tonal btn-large hidden" id="organizeGoToLocationBtn">
+            <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span data-i18n="common.goToLocation">Go to Location</span>
+          </button>
 
           <button class="btn btn-text btn-large" id="organizeNewBtn" data-i18n="common.newFile">New File</button>
         </section>
 
         <section class="screen hidden" id="screen-rotate">
           <div class="hero" id="rotateHero">
-            <div class="hero-icon" aria-hidden="true">🔄</div>
-            <h2 data-i18n="rotate.title">Rotate pages</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.pageOps">Page Operations</div>
+            <h2 data-i18n="rotate.title">Fix page orientation</h2>
             <p class="hero-subtitle" data-i18n="rotate.subtitle">Pick a PDF; turn pages to the orientation you need.</p>
+            <button class="btn btn-primary btn-large" id="rotatePickBtn" data-i18n="common.pickPdf">Select PDF</button>
           </div>
-
-          <button class="btn btn-primary btn-large" id="rotatePickBtn" data-i18n="common.pickPdf">Select PDF</button>
 
           <button class="btn btn-tonal btn-large hidden" id="rotateAllBtn" data-i18n="rotate.rotateAll">Rotate All 90°</button>
 
@@ -731,6 +747,11 @@
             <span id="rotateApplyBtnLabel" data-i18n="common.apply">Apply</span>
             <span class="spinner hidden" id="rotateApplySpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-rotate-result">
@@ -766,19 +787,22 @@
 
           <p class="action-status" id="rotateActionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="rotateGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-tonal btn-large hidden" id="rotateGoToLocationBtn">
+            <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span data-i18n="common.goToLocation">Go to Location</span>
+          </button>
 
           <button class="btn btn-text btn-large" id="rotateNewBtn" data-i18n="common.newFile">New File</button>
         </section>
 
         <section class="screen hidden" id="screen-page-numbers">
           <div class="hero" id="pageNumbersHero">
-            <div class="hero-icon" aria-hidden="true">🔢</div>
-            <h2 data-i18n="pageNumbers.title">Add page numbers</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.pageOps">Page Operations</div>
+            <h2 data-i18n="pageNumbers.title">Number your pages</h2>
             <p class="hero-subtitle" data-i18n="pageNumbers.subtitle">Pick a PDF; choose a position and format, then apply.</p>
+            <button class="btn btn-primary btn-large" id="pageNumbersPickBtn" data-i18n="common.pickPdf">Select PDF</button>
           </div>
-
-          <button class="btn btn-primary btn-large" id="pageNumbersPickBtn" data-i18n="common.pickPdf">Select PDF</button>
 
           <div class="pagenum-preview-card hidden" id="pageNumbersPreviewCard">
             <img id="pageNumbersPreviewImg" alt="Preview" />
@@ -820,6 +844,11 @@
             <span id="pageNumbersApplyBtnLabel" data-i18n="common.apply">Apply</span>
             <span class="spinner hidden" id="pageNumbersApplySpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-page-numbers-result">
@@ -855,19 +884,22 @@
 
           <p class="action-status" id="pageNumbersActionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="pageNumbersGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-tonal btn-large hidden" id="pageNumbersGoToLocationBtn">
+            <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span data-i18n="common.goToLocation">Go to Location</span>
+          </button>
 
           <button class="btn btn-text btn-large" id="pageNumbersNewBtn" data-i18n="common.newFile">New File</button>
         </section>
 
         <section class="screen hidden" id="screen-watermark">
           <div class="hero" id="watermarkHero">
-            <div class="hero-icon" aria-hidden="true">💧</div>
-            <h2 data-i18n="watermark.title">Add watermark</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.add">Stamp &amp; Convert</div>
+            <h2 data-i18n="watermark.title">Stamp your document</h2>
             <p class="hero-subtitle" data-i18n="watermark.subtitle">Pick a PDF; apply a text or image watermark.</p>
+            <button class="btn btn-primary btn-large" id="watermarkPickBtn" data-i18n="common.pickPdf">Select PDF</button>
           </div>
-
-          <button class="btn btn-primary btn-large" id="watermarkPickBtn" data-i18n="common.pickPdf">Select PDF</button>
 
           <div class="pagenum-preview-card hidden" id="watermarkPreviewCard">
             <img id="watermarkPreviewImg" alt="Preview" />
@@ -929,6 +961,11 @@
             <span id="watermarkApplyBtnLabel" data-i18n="common.apply">Apply</span>
             <span class="spinner hidden" id="watermarkApplySpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-watermark-result">
@@ -964,26 +1001,31 @@
 
           <p class="action-status" id="watermarkActionStatus" aria-live="polite"></p>
 
-          <button class="btn btn-tonal btn-large hidden" id="watermarkGoToLocationBtn" data-i18n="common.goToLocation">📁 Go to Location</button>
+          <button class="btn btn-tonal btn-large hidden" id="watermarkGoToLocationBtn">
+            <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span data-i18n="common.goToLocation">Go to Location</span>
+          </button>
 
           <button class="btn btn-text btn-large" id="watermarkNewBtn" data-i18n="common.newFile">New File</button>
         </section>
 
         <section class="screen hidden" id="screen-image-to-pdf">
           <div class="hero" id="imageToPdfHero">
-            <div class="hero-icon" aria-hidden="true">📸</div>
-            <h2 data-i18n="tool.imageToPdf.title">Image to PDF</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.add">Stamp &amp; Convert</div>
+            <h2 data-i18n="imageToPdf.heading">Turn photos into PDF</h2>
             <p class="hero-subtitle" data-i18n="imageToPdf.subtitle">Take photos with the camera or add from the gallery, set their order, then convert to PDF.</p>
-          </div>
-
-          <div class="image-actions">
-            <button class="btn btn-primary" id="imgCameraBtn" data-i18n="imageToPdf.takePhoto">
-              📷 Take Photo
-            </button>
-            <label class="btn btn-tonal" id="imgGalleryLabel">
-              <span data-i18n="imageToPdf.pickFromGallery">🖼️ Pick from Gallery</span>
-              <input type="file" id="imgGalleryInput" accept="image/png, image/jpeg" multiple style="display: none;" />
-            </label>
+            <div class="image-actions">
+              <button class="btn btn-primary" id="imgCameraBtn">
+                <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                <span data-i18n="imageToPdf.takePhoto">Take Photo</span>
+              </button>
+              <label class="btn btn-tonal" id="imgGalleryLabel">
+                <svg aria-hidden="true" class="tool-action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <span data-i18n="imageToPdf.pickFromGallery">Pick from Gallery</span>
+                <input type="file" id="imgGalleryInput" accept="image/png, image/jpeg" multiple style="display: none;" />
+              </label>
+            </div>
           </div>
 
           <p class="merge-empty-hint" id="imgListEmptyHint" data-i18n="imageToPdf.emptyHint">No images added yet.</p>
@@ -991,24 +1033,29 @@
           <div class="image-grid" id="imageGrid"></div>
 
           <button class="btn btn-primary btn-large hidden" id="imgGenerateBtn" disabled>
-            <span id="imgGenerateBtnLabel" data-i18n="imageToPdf.generatePdf">Create PDF</span>
+            <span id="imgGenerateBtnLabel" data-i18n="imageToPdf.generatePdf">Make PDF</span>
             <span class="spinner hidden" id="imgGenerateSpinner"></span>
           </button>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-md-to-pdf">
           <div class="hero" id="mdToPdfHero">
-            <div class="hero-icon" aria-hidden="true">📝</div>
-            <h2 data-i18n="tool.mdToPdf.title">Markdown to Booklet</h2>
+            <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+            <div class="tool-hero-kicker" data-i18n="hub.category.add">Stamp &amp; Convert</div>
+            <h2 data-i18n="mdToPdf.heading">Bind Markdown docs</h2>
             <p class="hero-subtitle" data-i18n="tool.mdToPdf.desc">Turn multi-file docs into ready-to-print A5 booklets</p>
-          </div>
-
-          <div class="image-actions">
-            <label class="btn btn-primary" id="mdPickLabel">
-              <span data-i18n="mdToPdf.pickFiles">Select .md Files</span>
-              <input type="file" id="mdFileInput" accept=".md,.markdown,text/markdown" multiple style="display: none;" />
-            </label>
-            <button type="button" class="btn btn-tonal hidden" id="mdClearBtn" data-i18n="common.clear">Clear</button>
+            <div class="image-actions">
+              <label class="btn btn-primary" id="mdPickLabel">
+                <span data-i18n="mdToPdf.pickFiles">Select .md Files</span>
+                <input type="file" id="mdFileInput" accept=".md,.markdown,text/markdown" multiple style="display: none;" />
+              </label>
+              <button type="button" class="btn btn-tonal hidden" id="mdClearBtn" data-i18n="common.clear">Clear</button>
+            </div>
           </div>
 
           <div class="md-options-panel hidden" id="mdOptionsPanel" style="margin: 14px 0; display: flex; flex-direction: column; gap: 12px;">
@@ -1032,14 +1079,19 @@
 
           <div class="md-actions-panel hidden" id="mdActionsPanel" style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
             <button type="button" class="btn btn-primary btn-large" id="mdGenerateBookletBtn">
-              <span id="mdGenerateBookletLabel" data-i18n="mdToPdf.generateBooklet">Create Booklet (A5)</span>
+              <span id="mdGenerateBookletLabel" data-i18n="mdToPdf.generateBooklet">Make Booklet (A5)</span>
               <span class="spinner hidden" id="mdGenerateBookletSpinner"></span>
             </button>
             <button type="button" class="btn btn-tonal" id="mdGeneratePdfBtn">
-              <span id="mdGeneratePdfLabel" data-i18n="mdToPdf.generatePdf">Create PDF Only</span>
+              <span id="mdGeneratePdfLabel" data-i18n="mdToPdf.generatePdf">Make PDF Only</span>
               <span class="spinner hidden" id="mdGeneratePdfSpinner"></span>
             </button>
           </div>
+
+          <footer class="tool-privacy-footer" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span data-i18n="atelier.privacySeal">Everything stays on your device — nothing is uploaded</span>
+          </footer>
         </section>
 
         <section class="screen hidden" id="screen-crop">
@@ -1843,7 +1895,7 @@
         <div class="modal-body">
           <p class="modal-label" data-i18n="modal.moveDoc.selectFolder">Select Destination Folder</p>
           <div class="folder-select-list" id="moveDocFolderList"></div>
-          <p class="modal-hint" data-i18n="modal.moveDoc.hint">💡 Your document will be moved to the selected folder.</p>
+          <p class="modal-hint" data-i18n="modal.moveDoc.hint">Your document will be moved to the selected folder.</p>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-text" id="moveDocCancelBtn" data-i18n="common.cancel">Cancel</button>
@@ -1873,13 +1925,34 @@
         <h3 class="modal-title" id="openInToolTitle" data-i18n="modal.openIn.title">Open in…</h3>
         <div class="modal-body">
           <div class="folder-select-list" id="openInToolList">
-            <button type="button" class="folder-select-item" data-tool-id="reader">📖 Reader</button>
-            <button type="button" class="folder-select-item" data-tool-id="booklet">📚 Booklet</button>
-            <button type="button" class="folder-select-item" data-tool-id="organize">🗂️ Organize Pages</button>
-            <button type="button" class="folder-select-item" data-tool-id="rotate">🔄 Rotate</button>
-            <button type="button" class="folder-select-item" data-tool-id="page-numbers">🔢 Page Numbers</button>
-            <button type="button" class="folder-select-item" data-tool-id="watermark">💧 Watermark</button>
-            <button type="button" class="folder-select-item" data-tool-id="merge">📎 Merge</button>
+            <button type="button" class="folder-select-item" data-tool-id="reader">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <span data-i18n="modal.openIn.reader">Reader</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="booklet">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>
+              <span data-i18n="tool.booklet.title">Booklet</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="organize">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>
+              <span data-i18n="tool.organize.title">Organize Pages</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="rotate">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
+              <span data-i18n="tool.rotate.title">Rotate</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="page-numbers">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></span>
+              <span data-i18n="tool.pageNumbers.title">Page Numbers</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="watermark">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
+              <span data-i18n="tool.watermark.title">Watermark</span>
+            </button>
+            <button type="button" class="folder-select-item" data-tool-id="merge">
+              <span class="open-in-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><rect x="8" y="6" width="13" height="15" rx="2"/><path d="M14.5 11v5"/><path d="M12 13.5h5"/></svg></span>
+              <span data-i18n="tool.merge.title">Merge</span>
+            </button>
           </div>
         </div>
         <div class="modal-actions">
@@ -2125,9 +2198,9 @@
     <!-- Review prompt dialog -->
     <dialog class="modal-sheet" id="growthReviewDialog">
       <div class="modal-sheet-content">
-        <div class="hero-icon" aria-hidden="true">⭐</div>
+        <div class="hero-icon" aria-hidden="true"><svg aria-hidden="true" class="tool-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
         <h2 data-i18n="growth.reviewPromptTitle">Enjoying Bindery?</h2>
-        <p class="hero-subtitle" data-i18n="growth.reviewPromptText">If Bindery helped you create booklets or organize PDFs, a quick review on Google Play helps others discover it!</p>
+        <p class="hero-subtitle" data-i18n="growth.reviewPromptText">If Bindery helped you make booklets or organize PDFs, a quick review on Google Play helps others discover it!</p>
         <div class="modal-sheet-actions">
           <button class="btn btn-primary" id="growthReviewRateBtn" data-i18n="growth.reviewPromptRate">Rate on Google Play</button>
           <button class="btn btn-tonal" id="growthReviewLaterBtn" data-i18n="growth.reviewPromptLater">Maybe Later</button>
