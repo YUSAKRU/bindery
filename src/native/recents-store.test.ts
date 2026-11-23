@@ -161,4 +161,88 @@ describe('recents-store', () => {
     expect(after).toHaveLength(8);
     expect(after.some((e) => e.uri === oldest.uri)).toBe(false);
   });
+
+  describe('fingerprint dedupe', () => {
+    it('one file reached through two uris stays one entry, under the newest uri, keeping its page', async () => {
+      const { recordOpened, updateLastPage, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://downloads/1', name: 'DarHub (1).pdf', fp: 'F1' });
+      await updateLastPage({ uri: 'content://downloads/1', name: 'DarHub (1).pdf' }, 4);
+      await recordOpened({ uri: 'content://recent/9', name: 'DarHub (1).pdf', fp: 'F1' });
+      const entries = await getRecents();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ uri: 'content://recent/9', lastPage: 4, fp: 'F1' });
+    });
+
+    it('never merges by name alone: different fingerprints stay apart', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'document.pdf', fp: 'F1' });
+      await recordOpened({ uri: 'content://b', name: 'document.pdf', fp: 'F2' });
+      expect(await getRecents()).toHaveLength(2);
+    });
+
+    it('an entry without a fingerprint is matched by identity only', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      // Written before fingerprints existed.
+      store.set(STORAGE_KEY, JSON.stringify([{ uri: 'content://old', name: 'x.pdf', lastPage: 9, openedAt: 1 }]));
+      await recordOpened({ uri: 'content://new', name: 'x.pdf', fp: 'F1' });
+      expect((await getRecents()).map((e) => e.uri)).toEqual(['content://new', 'content://old']);
+    });
+
+    it('a legacy pair converges once each side has been opened', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      store.set(
+        STORAGE_KEY,
+        JSON.stringify([
+          { uri: 'content://a', name: 'DarHub (1).pdf', lastPage: 4, openedAt: 2 },
+          { uri: 'content://b', name: 'DarHub (1).pdf', lastPage: 1, openedAt: 1 },
+        ]),
+      );
+      await recordOpened({ uri: 'content://a', name: 'DarHub (1).pdf', fp: 'F1' });
+      expect(await getRecents()).toHaveLength(2);
+      await recordOpened({ uri: 'content://b', name: 'DarHub (1).pdf', fp: 'F1' });
+      const entries = await getRecents();
+      expect(entries).toHaveLength(1);
+      // content://b carried its own page; its exact identity wins.
+      expect(entries[0]).toMatchObject({ uri: 'content://b', lastPage: 1, fp: 'F1' });
+    });
+
+    it('recording without bytes keeps the fingerprint the entry already had', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1' });
+      await recordOpened({ uri: 'content://a', name: 'a.pdf' });
+      expect((await getRecents())[0].fp).toBe('F1');
+    });
+
+    it('restoreRecent does not bring back a file that is on the desk under another uri', async () => {
+      const { recordOpened, removeRecent, restoreRecent, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1' });
+      const [removed] = await getRecents();
+      await removeRecent(removed);
+      await recordOpened({ uri: 'content://b', name: 'a.pdf', fp: 'F1' });
+      await restoreRecent(removed);
+      expect((await getRecents()).map((e) => e.uri)).toEqual(['content://b']);
+    });
+  });
+
+  describe('fingerprintPdf', () => {
+    it('is stable, and separates different contents and lengths', async () => {
+      const { fingerprintPdf, FINGERPRINT_EDGE_BYTES } = await importStore();
+      const a = new Uint8Array(3 * FINGERPRINT_EDGE_BYTES).map((_, i) => i % 251);
+      expect(fingerprintPdf(a)).toBe(fingerprintPdf(a.slice()));
+      const tailChanged = a.slice();
+      tailChanged[tailChanged.length - 1] ^= 1;
+      expect(fingerprintPdf(tailChanged)).not.toBe(fingerprintPdf(a));
+      const headChanged = a.slice();
+      headChanged[0] ^= 1;
+      expect(fingerprintPdf(headChanged)).not.toBe(fingerprintPdf(a));
+      expect(fingerprintPdf(a.slice(0, a.length - 1))).not.toBe(fingerprintPdf(a));
+      expect(fingerprintPdf(a)).toMatch(new RegExp(`^${a.length}:[0-9a-f]{16}$`));
+    });
+
+    it('handles files shorter than the hashed edges', async () => {
+      const { fingerprintPdf } = await importStore();
+      expect(fingerprintPdf(new Uint8Array([]))).toMatch(/^0:[0-9a-f]{16}$/);
+      expect(fingerprintPdf(new Uint8Array([1, 2, 3]))).not.toBe(fingerprintPdf(new Uint8Array([1, 2, 4])));
+    });
+  });
 });

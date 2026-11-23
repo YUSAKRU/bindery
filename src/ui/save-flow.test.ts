@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { fingerprintPdf } from '../native/fingerprint';
 import { t } from '../i18n';
 import { createSaveFlow, type SaveFlowDeps, type SaveFlowOptions, type SaveState } from './save-flow';
 
@@ -139,7 +140,11 @@ describe('createSaveFlow — successful save', () => {
     expect(h.writes).toEqual([
       { path: 'merges/report.pdf', bytes: new Uint8Array([1, 2, 3]) },
     ]);
-    expect(h.recorded).toEqual([{ uri: 'file:///data/merges/report.pdf', name: 'report.pdf' }]);
+    // The fingerprint is taken from the very bytes written, so the desk can
+    // recognise this file again when it comes back through another uri.
+    expect(h.recorded).toEqual([
+      { uri: 'file:///data/merges/report.pdf', name: 'report.pdf', fp: fingerprintPdf(new Uint8Array([1, 2, 3])) },
+    ]);
     expect(h.getState()).toBe('saved');
     expect(h.elements.actionStatus.textContent).toBe(t('status.merge.saved'));
     expect(h.elements.saveBtnLabel.textContent).toBe(t('common.saved'));

@@ -144,6 +144,18 @@ describe('app wiring', () => {
   });
 });
 
+describe('desk bookkeeping in app.ts', () => {
+  it('every recordOpened in app.ts carries a fingerprint of the bytes at hand', () => {
+    const calls = [...app.matchAll(/recordOpened\(\{[^}]*\}\)/g)].map((m) => m[0]);
+    expect(calls.length).toBeGreaterThanOrEqual(4);
+    // Rename/move re-record a file whose bytes are not loaded; the next commit
+    // replaces those with rekeyRecent.
+    const withBytes = calls.filter((c) => !/name: (newName|moveSourceFile\.name) \}\)$/.test(c));
+    for (const call of withBytes) expect(call, call).toMatch(/fp: fingerprintPdf\(\w+\)/);
+    expect(app).toContain('async function rememberSaved(uri: string, name: string, bytes: Uint8Array)');
+  });
+});
+
 describe('desk strings', () => {
   const keys = [
     'library.desk.more',

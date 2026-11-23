@@ -1,10 +1,26 @@
 import { Preferences } from '@capacitor/preferences';
 
+export { fingerprintPdf, FINGERPRINT_EDGE_BYTES } from './fingerprint';
+
 export interface RecentEntry {
   uri: string | null;
   name: string;
   lastPage: number;
   openedAt: number;
+  /**
+   * Content fingerprint (`fingerprintPdf`), when the bytes were at hand as the
+   * entry was recorded. Android hands out a different content:// uri for one
+   * file depending on the provider it was picked through; the fingerprint is
+   * what lets those collapse into one desk entry. Absent on entries written
+   * before it existed — those are matched by identity only.
+   */
+  fp?: string;
+}
+
+/** Same file: same identity, or — when both carry one — the same fingerprint. */
+function sameFile(a: { uri: string | null; name: string; fp?: string }, b: { uri: string | null; name: string; fp?: string }): boolean {
+  if (entryId(a) === entryId(b)) return true;
+  return Boolean(a.fp && b.fp && a.fp === b.fp);
 }
 
 const STORAGE_KEY = 'bindery.recents.v1';
@@ -54,14 +70,23 @@ export async function getRecents(): Promise<RecentEntry[]> {
   return readAll();
 }
 
-/** Adds/moves an entry to the front, deduped by identity (uri, falling back to name), capped at `MAX_ENTRIES`. */
-export async function recordOpened(entry: { uri: string | null; name: string }): Promise<void> {
+/**
+ * Adds/moves an entry to the front, capped at `MAX_ENTRIES`. Deduped by
+ * identity (uri, falling back to name) and, when both sides carry one, by
+ * content fingerprint — so one file reached through two uris stays one entry,
+ * under the newest uri. Never by name alone: two files may share a name.
+ */
+export async function recordOpened(entry: { uri: string | null; name: string; fp?: string }): Promise<void> {
   return enqueue(async () => {
     const entries = await readAll();
     const id = entryId(entry);
-    const existing = entries.find((e) => entryId(e) === id);
+    // The entry with this exact identity wins over a fingerprint match: its
+    // lastPage is the one the reader was last told about under this uri.
+    const existing = entries.find((e) => entryId(e) === id) ?? entries.find((e) => sameFile(e, entry));
     const next: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: existing?.lastPage ?? 1, openedAt: Date.now() };
-    const filtered = entries.filter((e) => entryId(e) !== id);
+    const fp = entry.fp ?? (existing && entryId(existing) === id ? existing.fp : undefined);
+    if (fp) next.fp = fp;
+    const filtered = entries.filter((e) => !sameFile(e, { ...entry, fp }));
     filtered.unshift(next);
     await writeAll(filtered.slice(0, MAX_ENTRIES));
   });
@@ -87,9 +112,9 @@ export async function updateLastPage(identity: { uri: string | null; name: strin
 export async function restoreRecent(entry: RecentEntry): Promise<void> {
   return enqueue(async () => {
     const entries = await readAll();
-    const id = entryId(entry);
-    if (entries.some((e) => entryId(e) === id)) return;
+    if (entries.some((e) => sameFile(e, entry))) return;
     const restored: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: entry.lastPage, openedAt: entry.openedAt };
+    if (entry.fp) restored.fp = entry.fp;
     const next = [...entries, restored].sort((a, b) => b.openedAt - a.openedAt);
     await writeAll(next.slice(0, MAX_ENTRIES));
   });

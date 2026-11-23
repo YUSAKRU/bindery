@@ -62,7 +62,7 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { getRecents, recordOpened, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { fingerprintPdf, getRecents, recordOpened, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
   getLibrary,
@@ -3880,7 +3880,7 @@ export function initApp(): void {
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
       const scanRelPath = `scans/${filename}`;
       const privateUri = await savePdfPrivately(pdfBytes, scanRelPath);
-      await rememberSaved(privateUri, filename);
+      await rememberSaved(privateUri, filename, pdfBytes);
 
       await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
@@ -4844,9 +4844,9 @@ export function initApp(): void {
    * that is certainly untrue — and sending them back to save a file that
    * already exists.
    */
-  async function rememberSaved(uri: string, name: string): Promise<void> {
+  async function rememberSaved(uri: string, name: string, bytes: Uint8Array): Promise<void> {
     try {
-      await recordOpened({ uri, name });
+      await recordOpened({ uri, name, fp: fingerprintPdf(bytes) });
     } catch (error) {
       console.warn('Saved, but could not add to recents:', error);
     }
@@ -4972,7 +4972,7 @@ export function initApp(): void {
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
-      await recordOpened({ uri: sourceUri, name });
+      await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes) });
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
@@ -6177,7 +6177,7 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         topBarTitle.title = readerName;
 
-        await rememberSaved(newUri, newName);
+        await rememberSaved(newUri, newName, readerBytes);
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
@@ -6188,7 +6188,7 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         topBarTitle.title = readerName;
 
-        await recordOpened({ uri: publicUri, name: newName });
+        await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });
         showToast(t('toast.savedToDevice'));
       }
 
@@ -6934,7 +6934,7 @@ export function initApp(): void {
     try {
       const bytes = await downloadPdfFromUrl(url);
       const savedUri = await savePdfPrivately(bytes, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
+      await recordOpened({ uri: savedUri, name: filename, fp: fingerprintPdf(bytes) });
       
       showToast(t('toast.downloadSuccess'));
       closeModal(downloadPdfModal);
