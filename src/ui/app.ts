@@ -871,8 +871,8 @@ export function initApp(): void {
   let readerIndicatorRaf = 0;
   let readerLastPageSaveTimer: ReturnType<typeof setTimeout> | undefined;
   // Must match .reader-page-list's `gap` and top padding in styles.css.
-  const READER_PAGE_GAP_PX = 6;
-  const READER_LIST_TOP_PADDING_PX = 6;
+  const READER_PAGE_GAP_PX = 12;
+  const READER_LIST_TOP_PADDING_PX = 12;
   // Per-page layout metadata, rebuilt on every document open (renderReaderList).
   // Pages can have mixed orientations, so slot math is per-page, not uniform:
   // readerPageOffsets[i] is the distance from the top of the page list to
