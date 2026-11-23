@@ -2149,6 +2149,7 @@ dialog.modal-sheet::backdrop {
 
 .reader-search-input {
   flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -2179,6 +2180,7 @@ dialog.modal-sheet::backdrop {
   color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
   min-width: 42px;
+  flex-shrink: 0;
   text-align: center;
 }
 
@@ -2189,6 +2191,18 @@ dialog.modal-sheet::backdrop {
 
 .reader-search-count.no-results {
   color: #e57373;
+}
+
+.reader-search-panel .icon-btn-sm {
+  flex-shrink: 0;
+  padding: 7px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.reader-search-panel .icon-svg {
+  width: 18px;
+  height: 18px;
 }
 
 #readerSearchBtn.search-active {
@@ -2786,6 +2800,7 @@ dialog.modal-sheet::backdrop {
   --reader-page-shadow: 0 1px 2px rgba(28, 26, 24, 0.14), 0 6px 16px rgba(28, 26, 24, 0.08);
   --reader-accent: var(--atelier-primary);
   --reader-accent-rgb: 154, 64, 29;
+  --reader-error: #b3261e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -2795,6 +2810,7 @@ dialog.modal-sheet::backdrop {
     --reader-page-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     --reader-accent: #d9875f;
     --reader-accent-rgb: 217, 135, 95;
+    --reader-error: #f2b8b5;
   }
 }
 
@@ -2804,6 +2820,7 @@ dialog.modal-sheet::backdrop {
   --reader-page-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --reader-accent: #d9875f;
   --reader-accent-rgb: 217, 135, 95;
+  --reader-error: #f2b8b5;
 }
 
 :root:not(.reader-night) .app:has(#screen-reader:not(.hidden)) .top-bar {
@@ -2867,6 +2884,52 @@ dialog.modal-sheet::backdrop {
 :root:not(.reader-night) #screen-reader .reader-subbar #readerSearchBtn.search-active {
   color: var(--reader-accent);
   background: rgba(var(--reader-accent-rgb), 0.15);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-panel {
+  background: var(--atelier-bg);
+  border-bottom-color: var(--atelier-border-hairline);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-input {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  color: var(--atelier-ink-black);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-input::placeholder {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-input:focus {
+  border-color: var(--reader-accent);
+  background: var(--atelier-surface-cream);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-count {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-count.has-results {
+  color: var(--reader-accent);
+  font-weight: 600;
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-count.no-results {
+  color: var(--reader-error);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm:active {
+  background: rgba(var(--reader-accent-rgb), 0.16);
+}
+
+:root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm:disabled {
+  opacity: 0.35;
 }
 
 :root:not(.reader-night) #screen-reader .reader-subbar .btn-tonal {
@@ -3083,6 +3146,30 @@ dialog.modal-sheet::backdrop {
 .reader-night .reader-subbar #readerSearchBtn.search-active {
   color: #e6c07b;
   background: rgba(200, 157, 83, .25);
+}
+.reader-night .reader-search-panel {
+  background: #181818;
+  border-bottom-color: rgba(255, 255, 255, .07);
+}
+.reader-night .reader-search-input {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .14);
+  color: #e0e0e0;
+}
+.reader-night .reader-search-input:focus {
+  border-color: #e6c07b;
+}
+.reader-night .reader-search-count {
+  color: rgba(255, 255, 255, .5);
+}
+.reader-night .reader-search-count.has-results {
+  color: #e6c07b;
+}
+.reader-night .reader-search-panel .icon-btn-sm {
+  color: #e0e0e0;
+}
+.reader-night .reader-search-panel .icon-btn-sm:active {
+  background: rgba(200, 157, 83, .2);
 }
 
 /* ── Reduced Motion ─────────────────────────────────────────────────────────── */

@@ -124,7 +124,7 @@ describe('reader atelier chrome', () => {
 
   it('never uses the old indigo theme', () => {
     expect(section).not.toMatch(/--color-primary|--color-on-primary/);
-    expect(section).not.toMatch(/79, ?70, ?229|#4f46e5|124, ?140, ?248|187, ?134, ?252|#d0aaff/i);
+    expect(section).not.toMatch(/79, ?70, ?229|#4f46e5|124, ?140, ?248|#7c8cf8|187, ?134, ?252|#d0aaff|#1e2030/i);
   });
 
   it('styles the reader tools and pages sheets with atelier tokens in day mode', () => {
@@ -255,6 +255,121 @@ describe('reader atelier chrome', () => {
 
     const nightPress = rule('.reader-night .reader-subbar .icon-btn-sm:active', nightSection);
     expect(nightPress).toContain('background: rgba(200, 157, 83, .2)');
+  });
+});
+
+describe('reader search panel', () => {
+  for (const id of ['readerSearchPrevBtn', 'readerSearchNextBtn', 'readerSearchCloseBtn']) {
+    it(`#${id} uses a line icon SVG and not a plain text glyph`, () => {
+      const at = html.indexOf(`id="${id}"`);
+      expect(at).toBeGreaterThan(-1);
+      const button = html.slice(at, html.indexOf('</button>', at));
+      expect(button).toContain('<svg aria-hidden="true" class="icon-svg"');
+      expect(button).toContain('</svg>');
+      expect(button).not.toMatch(/[‹›✕]/);
+      expect(button).toMatch(/data-i18n-aria-label="reader\.\w+"/);
+    });
+  }
+
+  it('app.ts does not overwrite the search button SVGs via textContent or innerHTML', () => {
+    expect(app).not.toMatch(/readerSearch(?:Prev|Next|Close)Btn\.(?:textContent|innerHTML)\s*=/);
+  });
+
+  it('styles the search panel, input, count and buttons with atelier tokens in day mode', () => {
+    const panel = rule(':root:not(.reader-night) #screen-reader .reader-search-panel', section);
+    expect(panel).toContain('var(--atelier-bg)');
+    expect(panel).toContain('var(--atelier-border-hairline)');
+
+    const input = rule(':root:not(.reader-night) #screen-reader .reader-search-input', section);
+    expect(input).toContain('var(--atelier-surface-cream)');
+    expect(input).toContain('var(--atelier-paper-edge)');
+    expect(input).toContain('border-radius: 10px');
+    expect(input).toContain('var(--atelier-ink-black)');
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-search-input::placeholder', section)).toContain(
+      'var(--atelier-ink-muted)',
+    );
+
+    const inputFocus = rule(':root:not(.reader-night) #screen-reader .reader-search-input:focus', section);
+    expect(inputFocus).toContain('var(--reader-accent)');
+    expect(inputFocus).toContain('var(--atelier-surface-cream)');
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-search-count', section)).toContain(
+      'var(--atelier-ink-muted)',
+    );
+
+    const hasResults = rule(':root:not(.reader-night) #screen-reader .reader-search-count.has-results', section);
+    expect(hasResults).toContain('var(--reader-accent)');
+    expect(hasResults).toContain('font-weight: 600');
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-search-count.no-results', section)).toContain(
+      'var(--reader-error)',
+    );
+    expect(section).toMatch(/(?:^|\n)#screen-reader \{[^}]*--reader-error:\s*#b3261e/);
+    expect(section).toMatch(
+      /@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\.light-theme\) #screen-reader \{[^}]*--reader-error:\s*#f2b8b5[^}]*\}\s*\}/,
+    );
+    expect(section).toMatch(/(?:^|\n):root\.dark-theme #screen-reader \{[^}]*--reader-error:\s*#f2b8b5/);
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm', section)).toContain(
+      'var(--atelier-ink-muted)',
+    );
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm:active', section)).toContain(
+      'rgba(var(--reader-accent-rgb), 0.16)',
+    );
+    expect(
+      rule(':root:not(.reader-night) #screen-reader .reader-search-panel .icon-btn-sm:disabled', section),
+    ).toContain('opacity: 0.35');
+  });
+
+  it('styles the search panel in night mode with warm gold and no indigo', () => {
+    expect(nightSection).not.toMatch(/#7c8cf8|#1e2030/i);
+
+    const nightPanel = rule('.reader-night .reader-search-panel', nightSection);
+    expect(nightPanel).toContain('#181818');
+    expect(nightPanel).toContain('rgba(255, 255, 255, .07)');
+
+    const nightInput = rule('.reader-night .reader-search-input', nightSection);
+    expect(nightInput).toContain('rgba(255, 255, 255, .08)');
+    expect(nightInput).toContain('rgba(255, 255, 255, .14)');
+    expect(nightInput).toContain('#e0e0e0');
+
+    expect(rule('.reader-night .reader-search-input:focus', nightSection)).toContain('#e6c07b');
+    expect(rule('.reader-night .reader-search-count', nightSection)).toContain('rgba(255, 255, 255, .5)');
+    expect(rule('.reader-night .reader-search-count.has-results', nightSection)).toContain('#e6c07b');
+    expect(rule('.reader-night .reader-search-panel .icon-btn-sm', nightSection)).toContain('#e0e0e0');
+    expect(rule('.reader-night .reader-search-panel .icon-btn-sm:active', nightSection)).toContain(
+      'rgba(200, 157, 83, .2)',
+    );
+  });
+
+  it('fits input, count and 32px icon buttons in one row at 320px', () => {
+    const input = rule('.reader-search-input');
+    expect(input).toMatch(/\bflex:\s*1\b/);
+    expect(input).toMatch(/\bmin-width:\s*0\b/);
+
+    const count = rule('.reader-search-count');
+    expect(count).toMatch(/\bflex-shrink:\s*0\b/);
+    expect(count).toMatch(/\bwhite-space:\s*nowrap\b/);
+
+    const btn = rule('.reader-search-panel .icon-btn-sm');
+    expect(btn).toMatch(/\bflex-shrink:\s*0\b/);
+    expect(btn).toMatch(/\bmin-width:\s*32px\b/);
+    expect(btn).toMatch(/\bmin-height:\s*32px\b/);
+    const pad = Number(btn.match(/\bpadding:\s*(\d+)px/)?.[1]);
+    expect(pad).toBeGreaterThanOrEqual(7);
+
+    const svg = rule('.reader-search-panel .icon-svg');
+    expect(svg).toMatch(/\bwidth:\s*18px\b/);
+    expect(svg).toMatch(/\bheight:\s*18px\b/);
+
+    const panel = rule('.reader-search-panel');
+    const hPad = Number(panel.match(/\bpadding:\s*\d+px\s+(\d+)px/)?.[1]);
+    const gap = Number(panel.match(/\bgap:\s*(\d+)px/)?.[1]);
+    const countMin = Number(count.match(/\bmin-width:\s*(\d+)px/)?.[1]);
+    const svgW = Number(svg.match(/\bwidth:\s*(\d+)px/)?.[1]);
+    const btnSize = Math.max(32, svgW + 2 * pad);
+    expect(2 * hPad + 4 * gap + countMin + 3 * btnSize).toBeLessThanOrEqual(200);
   });
 });
 
