@@ -3659,6 +3659,7 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-result,
 #screen-settings,
 #screen-error-log,
+#screen-tools-all,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
@@ -3678,7 +3679,9 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-settings:not(.hidden)) .top-bar,
 .app:has(#screen-settings:not(.hidden)) .screen-container,
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
-.app:has(#screen-error-log:not(.hidden)) .screen-container {
+.app:has(#screen-error-log:not(.hidden)) .screen-container,
+.app:has(#screen-tools-all:not(.hidden)) .top-bar,
+.app:has(#screen-tools-all:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3711,6 +3714,7 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-result,
   :root:not(.light-theme) #screen-settings,
   :root:not(.light-theme) #screen-error-log,
+  :root:not(.light-theme) #screen-tools-all,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
@@ -3730,7 +3734,9 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-settings:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-settings:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -3758,6 +3764,7 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-result,
 :root.dark-theme #screen-settings,
 :root.dark-theme #screen-error-log,
+:root.dark-theme #screen-tools-all,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
@@ -3777,7 +3784,9 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-settings:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-settings:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-error-log:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-error-log:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-error-log:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -7838,6 +7847,7 @@ button.book-page-label:active {
 
 .app:has(#screen-settings:not(.hidden)) .top-bar,
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
+.app:has(#screen-tools-all:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -7847,6 +7857,7 @@ button.book-page-label:active {
 
 .app:has(#screen-settings:not(.hidden)) .top-bar-title,
 .app:has(#screen-error-log:not(.hidden)) .top-bar-title,
+.app:has(#screen-tools-all:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -7858,6 +7869,7 @@ button.book-page-label:active {
 
 .app:has(#screen-settings:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-error-log:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-tools-all:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -10715,6 +10727,154 @@ button.book-page-label:active {
   background-color: #1c1a18;
 }
 /* End Atelier Settings & Recent Errors */
+
+/* Atelier All Tools (#screen-tools-all) */
+.app:has(#screen-tools-all:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-tools-all:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-tools-all {
+  color: var(--atelier-ink-black);
+  padding: 8px 0 24px;
+}
+
+#screen-tools-all .tool-category {
+  gap: 8px;
+}
+
+#screen-tools-all .tool-category-title {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--atelier-ink-muted);
+  margin: 0 4px;
+}
+
+#screen-tools-all .tool-rows {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+}
+
+#screen-tools-all .tool-row {
+  color: var(--atelier-ink-black);
+  border-bottom: 1px solid var(--atelier-border-hairline);
+  padding: 14px 16px;
+}
+
+#screen-tools-all .tool-rows .tool-row:last-child {
+  border-bottom: none;
+}
+
+#screen-tools-all .tool-row:active {
+  background: rgba(154, 64, 29, 0.08);
+}
+
+#screen-tools-all .tool-row-icon {
+  background: rgba(154, 64, 29, 0.1);
+  border-radius: 10px;
+}
+
+#screen-tools-all .tool-icon,
+#screen-tools-all .tool-row:hover .tool-icon,
+#screen-tools-all .tool-row:active .tool-icon {
+  stroke: var(--atelier-primary);
+}
+
+#screen-tools-all .tool-row-title {
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#screen-tools-all .tool-row-desc,
+#screen-tools-all .tool-row-chevron {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-tools-all .tool-row.is-soon .tool-row-icon {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-border-hairline);
+  opacity: 0.75;
+}
+
+#screen-tools-all .tool-row.is-soon .tool-icon,
+#screen-tools-all .tool-row.is-soon:hover .tool-icon,
+#screen-tools-all .tool-row.is-soon:active .tool-icon {
+  stroke: var(--atelier-ink-muted);
+}
+
+#screen-tools-all .tool-row.is-soon .tool-row-title,
+#screen-tools-all .tool-row.is-soon .tool-row-desc {
+  opacity: 0.65;
+}
+
+#screen-tools-all .badge-soon {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--atelier-ink-muted);
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 9999px;
+  padding: 3px 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-tools-all .tool-row:active {
+    background: rgba(217, 135, 95, 0.12);
+  }
+
+  :root:not(.light-theme) #screen-tools-all .tool-row-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #screen-tools-all .tool-icon,
+  :root:not(.light-theme) #screen-tools-all .tool-row:hover .tool-icon,
+  :root:not(.light-theme) #screen-tools-all .tool-row:active .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-tools-all .tool-row.is-soon .tool-icon,
+  :root:not(.light-theme) #screen-tools-all .tool-row.is-soon:hover .tool-icon,
+  :root:not(.light-theme) #screen-tools-all .tool-row.is-soon:active .tool-icon {
+    stroke: var(--atelier-ink-muted);
+  }
+}
+
+:root.dark-theme #screen-tools-all .tool-row:active {
+  background: rgba(217, 135, 95, 0.12);
+}
+
+:root.dark-theme #screen-tools-all .tool-row-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #screen-tools-all .tool-icon,
+:root.dark-theme #screen-tools-all .tool-row:hover .tool-icon,
+:root.dark-theme #screen-tools-all .tool-row:active .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-tools-all .tool-row.is-soon .tool-icon,
+:root.dark-theme #screen-tools-all .tool-row.is-soon:hover .tool-icon,
+:root.dark-theme #screen-tools-all .tool-row.is-soon:active .tool-icon {
+  stroke: var(--atelier-ink-muted);
+}
+/* End Atelier All Tools */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {
