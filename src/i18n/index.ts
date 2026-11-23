@@ -61,6 +61,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tool.imageToPdf.desc': 'Convert photos into PDF format',
     'tool.mdToPdf.title': 'Markdown to Booklet',
     'tool.mdToPdf.desc': 'Turn multi-file docs into ready-to-print A5 booklets',
+    'mdToPdf.heading': 'Bind Markdown docs',
     'mdToPdf.pickFiles': 'Select .md Files',
     'mdToPdf.emptyHint': 'No Markdown files added yet. Select one or more .md files to begin.',
     'mdToPdf.padEven': 'Start each chapter on odd page (recto)',
@@ -210,9 +211,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'cover.formatSingle': 'A3 paper (1 sheet)',
     'cover.totalDimensionsSplit': 'Sheet 1: {w1} × {h} mm · Sheet 2: {w2} × {h} mm',
 
+    'imageToPdf.heading': 'Turn photos into PDF',
     'imageToPdf.subtitle': 'Take photos with the camera or add from the gallery, set their order, then convert to PDF.',
-    'imageToPdf.takePhoto': '📷 Take Photo',
-    'imageToPdf.pickFromGallery': '🖼️ Pick from Gallery',
+    'imageToPdf.takePhoto': 'Take Photo',
+    'imageToPdf.pickFromGallery': 'Pick from Gallery',
     'imageToPdf.emptyHint': 'No images added yet.',
     'imageToPdf.generatePdf': 'Make PDF',
 
@@ -848,6 +850,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tool.imageToPdf.desc': 'Fotoğrafları PDF formatına dönüştürün',
     'tool.mdToPdf.title': "Markdown'dan Kitapçık",
     'tool.mdToPdf.desc': 'Çoklu .md dosyalarını basıma hazır A5 kitapçığa dönüştürün',
+    'mdToPdf.heading': 'Markdown belgelerini dizgileyin',
     'mdToPdf.pickFiles': '.md Dosyaları Seç',
     'mdToPdf.emptyHint': 'Henüz Markdown dosyası eklenmedi. Başlamak için bir veya birden fazla .md dosyası seçin.',
     'mdToPdf.padEven': 'Her bölüm sağ (tek) sayfadan başlasın',
@@ -997,9 +1000,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'cover.formatSingle': 'A3 kâğıt (tek tabaka)',
     'cover.totalDimensionsSplit': 'Tabaka 1: {w1} × {h} mm · Tabaka 2: {w2} × {h} mm',
 
+    'imageToPdf.heading': "Fotoğrafları PDF'e dönüştürün",
     'imageToPdf.subtitle': "Kamera ile fotoğraf çekin veya galeriden ekleyin, sırasını belirleyip PDF'e dönüştürün.",
-    'imageToPdf.takePhoto': '📷 Fotoğraf Çek',
-    'imageToPdf.pickFromGallery': '🖼️ Galeriden Seç',
+    'imageToPdf.takePhoto': 'Fotoğraf Çek',
+    'imageToPdf.pickFromGallery': 'Galeriden Seç',
     'imageToPdf.emptyHint': 'Henüz görsel eklenmedi.',
     'imageToPdf.generatePdf': 'PDF Üret',
 

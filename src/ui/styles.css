@@ -3938,6 +3938,9 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-rotate,
 #screen-page-numbers,
 #screen-watermark,
+#screen-image-to-pdf,
+#screen-md-to-pdf,
+#screen-crop,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
@@ -3971,7 +3974,13 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
 .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
 .app:has(#screen-watermark:not(.hidden)) .top-bar,
-.app:has(#screen-watermark:not(.hidden)) .screen-container {
+.app:has(#screen-watermark:not(.hidden)) .screen-container,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-crop:not(.hidden)) .top-bar,
+.app:has(#screen-crop:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -4010,6 +4019,9 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-rotate,
   :root:not(.light-theme) #screen-page-numbers,
   :root:not(.light-theme) #screen-watermark,
+  :root:not(.light-theme) #screen-image-to-pdf,
+  :root:not(.light-theme) #screen-md-to-pdf,
+  :root:not(.light-theme) #screen-crop,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
@@ -4043,7 +4055,13 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-crop:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -4077,6 +4095,9 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-rotate,
 :root.dark-theme #screen-page-numbers,
 :root.dark-theme #screen-watermark,
+:root.dark-theme #screen-image-to-pdf,
+:root.dark-theme #screen-md-to-pdf,
+:root.dark-theme #screen-crop,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
@@ -4110,7 +4131,13 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-watermark:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-crop:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-crop:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -8191,6 +8218,9 @@ button.book-page-label:active {
 .app:has(#screen-rotate:not(.hidden)) .top-bar,
 .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
 .app:has(#screen-watermark:not(.hidden)) .top-bar,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar,
+.app:has(#screen-crop:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -8206,6 +8236,9 @@ button.book-page-label:active {
 .app:has(#screen-rotate:not(.hidden)) .top-bar-title,
 .app:has(#screen-page-numbers:not(.hidden)) .top-bar-title,
 .app:has(#screen-watermark:not(.hidden)) .top-bar-title,
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar-title,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar-title,
+.app:has(#screen-crop:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -8223,6 +8256,9 @@ button.book-page-label:active {
 .app:has(#screen-rotate:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-page-numbers:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-watermark:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-crop:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -11541,6 +11577,591 @@ button.book-page-label:active {
   color: #d9875f;
 }
 /* End Atelier Tool Screens — Phase 1 */
+
+/* Atelier Tool Screens — Phase 2 (Working States, Image/MD & Crop) */
+.app:has(#screen-image-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-md-to-pdf:not(.hidden)) .screen-container,
+.app:has(#screen-crop:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-image-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-md-to-pdf:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-crop:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-image-to-pdf,
+#screen-md-to-pdf,
+#screen-crop {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 24px;
+  min-height: 100%;
+}
+
+#screen-image-to-pdf:not(:has(.image-grid > *)),
+#screen-md-to-pdf:not(:has(#mdFileList > *)) {
+  justify-content: center;
+}
+
+#screen-image-to-pdf .hero,
+#screen-md-to-pdf .hero {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 28px;
+  text-align: center;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#screen-image-to-pdf .hero-icon,
+#screen-md-to-pdf .hero-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: rgba(154, 64, 29, 0.1);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#screen-image-to-pdf .hero-icon .tool-icon,
+#screen-md-to-pdf .hero-icon .tool-icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#screen-image-to-pdf .tool-hero-kicker,
+#screen-md-to-pdf .tool-hero-kicker {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--atelier-tertiary);
+  margin-bottom: 6px;
+}
+
+#screen-image-to-pdf .hero h2,
+#screen-md-to-pdf .hero h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.65rem, 5vw + 0.3rem, 2.05rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0 0 10px;
+}
+
+#screen-image-to-pdf .hero-subtitle,
+#screen-md-to-pdf .hero-subtitle {
+  margin: 0 auto 24px;
+  color: var(--atelier-ink-muted);
+  font-size: 0.94rem;
+  line-height: 1.48;
+  max-width: 310px;
+}
+
+#screen-image-to-pdf .image-actions,
+#screen-md-to-pdf .image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  justify-content: center;
+}
+
+#screen-image-to-pdf .image-actions .btn,
+#screen-md-to-pdf .image-actions .btn {
+  flex: 1 1 130px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+
+#screen-image-to-pdf .tool-action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+#screen-image-to-pdf .btn-primary,
+#screen-md-to-pdf .btn-primary,
+#screen-crop .btn-primary {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 14px 24px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+#screen-image-to-pdf .btn-primary:disabled,
+#screen-md-to-pdf .btn-primary:disabled,
+#screen-crop .btn-primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+#screen-image-to-pdf .btn-tonal,
+#screen-md-to-pdf .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-image-to-pdf .btn-text,
+#screen-md-to-pdf .btn-text,
+#screen-crop .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-image-to-pdf .tool-privacy-footer,
+#screen-md-to-pdf .tool-privacy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+  text-align: center;
+}
+
+#screen-image-to-pdf .tool-privacy-footer svg,
+#screen-md-to-pdf .tool-privacy-footer svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+#screen-image-to-pdf:has(.image-grid > *) .tool-privacy-footer,
+#screen-md-to-pdf:has(#mdFileList > *) .tool-privacy-footer {
+  display: none;
+}
+
+/* Working states across all 7 tool screens */
+#screen-merge-picker .merge-file-list,
+#screen-organize .merge-file-list,
+#screen-rotate .merge-file-list,
+#screen-md-to-pdf .merge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#screen-merge-picker .merge-file-row,
+#screen-organize .organize-row,
+#screen-rotate .organize-row,
+#screen-md-to-pdf .merge-file-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--atelier-ink-black);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.04);
+}
+
+#screen-merge-picker .merge-file-index,
+#screen-md-to-pdf .merge-file-index {
+  background: rgba(154, 64, 29, 0.12);
+  color: var(--atelier-primary);
+}
+
+#screen-merge-picker .merge-file-size,
+#screen-organize .organize-thumb-placeholder,
+#screen-rotate .rotate-angle-label,
+#screen-md-to-pdf .merge-file-size,
+#screen-image-to-pdf .merge-empty-hint,
+#screen-md-to-pdf .merge-empty-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-image-to-pdf .merge-empty-hint,
+#screen-md-to-pdf .merge-empty-hint {
+  font-size: 0.86rem;
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+#screen-organize .organize-thumb,
+#screen-rotate .organize-thumb {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-merge-picker .merge-file-actions .icon-btn-sm,
+#screen-organize .merge-file-actions .icon-btn-sm,
+#screen-rotate .rotate-row-actions .icon-btn-sm,
+#screen-md-to-pdf .merge-file-actions .icon-btn-sm {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-page-numbers .pagenum-preview-card,
+#screen-watermark .pagenum-preview-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(28, 26, 24, 0.06);
+}
+
+#screen-page-numbers .pagenum-overlay {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+#screen-page-numbers .settings-panel .setting-card,
+#screen-watermark .settings-panel .setting-card,
+#screen-md-to-pdf .md-options-panel {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--atelier-ink-black);
+}
+
+#screen-page-numbers .setting-row,
+#screen-watermark .setting-row,
+#screen-md-to-pdf .config-label {
+  color: var(--atelier-ink-black);
+  font-weight: 600;
+}
+
+#screen-page-numbers .setting-value,
+#screen-watermark .setting-value {
+  color: var(--atelier-primary);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+#screen-page-numbers .setting-hint,
+#screen-watermark .setting-hint {
+  color: var(--atelier-ink-muted);
+}
+
+#screen-page-numbers .segmented-btn,
+#screen-watermark .segmented-btn,
+#screen-md-to-pdf .segmented-btn {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+#screen-page-numbers .segmented-btn.is-active,
+#screen-watermark .segmented-btn.is-active,
+#screen-md-to-pdf .segmented-btn.is-active {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-color: var(--atelier-primary);
+}
+
+#screen-page-numbers .number-input,
+#screen-watermark .number-input {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+}
+
+#screen-watermark .slider {
+  background: var(--atelier-paper-edge);
+  accent-color: var(--atelier-primary);
+}
+
+#screen-watermark .slider::-webkit-slider-thumb {
+  background: var(--atelier-primary);
+}
+
+#screen-md-to-pdf .checkbox-row {
+  color: var(--atelier-ink-black);
+}
+
+#screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+  accent-color: var(--atelier-primary);
+}
+
+#screen-image-to-pdf .image-card {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+}
+
+#screen-image-to-pdf .image-card-thumb {
+  background: var(--atelier-bg);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-image-to-pdf .image-card-badge {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+#screen-image-to-pdf .image-card-actions .icon-btn-sm {
+  background: var(--atelier-bg);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 8px;
+}
+
+#screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+  background: rgba(154, 64, 29, 0.12);
+  color: #9a241d;
+  border-color: rgba(154, 64, 29, 0.28);
+}
+
+/* Crop screen (#screen-crop) */
+#screen-crop .crop-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--atelier-ink-black);
+}
+
+#screen-crop .crop-container {
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+}
+
+#screen-crop .crop-polygon {
+  fill: rgba(154, 64, 29, 0.28);
+}
+
+#screen-crop .crop-line {
+  stroke: var(--atelier-primary);
+}
+
+#screen-crop .crop-handle {
+  fill: var(--atelier-primary);
+  stroke: #fff8f5;
+}
+
+#screen-crop .crop-handle:active {
+  fill: var(--atelier-gold-foil);
+}
+
+#screen-crop .crop-loupe {
+  border-color: var(--atelier-primary);
+}
+
+#screen-crop .crop-hint {
+  color: var(--atelier-ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-image-to-pdf .hero,
+  :root:not(.light-theme) #screen-md-to-pdf .hero {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .hero-icon,
+  :root:not(.light-theme) #screen-md-to-pdf .hero-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-md-to-pdf .hero-icon .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .btn-primary,
+  :root:not(.light-theme) #screen-md-to-pdf .btn-primary,
+  :root:not(.light-theme) #screen-crop .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .btn-text,
+  :root:not(.light-theme) #screen-md-to-pdf .btn-text,
+  :root:not(.light-theme) #screen-crop .btn-text {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .merge-file-index,
+  :root:not(.light-theme) #screen-md-to-pdf .merge-file-index {
+    background: rgba(217, 135, 95, 0.16);
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-page-numbers .setting-value,
+  :root:not(.light-theme) #screen-watermark .setting-value {
+    color: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-page-numbers .pagenum-overlay,
+  :root:not(.light-theme) #screen-page-numbers .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-watermark .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-md-to-pdf .segmented-btn.is-active,
+  :root:not(.light-theme) #screen-image-to-pdf .image-card-badge {
+    background: #c4683c;
+    border-color: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-watermark .slider {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-watermark .slider::-webkit-slider-thumb {
+    background: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+    accent-color: #c4683c;
+  }
+
+  :root:not(.light-theme) #screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+    background: rgba(217, 95, 75, 0.18);
+    color: #f4a498;
+    border-color: rgba(217, 95, 75, 0.32);
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-polygon {
+    fill: rgba(217, 135, 95, 0.3);
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-line {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-handle {
+    fill: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-crop .crop-loupe {
+    border-color: #d9875f;
+  }
+}
+
+:root.dark-theme #screen-image-to-pdf .hero,
+:root.dark-theme #screen-md-to-pdf .hero {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-image-to-pdf .hero-icon,
+:root.dark-theme #screen-md-to-pdf .hero-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #screen-image-to-pdf .hero-icon .tool-icon,
+:root.dark-theme #screen-md-to-pdf .hero-icon .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-image-to-pdf .btn-primary,
+:root.dark-theme #screen-md-to-pdf .btn-primary,
+:root.dark-theme #screen-crop .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-image-to-pdf .btn-text,
+:root.dark-theme #screen-md-to-pdf .btn-text,
+:root.dark-theme #screen-crop .btn-text {
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-merge-picker .merge-file-index,
+:root.dark-theme #screen-md-to-pdf .merge-file-index {
+  background: rgba(217, 135, 95, 0.16);
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-page-numbers .setting-value,
+:root.dark-theme #screen-watermark .setting-value {
+  color: #d9875f;
+}
+
+:root.dark-theme #screen-page-numbers .pagenum-overlay,
+:root.dark-theme #screen-page-numbers .segmented-btn.is-active,
+:root.dark-theme #screen-watermark .segmented-btn.is-active,
+:root.dark-theme #screen-md-to-pdf .segmented-btn.is-active,
+:root.dark-theme #screen-image-to-pdf .image-card-badge {
+  background: #c4683c;
+  border-color: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-watermark .slider {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #screen-watermark .slider::-webkit-slider-thumb {
+  background: #c4683c;
+}
+
+:root.dark-theme #screen-md-to-pdf .checkbox-row input[type='checkbox'] {
+  accent-color: #c4683c;
+}
+
+:root.dark-theme #screen-image-to-pdf .image-card-actions .icon-btn-sm.delete-btn {
+  background: rgba(217, 95, 75, 0.18);
+  color: #f4a498;
+  border-color: rgba(217, 95, 75, 0.32);
+}
+
+:root.dark-theme #screen-crop .crop-polygon {
+  fill: rgba(217, 135, 95, 0.3);
+}
+
+:root.dark-theme #screen-crop .crop-line {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-crop .crop-handle {
+  fill: #d9875f;
+}
+
+:root.dark-theme #screen-crop .crop-loupe {
+  border-color: #d9875f;
+}
+/* End Atelier Tool Screens — Phase 2 */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {

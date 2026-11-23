@@ -249,3 +249,136 @@ describe('Atelier Tool Screens — Phase 1 (Empty / Picker States)', () => {
     });
   });
 });
+
+const PHASE2_SCREENS = ['screen-image-to-pdf', 'screen-md-to-pdf', 'screen-crop'] as const;
+
+describe('Atelier Tool Screens — Phase 2 (Working States, Image/MD & Crop)', () => {
+  const phase2Css = extractSection(
+    css,
+    '/* Atelier Tool Screens — Phase 2 (Working States, Image/MD & Crop) */',
+    '/* End Atelier Tool Screens — Phase 2 */',
+  );
+
+  it('registers #screen-image-to-pdf, #screen-md-to-pdf, #screen-crop in all three Atelier token lists and top-bar groups', () => {
+    const { light, prefersDark, darkClass } = extractTokenSelectorBlocks();
+    const parseSelectorList = (raw: string): string[] =>
+      raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    const lightSelectors = parseSelectorList(light.slice(0, light.indexOf('{')));
+    const prefersDarkSelectors = parseSelectorList(
+      prefersDark.slice(
+        prefersDark.indexOf(':root:not(.light-theme)'),
+        prefersDark.indexOf('{', prefersDark.indexOf(':root:not(.light-theme)')),
+      ),
+    );
+    const darkClassSelectors = parseSelectorList(darkClass.slice(0, darkClass.indexOf('{')));
+
+    const headerPos = css.indexOf('printer needs. Scoped to #screen-result and its parent container.');
+    expect(headerPos).toBeGreaterThan(-1);
+    const start = css.indexOf('*/', headerPos) + 2;
+    const end = css.indexOf('/* Clear the absolute top bar;', start);
+    const ruleSelectors = [...css.slice(start, end).matchAll(/([^{}]+)\{/g)].map((m) =>
+      parseSelectorList(m[1]),
+    );
+    expect(ruleSelectors).toHaveLength(3);
+
+    for (const screenId of PHASE2_SCREENS) {
+      for (const sel of [
+        `#${screenId}`,
+        `.app:has(#${screenId}:not(.hidden)) .top-bar`,
+        `.app:has(#${screenId}:not(.hidden)) .screen-container`,
+      ]) {
+        expect(lightSelectors, `light token block missing ${sel}`).toContain(sel);
+        expect(
+          prefersDarkSelectors,
+          `prefersDark token block missing :root:not(.light-theme) ${sel}`,
+        ).toContain(`:root:not(.light-theme) ${sel}`);
+        expect(
+          darkClassSelectors,
+          `darkClass token block missing :root.dark-theme ${sel}`,
+        ).toContain(`:root.dark-theme ${sel}`);
+      }
+      expect(ruleSelectors[0]).toContain(`.app:has(#${screenId}:not(.hidden)) .top-bar`);
+      expect(ruleSelectors[1]).toContain(`.app:has(#${screenId}:not(.hidden)) .top-bar-title`);
+      expect(ruleSelectors[2]).toContain(
+        `.app:has(#${screenId}:not(.hidden)) .top-bar .icon-btn:not([hidden])`,
+      );
+      expect(phase2Css).toContain(`.app:has(#${screenId}:not(.hidden)) .screen-container`);
+    }
+  });
+
+  it('uses zero indigo/purple literals or legacy primary tokens in Phase 2 CSS and defines all custom properties', () => {
+    expect(phase2Css).not.toMatch(FORBIDDEN_INDIGO_RE);
+    const usedVars = new Set([...phase2Css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+    for (const v of usedVars) {
+      expect(css, `CSS variable ${v} must be defined`).toContain(`${v}:`);
+    }
+  });
+
+  it('removes emojis from #screen-image-to-pdf, #screen-md-to-pdf, and i18n camera/gallery labels while preserving i18n spans', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+    vi.stubGlobal('document', { documentElement: {}, querySelectorAll: () => [] });
+    try {
+      const imgHtml = extractTagBlock(html, 'id="screen-image-to-pdf"', 'section');
+      const mdHtml = extractTagBlock(html, 'id="screen-md-to-pdf"', 'section');
+
+      for (const [name, section] of [
+        ['#screen-image-to-pdf', imgHtml],
+        ['#screen-md-to-pdf', mdHtml],
+      ] as const) {
+        expect(section, `${name} should contain no emojis`).not.toMatch(EMOJI_RE);
+        const heroHtml = extractTagBlock(section, 'class="hero"', 'div');
+        expect(heroHtml).toContain('class="tool-icon"');
+        expect(heroHtml).toContain('class="tool-hero-kicker"');
+        expect(section).toContain('class="tool-privacy-footer"');
+      }
+
+      // SVG inside #imgCameraBtn must survive applyLanguageToDom() by placing data-i18n on inner <span>
+      const camBtnMatch = imgHtml.match(/<button[^>]*id="imgCameraBtn"[^>]*>([\s\S]*?)<\/button>/);
+      expect(camBtnMatch).not.toBeNull();
+      expect(camBtnMatch![0]).not.toMatch(/<button[^>]*data-i18n="/);
+      expect(camBtnMatch![1]).toContain('<svg');
+      expect(camBtnMatch![1]).toContain('<span data-i18n="imageToPdf.takePhoto">');
+
+      setLanguage('en');
+      expect(t('imageToPdf.takePhoto')).not.toMatch(EMOJI_RE);
+      expect(t('imageToPdf.pickFromGallery')).not.toMatch(EMOJI_RE);
+      expect(t('imageToPdf.heading')).not.toBe(t('tool.imageToPdf.title'));
+      expect(t('mdToPdf.heading')).not.toBe(t('tool.mdToPdf.title'));
+
+      setLanguage('tr');
+      expect(t('imageToPdf.takePhoto')).not.toMatch(EMOJI_RE);
+      expect(t('imageToPdf.pickFromGallery')).not.toMatch(EMOJI_RE);
+    } finally {
+      setLanguage('en');
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('styles active tool working states (lists, settings, slider, image cards, crop) in light and dark without altering global .slider', () => {
+    for (const selector of [
+      '.merge-file-row',
+      '.organize-row',
+      '.setting-card',
+      '.segmented-btn.is-active',
+      '#screen-watermark .slider',
+      '.pagenum-overlay',
+      '.image-card-badge',
+      '#screen-crop .crop-line',
+      '#screen-crop .crop-handle',
+      '#screen-crop .crop-loupe',
+    ]) {
+      expect(phase2Css, `missing Phase 2 selector ${selector}`).toContain(selector);
+    }
+    expect(phase2Css).toContain(':root:not(.light-theme) #screen-crop .crop-line');
+    expect(phase2Css).toContain(':root.dark-theme #screen-crop .crop-line');
+
+    const globalSliderMatch = css.match(/^\.slider\s*\{([^}]+)\}/m);
+    expect(globalSliderMatch).not.toBeNull();
+    expect(globalSliderMatch![1]).toContain('height: 4px;');
+  });
+});
