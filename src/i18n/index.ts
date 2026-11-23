@@ -22,7 +22,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'onboarding.start': 'Get Started',
 
     'nav.tools': 'Tools',
-    'nav.hub': 'Hub',
     'nav.recents': 'Recent',
     'nav.files': 'Files',
     'nav.settings': 'Settings',
@@ -68,7 +67,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'toast.mdCreated': 'Markdown compiled to booklet successfully',
 
     'settings.title': 'Settings',
-    'settings.subtitle': 'Manage your app preferences.',
     'settings.group.appearance': 'Appearance',
     'settings.darkTheme': 'Dark Theme',
     'settings.language': 'Language',
@@ -109,7 +107,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'screenTitle.pageNumbersResult': 'Numbers Added',
     'screenTitle.watermarkResult': 'Watermark Added',
     'screenTitle.crop': 'Align Corners',
-    'screenTitle.files': 'My Files',
 
     'common.pickPdf': 'Select PDF',
     'common.remove': 'Remove',
@@ -804,7 +801,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'onboarding.start': 'Başla',
 
     'nav.tools': 'Araçlar',
-    'nav.hub': 'Hub',
     'nav.recents': 'Son',
     'nav.files': 'Dosyalar',
     'nav.settings': 'Ayarlar',
@@ -850,7 +846,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'toast.mdCreated': 'Markdown başarıyla kitapçığa dönüştürüldü',
 
     'settings.title': 'Ayarlar',
-    'settings.subtitle': 'Uygulama tercihlerinizi düzenleyin.',
     'settings.group.appearance': 'Görünüm',
     'settings.darkTheme': 'Koyu Tema',
     'settings.language': 'Dil',
@@ -891,7 +886,6 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'screenTitle.pageNumbersResult': 'Numaralar Eklendi',
     'screenTitle.watermarkResult': 'Filigran Eklendi',
     'screenTitle.crop': 'Köşeleri Hizala',
-    'screenTitle.files': 'Dosyalarım',
 
     'common.pickPdf': 'PDF Seç',
     'common.remove': 'Kaldır',

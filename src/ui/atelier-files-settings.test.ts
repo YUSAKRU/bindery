@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const html = readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf-8');
 const css = readFileSync(fileURLToPath(new URL('./styles.css', import.meta.url)), 'utf-8');
+const i18n = readFileSync(fileURLToPath(new URL('../i18n/index.ts', import.meta.url)), 'utf-8');
+const appSource = readFileSync(fileURLToPath(new URL('./app.ts', import.meta.url)), 'utf-8');
 
 function extractSection(source: string, startMarker: string, endMarker: string): string {
   const start = source.indexOf(startMarker);
@@ -228,6 +230,102 @@ describe('Atelier Files tab, Settings, and Recent Errors (T-12 step 5)', () => {
     );
     for (const v of usedVars) {
       expect(css, `CSS variable ${v} must be defined`).toContain(`${v}:`);
+    }
+  });
+});
+
+describe('Atelier Settings switch, Recent Errors intro, and dead i18n cleanup (T-12 step 6)', () => {
+  const settingsCss = extractSection(
+    css,
+    '/* Atelier Settings & Recent Errors (#screen-settings & #screen-error-log) */',
+    '/* End Atelier Settings & Recent Errors */',
+  );
+
+  it('gives #screen-settings .switch .slider a real pill track height (!= 4px) without altering global .slider', () => {
+    const globalSliderMatch = css.match(/^\.slider\s*\{([^}]+)\}/m);
+    expect(globalSliderMatch).not.toBeNull();
+    const globalSliderBody = globalSliderMatch![1];
+    expect(globalSliderBody).toContain('width: 100%;');
+    expect(globalSliderBody).toContain('appearance: none;');
+    expect(globalSliderBody).toContain('height: 4px;');
+    expect(globalSliderBody).toContain('border-radius: 2px;');
+    expect(globalSliderBody).toContain('background: var(--color-outline);');
+    expect(globalSliderBody).toContain('accent-color: var(--color-primary);');
+
+    const switchTrackMatch = settingsCss.match(/#screen-settings \.switch \.slider\s*\{([^}]+)\}/);
+    expect(switchTrackMatch).not.toBeNull();
+    const switchTrackBody = switchTrackMatch![1];
+    expect(switchTrackBody).toMatch(/\bheight:\s*(?!4px\b)(?:24px|auto)\s*;/);
+    expect(switchTrackBody).toContain('width: auto;');
+    expect(switchTrackBody).toContain('appearance: none;');
+    expect(switchTrackBody).toContain('accent-color: auto;');
+    expect(switchTrackBody).toContain('border-radius: 24px;');
+    expect(switchTrackBody).toContain('top: 0;');
+    expect(switchTrackBody).toContain('left: 0;');
+    expect(switchTrackBody).toContain('right: 0;');
+    expect(switchTrackBody).toContain('bottom: 0;');
+    expect(switchTrackBody).toContain('var(--atelier-paper-edge)');
+
+    const switchKnobMatch = settingsCss.match(/#screen-settings \.switch \.slider:before\s*\{([^}]+)\}/);
+    expect(switchKnobMatch).not.toBeNull();
+    const switchKnobBody = switchKnobMatch![1];
+    expect(switchKnobBody).toContain('height: 18px;');
+    expect(switchKnobBody).toContain('width: 18px;');
+    expect(switchKnobBody).toContain('left: 3px;');
+    expect(switchKnobBody).toContain('top: 3px;');
+    expect(switchKnobBody).toContain('bottom: 3px;');
+
+    expect(settingsCss).toMatch(
+      /#screen-settings \.switch input:checked \+ \.slider\s*\{[^}]*background-color:\s*var\(--atelier-primary\)/,
+    );
+    expect(settingsCss).toMatch(
+      /#screen-settings \.switch input:checked \+ \.slider:before\s*\{[^}]*transform:\s*translateX\(20px\)/,
+    );
+  });
+
+  it('removes .hero, duplicate h2, and emoji from #screen-error-log while styling errorLog.subtitle as an Atelier intro', () => {
+    const errorLogHtml = extractTagBlock(html, 'id="screen-error-log"', 'section');
+    expect(errorLogHtml).not.toContain('class="hero"');
+    expect(errorLogHtml).not.toContain('hero-icon');
+    expect(errorLogHtml).not.toMatch(/<h2\b/i);
+    expect(errorLogHtml).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(errorLogHtml).toContain('class="error-log-intro"');
+    expect(errorLogHtml).toContain('data-i18n="errorLog.subtitle"');
+
+    for (const id of [
+      'errorLogList',
+      'errorLogEmptyHint',
+      'errorLogActions',
+      'errorLogShareBtn',
+      'errorLogClearBtn',
+    ]) {
+      expect(errorLogHtml, `missing #${id} in #screen-error-log`).toContain(`id="${id}"`);
+    }
+
+    expect(settingsCss).not.toContain('#screen-error-log .hero');
+    const introMatch = settingsCss.match(/#screen-error-log \.error-log-intro\s*\{([^}]+)\}/);
+    expect(introMatch).not.toBeNull();
+    const introBody = introMatch![1];
+    expect(introBody).toContain('color: var(--atelier-ink-muted);');
+    expect(introBody).toContain('font-size: 0.9rem;');
+    expect(introBody).toContain('text-align: left;');
+    expect(introBody).toMatch(/margin:\s*[^;]*\b16px\b/);
+  });
+
+  it('removes dead T-12 i18n keys from en and tr with no remaining references, while keeping active keys', () => {
+    for (const deadKey of ['nav.hub', 'screenTitle.files', 'settings.subtitle']) {
+      expect(i18n, `dead key ${deadKey} should be absent from i18n`).not.toContain(`'${deadKey}':`);
+      expect(html, `dead key ${deadKey} should not appear in index.html`).not.toContain(deadKey);
+      expect(appSource, `dead key ${deadKey} should not appear in app.ts`).not.toContain(deadKey);
+    }
+
+    const trStart = i18n.indexOf('  tr: {');
+    const enBlock = i18n.slice(0, trStart);
+    const trBlock = i18n.slice(trStart);
+    for (const keptKey of ['nav.files', 'nav.settings', 'errorLog.subtitle']) {
+      expect(enBlock, `kept key ${keptKey} missing in en`).toContain(`'${keptKey}':`);
+      expect(trBlock, `kept key ${keptKey} missing in tr`).toContain(`'${keptKey}':`);
+      expect(html, `kept key ${keptKey} missing in index.html`).toContain(`data-i18n="${keptKey}"`);
     }
   });
 });
