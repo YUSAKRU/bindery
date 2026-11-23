@@ -6907,6 +6907,24 @@ export function initApp(): void {
     moveDocConfirmBtn.disabled = false;
   }
 
+  /** Renders the folder icon SVG + safe text label inside a Move modal folder button. */
+  function setMoveFolderButtonContent(btn: HTMLButtonElement, label: string): void {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'move-folder-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute(
+      'd',
+      'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+    );
+    svg.appendChild(path);
+    const text = document.createElement('span');
+    text.textContent = label;
+    btn.replaceChildren(svg, text);
+  }
+
   /** Builds one expandable folder row for the Move modal; subfolders are lazy-loaded on first expand. */
   function buildMoveFolderRow(path: string, name: string, depth: number): HTMLDivElement {
     const item = document.createElement('div');
@@ -6925,7 +6943,7 @@ export function initApp(): void {
 
     const selectBtn = document.createElement('button');
     selectBtn.className = 'folder-select-item';
-    selectBtn.textContent = `📁 ${name}`;
+    setMoveFolderButtonContent(selectBtn, name);
     selectBtn.dataset.path = path;
     selectBtn.addEventListener('click', () => selectMoveFolderRow(selectBtn, path));
     header.appendChild(selectBtn);
@@ -6970,7 +6988,7 @@ export function initApp(): void {
 
     const rootBtn = document.createElement('button');
     rootBtn.className = 'folder-select-item';
-    rootBtn.textContent = t('files.root');
+    setMoveFolderButtonContent(rootBtn, t('files.root'));
     rootBtn.dataset.path = '';
     rootBtn.addEventListener('click', () => selectMoveFolderRow(rootBtn, ''));
     moveDocFolderList.appendChild(rootBtn);

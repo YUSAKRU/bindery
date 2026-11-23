@@ -369,7 +369,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'pwa.iosSteps':
       'Tap Share (in Safari [↑] or Chrome) and select "Add to Home Screen" to install as a full-screen offline app.',
     'pwa.androidManualHint': 'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".',
-    'config.generateBooklet': 'Create Booklet',
+    'config.generateBooklet': 'Make Booklet',
 
     'stat.blankPagesAdded': 'Padding Pages',
     'stat.insertedBlanks': 'Inserted Blanks',
@@ -382,7 +382,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.coverPdfLabel': 'Cover PDF',
     'booklet.instructionsPdfLabel': 'Instructions PDF',
     'booklet.printHint':
-      '🖨️ Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.',
+      'Two-sided printer? Print the Combined Booklet PDF. One-sided? Print Front Side, then Back Side.',
     'booklet.saveAll': 'Save All · {count} PDFs',
 
 
@@ -427,7 +427,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'files.goToRoot': 'Go to root folder',
     'files.noSubfolders': 'No subfolders',
     'files.showSubfoldersOf': 'Show subfolders of "{name}"',
-    'files.root': '📁 / (Root)',
+    'files.root': '/ (Root)',
     'files.deleteConfirmFolder': '"{name}" folder and all its contents',
     'files.deleteConfirmFile': '"{name}" file',
     'files.deleteConfirmQuestion': 'Are you sure you want to permanently delete {label}?',
@@ -455,13 +455,13 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'watermark.imageSelectError': 'Image could not be selected: {message}',
 
     'error.fileSelectFailed': 'File could not be selected',
-    'error.bookletCreateFailed': 'Booklet could not be created',
+    'error.bookletCreateFailed': 'Booklet could not be made',
     'error.mergeFailed': 'Could not merge',
     'error.pdfOpenFailed': 'Could not open PDF',
     'error.applyFailed': 'Could not apply',
     'error.noImageSelectedTitle': 'No image selected',
     'error.noImageSelectedMessage': 'You must select an image to continue.',
-    'error.pdfCreateFailed': 'PDF could not be created',
+    'error.pdfCreateFailed': 'PDF could not be made',
     'error.MARKDOWN_NO_CONTENT': 'The selected Markdown files contain no printable content.',
     'error.MARKDOWN_FONT_LOAD_FAILED': 'Could not load the Markdown booklet fonts.',
     'error.MARKDOWN_RENDER_FAILED': 'Failed to compile Markdown into PDF.',
@@ -526,7 +526,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'error.FILE_TOO_LARGE': 'File is too large ({mb} MB). Maximum is {limitMb} MB.',
     'error.DOWNLOAD_NOT_A_PDF': 'The URL did not return a valid PDF (Content-Type: {contentType}).',
     'error.DOWNLOAD_READ_ERROR': 'An error occurred while downloading the file data: {message}',
-    'error.IMAGE_TO_PDF_NO_IMAGES': 'You must add at least one image to create a PDF.',
+    'error.IMAGE_TO_PDF_NO_IMAGES': 'You must add at least one image to make a PDF.',
     'error.IMAGE_TO_PDF_UNSUPPORTED_FORMAT': 'Unsupported image format: {format}. Only png and jpg are accepted.',
     'error.IMAGE_TO_PDF_CONVERT_FAILED': 'Could not convert images to PDF: {message}',
     'error.PERSPECTIVE_SINGULAR_MATRIX': 'Could not solve the transform matrix due to collinear points.',
@@ -563,7 +563,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'reader.pageLoadFailed': 'Page could not be loaded',
 
-    'toast.comingSoon': 'Coming soon 🚧',
+    'toast.comingSoon': 'Coming soon',
     'files.downloadPdf': 'Download PDF from URL',
     'toast.downloadSuccess': 'PDF downloaded successfully.',
     'toast.downloadFailed': 'Download failed: {message}',
@@ -602,8 +602,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'toast.fileDeleted': 'File deleted.',
     'toast.deleteError': 'Delete error.',
     'toast.fileOpenError': 'File could not be opened.',
-    'toast.folderCreated': '"{name}" folder created.',
-    'toast.folderCreateError': 'Folder could not be created.',
+    'toast.folderCreated': '"{name}" folder added.',
+    'toast.folderCreateError': 'Folder could not be added.',
     'toast.sourceTargetSame': 'Source and destination are the same.',
     'toast.moved': '"{name}" moved.',
     'toast.moveError': 'Move error.',
@@ -1172,7 +1172,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'booklet.coverPdfLabel': 'Kapak PDF',
     'booklet.instructionsPdfLabel': 'Talimat PDF',
     'booklet.printHint':
-      "🖨️ Yazıcın çift taraflı basıyorsa Birleşik Kitapçık PDF'ini bas. Tek taraflıysa önce Ön Yüz, sonra Arka Yüz.",
+      "Yazıcınız çift taraflı basıyorsa Birleşik Kitapçık PDF'ini basın. Tek taraflıysa önce Ön Yüz, sonra Arka Yüz.",
     'booklet.saveAll': 'Tümünü Kaydet · {count} PDF',
 
 
@@ -1217,7 +1217,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'files.goToRoot': 'Kök dizine git',
     'files.noSubfolders': 'Alt klasör yok',
     'files.showSubfoldersOf': '"{name}" alt klasörlerini göster',
-    'files.root': '📁 / (Kök)',
+    'files.root': '/ (Kök)',
     'files.deleteConfirmFolder': '"{name}" klasörünü ve tüm içeriğini',
     'files.deleteConfirmFile': '"{name}" dosyasını',
     'files.deleteConfirmQuestion': '{label} kalıcı olarak silmek istediğinize emin misiniz?',
@@ -1353,7 +1353,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
 
     'reader.pageLoadFailed': 'Sayfa yüklenemedi',
 
-    'toast.comingSoon': 'Çok yakında 🚧',
+    'toast.comingSoon': 'Çok yakında',
     'files.downloadPdf': 'İnternetten PDF İndir',
     'toast.downloadSuccess': 'PDF başarıyla indirildi.',
     'toast.downloadFailed': 'İndirme başarısız: {message}',

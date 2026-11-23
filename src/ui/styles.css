@@ -161,7 +161,6 @@ body {
   align-items: center;
   gap: 8px;
   padding: max(env(safe-area-inset-top), 20px) 20px 16px;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   /* Opaque, not the rgba(…, 0.8) + blur(20px) glass this was until 0.4.7:
      Android WebView reports backdrop-filter as supported but does not composite
      it for a bar layered over a scrolling container, so the blur never landed
@@ -8186,9 +8185,11 @@ button.book-page-label:active {
 }
 
 #screen-picker .warning-banner-icon {
-  font-size: 1.15rem;
-  flex-shrink: 0;
-  margin-top: -1px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: currentColor;
 }
 
 #screen-picker .picker-error-content {
@@ -12776,6 +12777,17 @@ button.book-page-label:active {
   background: rgba(154, 64, 29, 0.1);
 }
 
+#moveDocModal .move-folder-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 #openInToolSheet .open-in-icon {
   width: 30px;
   height: 30px;
@@ -12915,6 +12927,7 @@ button.book-page-label:active {
   }
 
   :root:not(.light-theme) #openInToolSheet .open-in-icon .tool-icon,
+  :root:not(.light-theme) #moveDocModal .move-folder-icon,
   :root:not(.light-theme) #growthReviewDialog .hero-icon .tool-icon,
   :root:not(.light-theme) #openInToolSheet .btn-text,
   :root:not(.light-theme) #moveDocModal .btn-text,
@@ -12973,6 +12986,7 @@ button.book-page-label:active {
 }
 
 :root.dark-theme #openInToolSheet .open-in-icon .tool-icon,
+:root.dark-theme #moveDocModal .move-folder-icon,
 :root.dark-theme #growthReviewDialog .hero-icon .tool-icon,
 :root.dark-theme #openInToolSheet .btn-text,
 :root.dark-theme #moveDocModal .btn-text,
