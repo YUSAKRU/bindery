@@ -2540,19 +2540,61 @@ dialog.modal-sheet::backdrop {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: var(--color-surface);
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+  color: var(--atelier-ink-black);
   display: flex;
   flex-direction: column;
-  padding: 24px 0 32px;
+  padding: max(16px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .onboarding-overlay.hidden {
   display: none !important;
 }
 
+.onboarding-topbar {
+  min-height: 36px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.onboarding-skip-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--atelier-ink-muted);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.onboarding-skip-btn:active {
+  background: rgba(154, 64, 29, 0.08);
+  color: var(--atelier-ink-black);
+}
+
+.onboarding-skip-btn[hidden] {
+  display: none;
+}
+
 .onboarding-track {
   flex: 1;
+  min-height: 0;
   display: flex;
   width: 300%;
   transform: translateX(0%);
@@ -2561,143 +2603,322 @@ dialog.modal-sheet::backdrop {
 
 .onboarding-page {
   width: 33.3333%;
+  height: 100%;
+  min-height: 0;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0 32px;
+  padding: 8px 24px 12px;
   box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.onboarding-page-inner {
+  width: 100%;
+  max-width: 360px;
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .onboarding-lang-switch {
-  display: flex;
+  display: inline-flex;
   gap: 4px;
-  background: var(--color-surface-variant);
-  border-radius: var(--radius-lg);
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 999px;
   padding: 4px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
 }
 
 .onboarding-lang-btn {
   appearance: none;
   border: none;
   background: transparent;
-  color: var(--color-on-surface-variant);
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--atelier-ink-muted);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
   padding: 8px 16px;
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .onboarding-lang-btn.is-selected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--atelier-primary);
+  color: #ffffff;
 }
 
-.onboarding-illustration {
-  font-size: 4.5rem;
-  margin-bottom: 16px;
+.onboarding-logo {
+  width: 96px;
+  height: 96px;
+  display: block;
+  margin: 0 auto 18px;
+  filter: drop-shadow(0 8px 16px rgba(43, 26, 18, 0.14));
 }
 
 .onboarding-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--color-on-surface);
-  margin: 0 0 24px;
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--atelier-ink-black);
+  margin: 0 0 12px;
 }
 
 .onboarding-text {
-  font-size: 1rem;
-  color: var(--color-on-surface-variant);
+  font-size: 0.96rem;
+  color: var(--atelier-ink-muted);
   line-height: 1.5;
   margin: 0;
+  max-width: 310px;
 }
 
-.onboarding-feature-list {
+.onboarding-privacy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 22px 0 0;
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: var(--atelier-ink-muted);
+}
+
+.onboarding-privacy-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--atelier-tertiary);
+}
+
+.onboarding-steps {
   list-style: none;
-  margin: 20px 0 0;
+  width: 100%;
+  margin: 16px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  font-size: 1.05rem;
-  color: var(--color-on-surface);
+  gap: 10px;
 }
 
-.onboarding-feature-list li {
+.onboarding-step {
   display: flex;
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
   gap: 12px;
-  line-height: 1.4;
+  text-align: left;
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  padding: 13px 14px;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
 }
 
-.onboarding-feature-list li > span:first-child {
+.onboarding-step-num {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--atelier-primary);
   flex-shrink: 0;
-  line-height: inherit;
+}
+
+.onboarding-step-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(154, 64, 29, 0.1);
+  color: var(--atelier-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.onboarding-step-icon-box .icon-svg {
+  width: 19px;
+  height: 19px;
+}
+
+.onboarding-step-text {
+  font-size: 0.94rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--atelier-ink-black);
+}
+
+.onboarding-note {
+  margin: 18px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--atelier-ink-muted);
+  max-width: 300px;
 }
 
 .onboarding-theme-choice {
-  display: flex;
-  gap: 16px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 22px;
 }
 
 .onboarding-theme-btn {
   appearance: none;
-  border: 2px solid var(--color-outline);
-  background: var(--color-surface-variant);
-  color: var(--color-on-surface);
-  border-radius: var(--radius-lg);
-  padding: 20px 28px;
+  border: 1.5px solid var(--atelier-paper-edge);
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border-radius: 16px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
+  gap: 10px;
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.onboarding-theme-btn:active {
+  transform: scale(0.98);
 }
 
 .onboarding-theme-icon {
-  font-size: 1.8rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(154, 64, 29, 0.08);
+  color: var(--atelier-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.onboarding-theme-icon .icon-svg {
+  width: 22px;
+  height: 22px;
 }
 
 .onboarding-theme-btn.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-container);
-  color: var(--color-on-primary-container);
+  border-color: var(--atelier-primary);
+  background: rgba(154, 64, 29, 0.08);
+}
+
+.onboarding-theme-btn.is-selected .onboarding-theme-icon {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+
+.onboarding-footer {
+  width: 100%;
+  max-width: 408px;
+  margin: 0 auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .onboarding-dots {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin: 20px 0;
+  margin: 12px 0 16px;
 }
 
 .onboarding-dot {
   width: 8px;
   height: 8px;
-  border-radius: 4px;
-  background: var(--color-outline);
-  transition: width 0.3s ease, background 0.3s ease;
+  border-radius: 999px;
+  background: var(--atelier-paper-edge);
+  transition: width 0.3s ease, background-color 0.3s ease;
 }
 
 .onboarding-dot.is-active {
-  width: 22px;
-  background: var(--color-primary);
+  width: 24px;
+  background: var(--atelier-primary);
 }
 
 .onboarding-next-btn {
-  width: calc(100% - 48px);
-  margin: 0 24px;
+  appearance: none;
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: 16px;
+  background-color: var(--atelier-primary);
+  color: #ffffff;
+  border: 1px solid rgba(186, 88, 50, 0.6);
+  box-shadow: 0 8px 20px -4px rgba(154, 64, 29, 0.38);
+  font-family: 'EB Garamond', Georgia, 'Cambria', 'Times New Roman', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.15s ease;
 }
+
+.onboarding-next-btn:active {
+  transform: scale(0.985);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #onboardingOverlay .onboarding-skip-btn:active {
+    background: rgba(217, 135, 95, 0.14);
+  }
+  :root:not(.light-theme) #onboardingOverlay .onboarding-step-num {
+    color: #d9875f;
+  }
+  :root:not(.light-theme) #onboardingOverlay .onboarding-step-icon-box,
+  :root:not(.light-theme) #onboardingOverlay .onboarding-theme-icon {
+    background: rgba(217, 135, 95, 0.14);
+    color: #d9875f;
+  }
+  :root:not(.light-theme) #onboardingOverlay .onboarding-theme-btn.is-selected {
+    border-color: #d9875f;
+    background: rgba(217, 135, 95, 0.14);
+  }
+  :root:not(.light-theme) #onboardingOverlay .onboarding-theme-btn.is-selected .onboarding-theme-icon {
+    background: var(--atelier-primary);
+    color: #ffffff;
+  }
+  :root:not(.light-theme) #onboardingOverlay .onboarding-dot.is-active {
+    background: #d9875f;
+  }
+}
+
+:root.dark-theme #onboardingOverlay .onboarding-skip-btn:active {
+  background: rgba(217, 135, 95, 0.14);
+}
+:root.dark-theme #onboardingOverlay .onboarding-step-num {
+  color: #d9875f;
+}
+:root.dark-theme #onboardingOverlay .onboarding-step-icon-box,
+:root.dark-theme #onboardingOverlay .onboarding-theme-icon {
+  background: rgba(217, 135, 95, 0.14);
+  color: #d9875f;
+}
+:root.dark-theme #onboardingOverlay .onboarding-theme-btn.is-selected {
+  border-color: #d9875f;
+  background: rgba(217, 135, 95, 0.14);
+}
+:root.dark-theme #onboardingOverlay .onboarding-theme-btn.is-selected .onboarding-theme-icon {
+  background: var(--atelier-primary);
+  color: #ffffff;
+}
+:root.dark-theme #onboardingOverlay .onboarding-dot.is-active {
+  background: #d9875f;
+}
+/* End Onboarding overlay */
 
 /* ── Utilities ─────────────────────────────────────────────────────────────── */
 
@@ -3716,6 +3937,7 @@ body:has(#screen-hub:not(.hidden)) {
 #binderyFilePickerModal,
 #confirmModal,
 #signatureInfoSheet,
+#onboardingOverlay,
 #screen-reader,
 .app:has(#screen-reader:not(.hidden)) .top-bar,
 #fileActionsModal,
@@ -3772,6 +3994,7 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
   :root:not(.light-theme) #signatureInfoSheet,
+  :root:not(.light-theme) #onboardingOverlay,
   :root:not(.light-theme) #screen-reader,
   :root:not(.light-theme) .app:has(#screen-reader:not(.hidden)) .top-bar,
   :root:not(.light-theme) #fileActionsModal,
@@ -3823,6 +4046,7 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
 :root.dark-theme #signatureInfoSheet,
+:root.dark-theme #onboardingOverlay,
 :root.dark-theme #screen-reader,
 :root.dark-theme .app:has(#screen-reader:not(.hidden)) .top-bar,
 :root.dark-theme #fileActionsModal,
