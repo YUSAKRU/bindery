@@ -1165,3 +1165,38 @@ describe('isTouchMobile', () => {
     expect(isTouchMobile({ userAgent: 'X11; Linux x86_64', maxTouchPoints: 0, platform: 'Linux x86_64' })).toBe(false);
   });
 });
+
+describe('readPdfFromUri name', () => {
+  const bytes = new Uint8Array([37, 80, 68, 70]);
+
+  it('uses the name stat reports', async () => {
+    stat.mockResolvedValueOnce({ size: bytes.length, name: 'Ders Notları.pdf' });
+    mockNativeChunkedRead(bytes);
+    expect((await readPdfFromUri('content://fake/doc/123')).name).toBe('Ders Notları.pdf');
+  });
+
+  it('falls back to the uri when stat reports an empty name (web Filesystem)', async () => {
+    stat.mockResolvedValueOnce({ size: bytes.length, name: '' });
+    mockNativeChunkedRead(bytes);
+    expect((await readPdfFromUri('/DATA/Ders%20Notlar%C4%B1.pdf')).name).toBe('Ders Notları.pdf');
+  });
+
+  it('falls back to the uri when stat fails, dropping any query', async () => {
+    stat.mockRejectedValueOnce(new Error('stat not supported'));
+    mockNativeChunkedRead(bytes);
+    expect((await readPdfFromUri('file:///data/files/scans/Tarama.pdf?x=1')).name).toBe('Tarama.pdf');
+  });
+
+  it('keeps a malformed escape as written instead of failing the read', async () => {
+    stat.mockResolvedValueOnce({ size: bytes.length, name: '' });
+    mockNativeChunkedRead(bytes);
+    expect((await readPdfFromUri('/DATA/100%.pdf')).name).toBe('100%.pdf');
+  });
+
+  it('says "document.pdf" only when there is no name at all', async () => {
+    stat.mockResolvedValueOnce({ size: bytes.length, name: '' });
+    mockNativeChunkedRead(bytes);
+    expect((await readPdfFromUri('content://fake/')).name).toBe('document.pdf');
+  });
+});
+
