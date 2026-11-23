@@ -58,8 +58,13 @@ export function filterDesk(entries: readonly RecentEntry[], query: string, lang:
  * as a book, such a file would be imposed a second time. Instructions.pdf
  * sits in the same folder but is a plain document, so it does not count.
  * Decided at render time, so entries recorded before this rule are covered.
+ * Entries opened since the engine started marking its outputs also carry
+ * `imposed`, which wins wherever the file now lives.
  */
-export function isImposedOutput(entry: Pick<RecentEntry, 'uri'>): boolean {
+export function isImposedOutput(entry: Pick<RecentEntry, 'uri' | 'imposed'>): boolean {
+  // The engine's own mark, read from the file when it was opened: holds after
+  // a rename, a share or a move out of booklets/.
+  if (entry.imposed === true) return true;
   if (!entry.uri) return false;
   let path = entry.uri;
   try {

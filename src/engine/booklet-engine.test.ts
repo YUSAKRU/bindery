@@ -26,6 +26,7 @@ import {
   signatureStartPages,
 } from './booklet-engine';
 import { BookletError } from './types';
+import { IMPOSED_KEYWORD, hasImposedKeyword } from './imposed-mark';
 
 
 // makeBooklet's instructions sheet now embeds a Unicode font subset, fetched
@@ -1420,5 +1421,49 @@ describe('makeBooklet insertBlankAfter', () => {
     expect(result.blanksInserted).toBe(2);
     expect(result.paddingApplied).toBe(0);
     expect(result.paddedPages).toBe(8);
+  });
+});
+
+describe('imposed mark', () => {
+  // Read back through both libraries: pdf-lib wrote it, pdf.js is what the
+  // reader uses to find it.
+  async function keywordsViaPdfJs(bytes: Uint8Array): Promise<unknown> {
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = getDocument({ data: bytes.slice() });
+    try {
+      const doc = await loadingTask.promise;
+      return ((await doc.getMetadata()).info as { Keywords?: unknown }).Keywords;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  it('is written into front, back, combined and cover, and not into the instructions', async () => {
+    const result = await makeBooklet(await buildTestPdf(16), { separateCover: true, includeInstructions: true });
+    const imposed = { front: result.frontPdf, back: result.backPdf, combined: result.combinedPdf, cover: result.coverPdf! };
+    for (const [name, bytes] of Object.entries(imposed)) {
+      expect((await PDFDocument.load(bytes)).getKeywords(), name).toContain(IMPOSED_KEYWORD);
+      expect(hasImposedKeyword(await keywordsViaPdfJs(bytes)), name).toBe(true);
+    }
+    expect(result.instructionsPdf).toBeDefined();
+    expect(hasImposedKeyword((await PDFDocument.load(result.instructionsPdf!)).getKeywords())).toBe(false);
+    expect(hasImposedKeyword(await keywordsViaPdfJs(result.instructionsPdf!))).toBe(false);
+  });
+
+  it('is not carried over from the source onto anything but imposed output', async () => {
+    const source = await buildTestPdf(8);
+    expect(hasImposedKeyword((await PDFDocument.load(source)).getKeywords())).toBe(false);
+  });
+});
+
+describe('hasImposedKeyword', () => {
+  it('finds the mark as a whole word only', () => {
+    expect(hasImposedKeyword(IMPOSED_KEYWORD)).toBe(true);
+    expect(hasImposedKeyword(`notes ${IMPOSED_KEYWORD}`)).toBe(true);
+    expect(hasImposedKeyword(`a,${IMPOSED_KEYWORD};b`)).toBe(true);
+    expect(hasImposedKeyword(`${IMPOSED_KEYWORD}-not`)).toBe(false);
+    expect(hasImposedKeyword('')).toBe(false);
+    expect(hasImposedKeyword(undefined)).toBe(false);
+    expect(hasImposedKeyword(['bindery-imposed'])).toBe(false);
   });
 });

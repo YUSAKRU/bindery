@@ -161,6 +161,15 @@ describe('desk bookkeeping in app.ts', () => {
   });
 });
 
+describe('imposed mark in the reader', () => {
+  it('reads the Keywords through pdf.js and records what it found', () => {
+    expect(app).toContain("import { hasImposedKeyword } from '../engine/imposed-mark';");
+    expect(app).toContain('await readerDoc.proxy.getMetadata().catch(() => null)');
+    expect(app).toContain('const readerImposed = hasImposedKeyword(readerInfo?.Keywords);');
+    expect(app).toContain('fp: fingerprintPdf(bytes), imposed: readerImposed });');
+  });
+});
+
 describe('desk strings', () => {
   const keys = [
     'library.desk.more',

@@ -15,6 +15,12 @@ export interface RecentEntry {
    * before it existed — those are matched by identity only.
    */
   fp?: string;
+  /**
+   * The file carried the booklet engine's imposed mark when last opened
+   * (`hasImposedKeyword`). Absent when unknown: entries from before the mark,
+   * or recorded without reading the document.
+   */
+  imposed?: boolean;
 }
 
 /** Same file: same identity, or — when both carry one — the same fingerprint. */
@@ -76,7 +82,7 @@ export async function getRecents(): Promise<RecentEntry[]> {
  * content fingerprint — so one file reached through two uris stays one entry,
  * under the newest uri. Never by name alone: two files may share a name.
  */
-export async function recordOpened(entry: { uri: string | null; name: string; fp?: string }): Promise<void> {
+export async function recordOpened(entry: { uri: string | null; name: string; fp?: string; imposed?: boolean }): Promise<void> {
   return enqueue(async () => {
     const entries = await readAll();
     const id = entryId(entry);
@@ -86,6 +92,9 @@ export async function recordOpened(entry: { uri: string | null; name: string; fp
     const next: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: existing?.lastPage ?? 1, openedAt: Date.now() };
     const fp = entry.fp ?? (existing && entryId(existing) === id ? existing.fp : undefined);
     if (fp) next.fp = fp;
+    // Known now, or known before for this same file.
+    const imposed = entry.imposed ?? (existing && sameFile(existing, { ...entry, fp }) ? existing.imposed : undefined);
+    if (imposed !== undefined) next.imposed = imposed;
     const filtered = entries.filter((e) => !sameFile(e, { ...entry, fp }));
     filtered.unshift(next);
     await writeAll(filtered.slice(0, MAX_ENTRIES));
@@ -138,6 +147,7 @@ export async function restoreRecent(entry: RecentEntry): Promise<void> {
     if (entries.some((e) => sameFile(e, entry))) return;
     const restored: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: entry.lastPage, openedAt: entry.openedAt };
     if (entry.fp) restored.fp = entry.fp;
+    if (entry.imposed !== undefined) restored.imposed = entry.imposed;
     const next = [...entries, restored].sort((a, b) => b.openedAt - a.openedAt);
     await writeAll(next.slice(0, MAX_ENTRIES));
   });

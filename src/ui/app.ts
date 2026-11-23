@@ -62,6 +62,7 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
+import { hasImposedKeyword } from '../engine/imposed-mark';
 import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
@@ -4950,6 +4951,12 @@ export function initApp(): void {
       readerOutline = (await readerDoc.proxy.getOutline().catch(() => null)) as
         | OutlineItem[]
         | null;
+      // The booklet engine marks its imposed outputs; the desk uses it to keep
+      // "Read as a book" away from them wherever they are opened from.
+      const readerInfo = (await readerDoc.proxy.getMetadata().catch(() => null))?.info as
+        | { Keywords?: unknown }
+        | undefined;
+      const readerImposed = hasImposedKeyword(readerInfo?.Keywords);
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
@@ -4972,7 +4979,7 @@ export function initApp(): void {
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
-      await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes) });
+      await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);

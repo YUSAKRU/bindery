@@ -274,4 +274,36 @@ describe('recents-store', () => {
       expect((await getRecents()).map((e) => e.uri)).toEqual(['file:///y.pdf']);
     });
   });
+
+  describe('imposed flag', () => {
+    it('is stored when known and kept when a later record does not know it', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: true });
+      expect((await getRecents())[0].imposed).toBe(true);
+      await recordOpened({ uri: 'content://a', name: 'a.pdf' });
+      expect((await getRecents())[0].imposed).toBe(true);
+    });
+
+    it('follows the file to its new uri through the fingerprint', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: true });
+      await recordOpened({ uri: 'content://b', name: 'a.pdf', fp: 'F1' });
+      const entries = await getRecents();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ uri: 'content://b', imposed: true });
+    });
+
+    it('is left out when unknown, and survives restore and rekey', async () => {
+      const { recordOpened, removeRecent, restoreRecent, rekeyRecent, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://plain', name: 'p.pdf' });
+      expect('imposed' in (await getRecents())[0]).toBe(false);
+      await recordOpened({ uri: 'file:///x.pdf', name: 'x.pdf', imposed: true });
+      const [marked] = await getRecents();
+      await removeRecent(marked);
+      await restoreRecent(marked);
+      expect((await getRecents()).find((e) => e.uri === 'file:///x.pdf')?.imposed).toBe(true);
+      await rekeyRecent(marked, { uri: 'file:///y.pdf', name: 'y.pdf' });
+      expect((await getRecents()).find((e) => e.uri === 'file:///y.pdf')?.imposed).toBe(true);
+    });
+  });
 });
