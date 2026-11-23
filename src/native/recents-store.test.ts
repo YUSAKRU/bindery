@@ -389,4 +389,44 @@ describe('recents-store', () => {
       expect(entries[1]).toMatchObject({ lastPage: 9, openedAt: 100 });
     });
   });
+
+  describe('removeRecentsUnder', () => {
+    it('removes exact folder matches and nested entries while respecting segment boundaries and keeping null-uri entries', async () => {
+      const { recordOpened, removeRecentsUnder, getRecents } = await importStore();
+      await recordOpened({ uri: '/DATA/booklets/x', name: 'x' });
+      await recordOpened({ uri: '/DATA/booklets/x/Front Side.pdf', name: 'Front Side.pdf' });
+      await recordOpened({ uri: '/DATA/booklets/x/sub/Back Side.pdf', name: 'Back Side.pdf' });
+      await recordOpened({ uri: '/DATA/booklets/xy/other.pdf', name: 'other.pdf' });
+      await recordOpened({ uri: '/DATA/scans/keep.pdf', name: 'keep.pdf' });
+      await recordOpened({ uri: null, name: 'external.pdf', fp: 'FP-NULL' });
+
+      await removeRecentsUnder('/DATA/booklets/x');
+
+      const entries = await getRecents();
+      expect(entries.map((e) => e.uri)).toEqual([null, '/DATA/scans/keep.pdf', '/DATA/booklets/xy/other.pdf']);
+    });
+
+    it('handles a trailing slash on the folder uri without triggering the prefix trap', async () => {
+      const { recordOpened, removeRecentsUnder, getRecents } = await importStore();
+      await recordOpened({ uri: 'booklets/x/a.pdf', name: 'a.pdf' });
+      await recordOpened({ uri: 'booklets/xy/b.pdf', name: 'b.pdf' });
+
+      await removeRecentsUnder('booklets/x/');
+
+      expect((await getRecents()).map((e) => e.uri)).toEqual(['booklets/xy/b.pdf']);
+    });
+
+    it('keeps null-uri entries stored and returned by getRecents for fingerprint page-resume', async () => {
+      const { recordOpened, updateLastPage, getRecents } = await importStore();
+      await recordOpened({ uri: null, name: 'picked.pdf', fp: 'FP-RESUME' });
+      await updateLastPage({ uri: null, name: 'picked.pdf' }, 14);
+
+      const stored = await getRecents();
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ uri: null, name: 'picked.pdf', lastPage: 14, fp: 'FP-RESUME' });
+
+      const resumed = await recordOpened({ uri: null, name: 'picked.pdf', fp: 'FP-RESUME' });
+      expect(resumed.lastPage).toBe(14);
+    });
+  });
 });

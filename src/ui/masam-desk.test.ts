@@ -159,6 +159,26 @@ describe('desk bookkeeping in app.ts', () => {
     expect(app).toContain('await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });');
     expect(app).toContain('await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });');
   });
+
+  it('Files delete handler calls removeRecentsUnder for folders and removeRecent for files', () => {
+    const deleteBlock = block(app, "addAction(FILES_ACTION_ICON_DELETE, t('action.delete'), async () =>");
+    expect(deleteBlock).toContain('await deletePrivateItem(itemPath, isDir);');
+    expect(deleteBlock).toContain('if (isDir) await removeRecentsUnder(item.uri);');
+    expect(deleteBlock).toContain('else await removeRecent(item);');
+  });
+
+  it('reader nav recents list excludes unopenable null-uri entries', () => {
+    const navRecents = block(app, 'async function buildNavRecents(): Promise<void>');
+    expect(navRecents).toContain('r.uri !== null && r.uri !== readerUri');
+  });
+
+  it('saveDocConfirmBtn guards Desk recording when savePdfToDevice returns null', () => {
+    const at = app.indexOf('const publicUri = await savePdfToDevice(readerBytes, newName);');
+    expect(at).toBeGreaterThan(-1);
+    const tail = app.slice(at, app.indexOf("showToast(t('toast.savedToDevice'))", at));
+    expect(tail).toContain('if (publicUri !== null)');
+    expect(tail).toContain('await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });');
+  });
 });
 
 describe('reader bookkeeping', () => {

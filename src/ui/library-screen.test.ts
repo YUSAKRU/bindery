@@ -729,4 +729,82 @@ describe('library screen controller', () => {
     expect(els.librarySearchToggle.getAttribute('aria-expanded')).toBe('false');
     expect(rows(els.libraryBookList, 'library-row')).toHaveLength(2);
   });
+
+  it('reloads books and desk data (and updates badges without losing search query) when switching to books or desk tabs', async () => {
+    let currentBooks = [record('a'), record('b')];
+    let currentDesk: RecentEntry[] = [
+      { uri: '/DATA/booklets/x/a.pdf', name: 'a.pdf', lastPage: 2, openedAt: 2 },
+      { uri: '/DATA/scans/b.pdf', name: 'b.pdf', lastPage: 1, openedAt: 1 },
+    ];
+    const loadBooks = vi.fn(async () => currentBooks);
+    const loadDesk = vi.fn(async () => currentDesk);
+    const { controller, els } = setup({ loadBooks, loadDesk });
+
+    expect(loadBooks).toHaveBeenCalledTimes(0);
+    expect(loadDesk).toHaveBeenCalledTimes(0);
+
+    await controller.show('books');
+    expect(loadBooks).toHaveBeenCalledTimes(1);
+    expect(loadDesk).toHaveBeenCalledTimes(1);
+    expect(els.libraryBooksBadge.textContent).toBe('2');
+    expect(els.libraryDeskBadge.textContent).toBe('2');
+
+    // Switching to Files does not reload books/desk.
+    els.libraryTabFiles.click();
+    await flush();
+    expect(loadBooks).toHaveBeenCalledTimes(1);
+    expect(loadDesk).toHaveBeenCalledTimes(1);
+
+    // Simulate deleting a folder in Files that pruned a desk entry and changed books.
+    currentDesk = [{ uri: '/DATA/scans/b.pdf', name: 'b.pdf', lastPage: 1, openedAt: 1 }];
+    currentBooks = [record('a')];
+
+    els.libraryTabDesk.click();
+    await flush();
+    expect(loadBooks).toHaveBeenCalledTimes(2);
+    expect(loadDesk).toHaveBeenCalledTimes(2);
+    expect(els.libraryDeskBadge.textContent).toBe('1');
+    expect(els.libraryBooksBadge.textContent).toBe('1');
+    expect(rows(els.libraryDeskList, 'library-desk-row')).toHaveLength(1);
+    expect(els.libraryTabDesk.getAttribute('aria-selected')).toBe('true');
+
+    // Active search query is preserved when switching from desk to books.
+    els.librarySearchToggle.click();
+    els.librarySearch.value = 'Book a';
+    els.librarySearch.dispatch('input');
+    currentBooks = [record('a'), record('c')];
+
+    els.libraryTabBooks.click();
+    await flush();
+    expect(loadBooks).toHaveBeenCalledTimes(3);
+    expect(loadDesk).toHaveBeenCalledTimes(3);
+    expect(els.libraryBooksBadge.textContent).toBe('2');
+    expect(els.librarySearch.value).toBe('Book a');
+    expect(rows(els.libraryBookList, 'library-row')).toHaveLength(1);
+    expect(els.libraryTabBooks.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('hides null-uri entries from the Desk list and Desk badge', async () => {
+    const mixedDesk: RecentEntry[] = [
+      { uri: null, name: 'unopenable-1.pdf', lastPage: 5, openedAt: 3 },
+      { uri: 'content://reopenable', name: 'reopenable.pdf', lastPage: 2, openedAt: 2 },
+      { uri: null, name: 'unopenable-2.pdf', lastPage: 1, openedAt: 1 },
+    ];
+    const { controller, els } = setup({ loadDesk: async () => mixedDesk });
+    await controller.show('desk');
+
+    expect(els.libraryDeskBadge.textContent).toBe('1');
+    const deskRows = rows(els.libraryDeskList, 'library-desk-row');
+    expect(deskRows).toHaveLength(1);
+    expect(deskRows[0].textContent).toContain('reopenable.pdf');
+    expect(els.libraryDeskEmpty.classList.contains('hidden')).toBe(true);
+
+    // When only null-uri entries exist, Desk shows its empty state and badge 0.
+    const onlyNullDesk: RecentEntry[] = [{ uri: null, name: 'only-null.pdf', lastPage: 4, openedAt: 1 }];
+    const emptyCase = setup({ loadDesk: async () => onlyNullDesk });
+    await emptyCase.controller.show('desk');
+    expect(emptyCase.els.libraryDeskBadge.textContent).toBe('0');
+    expect(rows(emptyCase.els.libraryDeskList, 'library-desk-row')).toHaveLength(0);
+    expect(emptyCase.els.libraryDeskEmpty.classList.contains('hidden')).toBe(false);
+  });
 });

@@ -64,7 +64,7 @@ import {
   type ReaderDocument,
 } from '../native/pdf-reader-render';
 import { imposedFromInfo } from '../engine/imposed-mark';
-import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, removeRecentsUnder, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
   getLibrary,
@@ -5610,7 +5610,7 @@ export function initApp(): void {
   }
 
   async function buildNavRecents(): Promise<void> {
-    const recents = (await getRecents()).filter((r) => r.uri !== readerUri);
+    const recents = (await getRecents()).filter((r) => r.uri !== null && r.uri !== readerUri);
     readerNavRecentsList.innerHTML = '';
     if (recents.length === 0) {
       const empty = document.createElement('p');
@@ -6273,13 +6273,15 @@ export function initApp(): void {
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
 
-        readerName = newName;
-        readerUri = publicUri;
-        readerRelPath = null;
-        topBarTitle.textContent = readerName;
-        topBarTitle.title = readerName;
+        if (publicUri !== null) {
+          readerName = newName;
+          readerUri = publicUri;
+          readerRelPath = null;
+          topBarTitle.textContent = readerName;
+          topBarTitle.title = readerName;
 
-        await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });
+          await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });
+        }
         showToast(t('toast.savedToDevice'));
       }
 
@@ -6690,7 +6692,8 @@ export function initApp(): void {
       try {
         const itemPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         await deletePrivateItem(itemPath, isDir);
-        if (!isDir) await removeRecent(item);
+        if (isDir) await removeRecentsUnder(item.uri);
+        else await removeRecent(item);
         void clearOutputUnder(itemPath).catch((error: unknown) => {
           console.warn('Deleted, but could not update the library:', error);
         });

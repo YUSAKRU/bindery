@@ -969,9 +969,8 @@ describe('web platform fallbacks', () => {
     revokeObjectURLSpy.mockRestore();
   });
 
-  it('writes to Directory.Documents and triggers browser <a download> click on savePdfToDevice', async () => {
+  it('triggers browser <a download> without writing to Directory.Documents and returns null on web savePdfToDevice', async () => {
     getPlatform.mockReturnValue('web');
-    writeFile.mockResolvedValueOnce({ uri: 'file:///docs/saved.pdf' });
 
     const clickSpy = vi.fn();
     const removeSpy = vi.fn();
@@ -998,13 +997,8 @@ describe('web platform fallbacks', () => {
     const bytes = pseudoRandomBytes(512, 107);
     const uri = await savePdfToDevice(bytes, 'saved.pdf');
 
-    expect(writeFile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        path: 'saved.pdf',
-        directory: 'DOCUMENTS',
-      }),
-    );
-    expect(uri).toBe('file:///docs/saved.pdf');
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(uri).toBeNull();
     expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
     expect(mockDocument.createElement).toHaveBeenCalledWith('a');
     expect(mockAnchor.download).toBe('saved.pdf');
@@ -1014,6 +1008,27 @@ describe('web platform fallbacks', () => {
 
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
+  });
+
+  it('writes to Directory.Documents and returns uri without browser download on android savePdfToDevice', async () => {
+    getPlatform.mockReturnValue('android');
+    writeFile.mockResolvedValueOnce({ uri: 'file:///docs/saved.pdf' });
+
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+
+    const bytes = pseudoRandomBytes(512, 108);
+    const uri = await savePdfToDevice(bytes, 'saved.pdf');
+
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'saved.pdf',
+        directory: 'DOCUMENTS',
+      }),
+    );
+    expect(uri).toBe('file:///docs/saved.pdf');
+    expect(createObjectURLSpy).not.toHaveBeenCalled();
+
+    createObjectURLSpy.mockRestore();
   });
 
   it('uses navigator.share({ title, text }) on web when available and returns "shared"', async () => {
