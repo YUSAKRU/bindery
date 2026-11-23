@@ -245,4 +245,33 @@ describe('recents-store', () => {
       expect(fingerprintPdf(new Uint8Array([1, 2, 3]))).not.toBe(fingerprintPdf(new Uint8Array([1, 2, 4])));
     });
   });
+
+  describe('rekeyRecent', () => {
+    it('follows a renamed or moved file, keeping page, time, fingerprint and place', async () => {
+      const { recordOpened, updateLastPage, rekeyRecent, getRecents } = await importStore();
+      await recordOpened({ uri: 'file:///a.pdf', name: 'a.pdf', fp: 'F1' });
+      await updateLastPage({ uri: 'file:///a.pdf', name: 'a.pdf' }, 37);
+      await recordOpened({ uri: 'file:///b.pdf', name: 'b.pdf' });
+      const before = (await getRecents()).find((e) => e.uri === 'file:///a.pdf')!;
+      await rekeyRecent({ uri: 'file:///a.pdf', name: 'a.pdf' }, { uri: 'file:///notes/A.pdf', name: 'A.pdf' });
+      const after = await getRecents();
+      expect(after.map((e) => e.uri)).toEqual(['file:///b.pdf', 'file:///notes/A.pdf']);
+      expect(after[1]).toEqual({ uri: 'file:///notes/A.pdf', name: 'A.pdf', lastPage: 37, openedAt: before.openedAt, fp: 'F1' });
+    });
+
+    it('does not add a file that was never on the desk', async () => {
+      const { recordOpened, rekeyRecent, getRecents } = await importStore();
+      await recordOpened({ uri: 'file:///b.pdf', name: 'b.pdf' });
+      await rekeyRecent({ uri: 'file:///x.pdf', name: 'x.pdf' }, { uri: 'file:///y.pdf', name: 'y.pdf' });
+      expect((await getRecents()).map((e) => e.uri)).toEqual(['file:///b.pdf']);
+    });
+
+    it('leaves one entry when the target identity was already on the desk', async () => {
+      const { recordOpened, rekeyRecent, getRecents } = await importStore();
+      await recordOpened({ uri: 'file:///y.pdf', name: 'y.pdf' });
+      await recordOpened({ uri: 'file:///x.pdf', name: 'x.pdf' });
+      await rekeyRecent({ uri: 'file:///x.pdf', name: 'x.pdf' }, { uri: 'file:///y.pdf', name: 'y.pdf' });
+      expect((await getRecents()).map((e) => e.uri)).toEqual(['file:///y.pdf']);
+    });
+  });
 });

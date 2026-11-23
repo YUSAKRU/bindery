@@ -62,7 +62,7 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { fingerprintPdf, getRecents, recordOpened, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
   getLibrary,
@@ -6165,7 +6165,8 @@ export function initApp(): void {
           const dir = lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
           const newRelPath = dir ? `${dir}/${newName}` : newName;
           newUri = await movePrivateItem(readerRelPath, newRelPath);
-          await removeRecent({ uri: readerUri, name: readerName });
+          // Same file under a new name: the desk keeps its page and place.
+          await rekeyRecent({ uri: readerUri, name: readerName }, { uri: newUri, name: newName });
           readerRelPath = newRelPath;
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
@@ -6555,8 +6556,7 @@ export function initApp(): void {
         const newUri = await movePrivateItem(oldPath, newPath);
         if (!isDir) {
           try {
-            await removeRecent({ uri: item.uri, name: currentName });
-            await recordOpened({ uri: newUri, name: newName });
+            await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });
           } catch {
             // not in recents, ignore
           }
@@ -6993,8 +6993,7 @@ export function initApp(): void {
       const newUri = await movePrivateItem(sourceDir, destDir);
       // Update recents with new URI
       try {
-        await removeRecent(moveSourceFile);
-        await recordOpened({ uri: newUri, name: moveSourceFile.name });
+        await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });
       } catch {
         // not in recents, ignore
       }

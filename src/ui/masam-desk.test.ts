@@ -148,11 +148,16 @@ describe('desk bookkeeping in app.ts', () => {
   it('every recordOpened in app.ts carries a fingerprint of the bytes at hand', () => {
     const calls = [...app.matchAll(/recordOpened\(\{[^}]*\}\)/g)].map((m) => m[0]);
     expect(calls.length).toBeGreaterThanOrEqual(4);
-    // Rename/move re-record a file whose bytes are not loaded; the next commit
-    // replaces those with rekeyRecent.
-    const withBytes = calls.filter((c) => !/name: (newName|moveSourceFile\.name) \}\)$/.test(c));
-    for (const call of withBytes) expect(call, call).toMatch(/fp: fingerprintPdf\(\w+\)/);
+    for (const call of calls) expect(call, call).toMatch(/fp: fingerprintPdf\(\w+\)/);
     expect(app).toContain('async function rememberSaved(uri: string, name: string, bytes: Uint8Array)');
+  });
+
+  it('rename and move follow the file with rekeyRecent instead of remove + record', () => {
+    expect(app.match(/rekeyRecent\(/g)?.length).toBe(3);
+    expect(app).not.toMatch(/removeRecent\([^)]*\);\s*await recordOpened\(/);
+    expect(app).toContain('await rekeyRecent({ uri: readerUri, name: readerName }, { uri: newUri, name: newName });');
+    expect(app).toContain('await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });');
+    expect(app).toContain('await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });');
   });
 });
 

@@ -92,6 +92,29 @@ export async function recordOpened(entry: { uri: string | null; name: string; fp
   });
 }
 
+/**
+ * Follows a file to a new uri/name after a rename or move, keeping what the
+ * desk knows about it (lastPage, openedAt, fingerprint) and its place in the
+ * list. Does nothing when the file is not on the desk.
+ */
+export async function rekeyRecent(
+  from: { uri: string | null; name: string },
+  to: { uri: string | null; name: string },
+): Promise<void> {
+  return enqueue(async () => {
+    const entries = await readAll();
+    const index = entries.findIndex((e) => entryId(e) === entryId(from));
+    if (index < 0) return;
+    const moved: RecentEntry = { ...entries[index], uri: to.uri, name: to.name };
+    // An entry already sitting under the target identity is the same file
+    // seen before the move; keep one.
+    const rest = entries.filter((e, i) => i !== index && entryId(e) !== entryId(to));
+    const at = Math.min(index, rest.length);
+    rest.splice(at, 0, moved);
+    await writeAll(rest);
+  });
+}
+
 export async function updateLastPage(identity: { uri: string | null; name: string }, page: number): Promise<void> {
   return enqueue(async () => {
     const entries = await readAll();
