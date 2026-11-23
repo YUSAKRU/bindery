@@ -2565,6 +2565,12 @@ dialog.modal-sheet::backdrop {
   text-overflow: ellipsis;
 }
 
+.folder-select-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .folder-select-item:active, .folder-select-item.is-selected {
   background: rgba(var(--color-primary-rgb), 0.15);
   font-weight: 600;

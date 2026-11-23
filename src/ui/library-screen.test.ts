@@ -655,4 +655,78 @@ describe('library screen controller', () => {
     expect(mediaIdx).toBeGreaterThan(-1);
     expect(css).toMatch(/@media\s*\(max-width:\s*380px\)\s*\{[^}]*\.library-tabs\s*\{[^}]*gap:\s*12px;[^}]*\}[^}]*\.library-tab\s+svg\s*\{[^}]*display:\s*none;[^}]*\}/s);
   });
+
+  it('calls onTabChange with the active tab on init, show, click, keyboard nav, and selectTab', async () => {
+    const onTabChange = vi.fn();
+    const { controller, els } = setup({ onTabChange });
+    expect(onTabChange).toHaveBeenLastCalledWith('books');
+
+    onTabChange.mockClear();
+    await controller.show('desk');
+    expect(onTabChange).toHaveBeenCalledWith('desk');
+
+    els.libraryTabFiles.click();
+    expect(onTabChange).toHaveBeenLastCalledWith('files');
+
+    els.libraryTabFiles.dispatch('keydown', { key: 'Home' });
+    expect(onTabChange).toHaveBeenLastCalledWith('books');
+
+    controller.selectTab('files');
+    expect(onTabChange).toHaveBeenLastCalledWith('files');
+    expect(els.libraryTabFiles.getAttribute('aria-selected')).toBe('true');
+    expect(els.libraryFilesPanel.classList.contains('hidden')).toBe(false);
+    expect(els.libraryBooksPanel.classList.contains('hidden')).toBe(true);
+    expect(els.libraryDeskPanel.classList.contains('hidden')).toBe(true);
+  });
+
+  it('hides library search on Files, closes open search, and restores it on Books and Desk', async () => {
+    const { controller, els } = setup();
+    await controller.show('books');
+
+    els.librarySearchToggle.click();
+    els.librarySearch.value = 'zzz';
+    els.librarySearch.dispatch('input');
+    expect(controller.isSearchOpen()).toBe(true);
+    expect(els.libraryNoMatch.classList.contains('hidden')).toBe(false);
+    expect(els.librarySearchToggle.classList.contains('hidden')).toBe(false);
+    expect(els.librarySearchWrap.classList.contains('hidden')).toBe(false);
+
+    controller.selectTab('files');
+    expect(controller.isSearchOpen()).toBe(false);
+    expect(els.librarySearchToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(els.librarySearchToggle.classList.contains('hidden')).toBe(true);
+    expect(els.librarySearchWrap.classList.contains('hidden')).toBe(true);
+    expect(els.libraryNoMatch.classList.contains('hidden')).toBe(true);
+    expect(els.libraryNoMatch.textContent).toBe('');
+
+    controller.selectTab('desk');
+    expect(els.librarySearchToggle.classList.contains('hidden')).toBe(false);
+    expect(els.librarySearchWrap.classList.contains('hidden')).toBe(false);
+
+    controller.selectTab('files');
+    expect(els.librarySearchToggle.classList.contains('hidden')).toBe(true);
+    expect(els.librarySearchWrap.classList.contains('hidden')).toBe(true);
+
+    controller.selectTab('books');
+    expect(els.librarySearchToggle.classList.contains('hidden')).toBe(false);
+    expect(els.librarySearchWrap.classList.contains('hidden')).toBe(false);
+  });
+
+  it('exposes isSearchOpen() and closeSearch() for external back handling', async () => {
+    const { controller, els } = setup();
+    await controller.show('books');
+
+    expect(controller.isSearchOpen()).toBe(false);
+    els.librarySearchToggle.click();
+    els.librarySearch.value = 'Book a';
+    els.librarySearch.dispatch('input');
+    expect(controller.isSearchOpen()).toBe(true);
+    expect(rows(els.libraryBookList, 'library-row')).toHaveLength(1);
+
+    controller.closeSearch();
+    expect(controller.isSearchOpen()).toBe(false);
+    expect(els.librarySearch.value).toBe('');
+    expect(els.librarySearchToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(rows(els.libraryBookList, 'library-row')).toHaveLength(2);
+  });
 });

@@ -168,7 +168,9 @@ describe('Android back button on a root screen', () => {
     expect(rootBranch).toContain('App.minimizeApp()');
     expect(rootBranch).not.toContain('App.exitApp()');
 
-    const afterSubfolder = body.slice(body.indexOf('void renderFilesList();'));
+    const libraryBackIdx = body.indexOf('handleLibraryFilesBack()');
+    expect(libraryBackIdx, 'expected handleLibraryFilesBack() in the Android back handler').toBeGreaterThanOrEqual(0);
+    const afterSubfolder = body.slice(libraryBackIdx);
     const rootDecision = afterSubfolder.slice(0, afterSubfolder.indexOf('} else {'));
     expect(rootDecision).not.toContain("'files'");
     expect(rootDecision).not.toContain("'settings'");

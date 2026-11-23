@@ -58,6 +58,7 @@ export interface LibraryScreenDeps {
   onRemoveDesk: (entry: RecentEntry) => Promise<void>;
   openModal: (el: HTMLElement, trigger?: Element | null) => void;
   closeModal: (el: HTMLElement) => void;
+  onTabChange?: (tab: LibraryTab) => void;
   matchMedia?: (query: string) => { matches: boolean };
   IntersectionObserver?: ObserverCtor;
   storage?: Pick<Storage, 'getItem' | 'setItem'>;
@@ -68,9 +69,12 @@ export interface LibraryScreenDeps {
 export interface LibraryScreenController {
   show(tab?: LibraryTab): Promise<void>;
   hide(): void;
+  selectTab(tab: LibraryTab): void;
   refreshTexts(): void;
   isDetailOpen(): boolean;
   closeDetail(): void;
+  isSearchOpen(): boolean;
+  closeSearch(): void;
   destroy(): void;
 }
 
@@ -208,9 +212,16 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
       entry.tab.setAttribute('tabindex', active ? '0' : '-1');
       entry.panel.classList.toggle('hidden', !active);
     }
+    const isFiles = next === 'files';
+    if (isFiles && isSearchOpen()) {
+      closeSearch();
+    }
+    searchToggle?.classList.toggle('hidden', isFiles);
+    searchWrap?.classList.toggle('hidden', isFiles);
     searchInput.setAttribute('aria-controls', tabEntries[next].panelId);
     storeTab(next);
     renderNoMatch();
+    deps.onTabChange?.(next);
   }
 
   function renderCounts(): void {
@@ -603,29 +614,43 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
     renderBooks();
     renderDesk();
   };
+  function isSearchOpen(): boolean {
+    return Boolean(searchWrap?.classList.contains('is-open'));
+  }
+  function collapseSearch(): void {
+    searchWrap?.classList.remove('is-open');
+    searchToggle?.setAttribute('aria-expanded', 'false');
+  }
   function openSearch(): void {
     searchWrap?.classList.add('is-open');
     searchToggle?.setAttribute('aria-expanded', 'true');
     searchInput.focus?.();
   }
   function closeSearch(): void {
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
     if (searchInput.value) {
       searchInput.value = '';
       applySearch();
-    } else {
-      searchWrap?.classList.remove('is-open');
-      searchToggle?.setAttribute('aria-expanded', 'false');
     }
+    collapseSearch();
   }
   const onSearchToggleClick = (): void => {
-    if (searchWrap?.classList.contains('is-open')) {
+    if (isSearchOpen()) {
       closeSearch();
     } else {
       openSearch();
     }
   };
   const onSearchCloseClick = (): void => {
-    closeSearch();
+    if (searchInput.value) {
+      searchInput.value = '';
+      applySearch();
+    } else {
+      collapseSearch();
+    }
   };
   const onSearchKeydown = (event: Event): void => {
     const key = (event as KeyboardEvent).key;
@@ -634,8 +659,7 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
         searchInput.value = '';
         applySearch();
       } else {
-        searchWrap?.classList.remove('is-open');
-        searchToggle?.setAttribute('aria-expanded', 'false');
+        collapseSearch();
         searchToggle?.focus?.();
       }
     }
@@ -756,5 +780,5 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
   setTab(tab);
 
-  return { show, hide, refreshTexts, isDetailOpen, closeDetail, destroy };
+  return { show, hide, selectTab: setTab, refreshTexts, isDetailOpen, closeDetail, isSearchOpen, closeSearch, destroy };
 }
