@@ -3933,6 +3933,11 @@ body:has(#screen-hub:not(.hidden)) {
 #screen-settings,
 #screen-error-log,
 #screen-tools-all,
+#screen-merge-picker,
+#screen-organize,
+#screen-rotate,
+#screen-page-numbers,
+#screen-watermark,
 #pdfSourceModal,
 #binderyFilePickerModal,
 #confirmModal,
@@ -3956,7 +3961,17 @@ body:has(#screen-hub:not(.hidden)) {
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
 .app:has(#screen-error-log:not(.hidden)) .screen-container,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-.app:has(#screen-tools-all:not(.hidden)) .screen-container {
+.app:has(#screen-tools-all:not(.hidden)) .screen-container,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+.app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+.app:has(#screen-organize:not(.hidden)) .top-bar,
+.app:has(#screen-organize:not(.hidden)) .screen-container,
+.app:has(#screen-rotate:not(.hidden)) .top-bar,
+.app:has(#screen-rotate:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+.app:has(#screen-watermark:not(.hidden)) .top-bar,
+.app:has(#screen-watermark:not(.hidden)) .screen-container {
   --atelier-bg: #fff8f5;
   --atelier-surface-cream: #F3ECE1;
   --atelier-paper-edge: #D8CDB4;
@@ -3990,6 +4005,11 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) #screen-settings,
   :root:not(.light-theme) #screen-error-log,
   :root:not(.light-theme) #screen-tools-all,
+  :root:not(.light-theme) #screen-merge-picker,
+  :root:not(.light-theme) #screen-organize,
+  :root:not(.light-theme) #screen-rotate,
+  :root:not(.light-theme) #screen-page-numbers,
+  :root:not(.light-theme) #screen-watermark,
   :root:not(.light-theme) #pdfSourceModal,
   :root:not(.light-theme) #binderyFilePickerModal,
   :root:not(.light-theme) #confirmModal,
@@ -4013,7 +4033,17 @@ body:has(#screen-hub:not(.hidden)) {
   :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .top-bar,
   :root:not(.light-theme) .app:has(#screen-error-log:not(.hidden)) .screen-container,
   :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .screen-container {
+  :root:not(.light-theme) .app:has(#screen-tools-all:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-organize:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-organize:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-rotate:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-rotate:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .top-bar,
+  :root:not(.light-theme) .app:has(#screen-watermark:not(.hidden)) .screen-container {
     --atelier-bg: #161412;
     --atelier-surface-cream: #25211d;
     --atelier-paper-edge: #3d352e;
@@ -4042,6 +4072,11 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme #screen-settings,
 :root.dark-theme #screen-error-log,
 :root.dark-theme #screen-tools-all,
+:root.dark-theme #screen-merge-picker,
+:root.dark-theme #screen-organize,
+:root.dark-theme #screen-rotate,
+:root.dark-theme #screen-page-numbers,
+:root.dark-theme #screen-watermark,
 :root.dark-theme #pdfSourceModal,
 :root.dark-theme #binderyFilePickerModal,
 :root.dark-theme #confirmModal,
@@ -4065,7 +4100,17 @@ body:has(#screen-hub:not(.hidden)) {
 :root.dark-theme .app:has(#screen-error-log:not(.hidden)) .top-bar,
 :root.dark-theme .app:has(#screen-error-log:not(.hidden)) .screen-container,
 :root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .top-bar,
-:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .screen-container {
+:root.dark-theme .app:has(#screen-tools-all:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-organize:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-organize:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-rotate:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-rotate:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .top-bar,
+:root.dark-theme .app:has(#screen-watermark:not(.hidden)) .screen-container {
   --atelier-bg: #161412;
   --atelier-surface-cream: #25211d;
   --atelier-paper-edge: #3d352e;
@@ -8141,6 +8186,11 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar,
 .app:has(#screen-error-log:not(.hidden)) .top-bar,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar,
+.app:has(#screen-organize:not(.hidden)) .top-bar,
+.app:has(#screen-rotate:not(.hidden)) .top-bar,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar,
+.app:has(#screen-watermark:not(.hidden)) .top-bar,
 .app:has(#screen-config:not(.hidden)) .top-bar,
 .app:has(#screen-result:not(.hidden)) .top-bar {
   background: var(--atelier-bg);
@@ -8151,6 +8201,11 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar-title,
 .app:has(#screen-error-log:not(.hidden)) .top-bar-title,
 .app:has(#screen-tools-all:not(.hidden)) .top-bar-title,
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar-title,
+.app:has(#screen-organize:not(.hidden)) .top-bar-title,
+.app:has(#screen-rotate:not(.hidden)) .top-bar-title,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar-title,
+.app:has(#screen-watermark:not(.hidden)) .top-bar-title,
 .app:has(#screen-config:not(.hidden)) .top-bar-title,
 .app:has(#screen-result:not(.hidden)) .top-bar-title {
   visibility: visible;
@@ -8163,6 +8218,11 @@ button.book-page-label:active {
 .app:has(#screen-settings:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-error-log:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-tools-all:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-organize:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-rotate:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar .icon-btn:not([hidden]),
+.app:has(#screen-watermark:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-config:not(.hidden)) .top-bar .icon-btn:not([hidden]),
 .app:has(#screen-result:not(.hidden)) .top-bar .icon-btn:not([hidden]) {
   background: var(--atelier-surface-cream);
@@ -11168,6 +11228,319 @@ button.book-page-label:active {
   stroke: var(--atelier-ink-muted);
 }
 /* End Atelier All Tools */
+
+/* Atelier Tool Screens — Phase 1 (Empty / Picker States) */
+.app:has(#screen-merge-picker:not(.hidden)) .screen-container,
+.app:has(#screen-organize:not(.hidden)) .screen-container,
+.app:has(#screen-rotate:not(.hidden)) .screen-container,
+.app:has(#screen-page-numbers:not(.hidden)) .screen-container,
+.app:has(#screen-watermark:not(.hidden)) .screen-container {
+  background-color: var(--atelier-bg);
+  background-image:
+    radial-gradient(var(--atelier-grid-dot1) 0.85px, transparent 0.85px),
+    radial-gradient(var(--atelier-grid-dot2) 0.5px, var(--atelier-bg) 0.5px);
+  background-size: 20px 20px, 100px 100px;
+  background-position: 0 0, 10px 10px;
+}
+
+.app:has(#screen-merge-picker:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-organize:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-rotate:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-page-numbers:not(.hidden)) .top-bar .icon-btn:not([hidden]):active,
+.app:has(#screen-watermark:not(.hidden)) .top-bar .icon-btn:not([hidden]):active {
+  background: var(--atelier-paper-edge);
+}
+
+#screen-merge-picker,
+#screen-organize,
+#screen-rotate,
+#screen-page-numbers,
+#screen-watermark {
+  color: var(--atelier-ink-black);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 0 24px;
+  min-height: 100%;
+}
+
+#screen-organize:not(:has(> .hero.hidden)),
+#screen-rotate:not(:has(> .hero.hidden)),
+#screen-page-numbers:not(:has(> .hero.hidden)),
+#screen-watermark:not(:has(> .hero.hidden)),
+#screen-merge-picker:not(:has(.merge-file-list > *)) {
+  justify-content: center;
+}
+
+#screen-merge-picker .hero,
+#screen-organize .hero,
+#screen-rotate .hero,
+#screen-page-numbers .hero,
+#screen-watermark .hero {
+  background: linear-gradient(180deg, var(--atelier-card2-bg) 0%, var(--atelier-card2-grad-end) 100%);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 20px;
+  padding: 32px 22px 28px;
+  text-align: center;
+  box-shadow:
+    0 12px 34px rgba(154, 64, 29, 0.07),
+    0 2px 6px rgba(40, 30, 20, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#screen-merge-picker .hero-icon,
+#screen-organize .hero-icon,
+#screen-rotate .hero-icon,
+#screen-page-numbers .hero-icon,
+#screen-watermark .hero-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: rgba(154, 64, 29, 0.1);
+  border: 1px solid var(--atelier-paper-edge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: initial;
+}
+
+#screen-merge-picker .hero-icon .tool-icon,
+#screen-organize .hero-icon .tool-icon,
+#screen-rotate .hero-icon .tool-icon,
+#screen-page-numbers .hero-icon .tool-icon,
+#screen-watermark .hero-icon .tool-icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--atelier-primary);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#screen-merge-picker .tool-hero-kicker,
+#screen-organize .tool-hero-kicker,
+#screen-rotate .tool-hero-kicker,
+#screen-page-numbers .tool-hero-kicker,
+#screen-watermark .tool-hero-kicker {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--atelier-tertiary);
+  margin-bottom: 6px;
+}
+
+#screen-merge-picker .hero h2,
+#screen-organize .hero h2,
+#screen-rotate .hero h2,
+#screen-page-numbers .hero h2,
+#screen-watermark .hero h2 {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(1.65rem, 5vw + 0.3rem, 2.05rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--atelier-ink-black);
+  margin: 0 0 10px;
+}
+
+#screen-merge-picker .hero-subtitle,
+#screen-organize .hero-subtitle,
+#screen-rotate .hero-subtitle,
+#screen-page-numbers .hero-subtitle,
+#screen-watermark .hero-subtitle {
+  margin: 0 auto 24px;
+  color: var(--atelier-ink-muted);
+  font-size: 0.94rem;
+  line-height: 1.48;
+  max-width: 310px;
+}
+
+#screen-merge-picker .btn-primary,
+#screen-organize .btn-primary,
+#screen-rotate .btn-primary,
+#screen-page-numbers .btn-primary,
+#screen-watermark .btn-primary {
+  background: var(--atelier-primary);
+  color: #ffffff;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 14px 28px;
+  box-shadow:
+    0 6px 18px rgba(154, 64, 29, 0.2),
+    0 1px 3px rgba(154, 64, 29, 0.18);
+}
+
+#screen-merge-picker .hero .btn-primary,
+#screen-organize .hero .btn-primary,
+#screen-rotate .hero .btn-primary,
+#screen-page-numbers .hero .btn-primary,
+#screen-watermark .hero .btn-primary {
+  max-width: 270px;
+  margin: 0 auto;
+}
+
+#screen-merge-picker .btn-primary:disabled,
+#screen-organize .btn-primary:disabled,
+#screen-rotate .btn-primary:disabled,
+#screen-page-numbers .btn-primary:disabled,
+#screen-watermark .btn-primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+#screen-merge-picker .btn-tonal,
+#screen-organize .btn-tonal,
+#screen-rotate .btn-tonal,
+#screen-page-numbers .btn-tonal,
+#screen-watermark .btn-tonal {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-black);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 12px;
+}
+
+#screen-merge-picker .btn-text,
+#screen-organize .btn-text,
+#screen-rotate .btn-text,
+#screen-page-numbers .btn-text,
+#screen-watermark .btn-text {
+  background: transparent;
+  color: var(--atelier-primary);
+}
+
+#screen-merge-picker .merge-empty-hint {
+  color: var(--atelier-ink-muted);
+  font-size: 0.86rem;
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+#screen-merge-picker .tool-privacy-footer,
+#screen-organize .tool-privacy-footer,
+#screen-rotate .tool-privacy-footer,
+#screen-page-numbers .tool-privacy-footer,
+#screen-watermark .tool-privacy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--atelier-ink-muted);
+  text-align: center;
+}
+
+#screen-merge-picker .tool-privacy-footer svg,
+#screen-organize .tool-privacy-footer svg,
+#screen-rotate .tool-privacy-footer svg,
+#screen-page-numbers .tool-privacy-footer svg,
+#screen-watermark .tool-privacy-footer svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+#screen-organize:has(> .hero.hidden) .tool-privacy-footer,
+#screen-rotate:has(> .hero.hidden) .tool-privacy-footer,
+#screen-page-numbers:has(> .hero.hidden) .tool-privacy-footer,
+#screen-watermark:has(> .hero.hidden) .tool-privacy-footer,
+#screen-merge-picker:has(.merge-file-list > *) .tool-privacy-footer {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) #screen-merge-picker .hero,
+  :root:not(.light-theme) #screen-organize .hero,
+  :root:not(.light-theme) #screen-rotate .hero,
+  :root:not(.light-theme) #screen-page-numbers .hero,
+  :root:not(.light-theme) #screen-watermark .hero {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .hero-icon,
+  :root:not(.light-theme) #screen-organize .hero-icon,
+  :root:not(.light-theme) #screen-rotate .hero-icon,
+  :root:not(.light-theme) #screen-page-numbers .hero-icon,
+  :root:not(.light-theme) #screen-watermark .hero-icon {
+    background: rgba(217, 135, 95, 0.14);
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-organize .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-rotate .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-page-numbers .hero-icon .tool-icon,
+  :root:not(.light-theme) #screen-watermark .hero-icon .tool-icon {
+    stroke: #d9875f;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .btn-primary,
+  :root:not(.light-theme) #screen-organize .btn-primary,
+  :root:not(.light-theme) #screen-rotate .btn-primary,
+  :root:not(.light-theme) #screen-page-numbers .btn-primary,
+  :root:not(.light-theme) #screen-watermark .btn-primary {
+    background: #c4683c;
+    color: #fff8f5;
+  }
+
+  :root:not(.light-theme) #screen-merge-picker .btn-text,
+  :root:not(.light-theme) #screen-organize .btn-text,
+  :root:not(.light-theme) #screen-rotate .btn-text,
+  :root:not(.light-theme) #screen-page-numbers .btn-text,
+  :root:not(.light-theme) #screen-watermark .btn-text {
+    color: #d9875f;
+  }
+}
+
+:root.dark-theme #screen-merge-picker .hero,
+:root.dark-theme #screen-organize .hero,
+:root.dark-theme #screen-rotate .hero,
+:root.dark-theme #screen-page-numbers .hero,
+:root.dark-theme #screen-watermark .hero {
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root.dark-theme #screen-merge-picker .hero-icon,
+:root.dark-theme #screen-organize .hero-icon,
+:root.dark-theme #screen-rotate .hero-icon,
+:root.dark-theme #screen-page-numbers .hero-icon,
+:root.dark-theme #screen-watermark .hero-icon {
+  background: rgba(217, 135, 95, 0.14);
+}
+
+:root.dark-theme #screen-merge-picker .hero-icon .tool-icon,
+:root.dark-theme #screen-organize .hero-icon .tool-icon,
+:root.dark-theme #screen-rotate .hero-icon .tool-icon,
+:root.dark-theme #screen-page-numbers .hero-icon .tool-icon,
+:root.dark-theme #screen-watermark .hero-icon .tool-icon {
+  stroke: #d9875f;
+}
+
+:root.dark-theme #screen-merge-picker .btn-primary,
+:root.dark-theme #screen-organize .btn-primary,
+:root.dark-theme #screen-rotate .btn-primary,
+:root.dark-theme #screen-page-numbers .btn-primary,
+:root.dark-theme #screen-watermark .btn-primary {
+  background: #c4683c;
+  color: #fff8f5;
+}
+
+:root.dark-theme #screen-merge-picker .btn-text,
+:root.dark-theme #screen-organize .btn-text,
+:root.dark-theme #screen-rotate .btn-text,
+:root.dark-theme #screen-page-numbers .btn-text,
+:root.dark-theme #screen-watermark .btn-text {
+  color: #d9875f;
+}
+/* End Atelier Tool Screens — Phase 1 */
 
 @media (prefers-reduced-motion: reduce) {
   .config-step-panel:not(.hidden) {
