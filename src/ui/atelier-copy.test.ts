@@ -47,18 +47,40 @@ describe('Atelier hub copy', () => {
 
   // Card 2 now counts the booklets in the library, not opened documents.
   it('reads the library count correctly for 0, 1 and many booklets', () => {
+    const templateMatches = Array.from(
+      i18nSource.matchAll(/^\s*'atelier\.card2\.meta':\s*'([^']+)',/gm),
+      (m) => m[1],
+    );
+    expect(templateMatches).toEqual(['Library · {count}', 'Kitaplık · {count}']);
+    for (const template of templateMatches) {
+      expect(template).toContain('{count}');
+    }
+
     setLanguage('en');
     expect([0, 1, 7].map((count) => t('atelier.card2.meta', { count }))).toEqual([
-      'Booklets in library: 0',
-      'Booklets in library: 1',
-      'Booklets in library: 7',
+      'Library · 0',
+      'Library · 1',
+      'Library · 7',
     ]);
     setLanguage('tr');
     expect([0, 1, 7].map((count) => t('atelier.card2.meta', { count }))).toEqual([
-      'Kitaplıkta 0 kitapçık',
-      'Kitaplıkta 1 kitapçık',
-      'Kitaplıkta 7 kitapçık',
+      'Kitaplık · 0',
+      'Kitaplık · 1',
+      'Kitaplık · 7',
     ]);
+  });
+
+  it('prevents hub card meta-row spans from overflowing their card', () => {
+    const cleanCss = cssSource.replace(/\/\*[\s\S]*?\*\//g, '');
+    const bothSpansRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span\s*\{([^}]+)\}/);
+    const leftSpanRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span:first-child\s*\{([^}]+)\}/);
+    const rightSpanRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span:last-child\s*\{([^}]+)\}/);
+
+    expect(bothSpansRule?.[1]).toMatch(/(?:^|;)\s*min-width:\s*0\s*;/);
+    expect(leftSpanRule?.[1]).toMatch(/(?:^|;)\s*flex:\s*0\s+0\s+auto\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*overflow:\s*hidden\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*text-overflow:\s*ellipsis\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*white-space:\s*nowrap\s*;/);
   });
 
   it('names card 2 and the menu entry after the library', () => {

@@ -4433,6 +4433,20 @@ body:has(#screen-hub:not(.hidden)) {
   white-space: nowrap;
 }
 
+.atelier-card-meta-row > span {
+  min-width: 0;
+}
+
+.atelier-card-meta-row > span:first-child {
+  flex: 0 0 auto;
+}
+
+.atelier-card-meta-row > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .atelier-saved-count-link {
   text-decoration: underline;
   text-decoration-color: rgba(115, 87, 50, 0.45);

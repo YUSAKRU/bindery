@@ -913,7 +913,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
       controller.setSavedCount(5);
       expect(controller.getState().savedCount).toBe(5);
       expect(fixture.savedCountEl.textContent).toBe(t('atelier.card2.meta', { count: 5 }));
-      expect(fixture.savedCountEl.textContent).toBe('Booklets in library: 5');
+      expect(fixture.savedCountEl.textContent).toBe('Library · 5');
 
       controller.setSavedCount(-2); // clamp to 0
       expect(controller.getState().savedCount).toBe(0);
@@ -926,7 +926,7 @@ describe('Atelier Hub Controller (Unit & Interaction Tests)', () => {
 
       expect(getLanguage()).toBe('tr');
       expect(fixture.modeHint.textContent).toBe('Bir karta dokunun');
-      expect(fixture.savedCountEl.textContent).toBe('Kitaplıkta 4 kitapçık');
+      expect(fixture.savedCountEl.textContent).toBe('Kitaplık · 4');
       expect(fixture.btnTitle.textContent).toBe('Kitapçık Üretimini Başlat');
       expect(fixture.indicators[0].getAttribute('aria-label')).toBe('1. Kart');
     });
