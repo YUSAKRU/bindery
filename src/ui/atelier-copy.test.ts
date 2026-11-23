@@ -212,9 +212,11 @@ describe('Atelier hub copy', () => {
     setLanguage('en');
     expect(t('book.formaToggle')).toBe('Signature view');
     expect(t('library.source.rowMissing')).toBe("Source can't be reached");
+    expect(t('library.output.none')).toBe('No saved print files');
     setLanguage('tr');
     expect(t('book.formaToggle')).toBe('Forma görünümü');
     expect(t('library.source.rowMissing')).toBe('Kaynak dosyaya ulaşılamıyor');
+    expect(t('library.output.none')).toBe('Kaydedilmiş baskı dosyası yok');
     expect(t('book.forma.label', { sig: 2, sheet: 3, depth: 1, side: t('book.side.front'), slot: t('book.slot.right') })).toBe(
       'Forma 2 · Tabaka 3 (dıştan 1.) · Ön · sağ',
     );

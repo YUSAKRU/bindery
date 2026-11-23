@@ -454,7 +454,8 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
     clear(detailSpecs);
     for (const field of detailFields(record, { t, sourceState: detailState, formatDate: deps.formatDate })) {
-      const wrap = el('div', `library-spec library-spec-${field.key}`);
+      const extraClass = field.key === 'outputNone' ? ' library-spec-source' : '';
+      const wrap = el('div', `library-spec library-spec-${field.key}${extraClass}`);
       wrap.dataset.field = field.key;
       wrap.appendChild(el('dt', '', field.label));
       wrap.appendChild(el('dd', '', field.value));
@@ -470,7 +471,9 @@ export function createLibraryScreen(deps: LibraryScreenDeps): LibraryScreenContr
 
     const notes: string[] = [];
     if (missing) notes.push(t('library.source.missing'));
-    if (deps.platform === 'web' && record.source.kind === 'none') notes.push(t('library.source.webSession'));
+    if (missing && deps.platform === 'web' && record.source.kind === 'none') {
+      notes.push(t('library.source.webSession'));
+    }
     detailSourceState.textContent = notes.join(' ');
     detailSourceState.classList.toggle('hidden', notes.length === 0);
   }

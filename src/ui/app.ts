@@ -211,6 +211,27 @@ export function isBrowsableEntry(item: { type: 'file' | 'directory'; name: strin
   return item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf');
 }
 
+export const LIBRARY_SESSION_SOURCE_MAX = 3;
+
+/**
+ * Stores a session-only booklet source PDF and evicts the oldest entries past
+ * `max` so big PDFs do not pile up in memory during a web tab's lifetime.
+ */
+export function setSessionSource(
+  map: Map<string, PickedPdf>,
+  id: string,
+  file: PickedPdf,
+  max = LIBRARY_SESSION_SOURCE_MAX,
+): void {
+  if (map.has(id)) map.delete(id);
+  map.set(id, file);
+  while (map.size > max) {
+    const oldest = map.keys().next().value;
+    if (oldest === undefined) break;
+    map.delete(oldest);
+  }
+}
+
 /** Picker order: folders first, then files, each by name (numeric-aware). */
 export function sortPickerEntries<T extends { type: 'file' | 'directory'; name: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
@@ -4586,6 +4607,7 @@ export function initApp(): void {
   window.addEventListener('blur', forceEndPinchTracking);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) forceEndPinchTracking();
+    else if (getCurrentScreenId() === 'hub') void refreshHubSavedCount();
   });
 
   // touch-action can't change mid-gesture, so additionally block the
@@ -4933,6 +4955,10 @@ export function initApp(): void {
         output,
       });
       const { record, evicted } = await upsertRecord(draft);
+      if (record.source.kind === 'none' && source.bytes.length > 0) {
+        setSessionSource(librarySessionSources, record.id, { name: source.name, bytes: source.bytes });
+      }
+      void refreshHubSavedCount();
       for (const old of evicted) {
         if (old.thumb) void deleteLibraryThumb(old.thumb.relPath);
       }
@@ -7633,7 +7659,7 @@ export function initApp(): void {
       ) {
         return null;
       }
-      if (source.kind === 'none') librarySessionSources.set(record.id, picked);
+      if (source.kind === 'none') setSessionSource(librarySessionSources, record.id, picked);
       else librarySessionSources.delete(record.id);
       const updated = await patchRecord(record.id, { source, sourceSize: picked.bytes.length });
       if (updated && !updated.thumb) void renderLibraryThumb(updated.id, picked.bytes);
@@ -7651,6 +7677,7 @@ export function initApp(): void {
       const removed = await removeRecord(record.id);
       if (removed?.thumb) void deleteLibraryThumb(removed.thumb.relPath);
       librarySessionSources.delete(record.id);
+      void refreshHubSavedCount();
       showToast(t('library.toast.removed'));
       return true;
     } catch (error) {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Preferences } from '@capacitor/preferences';
 import type { LibraryRecordDraft } from './library-store';
 
 const store = new Map<string, string>();
@@ -157,6 +158,35 @@ describe('library-store', () => {
     const { upsertRecord, removeRecord, getLibrary } = await importStore();
     await Promise.all([upsertRecord(draft('a')), upsertRecord(draft('b')), removeRecord('gone')]);
     expect((await getLibrary()).map((r) => r.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('getLibrary and getRecord wait for a pending upsert instead of reading stale state', async () => {
+    const { upsertRecord, getLibrary, getRecord } = await importStore();
+    let finishWrite!: () => void;
+    const writeBlocked = new Promise<void>((resolve) => {
+      finishWrite = resolve;
+    });
+    vi.mocked(Preferences.set).mockImplementationOnce(async ({ key, value }) => {
+      await writeBlocked;
+      store.set(key, value);
+    });
+
+    const pendingUpsert = upsertRecord(draft('fresh'));
+    let libraryResolved = false;
+    const libraryPromise = getLibrary().then((res) => {
+      libraryResolved = true;
+      return res;
+    });
+    const recordPromise = getRecord('fresh');
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(libraryResolved).toBe(false);
+
+    finishWrite();
+    const [, all, one] = await Promise.all([pendingUpsert, libraryPromise, recordPromise]);
+    expect(all.map((r) => r.id)).toEqual(['fresh']);
+    expect(one?.id).toBe('fresh');
   });
 
   it('rewritePrivatePaths moves output and private sources, leaving saf and sibling prefixes alone', async () => {
