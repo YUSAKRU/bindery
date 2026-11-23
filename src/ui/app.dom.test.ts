@@ -69,6 +69,11 @@ describe('loadBookletFile (Reader -> Booklet stale-summary flash fix)', () => {
     const refreshIndex = body.indexOf('refreshConfigSummary()');
     expect(resetIndex).toBeLessThan(refreshIndex);
   });
+
+  it('sets both textContent and title on fileNameLabel to the full file name', () => {
+    expect(body).toContain('fileNameLabel.textContent = name;');
+    expect(body).toContain('fileNameLabel.title = name;');
+  });
 });
 
 describe('refreshConfigSummary guard (mechanism the fix relies on)', () => {
@@ -147,5 +152,37 @@ describe('refreshConfigSummary sheets-per-signature breakdown (bonus)', () => {
     expect(guardIndex, 'expected an `if (sigs > 1)` guard around the breakdown').toBeGreaterThanOrEqual(0);
     expect(keyIndex, 'expected config.summarySheetsPerSignature to be used for the breakdown').toBeGreaterThanOrEqual(0);
     expect(guardIndex).toBeLessThan(keyIndex);
+  });
+});
+
+// Same source-level approach: the Android back handler is a closure inside
+// initApp(). On a root screen it must send the app to the background rather
+// than exit, while the first onboarding page still exits.
+describe('Android back button on a root screen', () => {
+  const body = extractFunctionBody("App.addListener('backButton', ");
+
+  it('minimizes the app only on hub instead of exiting', () => {
+    const rootIndex = body.indexOf("if (current === 'hub') {");
+    expect(rootIndex, 'expected the hub-only root-screen branch in the back handler').toBeGreaterThanOrEqual(0);
+    const rootBranch = body.slice(rootIndex, body.indexOf('} else {', rootIndex));
+    expect(rootBranch).toContain('App.minimizeApp()');
+    expect(rootBranch).not.toContain('App.exitApp()');
+
+    const libraryBackIdx = body.indexOf('handleLibraryFilesBack()');
+    expect(libraryBackIdx, 'expected handleLibraryFilesBack() in the Android back handler').toBeGreaterThanOrEqual(0);
+    const afterSubfolder = body.slice(libraryBackIdx);
+    const rootDecision = afterSubfolder.slice(0, afterSubfolder.indexOf('} else {'));
+    expect(rootDecision).not.toContain("'files'");
+    expect(rootDecision).not.toContain("'settings'");
+    expect(rootDecision).not.toContain("'library'");
+    expect(afterSubfolder).not.toContain("'library'");
+  });
+
+  it('still exits from the first onboarding page', () => {
+    const onboardingIndex = body.indexOf('if (onboardingIndex > 0) {');
+    const currentIndex = body.indexOf('const current = getCurrentScreenId();');
+    expect(onboardingIndex).toBeGreaterThanOrEqual(0);
+    const onboardingBranch = body.slice(onboardingIndex, currentIndex);
+    expect(onboardingBranch).toContain('App.exitApp()');
   });
 });

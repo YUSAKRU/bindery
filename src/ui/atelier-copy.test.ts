@@ -1,0 +1,224 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { applyLanguageToDom, setLanguage, t } from '../i18n';
+
+const htmlPath = fileURLToPath(new URL('../../index.html', import.meta.url));
+const htmlSource = readFileSync(htmlPath, 'utf-8');
+
+const cssPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+const cssSource = readFileSync(cssPath, 'utf-8');
+
+const i18nPath = fileURLToPath(new URL('../i18n/index.ts', import.meta.url));
+const i18nSource = readFileSync(i18nPath, 'utf-8');
+// Every library and book-reader string, plus the card-2 copy and the library error.
+const libraryKeys = [
+  ...new Set(
+    Array.from(i18nSource.matchAll(/^\s*'((?:library\.|book\.|atelier\.card2\.|error\.LIBRARY_)[^']+)':/gm), (m) => m[1]),
+  ),
+];
+
+// The hub used to carry a "Mode: Free Float (Active)" pill that toggled the
+// cards. Tapping a card or empty space already switches the mode, so the pill
+// was dropped together with its copy.
+describe('Atelier hub copy', () => {
+  beforeEach(() => {
+    // setLanguage persists the choice and re-labels the DOM; neither exists in Node.
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+    vi.stubGlobal('document', { documentElement: {}, querySelectorAll: () => [] });
+  });
+
+  afterEach(() => {
+    setLanguage('en');
+    vi.unstubAllGlobals();
+  });
+
+  it('no longer ships the mode toggle pill', () => {
+    expect(htmlSource).not.toContain('atelierModeToggleBtn');
+    expect(htmlSource).not.toContain('atelierModeToggleLabel');
+    expect(htmlSource).not.toContain('atelier-mode-bar');
+    expect(cssSource).not.toContain('atelier-mode-btn');
+    for (const lang of ['en', 'tr'] as const) {
+      setLanguage(lang);
+      expect(t('atelier.modeFree')).toBe('atelier.modeFree');
+      expect(t('atelier.modeCarousel')).toBe('atelier.modeCarousel');
+    }
+  });
+
+  // Card 2 now counts the booklets in the library, not opened documents.
+  it('reads the library count correctly for 0, 1 and many booklets', () => {
+    const templateMatches = Array.from(
+      i18nSource.matchAll(/^\s*'atelier\.card2\.meta':\s*'([^']+)',/gm),
+      (m) => m[1],
+    );
+    expect(templateMatches).toEqual(['Library · {count}', 'Kitaplık · {count}']);
+    for (const template of templateMatches) {
+      expect(template).toContain('{count}');
+    }
+
+    setLanguage('en');
+    expect([0, 1, 7].map((count) => t('atelier.card2.meta', { count }))).toEqual([
+      'Library · 0',
+      'Library · 1',
+      'Library · 7',
+    ]);
+    setLanguage('tr');
+    expect([0, 1, 7].map((count) => t('atelier.card2.meta', { count }))).toEqual([
+      'Kitaplık · 0',
+      'Kitaplık · 1',
+      'Kitaplık · 7',
+    ]);
+  });
+
+  it('prevents hub card meta-row spans from overflowing their card', () => {
+    const cleanCss = cssSource.replace(/\/\*[\s\S]*?\*\//g, '');
+    const bothSpansRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span\s*\{([^}]+)\}/);
+    const leftSpanRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span:first-child\s*\{([^}]+)\}/);
+    const rightSpanRule = cleanCss.match(/\.atelier-card-meta-row\s*>\s*span:last-child\s*\{([^}]+)\}/);
+
+    expect(bothSpansRule?.[1]).toMatch(/(?:^|;)\s*min-width:\s*0\s*;/);
+    expect(leftSpanRule?.[1]).toMatch(/(?:^|;)\s*flex:\s*0\s+0\s+auto\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*overflow:\s*hidden\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*text-overflow:\s*ellipsis\s*;/);
+    expect(rightSpanRule?.[1]).toMatch(/(?:^|;)\s*white-space:\s*nowrap\s*;/);
+  });
+
+  it('names card 2 and the menu entry after the library', () => {
+    setLanguage('en');
+    expect(t('atelier.card2.ctaTitle')).toBe('Open library');
+    expect(t('atelier.card2.ctaSub')).toBe('Your booklets and PDFs');
+    expect(t('atelier.card2.desc')).toBe('Your booklets and PDFs in one place');
+    expect(t('atelier.menuRecents')).toBe('My Library');
+    setLanguage('tr');
+    expect(t('atelier.card2.ctaTitle')).toBe('Kitaplığı aç');
+    expect(t('atelier.card2.ctaSub')).toBe("Kitapçıklarınız ve PDF'leriniz");
+    expect(t('atelier.card2.desc')).toBe("Kitapçıklarınız ve PDF'leriniz bir arada");
+    expect(t('atelier.menuRecents')).toBe('Kitaplığım');
+  });
+
+  it('uses the plain-language Turkish hub texts', () => {
+    setLanguage('tr');
+    expect(t('atelier.deskTitle')).toBe('Bugün ne hazırlıyoruz?');
+    expect(t('atelier.hintFree')).toBe('Bir karta dokunun');
+    expect(t('atelier.hintCarousel')).toBe('Kaydırarak seçin, boşluğa dokunup geri dönün');
+    expect(t('atelier.card3.title')).toBe('Şablon Tasarımı');
+    expect(t('atelier.card3.desc')).toBe('Özel sayfa ve baskı şablonları — yakında');
+    expect(t('atelier.card3.ctaTitle')).toBe('Yakında');
+    expect(t('atelier.privacySeal')).toBe('Her şey cihazınızda kalır, hiçbir dosya yüklenmez');
+    expect(t('atelier.privacyNote')).toBe('Her şey cihazınızda kalır, hiçbir dosya yüklenmez');
+  });
+
+  it('marks card 3 as disabled Template Design in both languages and HTML', () => {
+    setLanguage('en');
+    expect(t('atelier.card3.title')).toBe('Template Design');
+    expect(t('atelier.card3.desc')).toBe('Custom page & print templates — coming soon');
+    expect(t('atelier.card3.ctaTitle')).toBe('Soon');
+    expect(t('atelier.privacyNote')).toBe('Everything stays on your device, no file is uploaded');
+
+    const card2Match = htmlSource.match(/<div[^>]*id="atelierCard2"[^>]*>/);
+    expect(card2Match?.[0]).toContain('aria-disabled="true"');
+    expect(card2Match?.[0]).toContain('atelier-card--soon');
+    expect(htmlSource).toContain('<span class="badge-soon" data-i18n="atelier.card3.ctaTitle">Soon</span>');
+  });
+
+  it('applies data-i18n-title attributes in applyLanguageToDom()', () => {
+    const setAttribute = vi.fn();
+    const titleEl = { dataset: { i18nTitle: 'library.backToHub' }, setAttribute };
+    vi.stubGlobal('document', {
+      documentElement: { lang: '' },
+      querySelectorAll: (selector: string) => (selector === '[data-i18n-title]' ? [titleEl] : []),
+    });
+
+    setLanguage('tr');
+    applyLanguageToDom();
+    expect(setAttribute).toHaveBeenCalledWith('title', 'Atölye');
+
+    setLanguage('en');
+    applyLanguageToDom();
+    expect(setAttribute).toHaveBeenCalledWith('title', 'Atelier');
+  });
+
+  it('keeps EN and TR i18n key sets identical and covers all HTML data-i18n* keys', () => {
+    const enStart = i18nSource.indexOf('  en: {');
+    const trStart = i18nSource.indexOf('  tr: {');
+    const storageStart = i18nSource.indexOf('const STORAGE_KEY');
+    expect(enStart).toBeGreaterThan(-1);
+    expect(trStart).toBeGreaterThan(enStart);
+    expect(storageStart).toBeGreaterThan(trStart);
+
+    const extractKeys = (block: string) =>
+      Array.from(block.matchAll(/^\s*'([^']+)':/gm), (m) => m[1]);
+
+    const enKeys = extractKeys(i18nSource.slice(enStart, trStart));
+    const trKeys = extractKeys(i18nSource.slice(trStart, storageStart));
+    const enSet = new Set(enKeys);
+    const trSet = new Set(trKeys);
+
+    expect(enKeys.length).toBe(enSet.size);
+    expect(trKeys.length).toBe(trSet.size);
+    expect(enKeys.filter((k) => !trSet.has(k))).toEqual([]);
+    expect(trKeys.filter((k) => !enSet.has(k))).toEqual([]);
+
+    const htmlKeyAttrs = [
+      'data-i18n',
+      'data-i18n-placeholder',
+      'data-i18n-aria-label',
+      'data-i18n-title',
+    ];
+    for (const attr of htmlKeyAttrs) {
+      const matches = Array.from(htmlSource.matchAll(new RegExp(`${attr}="([^"]+)"`, 'g')), (m) => m[1]);
+      for (const key of matches) {
+        expect(enSet.has(key), `Missing EN key for ${attr}="${key}"`).toBe(true);
+        expect(trSet.has(key), `Missing TR key for ${attr}="${key}"`).toBe(true);
+      }
+    }
+  });
+
+  it('has every library string in both languages', () => {
+    expect(libraryKeys.length).toBeGreaterThan(40);
+    expect(libraryKeys.filter((key) => key.startsWith('book.')).length).toBeGreaterThan(20);
+    for (const key of libraryKeys) {
+      const definitions = i18nSource.split('\n').filter((line) => line.trimStart().startsWith(`'${key}':`));
+      expect(definitions, key).toHaveLength(2);
+    }
+  });
+
+  // docs/BRAND.md: Bindery produces, never creates; it never uploads; and the
+  // library shows only what a record stores, so no paper weight, spine width
+  // or binding-material claims.
+  it('keeps library copy within the brand rules in both languages', () => {
+    const banned = /oluştur|yarat|create|yükle|upload|gramaj|sırt payı|koptik|yaldız|ebru|coptic|foil|marbl|grammage|gsm|spine/;
+    for (const lang of ['en', 'tr'] as const) {
+      setLanguage(lang);
+      for (const key of libraryKeys) {
+        const value = t(key).toLocaleLowerCase(lang);
+        expect(value, `${lang} ${key}`).not.toBe(key.toLocaleLowerCase(lang));
+        expect(value, `${lang} ${key}: "${value}"`).not.toMatch(banned);
+      }
+    }
+  });
+
+  it('uses the polite form in the Turkish library copy', () => {
+    setLanguage('tr');
+    expect(t('library.subtitle')).toBe("Ürettiğiniz kitapçıklar ve masanızdaki PDF'ler.");
+    expect(t('library.booksEmpty')).toBe('Kaydettiğiniz ya da paylaştığınız kitapçıklar burada görünür.');
+    expect(t('library.deskEmpty')).toBe("Açtığınız PDF'ler burada görünür.");
+    expect(t('library.detail.heading')).toBe('Forma Tezgâhı');
+    setLanguage('en');
+    expect(t('library.detail.heading')).toBe('Booklet details');
+  });
+
+  it('names the book reader and its signature view in both languages', () => {
+    setLanguage('en');
+    expect(t('book.formaToggle')).toBe('Signature view');
+    expect(t('library.source.rowMissing')).toBe("Source can't be reached");
+    expect(t('library.output.none')).toBe('No saved print files');
+    setLanguage('tr');
+    expect(t('book.formaToggle')).toBe('Forma görünümü');
+    expect(t('library.source.rowMissing')).toBe('Kaynak dosyaya ulaşılamıyor');
+    expect(t('library.output.none')).toBe('Kaydedilmiş baskı dosyası yok');
+    expect(t('book.forma.label', { sig: 2, sheet: 3, depth: 1, side: t('book.side.front'), slot: t('book.slot.right') })).toBe(
+      'Forma 2 · Tabaka 3 (dıştan 1.) · Ön · sağ',
+    );
+  });
+});

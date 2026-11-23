@@ -44,11 +44,17 @@ export async function destroyThumbnailDoc(proxy: PDFDocumentProxy): Promise<void
   }
 }
 
-/** Renders a single page (1-based `pageNumber`) to a small PNG data URL. */
+/**
+ * Renders a single page (1-based `pageNumber`) to a small data URL — PNG by
+ * default; pass `'image/jpeg'` (with an optional 0–1 `quality`) for a much
+ * smaller file where transparency does not matter.
+ */
 export async function renderPageThumbnail(
   doc: PDFDocumentProxy,
   pageNumber: number,
   maxWidth = 96,
+  mime: 'image/png' | 'image/jpeg' = 'image/png',
+  quality?: number,
 ): Promise<string> {
   const page = await doc.getPage(pageNumber);
   const baseViewport = page.getViewport({ scale: 1 });
@@ -60,7 +66,7 @@ export async function renderPageThumbnail(
   canvas.height = viewport.height;
 
   await page.render({ canvas, viewport }).promise;
-  const dataUrl = canvas.toDataURL('image/png');
+  const dataUrl = canvas.toDataURL(mime, quality);
   // Never attached to the DOM, so nothing else will ever zero this canvas's
   // GPU backing store — do it here rather than waiting on GC, same reasoning
   // as evictReaderPage()/renderReaderPageInto() in app.ts.

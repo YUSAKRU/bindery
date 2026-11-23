@@ -26,6 +26,7 @@ import {
   signatureStartPages,
 } from './booklet-engine';
 import { BookletError } from './types';
+import { IMPOSED_KEYWORD, hasImposedKeyword, imposedFromInfo } from './imposed-mark';
 
 
 // makeBooklet's instructions sheet now embeds a Unicode font subset, fetched
@@ -1134,6 +1135,24 @@ describe('signatureStartPages', () => {
     expect(signatureStartPages(44, 16)).toEqual([1, 17, 33]);
     expect(signatureStartPages(32, 8)).toEqual([1, 9, 17, 25]);
   });
+
+  it('follows balanced signature sizes when multiple shorter signatures exist', () => {
+    const firstPagesFromMappings = (N: number, size?: number | 'auto') =>
+      computeSignatureMappings(N, size).map(
+        (sig) =>
+          Math.min(...sig.flatMap((s) => [s.frontLeft, s.frontRight, s.backLeft, s.backRight])) + 1,
+      );
+
+    // 56 pages, 'auto' -> 14 sheets balanced as [4, 4, 3, 3] (16, 16, 12, 12 pages).
+    const expected56 = [1, 17, 33, 45];
+    expect(firstPagesFromMappings(56, 'auto')).toEqual(expected56);
+    expect(signatureStartPages(56, 'auto')).toEqual(expected56);
+
+    // 120 pages, 'auto' -> 30 sheets balanced as [4, 4, 4, 4, 4, 4, 3, 3] (6x16 + 2x12 pages).
+    const expected120 = [1, 17, 33, 49, 65, 81, 97, 109];
+    expect(firstPagesFromMappings(120, 'auto')).toEqual(expected120);
+    expect(signatureStartPages(120, 'auto')).toEqual(expected120);
+  });
 });
 
 describe('makeBooklet includeInstructions', () => {
@@ -1402,5 +1421,65 @@ describe('makeBooklet insertBlankAfter', () => {
     expect(result.blanksInserted).toBe(2);
     expect(result.paddingApplied).toBe(0);
     expect(result.paddedPages).toBe(8);
+  });
+});
+
+describe('imposed mark', () => {
+  // Read back through both libraries: pdf-lib wrote it, pdf.js is what the
+  // reader uses to find it.
+  async function keywordsViaPdfJs(bytes: Uint8Array): Promise<unknown> {
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = getDocument({ data: bytes.slice() });
+    try {
+      const doc = await loadingTask.promise;
+      return ((await doc.getMetadata()).info as { Keywords?: unknown }).Keywords;
+    } finally {
+      await loadingTask.destroy();
+    }
+  }
+
+  it('is written into front, back, combined and cover, and not into the instructions', async () => {
+    const result = await makeBooklet(await buildTestPdf(16), { separateCover: true, includeInstructions: true });
+    const imposed = { front: result.frontPdf, back: result.backPdf, combined: result.combinedPdf, cover: result.coverPdf! };
+    for (const [name, bytes] of Object.entries(imposed)) {
+      expect((await PDFDocument.load(bytes)).getKeywords(), name).toContain(IMPOSED_KEYWORD);
+      expect(hasImposedKeyword(await keywordsViaPdfJs(bytes)), name).toBe(true);
+    }
+    expect(result.instructionsPdf).toBeDefined();
+    expect(hasImposedKeyword((await PDFDocument.load(result.instructionsPdf!)).getKeywords())).toBe(false);
+    expect(hasImposedKeyword(await keywordsViaPdfJs(result.instructionsPdf!))).toBe(false);
+  });
+
+  it('outputs carry exactly the mark, whatever keywords the source had', async () => {
+    const doc = await PDFDocument.load(await buildTestPdf(16));
+    doc.setKeywords(['bindery-imposed', 'private-note']);
+    const result = await makeBooklet(await doc.save(), { separateCover: true, includeInstructions: true });
+    for (const bytes of [result.frontPdf, result.backPdf, result.combinedPdf, result.coverPdf!]) {
+      expect((await PDFDocument.load(bytes)).getKeywords()).toBe(IMPOSED_KEYWORD);
+    }
+    // A marked source does not mark the instructions page.
+    expect((await PDFDocument.load(result.instructionsPdf!)).getKeywords()).toBeUndefined();
+  });
+});
+
+describe('imposedFromInfo', () => {
+  it('answers true/false when the info was read, and undefined when it was not', () => {
+    expect(imposedFromInfo({ Keywords: IMPOSED_KEYWORD })).toBe(true);
+    expect(imposedFromInfo({ Keywords: 'other' })).toBe(false);
+    expect(imposedFromInfo({})).toBe(false);
+    expect(imposedFromInfo(null)).toBeUndefined();
+    expect(imposedFromInfo(undefined)).toBeUndefined();
+  });
+});
+
+describe('hasImposedKeyword', () => {
+  it('finds the mark as a whole word only', () => {
+    expect(hasImposedKeyword(IMPOSED_KEYWORD)).toBe(true);
+    expect(hasImposedKeyword(`notes ${IMPOSED_KEYWORD}`)).toBe(true);
+    expect(hasImposedKeyword(`a,${IMPOSED_KEYWORD};b`)).toBe(true);
+    expect(hasImposedKeyword(`${IMPOSED_KEYWORD}-not`)).toBe(false);
+    expect(hasImposedKeyword('')).toBe(false);
+    expect(hasImposedKeyword(undefined)).toBe(false);
+    expect(hasImposedKeyword(['bindery-imposed'])).toBe(false);
   });
 });

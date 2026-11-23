@@ -1,6 +1,6 @@
 import pkg from '../../package.json';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
-import type { Binding, FlipEdge, PaperSize } from '../engine/types';
+import type { Binding, BookletOptions, FlipEdge, PaperSize } from '../engine/types';
 import { makeBooklet, computeSignatureMappings, inspectPdf, resolveSheetSize } from '../engine/booklet-engine';
 import { mergePdfs } from '../engine/merge-engine';
 import { organizePages } from '../engine/organize-engine';
@@ -16,32 +16,17 @@ import { validatePdf } from '../engine/validator';
 import { addWatermark, type WatermarkOptions } from '../engine/watermark-engine';
 import { imagesToPdf } from '../engine/image-to-pdf-engine';
 import { warpPerspective, type Point } from '../engine/perspective-warp';
-import {
-  computeSpineWidth,
-  computeCoverDimensions,
-  computeSplitCoverDimensions,
-  generateCoverPdf,
-  type BindingType,
-  type CoverFormat,
-  type CoverTheme,
-  type PaperGsm,
-  PAPER_CALIPERS_MM,
-} from '../engine/cover-engine';
-import {
-  type BoardThicknessMm,
-  type CoverOptions,
-  DEFAULT_COVER_OPTIONS,
-  normalizeCoverOptions,
-  coverGeometryInput,
-  spineInput,
-  resolveCoverPageTrim,
-  checkCoverFormatFit,
-} from './cover-options';
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { initMdFlow } from './md-flow';
+import {
+  initAtelierHub,
+  resolveAtelierBackAction,
+  type AtelierHubController,
+} from './atelier-hub';
+import { isWithinLanding, resolveFilesBack } from './files-back';
 import { setupIncomingPdfLinks } from '../native/app-links';
 import { pickPdfWithPersistentUri } from '../native/open-document';
 import { canPrint } from '../native/print';
@@ -66,6 +51,7 @@ import {
   readThumbnailFromDiskCache,
   writeThumbnailToDiskCache,
   type PickedPdf,
+  type PrintOutcome,
   type FileEntryInfo,
 } from '../native/file-bridge';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -77,7 +63,28 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { getRecents, recordOpened, removeRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import { imposedFromInfo } from '../engine/imposed-mark';
+import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, removeRecentsUnder, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
+import {
+  clearOutputUnder,
+  getLibrary,
+  getRecord,
+  newRecordId,
+  patchRecord,
+  probeSource,
+  readSource,
+  removeRecord,
+  rewritePrivatePaths,
+  upsertRecord,
+  type LibraryRecord,
+  type SourceRef,
+  type StoredBookletSettings,
+} from '../native/library-store';
+import { deleteLibraryThumb, readLibraryThumb, writeLibraryThumb } from '../native/library-thumbs';
+import { buildRecordDraft, canReopen, type BookletResultMeta } from './library-record';
+import { createLibraryScreen, type LibraryScreenController, type LibraryTab } from './library-screen';
+import { createBookReader, type BookReaderController } from './book-reader';
+import { computeFormaMap, type PhysicalPage } from '../engine/forma-map';
 import {
   clearErrors,
   getErrors,
@@ -133,13 +140,11 @@ type ScreenId =
   | 'image-to-pdf'
   | 'crop'
   | 'reader'
-  | 'recents'
+  | 'library'
+  | 'book'
   | 'tools-all'
-  | 'files'
   | 'settings'
   | 'error-log'
-  | 'cover'
-  | 'cover-result'
   | 'md-to-pdf';
 
 const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
@@ -159,13 +164,11 @@ const PARENT_SCREEN: Partial<Record<ScreenId, ScreenId>> = {
   'image-to-pdf': 'hub',
   crop: 'image-to-pdf',
   reader: 'hub',
-  recents: 'hub',
+  library: 'hub',
+  book: 'library',
   'tools-all': 'hub',
-  files: 'hub',
   settings: 'hub',
   'error-log': 'settings',
-  cover: 'hub',
-  'cover-result': 'hub',
   'md-to-pdf': 'hub',
 };
 
@@ -177,7 +180,6 @@ const TOOL_ENTRY_SCREEN: Partial<Record<string, ScreenId>> = {
   'page-numbers': 'page-numbers',
   watermark: 'watermark',
   'image-to-pdf': 'image-to-pdf',
-  cover: 'cover',
   'md-to-pdf': 'md-to-pdf',
 };
 
@@ -202,9 +204,61 @@ function formatBytes(bytes: number): string {
  * neither open nor account for. Shared by every list so the rule cannot drift
  * out of sync between them again.
  */
-function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): boolean {
+export function isBrowsableEntry(item: { type: 'file' | 'directory'; name: string }): boolean {
+  // Dot-entries are app bookkeeping (the library's `.library/` thumbnails),
+  // never user documents.
+  if (item.name.startsWith('.')) return false;
   return item.type === 'directory' || item.name.toLowerCase().endsWith('.pdf');
 }
+
+export const LIBRARY_SESSION_SOURCE_MAX = 3;
+
+/**
+ * Stores a session-only booklet source PDF and evicts the oldest entries past
+ * `max` so big PDFs do not pile up in memory during a web tab's lifetime.
+ */
+export function setSessionSource(
+  map: Map<string, PickedPdf>,
+  id: string,
+  file: PickedPdf,
+  max = LIBRARY_SESSION_SOURCE_MAX,
+): void {
+  if (map.has(id)) map.delete(id);
+  map.set(id, file);
+  while (map.size > max) {
+    const oldest = map.keys().next().value;
+    if (oldest === undefined) break;
+    map.delete(oldest);
+  }
+}
+
+/** Picker order: folders first, then files, each by name (numeric-aware). */
+export function sortPickerEntries<T extends { type: 'file' | 'directory'; name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
+const KNOWN_PICKER_FOLDERS = new Set(['booklets', 'scans']);
+
+/**
+ * Label shown for a folder in the Bindery picker. Only the app's own top-level
+ * folders are translated; the folder on disk keeps its name, and folders the
+ * user named are shown as they are.
+ */
+export function pickerFolderLabel(name: string, depth: number): string {
+  return depth === 0 && KNOWN_PICKER_FOLDERS.has(name) ? t(`modal.binderyPicker.folder.${name}`) : name;
+}
+
+const PICKER_ICON_FOLDER =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>';
+const PICKER_ICON_FILE =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>';
+const PICKER_ICON_CHEVRON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>';
+const PICKER_ICON_CHECK =
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
 
 /**
  * Resolves a caught error to user-facing, localized text. Engine failures carry a
@@ -247,15 +301,72 @@ const SCREEN_TITLES: Record<ScreenId, string> = {
   'image-to-pdf': 'tool.imageToPdf.title',
   crop: 'screenTitle.crop',
   reader: 'screenTitle.brand',
-  recents: 'hub.recentlyOpened',
+  library: 'library.title',
+  book: 'book.title',
   'tools-all': 'tools.allTitle',
-  files: 'screenTitle.files',
   settings: 'settings.title',
   'error-log': 'errorLog.title',
-  cover: 'screenTitle.cover',
-  'cover-result': 'screenTitle.coverResult',
   'md-to-pdf': 'tool.mdToPdf.title',
 };
+
+const SINGLE_SIGNATURE_WARNING_THRESHOLD = 40;
+
+/** Status line key telling the user what to do after a print request. */
+export function printStatusKey(outcome: Exclude<PrintOutcome, 'canceled'>): string {
+  switch (outcome) {
+    case 'share-sheet':
+      return 'status.print.shareSheet';
+    case 'opened':
+      return 'status.print.opened';
+    case 'downloaded':
+      return 'status.print.downloaded';
+    default:
+      return 'status.printed';
+  }
+}
+
+/** Printer choice on the result screen: two-sided (duplex) or one-sided (simplex). */
+export type PrinterMode = 'duplex' | 'simplex';
+
+/** Coerces a stored/raw value to a printer mode; anything unknown means duplex. */
+export function normalizePrinterMode(value: string | null | undefined): PrinterMode {
+  return value === 'simplex' ? 'simplex' : 'duplex';
+}
+
+/** Which booklet outputs the result screen offers as main actions for a printer mode. */
+export function printerModeTargets(mode: PrinterMode): Array<'combined' | 'front' | 'back'> {
+  return mode === 'simplex' ? ['front', 'back'] : ['combined'];
+}
+
+/**
+ * One-line result summary, e.g. "5 sayfa → 2 yaprak · 1 forma · +3 boş".
+ * Padding and inserted blanks are appended only when non-zero.
+ */
+export function formatResultSummary(r: {
+  originalPages: number;
+  sheetsCount: number;
+  signaturesCount: number;
+  paddingApplied: number;
+  blanksInserted: number;
+}): string {
+  // Non-breaking spaces keep "+3 boş" or "2 yaprak" together; the line may
+  // only wrap at the " · " separators.
+  const keep = (text: string): string => text.replace(/ /g, '\u00a0');
+  const count = (key: string, n: number): string =>
+    keep(t(n === 1 ? `${key}.one` : `${key}.other`, { count: n }));
+  const parts = [
+    `${count('result.summary.pages', r.originalPages)} → ${count('result.summary.sheets', r.sheetsCount)}`,
+    count('result.summary.signatures', r.signaturesCount),
+  ];
+  if (r.paddingApplied > 0) parts.push(keep(t('result.summary.padding', { count: r.paddingApplied })));
+  if (r.blanksInserted > 0) parts.push(keep(t('result.summary.blanks', { count: r.blanksInserted })));
+  return parts.join(' · ');
+}
+
+/** Returns true when a thick document (>40 original pages) has Single signature selected. */
+export function shouldWarnSingleSignature(signature: string, originalPages: number): boolean {
+  return signature === 'single' && originalPages > SINGLE_SIGNATURE_WARNING_THRESHOLD;
+}
 
 export function initApp(): void {
   initLanguage();
@@ -292,18 +403,14 @@ export function initApp(): void {
     'image-to-pdf': byId('screen-image-to-pdf'),
     crop: byId('screen-crop'),
     reader: byId('screen-reader'),
-    recents: byId('screen-recents'),
+    library: byId('screen-library'),
+    book: byId('screen-book'),
     'tools-all': byId('screen-tools-all'),
-    files: byId('screen-files'),
     settings: byId('screen-settings'),
     'error-log': byId('screen-error-log'),
-    cover: byId('screen-cover'),
-    'cover-result': byId('screen-cover-result'),
     'md-to-pdf': byId('screen-md-to-pdf'),
   };
 
-  const recentsListLarge = byId<HTMLElement>('recentsListLarge');
-  const recentsEmptyHint = byId<HTMLElement>('recentsEmptyHint');
   const filesList = byId<HTMLElement>('filesList');
   const filesEmptyHint = byId<HTMLElement>('filesEmptyHint');
   const filesBreadcrumb = byId<HTMLElement>('filesBreadcrumb');
@@ -327,7 +434,8 @@ export function initApp(): void {
   const pdfSourceCancelBtn = byId<HTMLButtonElement>('pdfSourceCancelBtn');
 
   const binderyFilePickerModal = byId<HTMLDivElement>('binderyFilePickerModal');
-  const binderyPickerBreadcrumb = byId<HTMLDivElement>('binderyPickerBreadcrumb');
+  const binderyPickerBreadcrumb = byId<HTMLElement>('binderyPickerBreadcrumb');
+  const binderyPickerUpBtn = byId<HTMLButtonElement>('binderyPickerUpBtn');
   const binderyPickerList = byId<HTMLDivElement>('binderyPickerList');
   const binderyPickerEmptyHint = byId<HTMLParagraphElement>('binderyPickerEmptyHint');
   const binderyPickerCancelBtn = byId<HTMLButtonElement>('binderyPickerCancelBtn');
@@ -359,6 +467,7 @@ export function initApp(): void {
   const onboardingTrack = byId<HTMLDivElement>('onboardingTrack');
   const onboardingDots = byId<HTMLDivElement>('onboardingDots');
   const onboardingNextBtn = byId<HTMLButtonElement>('onboardingNextBtn');
+  const onboardingSkipBtn = byId<HTMLButtonElement>('onboardingSkipBtn');
   const onboardingThemeBtns = Array.from(
     document.querySelectorAll<HTMLButtonElement>('.onboarding-theme-btn'),
   );
@@ -374,27 +483,68 @@ export function initApp(): void {
   let openInToolUri: string | null = null;
   let openInToolRelPath: string | null = null;
 
-  const bottomNav = byId<HTMLElement>('bottomNav');
-  const hubSearchInput = byId<HTMLInputElement>('hubSearchInput');
   const toast = byId<HTMLDivElement>('toast');
-  // Only the hub carousel and All-Tools rows use this navigate-or-"coming soon"
+  // Only the All-Tools rows use this navigate-or-"coming soon"
   // handler. The reader tools sheet and the files sort sheet reuse the .tool-row
   // styling but have their own dedicated click handlers, so exclude them here —
   // otherwise their rows also fire a spurious "coming soon" toast.
   const toolRows = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool-row')).filter(
     (row) => !row.closest('#readerToolsSheet') && !row.closest('#filesSortSheet'),
   );
-  const carouselToolRows = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('.hub-carousel .tool-row'),
-  );
 
+  const dropzoneCard = byId<HTMLDivElement>('dropzoneCard');
   const pickFileBtn = byId<HTMLButtonElement>('pickFileBtn');
-  const pickerSampleBtn = byId<HTMLButtonElement>('pickerSampleBtn');
-  const fileCard = byId<HTMLDivElement>('fileCard');
   const fileNameLabel = byId<HTMLSpanElement>('fileNameLabel');
   const fileSizeLabel = byId<HTMLSpanElement>('fileSizeLabel');
   const clearFileBtn = byId<HTMLButtonElement>('clearFileBtn');
   const continueBtn = byId<HTMLButtonElement>('continueBtn');
+  const screenPicker = byId<HTMLElement>('screen-picker');
+  const pickerInlineError = byId<HTMLDivElement>('pickerInlineError');
+  const pickerInlineErrorText = byId<HTMLSpanElement>('pickerInlineErrorText');
+  const pickerStage = screenPicker.querySelector<HTMLElement>('.picker-stage');
+  let intakeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function stopPickerIntake(): void {
+    if (intakeTimer) {
+      clearTimeout(intakeTimer);
+      intakeTimer = null;
+    }
+    pickerStage?.classList.remove('is-intake');
+  }
+
+  /** Tactile paper-press micro-interaction, ~240 ms, 100% non-blocking. */
+  function runPickerIntake(): void {
+    if (!pickerStage) return;
+    stopPickerIntake();
+    requestAnimationFrame(() => {
+      pickerStage?.classList.add('is-intake');
+      intakeTimer = setTimeout(() => {
+        pickerStage?.classList.remove('is-intake');
+        intakeTimer = null;
+      }, 260);
+    });
+  }
+
+  type PickerState = 'empty' | 'reading' | 'ready' | 'error';
+  function setPickerState(state: PickerState, errorText?: string): void {
+    screenPicker.dataset.state = state;
+    if (state === 'empty') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = false;
+    } else if (state === 'reading') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = true;
+    } else if (state === 'ready') {
+      pickerInlineError.classList.add('hidden');
+      continueBtn.disabled = false;
+    } else if (state === 'error') {
+      if (errorText) {
+        pickerInlineErrorText.textContent = errorText;
+      }
+      pickerInlineError.classList.remove('hidden');
+      continueBtn.disabled = false;
+    }
+  }
 
   const gutterSlider = byId<HTMLInputElement>('gutterSlider');
   const gutterValueLabel = byId<HTMLSpanElement>('gutterValueLabel');
@@ -416,43 +566,20 @@ export function initApp(): void {
   const insertBlankInput = byId<HTMLInputElement>('insertBlankInput');
   const insertBlankError = byId<HTMLParagraphElement>('insertBlankError');
   const configSummary = byId<HTMLDivElement>('configSummary');
-  // Inline wrap-around cover section on the config screen (Cover Studio's
-  // controls, driven by this booklet's own numbers instead of manual entry).
-  const wrapCoverToggleGroup = byId<HTMLDivElement>('wrapCoverToggleGroup');
-  const wrapCoverOptions = byId<HTMLDivElement>('wrapCoverOptions');
-  const wrapCoverFormatGroup = byId<HTMLDivElement>('wrapCoverFormatGroup');
-  const wrapCoverFormatHint = byId<HTMLParagraphElement>('wrapCoverFormatHint');
-  const wrapCoverFormatResultLine = byId<HTMLParagraphElement>('wrapCoverFormatResultLine');
-  const wrapCoverBindingGroup = byId<HTMLDivElement>('wrapCoverBindingGroup');
-  const wrapCoverKindGroup = byId<HTMLDivElement>('wrapCoverKindGroup');
-  const wrapCoverKindHint = byId<HTMLParagraphElement>('wrapCoverKindHint');
-  const wrapCoverBoardThicknessBlock = byId<HTMLDivElement>('wrapCoverBoardThicknessBlock');
-  const wrapCoverBoardGroup = byId<HTMLDivElement>('wrapCoverBoardGroup');
-  const wrapCoverGsmGroup = byId<HTMLDivElement>('wrapCoverGsmGroup');
-  const wrapCoverPaletteGroup = byId<HTMLDivElement>('wrapCoverPaletteGroup');
-  const wrapCoverTitleInput = byId<HTMLInputElement>('wrapCoverTitleInput');
-  const wrapCoverAuthorInput = byId<HTMLInputElement>('wrapCoverAuthorInput');
-  const wrapCoverSynopsisInput = byId<HTMLTextAreaElement>('wrapCoverSynopsisInput');
-  const wrapCoverSpineLabel = byId<HTMLSpanElement>('wrapCoverSpineLabel');
-  const wrapCoverPaperBulkBadge = byId<HTMLSpanElement>('wrapCoverPaperBulkBadge');
-  const wrapCoverThreadSwellBadge = byId<HTMLSpanElement>('wrapCoverThreadSwellBadge');
-  const wrapCoverHingeBadge = byId<HTMLSpanElement>('wrapCoverHingeBadge');
-  const wrapCoverFitBadge = byId<HTMLSpanElement>('wrapCoverFitBadge');
-  const wrapCoverPaperFitBadge = byId<HTMLSpanElement>('wrapCoverPaperFitBadge');
-  const wrapCoverDimsLabel = byId<HTMLDivElement>('wrapCoverDimsLabel');
-  const wrapCoverMiniPreview = byId<HTMLDivElement>('wrapCoverMiniPreview');
-  const wrapCoverMiniSynopsis = byId<HTMLParagraphElement>('wrapCoverMiniSynopsis');
-  const wrapCoverMiniSpine = byId<HTMLDivElement>('wrapCoverMiniSpine');
-  const wrapCoverMiniSpineText = byId<HTMLSpanElement>('wrapCoverMiniSpineText');
-  const wrapCoverMiniTitle = byId<HTMLHeadingElement>('wrapCoverMiniTitle');
-  const wrapCoverMiniAuthor = byId<HTMLParagraphElement>('wrapCoverMiniAuthor');
+  const configStepLayout = byId<HTMLDivElement>('configStepLayout');
+  const configTooltipPopover = byId<HTMLDivElement>('configTooltipPopover');
+  const paperSelectedLabel = byId<HTMLElement>('paperSelectedLabel');
+  const signatureMoreBtn = byId<HTMLButtonElement>('signatureMoreBtn');
+  const signatureSizeMore = byId<HTMLDivElement>('signatureSizeMore');
   const advancedToggle = byId<HTMLButtonElement>('advancedToggle');
   const advancedPanel = byId<HTMLDivElement>('advancedPanel');
   const advancedBadge = byId<HTMLSpanElement>('advancedBadge');
+  const advancedDefaultLabel = byId<HTMLSpanElement>('advancedDefaultLabel');
   const mixedSizeWarning = byId<HTMLDivElement>('mixedSizeWarning');
   const trimBoxNotice = byId<HTMLDivElement>('trimBoxNotice');
   const preflightLargeFileWarning = byId<HTMLDivElement>('preflightLargeFileWarning');
   const configPreflightWarning = byId<HTMLDivElement>('configPreflightWarning');
+  const configPreflightWarningText = byId<HTMLSpanElement>('configPreflightWarningText');
   const settingsShareAppBtn = byId<HTMLButtonElement>('settingsShareAppBtn');
   const settingsRateAppBtn = byId<HTMLButtonElement>('settingsRateAppBtn');
   const growthReviewDialog = byId<HTMLDialogElement>('growthReviewDialog');
@@ -461,15 +588,8 @@ export function initApp(): void {
   const generateBtn = byId<HTMLButtonElement>('generateBtn');
   const generateBtnLabel = byId<HTMLSpanElement>('generateBtnLabel');
   const generateSpinner = byId<HTMLSpanElement>('generateSpinner');
-
-  const statOriginal = byId<HTMLSpanElement>('statOriginal');
-  const statPaddingCard = byId<HTMLDivElement>('statPaddingCard');
-  const statPadding = byId<HTMLSpanElement>('statPadding');
-  const statSheets = byId<HTMLSpanElement>('statSheets');
-  const statSignaturesCard = byId<HTMLDivElement>('statSignaturesCard');
-  const statSignatures = byId<HTMLSpanElement>('statSignatures');
-  const statBlanksCard = byId<HTMLDivElement>('statBlanksCard');
-  const statBlanks = byId<HTMLSpanElement>('statBlanks');
+  const screenResult = byId<HTMLElement>('screen-result');
+  const resultSummaryLine = byId<HTMLParagraphElement>('resultSummaryLine');
   const coverActionRow = byId<HTMLDivElement>('coverActionRow');
   const instructionsActionRow = byId<HTMLDivElement>('instructionsActionRow');
   const actionStatus = byId<HTMLParagraphElement>('actionStatus');
@@ -481,18 +601,6 @@ export function initApp(): void {
   const backPreviewImg = byId<HTMLImageElement>('backPreviewImg');
   const backPreviewSpinner = byId<HTMLDivElement>('backPreviewSpinner');
   const backPreviewError = byId<HTMLParagraphElement>('backPreviewError');
-  const wrapCoverSheet1ActionRow = byId<HTMLDivElement>('wrapCoverSheet1ActionRow');
-  const wrapCoverSheet2ActionRow = byId<HTMLDivElement>('wrapCoverSheet2ActionRow');
-  const wrapCoverSheet1Label = byId<HTMLSpanElement>('wrapCoverSheet1Label');
-  const wrapCoverSheet1PreviewCell = byId<HTMLDivElement>('wrapCoverSheet1PreviewCell');
-  const wrapCoverSheet1PreviewImg = byId<HTMLImageElement>('wrapCoverSheet1PreviewImg');
-  const wrapCoverSheet1PreviewSpinner = byId<HTMLDivElement>('wrapCoverSheet1PreviewSpinner');
-  const wrapCoverSheet1PreviewError = byId<HTMLParagraphElement>('wrapCoverSheet1PreviewError');
-  const wrapCoverSheet1PreviewLabel = byId<HTMLParagraphElement>('wrapCoverSheet1PreviewLabel');
-  const wrapCoverSheet2PreviewCell = byId<HTMLDivElement>('wrapCoverSheet2PreviewCell');
-  const wrapCoverSheet2PreviewImg = byId<HTMLImageElement>('wrapCoverSheet2PreviewImg');
-  const wrapCoverSheet2PreviewSpinner = byId<HTMLDivElement>('wrapCoverSheet2PreviewSpinner');
-  const wrapCoverSheet2PreviewError = byId<HTMLParagraphElement>('wrapCoverSheet2PreviewError');
   const coverPreviewCell = byId<HTMLDivElement>('coverPreviewCell');
   const coverPreviewImg = byId<HTMLImageElement>('coverPreviewImg');
   const coverPreviewSpinner = byId<HTMLDivElement>('coverPreviewSpinner');
@@ -525,27 +633,35 @@ export function initApp(): void {
   const mergeNewBtn = byId<HTMLButtonElement>('mergeNewBtn');
 
   let selectedFile: { name: string; bytes: Uint8Array } | null = null;
+  // Where the selected booklet source can be read again from — what lets a
+  // library record outlive this session.
+  let bookletSourceRef: SourceRef = { kind: 'none' };
+  // Library record the current booklet result belongs to. Set by its first
+  // save/share, so a later save or share updates it rather than adding another.
+  let currentLibraryRecordId: string | null = null;
+  // Options and counts of the last successful generation, for the library record.
+  let lastBookletResultMeta: BookletResultMeta | null = null;
+  // Set by the library's "Print sheets" just before it regenerates a stored
+  // booklet: the generation that follows takes this id instead of starting a
+  // new record, so its save/share updates the record it came from.
+  let pendingLibraryRecordId: string | null = null;
+  // The regenerated record's title, so the result keeps the name it was saved under.
+  let pendingLibraryTitle: string | null = null;
+  // Where back leads from the booklet result screen: the library when the
+  // result was regenerated from there, the hub otherwise.
+  let bookletResultReturnTo: ScreenId = 'hub';
   let booklet: {
     frontPdf: Uint8Array;
     backPdf: Uint8Array;
     combinedPdf: Uint8Array;
     coverPdf?: Uint8Array;
     instructionsPdf?: Uint8Array;
-    // Wrap-around cover, produced alongside the book block when the config
-    // screen's cover section is on. Split format yields one PDF per printed
-    // sheet; single wrap yields one wide PDF. Never both.
-    wrapCoverSheet1Pdf?: Uint8Array;
-    wrapCoverSheet2Pdf?: Uint8Array;
-    wrapCoverPdf?: Uint8Array;
   } | null = null;
   let bookletSaveState: 'idle' | 'saving' | 'saved' = 'idle';
   let bookletFlipEdge: FlipEdge = 'short';
   let bookletPaperSize: PaperSize = 'A4';
-  // Hub hero brand-moment intro: assigned by the controller block below;
-  // showScreen('hub') and finishOnboarding() call it. No-op until set.
-  let requestHeroIntro: () => void = () => {};
-  // Raw segmented value: 'single' | '8' | '16' | '32' | 'auto'.
-  let bookletSignature = 'single';
+  // Raw segmented value: 'single' | 'auto' | '4' | '8' | '16' | '32'.
+  let bookletSignature = 'auto';
   let bookletBinding: Binding = 'ltr';
   let bookletSeparateCover = false;
   let bookletIncludeInstructions = false;
@@ -556,34 +672,15 @@ export function initApp(): void {
   // Original page count of the selected source (0 = none). Drives the live
   // config summary and the separate-cover availability check.
   let bookletOriginalPages = 0;
-  // Wrap-around cover section on the config screen, using the shared CoverOptions model.
-  let bookletWrapCover = false;
-  let wrapCoverFormat: CoverFormat = 'split';
-  let wrapCoverBinding: BindingType = 'sewn';
-  let wrapCoverKind: 'softcover' | 'hardcover' = 'softcover';
-  let wrapCoverBoardMm: BoardThicknessMm = 2.0;
-  let wrapCoverGsm: PaperGsm = 80;
-  let wrapCoverTheme: CoverTheme = 'cream';
   /**
    * Sheet size the engine resolves for `paperSize: 'source'` on the currently
-   * selected document, cached at pick time so the live cover preview never has
-   * to re-parse the PDF on every keystroke. Null until a document is loaded, or
-   * when resolving it failed (a document whose own size is out of printable
-   * bounds) — the cover section falls back to A4 and says so.
+   * selected document, cached at pick time for library metadata and printing.
+   * Null until a document is loaded, or when resolving it failed (a document
+   * whose own size is out of printable bounds) — falls back to A4.
    */
   let bookletSourceSheetSize: [number, number] | null = null;
-
-  function getBookletCoverOptions(): CoverOptions {
-    return normalizeCoverOptions({
-      paper: wrapCoverFormat === 'single' ? 'single' : 'split',
-      kind: wrapCoverKind,
-      binding: wrapCoverBinding,
-      boardMm: wrapCoverBoardMm,
-      gsm: wrapCoverGsm,
-      theme: wrapCoverTheme,
-    });
-  }
   let returnScreenOnError: ScreenId = 'picker';
+  let returnLibraryTabOnError: LibraryTab | null = null;
 
   let mergeFiles: PickedPdf[] = [];
   let mergedPdf: Uint8Array | null = null;
@@ -721,114 +818,6 @@ export function initApp(): void {
   let watermarkResultPdf: Uint8Array | null = null;
   let watermarkSaveState: 'idle' | 'saving' | 'saved' = 'idle';
 
-  // Cover Studio elements
-  const coverSourceModeGroup = byId<HTMLDivElement>('coverSourceModeGroup');
-  const coverPdfSourceCard = byId<HTMLDivElement>('coverPdfSourceCard');
-  const coverPickPdfBtn = byId<HTMLButtonElement>('coverPickPdfBtn');
-  const coverPdfBadge = byId<HTMLDivElement>('coverPdfBadge');
-  const coverPdfName = byId<HTMLSpanElement>('coverPdfName');
-  const coverPdfInfo = byId<HTMLSpanElement>('coverPdfInfo');
-  const coverClearPdfBtn = byId<HTMLButtonElement>('coverClearPdfBtn');
-  const coverManualCountsCard = byId<HTMLDivElement>('coverManualCountsCard');
-  const coverSheetCountInput = byId<HTMLInputElement>('coverSheetCountInput');
-  const coverSigCountRow = byId<HTMLDivElement>('coverSigCountRow');
-  const coverSigCountInput = byId<HTMLInputElement>('coverSigCountInput');
-  const coverSpineWidthLabel = byId<HTMLSpanElement>('coverSpineWidthLabel');
-  const coverPaperBulkBadge = byId<HTMLSpanElement>('coverPaperBulkBadge');
-  const coverThreadSwellBadge = byId<HTMLSpanElement>('coverThreadSwellBadge');
-  const coverHingeBadge = byId<HTMLSpanElement>('coverHingeBadge');
-  const coverSpineFitBadge = byId<HTMLSpanElement>('coverSpineFitBadge');
-  const coverPaperFitBadge = byId<HTMLSpanElement>('coverPaperFitBadge');
-  const coverTotalDimensionsLabel = byId<HTMLDivElement>('coverTotalDimensionsLabel');
-  const coverBindingGroup = byId<HTMLDivElement>('coverBindingGroup');
-  const coverFormatGroup = byId<HTMLDivElement>('coverFormatGroup');
-  const coverFormatHint = byId<HTMLParagraphElement>('coverFormatHint');
-  const coverFormatResultLine = byId<HTMLParagraphElement>('coverFormatResultLine');
-  const coverPreviewHeading = byId<HTMLSpanElement>('coverPreviewHeading');
-  const coverLayoutPreview = byId<HTMLDivElement>('coverLayoutPreview');
-  const coverSplitPreview = byId<HTMLDivElement>('coverSplitPreview');
-  const coverSplitSheet1Preview = byId<HTMLDivElement>('coverSplitSheet1Preview');
-  const coverSplitSheet2Preview = byId<HTMLDivElement>('coverSplitSheet2Preview');
-  const coverSplitSynopsisText = byId<HTMLParagraphElement>('coverSplitSynopsisText');
-  const coverSplitSpinePreview = byId<HTMLDivElement>('coverSplitSpinePreview');
-  const coverSplitFlapPreview = byId<HTMLDivElement>('coverSplitFlapPreview');
-  const coverSplitTabPreview = byId<HTMLDivElement>('coverSplitTabPreview');
-  const coverSplitSpineText = byId<HTMLSpanElement>('coverSplitSpineText');
-  const coverSplitThumbImg = byId<HTMLImageElement>('coverSplitThumbImg');
-  const coverSplitTitleText = byId<HTMLHeadingElement>('coverSplitTitleText');
-  const coverSplitAuthorText = byId<HTMLParagraphElement>('coverSplitAuthorText');
-  const coverPreviewSynopsisText = byId<HTMLParagraphElement>('coverPreviewSynopsisText');
-  const coverSpinePreview = byId<HTMLDivElement>('coverSpinePreview');
-  const coverPreviewSpineText = byId<HTMLSpanElement>('coverPreviewSpineText');
-  const coverPreviewThumbImg = byId<HTMLImageElement>('coverPreviewThumbImg');
-  const coverPreviewTitleText = byId<HTMLHeadingElement>('coverPreviewTitleText');
-  const coverPreviewAuthorText = byId<HTMLParagraphElement>('coverPreviewAuthorText');
-  const coverTitleInput = byId<HTMLInputElement>('coverTitleInput');
-  const coverAuthorInput = byId<HTMLInputElement>('coverAuthorInput');
-  const coverSynopsisInput = byId<HTMLTextAreaElement>('coverSynopsisInput');
-  const coverPickImageBtn = byId<HTMLButtonElement>('coverPickImageBtn');
-  const coverRemoveImageBtn = byId<HTMLButtonElement>('coverRemoveImageBtn');
-  const coverImageStatus = byId<HTMLParagraphElement>('coverImageStatus');
-  const coverPaletteGroup = byId<HTMLDivElement>('coverPaletteGroup');
-  const coverGsmGroup = byId<HTMLDivElement>('coverGsmGroup');
-  const coverKindRow = byId<HTMLDivElement>('coverKindRow');
-  const coverKindGroup = byId<HTMLDivElement>('coverKindGroup');
-  const coverKindHint = byId<HTMLParagraphElement>('coverKindHint');
-  const coverBoardThicknessBlock = byId<HTMLDivElement>('coverBoardThicknessBlock');
-  const coverBoardGroup = byId<HTMLDivElement>('coverBoardGroup');
-  const coverPageTrimGroup = byId<HTMLDivElement>('coverPageTrimGroup');
-  const coverPageTrimHint = byId<HTMLParagraphElement>('coverPageTrimHint');
-  const coverTrimUnsupportedHint = byId<HTMLParagraphElement>('coverTrimUnsupportedHint');
-  const coverGenerateBtn = byId<HTMLButtonElement>('coverGenerateBtn');
-  const coverGenerateBtnLabel = byId<HTMLSpanElement>('coverGenerateBtnLabel');
-  const coverGenerateSpinner = byId<HTMLSpanElement>('coverGenerateSpinner');
-
-  const coverResultBreakdownCard = byId<HTMLDivElement>('coverResultBreakdownCard');
-  const coverResultSpineStat = byId<HTMLSpanElement>('coverResultSpineStat');
-  const coverResultDimStat = byId<HTMLSpanElement>('coverResultDimStat');
-  const coverFileNameInput = byId<HTMLInputElement>('coverFileNameInput');
-  const coverSaveBtn = byId<HTMLButtonElement>('coverSaveBtn');
-  const coverSaveBtnLabel = byId<HTMLSpanElement>('coverSaveBtnLabel');
-  const coverSaveSpinner = byId<HTMLSpanElement>('coverSaveSpinner');
-  const coverShareBtn = byId<HTMLButtonElement>('coverShareBtn');
-  const coverActionStatus = byId<HTMLParagraphElement>('coverActionStatus');
-  const coverGoToLocationBtn = byId<HTMLButtonElement>('coverGoToLocationBtn');
-  const coverNewBtn = byId<HTMLButtonElement>('coverNewBtn');
-
-  const resultOpenCoverStudioBtn = byId<HTMLButtonElement>('resultOpenCoverStudioBtn');
-
-  let coverPickedPdfName = '';
-  let coverSheetCount = 20;
-  let coverSigCount = 5;
-  let coverPaperGsm: PaperGsm = 80;
-  let coverBindingType: BindingType = 'sewn';
-  let coverCoverStyle: 'softcover' | 'hardcover' = 'softcover';
-  let coverBoardThicknessMm: BoardThicknessMm = 2.0;
-  let coverPageTrim: 'A5' | 'A4' = 'A5';
-  // Two A4 sheets is the default: a single-piece A5 wrap is ~305mm wide and
-  // cannot be fed through a home A4 printer at all (see cover-engine's
-  // CoverFormat). Users with A3 access opt into 'single' explicitly.
-  let coverFormat: CoverFormat = 'split';
-  let coverTheme: 'cream' | 'white' | 'navy' | 'burgundy' | 'charcoal' = 'cream';
-
-  function getStudioCoverOptions(): CoverOptions {
-    return normalizeCoverOptions({
-      paper: coverFormat === 'single' ? 'single' : 'split',
-      kind: coverCoverStyle,
-      binding: coverBindingType,
-      boardMm: coverBoardThicknessMm,
-      gsm: coverPaperGsm,
-      theme: coverTheme,
-    });
-  }
-  let coverImageBytes: Uint8Array | null = null;
-  let coverResultPdf: Uint8Array | null = null;
-  let coverSaveState: 'idle' | 'saving' | 'saved' = 'idle';
-
-  const hubOpenReaderBtn = byId<HTMLButtonElement>('hubOpenReaderBtn');
-  const recentsList = byId<HTMLDivElement>('recentsList');
-  const recentsViewAllBtn = byId<HTMLButtonElement>('recentsViewAllBtn');
-  const toolsViewAllBtn = byId<HTMLButtonElement>('toolsViewAllBtn');
   const readerPageIndicator = byId<HTMLButtonElement>('readerPageIndicator');
   const readerNightModeBtn = byId<HTMLButtonElement>('readerNightModeBtn');
   const readerScrubber = byId<HTMLDivElement>('readerScrubber');
@@ -901,8 +890,8 @@ export function initApp(): void {
   let readerIndicatorRaf = 0;
   let readerLastPageSaveTimer: ReturnType<typeof setTimeout> | undefined;
   // Must match .reader-page-list's `gap` and top padding in styles.css.
-  const READER_PAGE_GAP_PX = 6;
-  const READER_LIST_TOP_PADDING_PX = 6;
+  const READER_PAGE_GAP_PX = 12;
+  const READER_LIST_TOP_PADDING_PX = 12;
   // Per-page layout metadata, rebuilt on every document open (renderReaderList).
   // Pages can have mixed orientations, so slot math is per-page, not uniform:
   // readerPageOffsets[i] is the distance from the top of the page list to
@@ -1038,15 +1027,37 @@ export function initApp(): void {
 
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function showToast(message: string, opts?: { type?: 'info' | 'error' }): void {
+  interface ToastAction {
+    label: string;
+    onClick: () => void;
+  }
+
+  function showToast(
+    message: string,
+    opts?: { type?: 'info' | 'error'; action?: ToastAction; durationMs?: number },
+  ): void {
     if (opts?.type === 'error') {
       errorLiveRegion.textContent = '';
       requestAnimationFrame(() => { errorLiveRegion.textContent = message; });
     }
-    toast.textContent = message;
-    toast.classList.remove('hidden');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
+    toast.textContent = message;
+    const action = opts?.action;
+    toast.classList.toggle('has-action', Boolean(action));
+    if (action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toast-action';
+      button.textContent = action.label;
+      button.addEventListener('click', () => {
+        if (toastTimer) clearTimeout(toastTimer);
+        toast.classList.add('hidden');
+        action.onClick();
+      });
+      toast.appendChild(button);
+    }
+    toast.classList.remove('hidden');
+    toastTimer = setTimeout(() => toast.classList.add('hidden'), opts?.durationMs ?? 2500);
   }
 
   // ── Modal focus trap ────────────────────────────────────────────────────────
@@ -1147,17 +1158,135 @@ export function initApp(): void {
       'hub') as ScreenId;
   }
 
-  function updateBottomNavActive(tab: string): void {
-    bottomNav.querySelectorAll('.bottom-nav-item').forEach((item) => {
-      const btn = item as HTMLButtonElement;
-      const isActive = btn.dataset.nav === tab;
-      btn.classList.toggle('is-active', isActive);
-    });
+  let mdFlow: { reset: () => void } | null = null;
+  let atelierHub: AtelierHubController | null = null;
+  let libraryScreen: LibraryScreenController | null = null;
+  type FilesBackTarget = { screen: ScreenId } | { tab: LibraryTab };
+  let pendingLibraryTab: LibraryTab | null = null;
+  let currentLibraryTab: LibraryTab = 'books';
+  let filesBackTarget: FilesBackTarget | null = null;
+  let filesLandingPath: string | null = null;
+  let readerReturnLibraryTab: LibraryTab | null = null;
+
+  function clearFilesBackTarget(): void {
+    filesBackTarget = null;
+    filesLandingPath = null;
   }
 
-  let mdFlow: { reset: () => void } | null = null;
+  function navigateFilesFolder(nextPath: string): void {
+    currentFolderPath = nextPath;
+    if (filesLandingPath !== null && !isWithinLanding(nextPath, filesLandingPath)) {
+      clearFilesBackTarget();
+    }
+    void renderFilesList();
+  }
+
+  function openLibrary(
+    tab: LibraryTab,
+    opts: { folderPath?: string; backTarget?: FilesBackTarget | null } = {},
+  ): void {
+    if (opts.folderPath !== undefined) {
+      currentFolderPath = opts.folderPath;
+    }
+    if (opts.backTarget !== undefined) {
+      filesBackTarget = opts.backTarget;
+      filesLandingPath = opts.backTarget ? currentFolderPath : null;
+    } else if (opts.folderPath !== undefined) {
+      clearFilesBackTarget();
+    }
+    if (getCurrentScreenId() === 'library') {
+      libraryScreen?.selectTab(tab);
+    } else {
+      pendingLibraryTab = tab;
+      showScreen('library');
+    }
+  }
+
+  /**
+   * Handles Files-tab back navigation inside the Library screen: returns to the
+   * recorded back target at the landing folder, or climbs one folder when
+   * deeper than the landing path (or below root when no landing path is set).
+   * Returns true when back navigation was handled.
+   */
+  function handleLibraryFilesBack(): boolean {
+    if (getCurrentScreenId() !== 'library' || currentLibraryTab !== 'files') return false;
+    const action = resolveFilesBack({
+      path: currentFolderPath,
+      landing: filesLandingPath,
+      hasTarget: filesBackTarget !== null,
+    });
+    if (action === 'target' && filesBackTarget) {
+      const target = filesBackTarget;
+      clearFilesBackTarget();
+      if ('screen' in target) {
+        showScreen(target.screen);
+      } else {
+        libraryScreen?.selectTab(target.tab);
+      }
+      return true;
+    }
+    if (action === 'climb') {
+      currentFolderPath = currentFolderPath.includes('/')
+        ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))
+        : '';
+      void renderFilesList();
+      return true;
+    }
+    return false;
+  }
+  let bookReader: BookReaderController | null = null;
+  interface BookSession {
+    bytes: Uint8Array;
+    name: string;
+    title: string;
+    /** Set for a library record (signature view); null for a desk PDF. */
+    record: LibraryRecord | null;
+    desk: RecentEntry | null;
+    uri: string | null;
+    relPath: string | null;
+    /** Index into the book's page sequence. */
+    page: number;
+  }
+  // What the book reader shows: the bytes stay here while the reader is
+  // opened on one of its pages, so back returns to the same spread.
+  let bookSession: BookSession | null = null;
+  // The session the book reader currently has open (null while closed).
+  let bookSessionShown: BookSession | null = null;
+  // Bumped whenever the book closes, so an open still in flight is dropped.
+  let bookOpenToken = 0;
+
+  let screenTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function triggerScreenTransitionGuard(): void {
+    appShell.classList.add('is-screen-transitioning');
+    if (screenTransitionTimer) clearTimeout(screenTransitionTimer);
+    screenTransitionTimer = setTimeout(() => {
+      appShell.classList.remove('is-screen-transitioning');
+      screenTransitionTimer = null;
+    }, 280);
+  }
 
   function showScreen(id: ScreenId): void {
+    triggerScreenTransitionGuard();
+    if (id !== 'library' && id !== 'reader' && id !== 'book') {
+      filesBackTarget = null;
+      filesLandingPath = null;
+      readerReturnLibraryTab = null;
+    }
+    if (getCurrentScreenId() === 'library' && id !== 'library') {
+      libraryScreen?.hide();
+    }
+    if (getCurrentScreenId() === 'book' && id !== 'book') {
+      // The book's document goes away with the screen (renders cancelled
+      // first, inside close). Only the reader, opened on one of its pages,
+      // keeps the session so back can return to the same spread.
+      void closeBookReader(id === 'reader');
+      void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
+      stopBookResizeWatch();
+      appShell.classList.remove('book-chrome-hidden');
+    } else if (id !== 'book' && id !== 'reader') {
+      bookSession = null;
+    }
     if (getCurrentScreenId() === 'reader' && id !== 'reader') {
       void closeReaderDocument();
       void ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
@@ -1175,9 +1304,9 @@ export function initApp(): void {
       el.classList.toggle('hidden', key !== id);
     }
     topBarTitle.textContent = t(SCREEN_TITLES[id]);
+    topBarTitle.title = id === 'reader' ? (readerName || '') : '';
 
-    const isTab = id === 'hub' || id === 'files' || id === 'settings';
-    backBtn.hidden = isTab;
+    backBtn.hidden = id === 'hub';
 
     const isReader = id === 'reader';
     savePdfBtn.hidden = !isReader;
@@ -1186,27 +1315,29 @@ export function initApp(): void {
     // there, and a button that can only fail is worse than no button.
     printPdfBtn.hidden = !isReader || !canPrint();
 
-    bottomNav.classList.toggle('hidden', !isTab);
-    if (isTab) {
-      updateBottomNavActive(id);
+    if (id !== 'hub') {
+      // The hub is leaving the screen, so there is nothing to animate.
+      atelierHub?.closeMenu({ immediate: true });
     }
 
     if (id === 'reader') {
       void ScreenOrientation.unlock().catch(() => {});
+    } else if (id === 'book') {
+      void ScreenOrientation.unlock().catch(() => {});
+      void startBookSession();
+      startBookResizeWatch();
     } else if (id === 'hub') {
-      void renderHubRecentsGrid();
-      // Only after onboarding (on first run the hub sits behind the onboarding
-      // overlay; finishOnboarding() triggers the intro instead).
-      if (localStorage.getItem('bindery.onboarded') === 'true') requestHeroIntro();
-    } else if (id === 'recents') {
-      void renderRecentsListLarge();
-    } else if (id === 'files') {
-      void renderFilesList();
+      void refreshHubSavedCount();
+    } else if (id === 'library') {
+      const tabToShow = pendingLibraryTab ?? undefined;
+      pendingLibraryTab = null;
+      void libraryScreen?.show(tabToShow);
     } else if (id === 'error-log') {
       void renderErrorLog();
-    } else if (id === 'cover') {
-      applyCoverFormatToUi();
-      updateCoverLiveCalculations();
+    } else if (id === 'config') {
+      updatePaperSelectedBadge();
+      syncSignatureMore();
+      updateConfigPreflightWarning();
     }
     updateReaderNightChrome();
   }
@@ -1218,21 +1349,59 @@ export function initApp(): void {
     );
   }
 
+  function updatePaperSelectedBadge(): void {
+    if (!paperSelectedLabel) return;
+    const paperLabels: Record<string, string> = {
+      A4: 'A4 (210×297 mm)',
+      A5: 'A5 (148×210 mm)',
+      Letter: 'Letter (8.5×11 in)',
+      A3: 'A3 (297×420 mm)',
+      source: t('config.paperSource'),
+    };
+    paperSelectedLabel.textContent = paperLabels[String(bookletPaperSize)] || String(bookletPaperSize);
+  }
+
+  // The numeric signature sizes live behind "Other" so the common choices fit
+  // one row. "Other" lights up while a numeric size is selected, and its row
+  // stays open then, so the active size is never hidden.
+  function syncSignatureMore(open?: boolean): void {
+    const numeric = bookletSignature !== 'auto' && bookletSignature !== 'single';
+    const show = numeric || (open ?? !signatureSizeMore.classList.contains('hidden'));
+    signatureSizeMore.classList.toggle('hidden', !show);
+    signatureMoreBtn.classList.toggle('is-active', numeric);
+    signatureMoreBtn.setAttribute('aria-expanded', String(show));
+  }
+
+  function updateConfigPreflightWarning(): void {
+    const shouldShow = shouldWarnSingleSignature(bookletSignature, bookletOriginalPages);
+    if (shouldShow) {
+      configPreflightWarningText.textContent = t('config.preflightWarning', {
+        pages: bookletOriginalPages,
+      });
+    }
+    configPreflightWarning.classList.toggle('hidden', !shouldShow);
+  }
+
   function resetPicker(): void {
+    stopPickerIntake();
     selectedFile = null;
-    fileCard.classList.add('hidden');
-    continueBtn.classList.add('hidden');
-    pickFileBtn.classList.remove('hidden');
+    bookletSourceRef = { kind: 'none' };
+    currentLibraryRecordId = null;
+    lastBookletResultMeta = null;
+    pendingLibraryRecordId = null;
+    pendingLibraryTitle = null;
+    bookletResultReturnTo = 'hub';
+    setPickerState('empty');
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
-    configPreflightWarning.classList.add('hidden');
     bookletFlipEdge = 'short';
     setActiveSegment(flipEdgeGroup, 'flip', 'short');
     bookletPaperSize = 'A4';
     setActiveSegment(paperSizeGroup, 'paper', 'A4');
-    bookletSignature = 'single';
-    setActiveSegment(signatureSizeGroup, 'sig', 'single');
+    bookletSignature = 'auto';
+    setActiveSegment(signatureSizeGroup, 'sig', 'auto');
+    syncSignatureMore(false);
     bookletBinding = 'ltr';
     setActiveSegment(bindingGroup, 'binding', 'ltr');
     bookletSeparateCover = false;
@@ -1246,22 +1415,55 @@ export function initApp(): void {
     insertBlankError.classList.add('hidden');
     bookletOriginalPages = 0;
     bookletSourceSheetSize = null;
-    bookletWrapCover = false;
-    wrapCoverFormat = 'split';
-    wrapCoverBinding = 'sewn';
-    wrapCoverKind = 'softcover';
-    wrapCoverBoardMm = 2.0;
-    wrapCoverGsm = 80;
-    wrapCoverTheme = 'cream';
-    wrapCoverTitleInput.value = '';
-    wrapCoverAuthorInput.value = '';
-    wrapCoverSynopsisInput.value = '';
-    applyWrapCoverToUi();
-    // After the wrap-cover state above, so the separate-cover segment is not
-    // reconciled against the previous document's setting.
     updateCoverAvailability();
+    updatePaperSelectedBadge();
+    syncSignatureMore();
+    updateConfigPreflightWarning();
     refreshConfigSummary();
     setAdvancedOpen(false);
+    configStepLayout.scrollTop = 0;
+    updateAdvancedBadge();
+  }
+
+  /**
+   * The inverse of resetPicker for the config screen: puts a library record's
+   * stored options back into the config state and its controls, so the
+   * generation that follows produces the booklet the record describes. Every
+   * setting resetPicker resets is assigned here too (library-wiring.test.ts
+   * holds the two side by side); a missed one would silently produce a
+   * different booklet.
+   */
+  function applyStoredBookletSettings(settings: StoredBookletSettings): void {
+    const { options } = settings;
+    bookletFlipEdge = options.flipEdge === 'long' ? 'long' : 'short';
+    setActiveSegment(flipEdgeGroup, 'flip', bookletFlipEdge);
+    bookletPaperSize = options.paperSize ?? 'A4';
+    setActiveSegment(paperSizeGroup, 'paper', typeof bookletPaperSize === 'string' ? bookletPaperSize : '');
+    bookletSignature = options.signatureSize === undefined ? 'single' : String(options.signatureSize);
+    setActiveSegment(signatureSizeGroup, 'sig', bookletSignature);
+    bookletBinding = options.binding === 'rtl' ? 'rtl' : 'ltr';
+    setActiveSegment(bindingGroup, 'binding', bookletBinding);
+    bookletSeparateCover = options.separateCover === true;
+    bookletIncludeInstructions = options.includeInstructions === true;
+    setActiveSegment(instructionsGroup, 'instr', bookletIncludeInstructions ? 'add' : 'none');
+    bookletReverseSheetOrder = options.reverseSheetOrder === true;
+    setActiveSegment(sheetOrderGroup, 'order', bookletReverseSheetOrder ? 'reversed' : 'default');
+    bookletMarks = options.collationMarks ? 'full' : options.foldGuides ? 'fold' : 'none';
+    setActiveSegment(marksGroup, 'marks', bookletMarks);
+    insertBlankInput.value = (options.insertBlankAfter ?? []).join(', ');
+    insertBlankError.classList.add('hidden');
+    gutterSlider.value = String(options.gutter ?? 0);
+    gutterValueLabel.textContent = `${gutterSlider.value} pt`;
+    creepSlider.value = String(options.creep ?? 0);
+    creepValueLabel.textContent = formatCreepLabel(Number(creepSlider.value));
+    creepPaperGsm.value = '';
+    updateCoverAvailability();
+    updatePaperSelectedBadge();
+    syncSignatureMore();
+    updateConfigPreflightWarning();
+    refreshConfigSummary();
+    setAdvancedOpen(false);
+    configStepLayout.scrollTop = 0;
     updateAdvancedBadge();
   }
 
@@ -1276,9 +1478,7 @@ export function initApp(): void {
   // and instructions.
   function savedPdfCount(): number {
     if (!booklet) return 3;
-    const wrapCoverFiles = [booklet.wrapCoverSheet1Pdf, booklet.wrapCoverSheet2Pdf, booklet.wrapCoverPdf]
-      .filter(Boolean).length;
-    return 3 + (booklet.coverPdf ? 1 : 0) + (booklet.instructionsPdf ? 1 : 0) + wrapCoverFiles;
+    return 3 + (booklet.coverPdf ? 1 : 0) + (booklet.instructionsPdf ? 1 : 0);
   }
 
   // Keeps the save button label in sync with state and PDF count / language.
@@ -1289,25 +1489,6 @@ export function initApp(): void {
         : t('booklet.saveAll', { count: savedPdfCount() });
   }
 
-  /**
-   * Whether this run actually produces a separate cover.
-   *
-   * A wrap-around cover encloses the whole book block, so the block cannot also
-   * give up 4 of its own pages to a separate cover — and measuring the wrap's
-   * spine on a block short of those 4 pages (plus the heavier cover sheet bound
-   * in but never counted) would leave the printed spine narrower than the
-   * finished book.
-   *
-   * The user's own choice is SUPPRESSED, not erased: `bookletSeparateCover`
-   * still holds what they asked for, so turning the wrap cover back off restores
-   * it. Every consumer of the setting — the engine call, the sheet metrics, the
-   * summary band and the Advanced badge — must read this, never the raw flag, or
-   * they disagree with each other about what is being produced.
-   */
-  function effectiveSeparateCover(): boolean {
-    return bookletSeparateCover && !bookletWrapCover;
-  }
-
   // A separate cover needs the original document to have at least 8 pages
   // (2+2 cover + at least one inner sheet). The rule is on ORIGINAL pages, not
   // the blank-inflated logical order — matching the engine's validation. Disables
@@ -1315,40 +1496,28 @@ export function initApp(): void {
   function updateCoverAvailability(): void {
     const separateBtn = coverModeGroup.querySelector<HTMLButtonElement>('[data-cover="separate"]');
     const tooFew = bookletOriginalPages > 0 && bookletOriginalPages < 8;
-    if (separateBtn) separateBtn.disabled = tooFew || bookletWrapCover;
+    if (separateBtn) separateBtn.disabled = tooFew;
 
-    // Too short is a property of the DOCUMENT, so that choice is cleared for
-    // good — nothing on this screen can make it valid again. The wrap-cover
-    // conflict is a property of another control on this same screen, so it only
-    // parks the choice (see effectiveSeparateCover) and the segment is shown as
-    // 'together' without the state behind it being thrown away.
     if (tooFew && bookletSeparateCover) {
       bookletSeparateCover = false;
     }
-    setActiveSegment(coverModeGroup, 'cover', effectiveSeparateCover() ? 'separate' : 'together');
+    setActiveSegment(coverModeGroup, 'cover', bookletSeparateCover ? 'separate' : 'together');
 
-    // The document reason wins when both apply: telling the user the wrap cover
-    // is in the way would be a lie when turning it off still would not free the
-    // button.
     coverHintText.textContent = tooFew
       ? t('config.coverDisabledHint')
-      : bookletWrapCover
-        ? t('config.coverWrapConflictHint')
-        : t('config.coverHint');
+      : t('config.coverHint');
   }
 
-  // True when any control inside the Advanced accordion differs from its
-  // default, so a "modified" badge can warn the user about settings hidden
-  // behind the collapsed panel. Defaults: flip=short, binding=ltr, gutter=0,
-  // creep=0, cover=together, instructions=none, sheet order=default, blank
-  // field empty.
+  // True when any control inside the collapsed advanced print section differs
+  // from its default, so its row can say "Modified" instead of "Recommended".
+  // Binding and flip edge are not in it: they sit on the main screen.
+  // Defaults: gutter=0, creep=0, cover=together, instructions=none, sheet
+  // order=default, marks=none, blank field empty.
   function isAdvancedModified(): boolean {
     return (
-      bookletFlipEdge !== 'short' ||
-      bookletBinding !== 'ltr' ||
       Number(gutterSlider.value) !== 0 ||
       Number(creepSlider.value) !== 0 ||
-      effectiveSeparateCover() ||
+      bookletSeparateCover ||
       bookletIncludeInstructions ||
       bookletReverseSheetOrder ||
       bookletMarks !== 'none' ||
@@ -1357,7 +1526,9 @@ export function initApp(): void {
   }
 
   function updateAdvancedBadge(): void {
-    advancedBadge.classList.toggle('hidden', !isAdvancedModified());
+    const modified = isAdvancedModified();
+    advancedBadge.classList.toggle('hidden', !modified);
+    advancedDefaultLabel.classList.toggle('hidden', modified);
   }
 
   function setAdvancedOpen(open: boolean): void {
@@ -1367,34 +1538,15 @@ export function initApp(): void {
   }
 
   /**
-   * On-screen preview colours for a cover theme. The PDF's own colours live in
-   * cover-engine's COVER_THEMES; these are the CSS equivalents (plus a spine
-   * shade that has no PDF counterpart), shared by Cover Studio's preview and
-   * the config screen's mini preview.
-   */
-  function coverPreviewTheme(theme: CoverTheme): { bg: string; text: string; spineBg: string } {
-    const themeConfigs: Record<CoverTheme, { bg: string; text: string; spineBg: string }> = {
-      cream: { bg: '#fbf8f2', text: '#292524', spineBg: 'rgba(0,0,0,0.04)' },
-      white: { bg: '#ffffff', text: '#0f172a', spineBg: 'rgba(0,0,0,0.04)' },
-      navy: { bg: '#0f172a', text: '#f8fafc', spineBg: 'rgba(255,255,255,0.06)' },
-      burgundy: { bg: '#450a0a', text: '#fef2f2', spineBg: 'rgba(255,255,255,0.06)' },
-      charcoal: { bg: '#1e293b', text: '#f8fafc', spineBg: 'rgba(255,255,255,0.06)' },
-    };
-    return themeConfigs[theme] ?? themeConfigs.cream;
-  }
-
-  /**
    * Sheets and signatures the current config would produce for the loaded
-   * document, or null when there is nothing to measure yet. Shared by the
-   * config summary band and the wrap-cover spine calculation so the two can
-   * never disagree about how thick the book is.
+   * document, or null when there is nothing to measure yet.
    */
   function bookletBlockMetrics(): { logical: number; sheets: number; sigLengths: number[] } | null {
     if (!selectedFile || bookletOriginalPages <= 0) return null;
     const parsed = parseInsertBlank();
     const blanks = parsed === null ? 0 : parsed.length;
     const logical = bookletOriginalPages + blanks;
-    const separateCover = effectiveSeparateCover();
+    const separateCover = bookletSeparateCover;
     if (separateCover && bookletOriginalPages < 8) return null;
     const block = separateCover ? logical - 4 : logical;
     const padded = Math.max(4, Math.ceil(block / 4) * 4);
@@ -1413,214 +1565,11 @@ export function initApp(): void {
    * a preset it can answer on its own. Falls back to A4 when a 'source' size
    * could not be resolved, which is also what the engine would reject on.
    */
-  function wrapCoverSheetSize(): [number, number] {
+  function bookletSheetSize(): [number, number] {
     if (bookletPaperSize === 'source') {
       return bookletSourceSheetSize ?? resolveSheetSize('A4');
     }
     return resolveSheetSize(bookletPaperSize);
-  }
-
-  /**
-   * Cover geometry inputs derived from the booklet the user is about to make —
-   * the point of the integration: no sheet count, signature count or trim size
-   * is ever typed in by hand.
-   *
-   * A booklet sheet carries two finished pages side by side, so the cover's page
-   * size is half the sheet's width by its full height.
-   */
-  function wrapCoverGeometry(sheets: number, signatures: number) {
-    const [sheetWidthPt, sheetHeightPt] = wrapCoverSheetSize();
-    const options = getBookletCoverOptions();
-
-    const spine = computeSpineWidth(spineInput(options, sheets, signatures));
-    const dimInput = coverGeometryInput(
-      options,
-      sheetWidthPt / 2,
-      sheetHeightPt,
-      spine.totalSpineWidthPt,
-    );
-
-    return {
-      spine,
-      dimensions: options.paper === 'split'
-        ? computeSplitCoverDimensions(dimInput)
-        : computeCoverDimensions(dimInput),
-    };
-  }
-
-  /** Title/author/synopsis for the cover, falling back to the document's own name. */
-  function wrapCoverContent() {
-    const fallbackTitle = selectedFile?.name.replace(/\.pdf$/i, '') ?? '';
-    return {
-      title: wrapCoverTitleInput.value.trim() || fallbackTitle || t('cover.bookTitle'),
-      author: wrapCoverAuthorInput.value.trim() || undefined,
-      synopsis: wrapCoverSynopsisInput.value.trim() || undefined,
-      theme: wrapCoverTheme,
-    };
-  }
-
-  function applyWrapCoverKindHint(): void {
-    if (!wrapCoverKindHint) return;
-    if (wrapCoverBinding === 'saddle') {
-      wrapCoverKindHint.dataset.i18n = 'cover.saddleNote';
-      wrapCoverKindHint.textContent = t('cover.saddleNote');
-    } else if (wrapCoverKind === 'hardcover') {
-      wrapCoverKindHint.dataset.i18n = 'cover.hardHint';
-      wrapCoverKindHint.textContent = t('cover.hardHint');
-    } else {
-      wrapCoverKindHint.dataset.i18n = '';
-      wrapCoverKindHint.textContent = '';
-    }
-  }
-
-  /**
-   * Shows/hides the inline cover options and keeps the format hint's data-i18n
-   * key in step with the selected format, so a later language change does not
-   * restore the other format's wording (same rule as Cover Studio's own
-   * applyCoverFormatToUi).
-   */
-  function applyWrapCoverToUi(): void {
-    setActiveSegment(wrapCoverToggleGroup, 'wrapcover', bookletWrapCover ? 'on' : 'off');
-    wrapCoverOptions.classList.toggle('hidden', !bookletWrapCover);
-
-    const splitKey = wrapCoverFormat === 'split'
-      ? 'cover.formatSplitHint'
-      : 'cover.formatSingleHint';
-    wrapCoverFormatHint.dataset.i18n = splitKey;
-    wrapCoverFormatHint.textContent = t(splitKey);
-    setActiveSegment(wrapCoverFormatGroup, 'format', wrapCoverFormat);
-    setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', wrapCoverBinding);
-    setActiveSegment(wrapCoverKindGroup, 'wrapkind', wrapCoverKind);
-
-    const isSaddle = wrapCoverBinding === 'saddle';
-    const hardcoverBtn = wrapCoverKindGroup.querySelector<HTMLButtonElement>('[data-wrapkind="hardcover"]');
-    if (hardcoverBtn) {
-      hardcoverBtn.disabled = isSaddle;
-      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
-    }
-    wrapCoverBoardThicknessBlock.classList.toggle('hidden', wrapCoverKind !== 'hardcover');
-    setActiveSegment(wrapCoverBoardGroup, 'wrapboard', String(wrapCoverBoardMm));
-    setActiveSegment(wrapCoverGsmGroup, 'gsm', String(wrapCoverGsm));
-    wrapCoverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
-      swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === wrapCoverTheme);
-    });
-    applyWrapCoverKindHint();
-  }
-
-  /**
-   * Recomputes the inline spine readout and mini preview from the booklet's own
-   * numbers. With no document loaded there is nothing to measure, so the section
-   * says so rather than showing a spine derived from invented sheet counts.
-   */
-  function updateWrapCoverCalculations(): void {
-    if (!bookletWrapCover) return;
-
-    const metrics = bookletBlockMetrics();
-    if (!metrics) {
-      wrapCoverSpineLabel.textContent = '—';
-      wrapCoverDimsLabel.textContent = t('config.wrapCoverNeedsFile');
-      wrapCoverPaperFitBadge.classList.add('hidden');
-      return;
-    }
-
-    const { spine, dimensions } = wrapCoverGeometry(metrics.sheets, metrics.sigLengths.length);
-    const mmPerPt = 25.4 / 72;
-
-    wrapCoverSpineLabel.textContent = `${spine.totalSpineWidthMm.toFixed(2)} mm`;
-    wrapCoverPaperBulkBadge.textContent = t('cover.paperBulk', { value: spine.textBlockThicknessMm.toFixed(2) });
-    wrapCoverThreadSwellBadge.textContent = t('cover.threadSwell', { value: spine.threadSwellMm.toFixed(2) });
-    wrapCoverHingeBadge.textContent = t('cover.hingeAllowance', { value: spine.hingeAllowanceMm.toFixed(2) });
-
-    wrapCoverFitBadge.className = spine.canPrintSpineText
-      ? 'cover-fit-badge cover-fit-badge--ok'
-      : 'cover-fit-badge cover-fit-badge--warn';
-    wrapCoverFitBadge.textContent = t(spine.canPrintSpineText ? 'cover.spineTextFit' : 'cover.spineTextTooNarrow');
-
-    const fitResult = checkCoverFormatFit(dimensions);
-    wrapCoverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
-    const wrapPaperFitWarnKey = fitResult.warnKey;
-    wrapCoverPaperFitBadge.dataset.i18n = wrapPaperFitWarnKey;
-    wrapCoverPaperFitBadge.textContent = t(wrapPaperFitWarnKey);
-
-    if (wrapCoverFormatResultLine) {
-      wrapCoverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
-      if (fitResult.fits) {
-        wrapCoverFormatResultLine.textContent = t('cover.formatResultFit', {
-          paper: t(fitResult.paperKey),
-          w: fitResult.wMm.toFixed(1),
-          h: fitResult.hMm.toFixed(1),
-        });
-      }
-    }
-
-    const heightMm = dimensions.totalHeightPt * mmPerPt;
-    wrapCoverDimsLabel.textContent = dimensions.format === 'split'
-      ? t('cover.totalDimensionsSplit', {
-          w1: (dimensions.sheet1.widthPt * mmPerPt).toFixed(1),
-          w2: (dimensions.sheet2.widthPt * mmPerPt).toFixed(1),
-          h: heightMm.toFixed(1),
-        })
-      : t('cover.totalDimensions', {
-          w: (dimensions.totalWidthPt * mmPerPt).toFixed(1),
-          h: heightMm.toFixed(1),
-        });
-
-    updateWrapCoverMiniPreview(spine.totalSpineWidthMm, spine.canPrintSpineText);
-  }
-
-  /** The small back|spine|front strip under the cover options. Same visual language as Cover Studio's preview. */
-  function updateWrapCoverMiniPreview(spineWidthMm: number, canPrintSpineText: boolean): void {
-    const content = wrapCoverContent();
-    wrapCoverMiniTitle.textContent = content.title;
-    wrapCoverMiniAuthor.textContent = content.author ?? t('cover.author');
-    wrapCoverMiniSynopsis.textContent = content.synopsis ?? '';
-
-    const visualSpineWidth = Math.max(14, Math.min(70, Math.round(spineWidthMm * 3.5)));
-    wrapCoverMiniSpine.style.width = `${visualSpineWidth}px`;
-    wrapCoverMiniSpine.style.flexBasis = `${visualSpineWidth}px`;
-
-    if (canPrintSpineText) {
-      wrapCoverMiniSpineText.textContent = content.title;
-      wrapCoverMiniSpineText.style.display = 'block';
-    } else {
-      wrapCoverMiniSpineText.textContent = '';
-      wrapCoverMiniSpineText.style.display = 'none';
-    }
-
-    const theme = coverPreviewTheme(wrapCoverTheme);
-    wrapCoverMiniPreview.style.backgroundColor = theme.bg;
-    wrapCoverMiniPreview.style.color = theme.text;
-    wrapCoverMiniSpine.style.backgroundColor = theme.spineBg;
-  }
-
-  /**
-   * Produces the wrap-cover PDF(s) for a finished booklet.
-   *
-   * Split format has to reach the user as two separately printable files (one
-   * per sheet), while generateCoverPdf emits them as one 2-page document — so
-   * the pages are extracted with organizePages, the same engine call the
-   * Organize tool uses, rather than re-implementing page copying here.
-   */
-  async function buildWrapCoverPdfs(sheets: number, signatures: number): Promise<{
-    wrapCoverSheet1Pdf?: Uint8Array;
-    wrapCoverSheet2Pdf?: Uint8Array;
-    wrapCoverPdf?: Uint8Array;
-  }> {
-    const { spine, dimensions } = wrapCoverGeometry(sheets, signatures);
-    const pdfBytes = await generateCoverPdf({
-      dimensions,
-      content: wrapCoverContent(),
-      spineResult: spine,
-      format: wrapCoverFormat,
-    });
-
-    if (dimensions.format === 'single') return { wrapCoverPdf: pdfBytes };
-
-    const [sheet1, sheet2] = await Promise.all([
-      organizePages(pdfBytes, [0]),
-      organizePages(pdfBytes, [1]),
-    ]);
-    return { wrapCoverSheet1Pdf: sheet1.organizedPdf, wrapCoverSheet2Pdf: sheet2.organizedPdf };
   }
 
   // Live "A4 · 52 pages -> 13 sheets · 4 signatures" band. Uses the engine's pure
@@ -1632,7 +1581,6 @@ export function initApp(): void {
       refreshMarksHint(null);
       refreshSignatureHint(null);
       configSummary.classList.add('hidden');
-      updateWrapCoverCalculations();
       return;
     }
     const metrics = bookletBlockMetrics();
@@ -1662,16 +1610,14 @@ export function initApp(): void {
         breakdown: sigLengths.join('-'),
       });
     }
-    if (effectiveSeparateCover()) text += t('config.summaryCover');
+    if (bookletSeparateCover) text += t('config.summaryCover');
     if (bookletIncludeInstructions) text += t('config.summaryInstructions');
     if (bookletReverseSheetOrder) text += t('config.summaryReverseOrder');
-    if (bookletWrapCover) text += t('config.summaryWrapCover');
     refreshSignatureHint(sigLengths);
     const marksLabels = refreshMarksHint(sigs);
     if (marksLabels.summaryKey) text += t(marksLabels.summaryKey);
     configSummary.textContent = text;
     configSummary.classList.remove('hidden');
-    updateWrapCoverCalculations();
   }
 
   /**
@@ -1715,6 +1661,8 @@ export function initApp(): void {
 
   function goToError(title: string, message: string, returnTo: ScreenId): void {
     returnScreenOnError = returnTo;
+    returnLibraryTabOnError =
+      returnTo === 'library' && readerReturnLibraryTab === 'files' ? 'files' : null;
     errorTitle.textContent = title;
     errorMessage.textContent = message;
     showScreen('error');
@@ -1734,136 +1682,132 @@ export function initApp(): void {
     });
   });
 
-  hubSearchInput.addEventListener('input', () => {
-    const query = hubSearchInput.value.trim().toLowerCase();
-    for (const row of carouselToolRows) {
-      const title = row.querySelector('.tool-row-title')?.textContent?.toLowerCase() ?? '';
-      const matches = query === '' || title.includes(query);
-      row.classList.toggle('hidden', !matches);
-    }
-  });
-
-  bottomNav.querySelectorAll<HTMLButtonElement>('.bottom-nav-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const nav = item.dataset.nav as ScreenId;
-      if (nav) {
-        showScreen(nav);
-      }
-    });
-  });
-
-  recentsViewAllBtn.addEventListener('click', () => {
-    showScreen('recents');
-  });
-
-  toolsViewAllBtn.addEventListener('click', () => {
-    showScreen('tools-all');
-  });
-
   let currentPickerPath = '';
   let selectedPickerFiles: { name: string; uri: string }[] = [];
-  let pickerResolve: ((value: PickedPdf | PickedPdf[] | null) => void) | null = null;
+  // A picked PDF plus, when the pick path can tell, where it can be read again.
+  type PickedWithSource = PickedPdf & { source?: SourceRef };
+  let pickerResolve: ((value: PickedWithSource | PickedWithSource[] | null) => void) | null = null;
 
   function renderBinderyPickerBreadcrumb(): void {
     binderyPickerBreadcrumb.innerHTML = '';
-    const btn = document.createElement('button');
-    btn.className = 'breadcrumb-item';
-    btn.textContent = t('files.root');
-    btn.addEventListener('click', () => {
-      currentPickerPath = '';
-      void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
-    });
-    binderyPickerBreadcrumb.appendChild(btn);
+    const parts = currentPickerPath ? currentPickerPath.split('/') : [];
+    const allowMultiple = !binderyPickerConfirmBtn.classList.contains('hidden');
+    binderyPickerUpBtn.classList.toggle('hidden', parts.length === 0);
 
-    if (currentPickerPath) {
-      const parts = currentPickerPath.split('/');
-      let pathAcc = '';
-      parts.forEach((part) => {
-        pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
-        const currentPath = pathAcc;
-        const separator = document.createElement('span');
-        separator.className = 'breadcrumb-separator';
-        separator.textContent = ' › ';
-        binderyPickerBreadcrumb.appendChild(separator);
-
-        const folderBtn = document.createElement('button');
-        folderBtn.className = 'breadcrumb-item';
-        folderBtn.textContent = part;
-        folderBtn.addEventListener('click', () => {
-          currentPickerPath = currentPath;
-          void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
+    const addSegment = (label: string, targetPath: string, isCurrent: boolean): void => {
+      const seg = document.createElement('button');
+      seg.type = 'button';
+      seg.className = 'bp-crumb';
+      seg.textContent = label;
+      if (isCurrent) {
+        seg.classList.add('is-current');
+        seg.setAttribute('aria-current', 'location');
+        seg.disabled = true;
+      } else {
+        seg.addEventListener('click', () => {
+          currentPickerPath = targetPath;
+          void renderBinderyPickerList(allowMultiple);
         });
-        binderyPickerBreadcrumb.appendChild(folderBtn);
-      });
-    }
+      }
+      binderyPickerBreadcrumb.appendChild(seg);
+    };
+
+    addSegment(t('modal.binderyPicker.root'), '', parts.length === 0);
+    let pathAcc = '';
+    parts.forEach((part, idx) => {
+      pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
+      const sep = document.createElement('span');
+      sep.className = 'bp-crumb-sep';
+      sep.textContent = '›';
+      sep.ariaHidden = 'true';
+      binderyPickerBreadcrumb.appendChild(sep);
+      addSegment(pickerFolderLabel(part, idx), pathAcc, idx === parts.length - 1);
+    });
+    // Deep paths overflow: keep the current folder, the end of the trail, in view.
+    binderyPickerBreadcrumb.scrollLeft = binderyPickerBreadcrumb.scrollWidth;
   }
+
+  binderyPickerUpBtn.addEventListener('click', () => {
+    const parts = currentPickerPath.split('/');
+    parts.pop();
+    currentPickerPath = parts.join('/');
+    void renderBinderyPickerList(!binderyPickerConfirmBtn.classList.contains('hidden'));
+  });
 
   async function renderBinderyPickerList(allowMultiple: boolean): Promise<void> {
     renderBinderyPickerBreadcrumb();
     const items = await listPrivateFolder(currentPickerPath);
     binderyPickerList.innerHTML = '';
+    binderyPickerList.scrollTop = 0;
 
-    const pdfItems = items.filter(isBrowsableEntry);
+    const pdfItems = sortPickerEntries(items.filter(isBrowsableEntry));
     const isEmpty = pdfItems.length === 0;
     binderyPickerEmptyHint.classList.toggle('hidden', !isEmpty);
+    const depth = currentPickerPath ? currentPickerPath.split('/').length : 0;
 
     for (const item of pdfItems) {
       const isDir = item.type === 'directory';
 
-      const card = document.createElement('div');
-      card.className = 'file-item-card';
-      if (isDir) card.classList.add('is-folder');
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'bp-item';
+      if (isDir) row.classList.add('is-folder');
 
       const icon = document.createElement('span');
-      icon.className = 'file-item-icon';
-      icon.textContent = isDir ? '📂' : '📄';
+      icon.className = 'bp-item-icon';
       icon.ariaHidden = 'true';
-      card.appendChild(icon);
+      icon.innerHTML = isDir ? PICKER_ICON_FOLDER : PICKER_ICON_FILE;
+      row.appendChild(icon);
 
-      const details = document.createElement('div');
-      details.className = 'file-item-details';
+      const details = document.createElement('span');
+      details.className = 'bp-item-text';
 
       const nameEl = document.createElement('span');
-      nameEl.className = 'file-item-name';
-      nameEl.textContent = item.name;
+      nameEl.className = 'bp-item-name';
+      nameEl.textContent = isDir ? pickerFolderLabel(item.name, depth) : item.name;
       details.appendChild(nameEl);
 
       const meta = document.createElement('span');
-      meta.className = 'file-item-meta';
-      if (isDir) {
-        meta.textContent = t('common.folder');
-      } else {
-        meta.textContent = formatBytes(item.size);
-      }
+      meta.className = 'bp-item-meta';
+      meta.textContent = isDir ? t('common.folder') : formatBytes(item.size);
       details.appendChild(meta);
+      row.appendChild(details);
 
-      card.appendChild(details);
+      const trail = document.createElement('span');
+      trail.className = 'bp-item-trail';
+      trail.ariaHidden = 'true';
+      trail.innerHTML = isDir ? PICKER_ICON_CHEVRON : allowMultiple ? PICKER_ICON_CHECK : '';
+      row.appendChild(trail);
 
-      const isSelected = selectedPickerFiles.some((f) => f.uri === item.uri);
-      if (!isDir && isSelected) {
-        card.classList.add('is-selected');
+      if (!isDir && allowMultiple) {
+        const isSelected = selectedPickerFiles.some((f) => f.uri === item.uri);
+        row.classList.toggle('is-selected', isSelected);
+        row.setAttribute('aria-pressed', String(isSelected));
       }
 
-      card.addEventListener('click', async () => {
+      row.addEventListener('click', async () => {
         if (isDir) {
           currentPickerPath = currentPickerPath ? `${currentPickerPath}/${item.name}` : item.name;
-          void renderBinderyPickerList(allowMultiple);
+          await renderBinderyPickerList(allowMultiple);
+          binderyPickerList.querySelector<HTMLElement>('.bp-item')?.focus();
         } else {
           if (allowMultiple) {
             const idx = selectedPickerFiles.findIndex((f) => f.uri === item.uri);
             if (idx >= 0) {
               selectedPickerFiles.splice(idx, 1);
-              card.classList.remove('is-selected');
             } else {
               selectedPickerFiles.push({ name: item.name, uri: item.uri });
-              card.classList.add('is-selected');
             }
+            const nowSelected = idx < 0;
+            row.classList.toggle('is-selected', nowSelected);
+            row.setAttribute('aria-pressed', String(nowSelected));
             binderyPickerConfirmBtn.disabled = selectedPickerFiles.length === 0;
           } else {
             closeModal(binderyFilePickerModal);
             try {
+              const relPath = currentPickerPath ? `${currentPickerPath}/${item.name}` : item.name;
               const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
-              pickerResolve?.(picked);
+              pickerResolve?.({ ...picked, source: { kind: 'private', relPath } });
             } catch (err) {
               if (err instanceof FileTooLargeError) {
                 showToast(t('toast.fileTooLarge', { mb: Math.round(err.sizeBytes / 1048576) }), { type: 'error' });
@@ -1876,14 +1820,19 @@ export function initApp(): void {
         }
       });
 
-      binderyPickerList.appendChild(card);
+      binderyPickerList.appendChild(row);
     }
   }
 
+  // `persistentSource` (single pick only): on Android, pick from device through
+  // SAF so the grant survives a restart and the result carries a `saf` source.
   function promptAndPickPdfs(options: { allowMultiple: true }): Promise<PickedPdf[]>;
-  function promptAndPickPdfs(options: { allowMultiple: false }): Promise<PickedPdf | null>;
-  function promptAndPickPdfs(options: { allowMultiple: boolean }): Promise<PickedPdf | PickedPdf[] | null> {
-    return new Promise<PickedPdf | PickedPdf[] | null>((resolve) => {
+  function promptAndPickPdfs(options: { allowMultiple: false; persistentSource?: boolean }): Promise<PickedWithSource | null>;
+  function promptAndPickPdfs(options: {
+    allowMultiple: boolean;
+    persistentSource?: boolean;
+  }): Promise<PickedWithSource | PickedWithSource[] | null> {
+    return new Promise<PickedWithSource | PickedWithSource[] | null>((resolve) => {
       pickerResolve = resolve;
 
       const handleDevice = async () => {
@@ -1893,6 +1842,15 @@ export function initApp(): void {
           if (options.allowMultiple) {
             const res = await pickPdfs();
             resolve(res);
+          } else if (options.persistentSource && Capacitor.getPlatform() === 'android') {
+            const picked = await pickPdfWithPersistentUri();
+            if (!picked) {
+              resolve(null);
+              return;
+            }
+            const file = await withBusyOverlay(() => readPdfFromUri(picked.uri));
+            const source: SourceRef = picked.persistent ? { kind: 'saf', uri: picked.uri } : { kind: 'none' };
+            resolve({ ...file, source });
           } else {
             const res = await pickPdf();
             resolve(res);
@@ -1972,83 +1930,92 @@ export function initApp(): void {
     }
   });
 
-  function loadBookletFile(bytes: Uint8Array, name: string): void {
+  // Resolves once the document has been inspected (page count, source sheet
+  // size); callers that only show the picker need not wait for it.
+  let isPickingBookletFile = false;
+
+  async function loadBookletFile(bytes: Uint8Array, name: string, source?: SourceRef): Promise<void> {
+    if (isPickingBookletFile) return;
+    isPickingBookletFile = true;
+
     selectedFile = { name, bytes };
+    bookletSourceRef = source ?? { kind: 'none' };
+    // A newly loaded document is a new booklet; "Print sheets" sets these
+    // again after loading its source.
+    pendingLibraryRecordId = null;
+    pendingLibraryTitle = null;
+    bookletResultReturnTo = 'hub';
     // Clear the previous document's page count immediately so the summary/hints
     // don't flash stale values while validatePdf() resolves for the new file.
     bookletOriginalPages = 0;
     bookletSourceSheetSize = null;
     refreshConfigSummary();
     fileNameLabel.textContent = name;
-    fileSizeLabel.textContent = formatBytes(bytes.length);
-    fileCard.classList.remove('hidden');
-    pickFileBtn.classList.add('hidden');
-    continueBtn.classList.remove('hidden');
+    fileNameLabel.title = name;
+    fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${t('picker.reading')}`;
+
+    setPickerState('reading');
     mixedSizeWarning.classList.add('hidden');
     trimBoxNotice.classList.add('hidden');
     preflightLargeFileWarning.classList.add('hidden');
-    configPreflightWarning.classList.add('hidden');
-    void showMixedSizeWarningIfNeeded(bytes);
+    updateConfigPreflightWarning();
+
+    try {
+      await showMixedSizeWarningIfNeeded(bytes);
+      if (selectedFile?.bytes === bytes) {
+        setPickerState('ready');
+      }
+    } catch (err) {
+      if (selectedFile?.bytes === bytes) {
+        const msg = err instanceof Error ? err.message : t('picker.errorDesc');
+        setPickerState('error', msg);
+      }
+    } finally {
+      isPickingBookletFile = false;
+    }
   }
 
   // Non-blocking heads-up: if the document mixes page sizes (beyond a small
   // tolerance), the booklet's per-slot scaling will differ page to page. Also
   // captures the page count for the live summary and cover availability.
   async function showMixedSizeWarningIfNeeded(bytes: Uint8Array): Promise<void> {
-    try {
-      // One parse, on the PDF worker: page count, displayed page sizes and the
-      // 'source' sheet size (resolved once here rather than on every keystroke
-      // in the cover section's live spine readout).
-      const { pageCount, pageSizes, sourceSheetSize, trimmedPages } = await inspectPdf(bytes);
-      const TOL = 0.5;
-      const distinct = pageSizes.filter(
-        ([w, h], i) =>
-          pageSizes.findIndex(
-            ([w0, h0]) => Math.abs(w0 - w) <= TOL && Math.abs(h0 - h) <= TOL,
-          ) === i,
-      );
-      // Guard against a race where the user cleared/replaced the file meanwhile.
-      if (selectedFile?.bytes === bytes) {
-        mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
-        trimBoxNotice.classList.toggle('hidden', trimmedPages === 0);
-        bookletOriginalPages = pageCount;
-        const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
-        preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
-        configPreflightWarning.classList.toggle('hidden', !isLarge);
-        // Null when the document's own page size is outside the engine's
-        // printable bounds; the cover section then falls back to A4 rather
-        // than blocking the booklet itself, which does not need this value.
-        bookletSourceSheetSize = sourceSheetSize;
-        updateCoverAvailability();
-        refreshConfigSummary();
-      }
-    } catch {
-      // Validation errors surface later on generate; don't block the warning path.
+    // One parse, on the PDF worker: page count, displayed page sizes and the
+    // 'source' sheet size.
+    const { pageCount, pageSizes, sourceSheetSize, trimmedPages } = await inspectPdf(bytes);
+    const TOL = 0.5;
+    const distinct = pageSizes.filter(
+      ([w, h], i) =>
+        pageSizes.findIndex(
+          ([w0, h0]) => Math.abs(w0 - w) <= TOL && Math.abs(h0 - h) <= TOL,
+        ) === i,
+    );
+    // Guard against a race where the user cleared/replaced the file meanwhile.
+    if (selectedFile?.bytes === bytes) {
+      mixedSizeWarning.classList.toggle('hidden', distinct.length <= 1);
+      trimBoxNotice.classList.toggle('hidden', trimmedPages === 0);
+      bookletOriginalPages = pageCount;
+      const isLarge = bytes.length > 50 * 1024 * 1024 || pageCount > 150;
+      preflightLargeFileWarning.classList.toggle('hidden', !isLarge);
+      updateConfigPreflightWarning();
+      // Null when the document's own page size is outside the engine's
+      // printable bounds; falls back to A4 for sheet size queries.
+      bookletSourceSheetSize = sourceSheetSize;
+      const pagesLabel = pageCount === 1 ? t('common.pageWord') : t('common.pageWordPlural');
+      fileSizeLabel.textContent = `${formatBytes(bytes.length)} · ${pageCount} ${pagesLabel}`;
+      updateCoverAvailability();
+      refreshConfigSummary();
     }
   }
 
   pickFileBtn.addEventListener('click', async () => {
     showToast(t('toast.selectingSource'));
     try {
-      const picked = await promptAndPickPdfs({ allowMultiple: false });
+      const picked = await promptAndPickPdfs({ allowMultiple: false, persistentSource: true });
       if (!picked) {
         return;
       }
-      loadBookletFile(picked.bytes, picked.name);
-    } catch (error) {
-      const message = errorText(error);
-      goToError(t('error.fileSelectFailed'), message, 'picker');
-    }
-  });
-
-  pickerSampleBtn.addEventListener('click', async () => {
-    const lang = getLanguage();
-    try {
-      const response = await fetch(`onboarding/quick-start-${lang}.pdf`);
-      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      const name = lang === 'tr' ? 'Bindery Hizli Baslangic.pdf' : 'Bindery Quick Start.pdf';
-      loadBookletFile(bytes, name);
+      runPickerIntake();
+      loadBookletFile(picked.bytes, picked.name, picked.source);
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.fileSelectFailed'), message, 'picker');
@@ -2056,6 +2023,39 @@ export function initApp(): void {
   });
 
   clearFileBtn.addEventListener('click', () => resetPicker());
+
+  dropzoneCard.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('#pickFileBtn')) {
+      return;
+    }
+    pickFileBtn.click();
+  });
+
+  dropzoneCard.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzoneCard.classList.add('drag-over');
+  });
+
+  dropzoneCard.addEventListener('dragleave', () => {
+    dropzoneCard.classList.remove('drag-over');
+  });
+
+  dropzoneCard.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropzoneCard.classList.remove('drag-over');
+    const file = e.dataTransfer?.files?.[0];
+    if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+      runPickerIntake();
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        loadBookletFile(bytes, file.name);
+      } catch (error) {
+        const message = errorText(error);
+        goToError(t('error.fileSelectFailed'), message, 'picker');
+      }
+    }
+  });
 
   continueBtn.addEventListener('click', () => {
     updateCoverAvailability();
@@ -2103,6 +2103,7 @@ export function initApp(): void {
     if (!paper) return;
     bookletPaperSize = paper as PaperSize;
     setActiveSegment(paperSizeGroup, 'paper', paper);
+    updatePaperSelectedBadge();
     refreshConfigSummary();
   });
 
@@ -2117,10 +2118,16 @@ export function initApp(): void {
 
   signatureSizeGroup.addEventListener('click', (event) => {
     const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
+    if (btn === signatureMoreBtn) {
+      syncSignatureMore(signatureSizeMore.classList.contains('hidden'));
+      return;
+    }
     const sig = btn?.dataset.sig;
     if (!sig) return;
     bookletSignature = sig;
     setActiveSegment(signatureSizeGroup, 'sig', sig);
+    syncSignatureMore();
+    updateConfigPreflightWarning();
     refreshConfigSummary();
   });
 
@@ -2355,103 +2362,75 @@ export function initApp(): void {
     updateAdvancedBadge();
   });
 
-  wrapCoverToggleGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const mode = btn?.dataset.wrapcover;
-    if (mode !== 'on' && mode !== 'off') return;
-    bookletWrapCover = mode === 'on';
-    // Seed the title from the document the first time the section is opened;
-    // after that the user's own edit stands, even if they toggle it off and on.
-    if (bookletWrapCover && !wrapCoverTitleInput.value.trim() && selectedFile) {
-      wrapCoverTitleInput.value = selectedFile.name.replace(/\.pdf$/i, '');
-    }
-    applyWrapCoverToUi();
-    // Turning the wrap cover on parks the separate-cover choice; turning it off
-    // hands it back. Both directions run through here.
-    updateCoverAvailability();
-    refreshConfigSummary();
-  });
-
-  wrapCoverFormatGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single') return;
-    wrapCoverFormat = format;
-    applyWrapCoverToUi();
-    updateWrapCoverCalculations();
-  });
-
-  wrapCoverBindingGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const binding = btn?.dataset.wrapbinding as BindingType | undefined;
-    if (!binding) return;
-    wrapCoverBinding = binding;
-    setActiveSegment(wrapCoverBindingGroup, 'wrapbinding', binding);
-
-    const isSaddle = binding === 'saddle';
-    const hardcoverBtn = wrapCoverKindGroup.querySelector<HTMLButtonElement>('[data-wrapkind="hardcover"]');
-    if (hardcoverBtn) {
-      hardcoverBtn.disabled = isSaddle;
-      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
-    }
-    if (isSaddle && wrapCoverKind === 'hardcover') {
-      wrapCoverKind = 'softcover';
-      setActiveSegment(wrapCoverKindGroup, 'wrapkind', 'softcover');
-      wrapCoverBoardThicknessBlock.classList.add('hidden');
-    }
-    applyWrapCoverKindHint();
-    updateWrapCoverCalculations();
-  });
-
-  wrapCoverKindGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    if (btn?.disabled) return;
-    const kind = btn?.dataset.wrapkind as 'softcover' | 'hardcover' | undefined;
-    if (!kind) return;
-    if (wrapCoverBinding === 'saddle' && kind === 'hardcover') return;
-    wrapCoverKind = kind;
-    setActiveSegment(wrapCoverKindGroup, 'wrapkind', kind);
-    wrapCoverBoardThicknessBlock.classList.toggle('hidden', kind !== 'hardcover');
-    applyWrapCoverKindHint();
-    updateWrapCoverCalculations();
-  });
-
-  wrapCoverBoardGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const board = Number(btn?.dataset.wrapboard) as BoardThicknessMm;
-    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
-    wrapCoverBoardMm = board;
-    setActiveSegment(wrapCoverBoardGroup, 'wrapboard', String(board));
-    updateWrapCoverCalculations();
-  });
-
-  wrapCoverGsmGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const gsm = Number(btn?.dataset.gsm) as PaperGsm;
-    if (!gsm || !(gsm in PAPER_CALIPERS_MM)) return;
-    wrapCoverGsm = gsm;
-    setActiveSegment(wrapCoverGsmGroup, 'gsm', String(gsm));
-    updateWrapCoverCalculations();
-  });
-
-  wrapCoverPaletteGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.cover-swatch');
-    const theme = btn?.dataset.theme as CoverTheme | undefined;
-    if (!theme) return;
-    wrapCoverTheme = theme;
-    applyWrapCoverToUi();
-    updateWrapCoverCalculations();
-  });
-
-  for (const input of [wrapCoverTitleInput, wrapCoverAuthorInput, wrapCoverSynopsisInput]) {
-    input.addEventListener('input', () => updateWrapCoverCalculations());
-  }
-
   advancedToggle.addEventListener('click', () => {
     const willOpen = advancedPanel.classList.contains('hidden');
     setAdvancedOpen(willOpen);
     if (willOpen) {
       advancedPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  // ── Info Tooltips Micro-interactions ──────────────────────────────────────
+  let activeTooltipBtn: HTMLElement | null = null;
+
+  function showTooltip(btn: HTMLElement): void {
+    const tooltipKey = btn.getAttribute('data-tooltip');
+    if (!tooltipKey || !configTooltipPopover) return;
+
+    activeTooltipBtn = btn;
+    configTooltipPopover.textContent = t(tooltipKey);
+    configTooltipPopover.classList.add('is-visible');
+    configTooltipPopover.setAttribute('aria-hidden', 'false');
+
+    const btnRect = btn.getBoundingClientRect();
+    const configRect = byId('screen-config').getBoundingClientRect();
+
+    const top = btnRect.bottom - configRect.top + 6;
+    let left = btnRect.left - configRect.left - 20;
+
+    if (left + 260 > configRect.width - 12) {
+      left = configRect.width - 272;
+    }
+    if (left < 12) {
+      left = 12;
+    }
+
+    configTooltipPopover.style.top = `${top}px`;
+    configTooltipPopover.style.left = `${left}px`;
+  }
+
+  function hideTooltip(): void {
+    if (!configTooltipPopover) return;
+    configTooltipPopover.classList.remove('is-visible');
+    configTooltipPopover.setAttribute('aria-hidden', 'true');
+    activeTooltipBtn = null;
+  }
+
+  const infoBtns = Array.from(byId('screen-config').querySelectorAll<HTMLButtonElement>('.config-info-btn'));
+  infoBtns.forEach((btn) => {
+    btn.addEventListener('mouseenter', () => showTooltip(btn));
+    btn.addEventListener('mouseleave', () => hideTooltip());
+    btn.addEventListener('focus', () => showTooltip(btn));
+    btn.addEventListener('blur', () => hideTooltip());
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (activeTooltipBtn === btn) {
+        hideTooltip();
+      } else {
+        showTooltip(btn);
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (configTooltipPopover && activeTooltipBtn && !configTooltipPopover.contains(e.target as Node) && !activeTooltipBtn.contains(e.target as Node)) {
+      hideTooltip();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && configTooltipPopover?.classList.contains('is-visible')) {
+      hideTooltip();
     }
   });
 
@@ -2466,46 +2445,60 @@ export function initApp(): void {
     // engine, which surfaces them through the normal error flow.
     const insertBlankAfter = parseInsertBlank();
     if (insertBlankAfter === null) {
+      setAdvancedOpen(true);
       insertBlankError.textContent = t('config.insertBlankError');
       insertBlankError.classList.remove('hidden');
+      insertBlankInput.setAttribute('aria-invalid', 'true');
+      insertBlankInput.focus();
+      insertBlankInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     insertBlankError.classList.add('hidden');
+    insertBlankInput.removeAttribute('aria-invalid');
 
     generateBtn.disabled = true;
     generateBtnLabel.classList.add('hidden');
     generateSpinner.classList.remove('hidden');
 
     try {
-      const result = await makeBooklet(selectedFile.bytes, {
+      // Assigned inside the call so the options literal stays at the call site
+      // (booklet-flow.test.ts reads it there); kept for the library record.
+      let bookletOptions: BookletOptions;
+      const result = await makeBooklet(selectedFile.bytes, (bookletOptions = {
         gutter: Number(gutterSlider.value),
         creep: Number(creepSlider.value),
         flipEdge: bookletFlipEdge,
         paperSize: bookletPaperSize,
         signatureSize: signatureOption(),
         binding: bookletBinding,
-        separateCover: effectiveSeparateCover(),
+        separateCover: bookletSeparateCover,
         includeInstructions: bookletIncludeInstructions,
         reverseSheetOrder: bookletReverseSheetOrder,
         foldGuides: bookletMarks !== 'none',
         collationMarks: bookletMarks === 'full',
         insertBlankAfter,
-      });
-
-      // The cover is measured from what the booklet ACTUALLY came out as, not
-      // from the config screen's projection, so a padding or signature decision
-      // the engine made cannot leave the spine wrong.
-      //
-      // A cover that cannot be produced (e.g. COVER_TOO_LARGE for a 1 × A4 wrap)
-      // is caught on its own rather than by the outer catch: the booklet above
-      // already succeeded, and must still reach the result screen to be saved.
-      const wrapCoverPdfs = bookletWrapCover
-        ? await buildWrapCoverPdfs(result.sheetsCount, result.signaturesCount).catch((coverError: unknown) => {
-            console.warn('Wrap cover could not be produced; keeping the booklet:', coverError);
-            showToast(errorText(coverError), { type: 'error' });
-            return {};
-          })
-        : {};
+      }));
+      // A fresh generation is a new booklet, so its first save/share adds a new
+      // library record — unless the library's "Print sheets" started it, which
+      // keeps the record it regenerates.
+      currentLibraryRecordId = null;
+      let regeneratedTitle: string | null = null;
+      if (pendingLibraryRecordId !== null) {
+        currentLibraryRecordId = pendingLibraryRecordId;
+        regeneratedTitle = pendingLibraryTitle;
+        pendingLibraryRecordId = null;
+        pendingLibraryTitle = null;
+      }
+      lastBookletResultMeta = {
+        options: bookletOptions,
+        originalPages: result.originalPages,
+        signaturesCount: result.signaturesCount,
+        sheetsCount: result.sheetsCount,
+        paddingApplied: result.paddingApplied,
+        blanksInserted: result.blanksInserted,
+        sheetSizePt: bookletSheetSize(),
+        wrapCover: null,
+      };
 
       booklet = {
         frontPdf: result.frontPdf,
@@ -2513,10 +2506,9 @@ export function initApp(): void {
         combinedPdf: result.combinedPdf,
         coverPdf: result.coverPdf,
         instructionsPdf: result.instructionsPdf,
-        ...wrapCoverPdfs,
       };
       bookletSaveState = 'idle';
-      bookletFileNameInput.value = selectedFile.name.replace(/\.pdf$/i, '');
+      bookletFileNameInput.value = regeneratedTitle ?? selectedFile.name.replace(/\.pdf$/i, '');
       bookletSaveBtn.disabled = false;
       refreshSaveLabel();
       bookletSaveSpinner.classList.add('hidden');
@@ -2525,28 +2517,8 @@ export function initApp(): void {
       coverActionRow.classList.toggle('hidden', !booklet.coverPdf);
       instructionsActionRow.classList.toggle('hidden', !booklet.instructionsPdf);
       coverPreviewCell.classList.toggle('hidden', !booklet.coverPdf);
-      applyWrapCoverResultVisibility();
 
-      statOriginal.textContent = String(result.originalPages);
-      statSheets.textContent = String(result.sheetsCount);
-      if (result.paddingApplied > 0) {
-        statPadding.textContent = `+${result.paddingApplied}`;
-        statPaddingCard.classList.remove('hidden');
-      } else {
-        statPaddingCard.classList.add('hidden');
-      }
-      if (result.signaturesCount > 1) {
-        statSignatures.textContent = String(result.signaturesCount);
-        statSignaturesCard.classList.remove('hidden');
-      } else {
-        statSignaturesCard.classList.add('hidden');
-      }
-      if (result.blanksInserted > 0) {
-        statBlanks.textContent = `+${result.blanksInserted}`;
-        statBlanksCard.classList.remove('hidden');
-      } else {
-        statBlanksCard.classList.add('hidden');
-      }
+      resultSummaryLine.textContent = formatResultSummary(result);
       actionStatus.textContent = '';
 
       showScreen('result');
@@ -2560,38 +2532,6 @@ export function initApp(): void {
       generateSpinner.classList.add('hidden');
     }
   });
-
-  /**
-   * Shows the wrap-cover rows and preview cells that this result actually has.
-   *
-   * The split format's first sheet is labelled differently from a single wrap's
-   * only sheet, so sheet 1's row and preview label carry whichever key matches —
-   * key and text together, so a later language change keeps the right one.
-   */
-  function applyWrapCoverResultVisibility(): void {
-    const sheet1 = booklet?.wrapCoverSheet1Pdf ?? booklet?.wrapCoverPdf;
-    const isSplit = Boolean(booklet?.wrapCoverSheet1Pdf);
-
-    // The result-screen button reads "Design…" while there is no cover yet, and
-    // "Preview / edit…" once one has been produced. Key swapped with the text so
-    // a later language change keeps the right wording.
-    const btnKey = sheet1 ? 'booklet.editCover' : 'booklet.openCoverStudio';
-    resultOpenCoverStudioBtn.dataset.i18n = btnKey;
-    resultOpenCoverStudioBtn.textContent = t(btnKey);
-
-    wrapCoverSheet1ActionRow.classList.toggle('hidden', !sheet1);
-    wrapCoverSheet1PreviewCell.classList.toggle('hidden', !sheet1);
-    wrapCoverSheet2ActionRow.classList.toggle('hidden', !booklet?.wrapCoverSheet2Pdf);
-    wrapCoverSheet2PreviewCell.classList.toggle('hidden', !booklet?.wrapCoverSheet2Pdf);
-
-    const rowKey = isSplit ? 'booklet.wrapCoverSheet1Pdf' : 'booklet.wrapCoverPdf';
-    wrapCoverSheet1Label.dataset.i18n = rowKey;
-    wrapCoverSheet1Label.textContent = t(rowKey);
-
-    const labelKey = isSplit ? 'booklet.previewWrapCoverSheet1' : 'booklet.previewWrapCover';
-    wrapCoverSheet1PreviewLabel.dataset.i18n = labelKey;
-    wrapCoverSheet1PreviewLabel.textContent = t(labelKey);
-  }
 
   // Renders page `pageIndex` (1-based) of `bytes` into one preview cell, owning
   // that cell's spinner/error state so front, back and cover all share one path.
@@ -2611,7 +2551,8 @@ export function initApp(): void {
     try {
       const proxy = await loadPdfForThumbnails(bytes);
       try {
-        imgEl.src = await renderPageThumbnail(proxy, pageIndex, 160);
+        // 480px wide keeps the result hero crisp on 2-3x screens; JPEG keeps it light.
+        imgEl.src = await renderPageThumbnail(proxy, pageIndex, 480, 'image/jpeg', 0.85);
         imgEl.classList.remove('hidden');
       } finally {
         await destroyThumbnailDoc(proxy);
@@ -2636,19 +2577,44 @@ export function initApp(): void {
         renderPreviewInto(booklet.coverPdf, coverPreviewImg, coverPreviewSpinner, coverPreviewError),
       );
     }
-    const wrapSheet1 = booklet.wrapCoverSheet1Pdf ?? booklet.wrapCoverPdf;
-    if (wrapSheet1) {
-      jobs.push(
-        renderPreviewInto(wrapSheet1, wrapCoverSheet1PreviewImg, wrapCoverSheet1PreviewSpinner, wrapCoverSheet1PreviewError),
-      );
-    }
-    if (booklet.wrapCoverSheet2Pdf) {
-      jobs.push(
-        renderPreviewInto(booklet.wrapCoverSheet2Pdf, wrapCoverSheet2PreviewImg, wrapCoverSheet2PreviewSpinner, wrapCoverSheet2PreviewError),
-      );
-    }
     await Promise.allSettled(jobs);
   }
+
+  // Result screen printer choice: shows only the outputs that printer needs.
+  // Remembered per device as a convenience; storage failures are harmless.
+  const PRINTER_MODE_KEY = 'bindery.printerMode';
+  function readPrinterMode(): PrinterMode {
+    try {
+      return normalizePrinterMode(localStorage.getItem(PRINTER_MODE_KEY));
+    } catch {
+      return 'duplex';
+    }
+  }
+  function applyPrinterMode(mode: PrinterMode): void {
+    screenResult.dataset.printer = mode;
+    const targets: string[] = printerModeTargets(mode);
+    screenResult.querySelectorAll<HTMLElement>('[data-row-target]').forEach((row) => {
+      row.classList.toggle('hidden', !targets.includes(row.dataset.rowTarget ?? ''));
+    });
+    screenResult.querySelectorAll<HTMLElement>('[data-show-for]').forEach((el) => {
+      el.classList.toggle('hidden', el.dataset.showFor !== mode);
+    });
+    screenResult.querySelectorAll<HTMLButtonElement>('.result-printer-opt').forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.printer === mode));
+    });
+  }
+  screenResult.querySelectorAll<HTMLButtonElement>('.result-printer-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = normalizePrinterMode(btn.dataset.printer);
+      applyPrinterMode(mode);
+      try {
+        localStorage.setItem(PRINTER_MODE_KEY, mode);
+      } catch {
+        // Private mode / blocked storage: the choice just is not remembered.
+      }
+    });
+  });
+  applyPrinterMode(readPrinterMode());
 
   // Share and Print differ only in the last step, so they share one handler:
   // same target lookup, same filename, same status line.
@@ -2661,18 +2627,13 @@ export function initApp(): void {
         | 'back'
         | 'combined'
         | 'cover'
-        | 'instructions'
-        | 'wrapCover1'
-        | 'wrapCover2';
+        | 'instructions';
       const bytesByTarget: Record<typeof target, Uint8Array | undefined> = {
         front: booklet.frontPdf,
         back: booklet.backPdf,
         combined: booklet.combinedPdf,
         cover: booklet.coverPdf,
         instructions: booklet.instructionsPdf,
-        // One row serves both formats: split sheet 1, or the single wide wrap.
-        wrapCover1: booklet.wrapCoverSheet1Pdf ?? booklet.wrapCoverPdf,
-        wrapCover2: booklet.wrapCoverSheet2Pdf,
       };
       const bytes = bytesByTarget[target];
       if (!bytes) return;
@@ -2683,8 +2644,6 @@ export function initApp(): void {
         combined: 'booklet.combinedLower',
         cover: 'booklet.coverLower',
         instructions: 'booklet.instructionsLower',
-        wrapCover1: booklet.wrapCoverSheet1Pdf ? 'booklet.wrapCoverSheet1Lower' : 'booklet.wrapCoverLower',
-        wrapCover2: 'booklet.wrapCoverSheet2Lower',
       };
       const label = t(labelKeyByTarget[target]);
       // front/back/combined are the imposed booklet sheets, so their page size
@@ -2692,18 +2651,22 @@ export function initApp(): void {
       // selection — no need to re-derive it from the PDF bytes.
       const dimsByTarget: Partial<Record<typeof target, { widthPt: number; heightPt: number }>> = {};
       if (target === 'front' || target === 'back' || target === 'combined') {
-        const [widthPt, heightPt] = wrapCoverSheetSize();
+        const [widthPt, heightPt] = bookletSheetSize();
         dimsByTarget[target] = { widthPt, heightPt };
       }
 
       try {
         if (action === 'print') {
-          await withBusyOverlay(() => printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]));
-          actionStatus.textContent = t('status.printed');
+          const outcome = await withBusyOverlay(() =>
+            printPdf(bytes, filename, `${label} PDF`, dimsByTarget[target]),
+          );
+          if (outcome === 'canceled') return;
+          actionStatus.textContent = t(printStatusKey(outcome));
           void triggerReviewPromptIfEligible();
         } else {
           if ((await sharePdf(bytes, filename, `${label} PDF`)) === 'canceled') return;
           actionStatus.textContent = t('status.booklet.shared', { label });
+          void recordBookletInLibrary('share', null);
           void triggerReviewPromptIfEligible();
         }
       } catch (error) {
@@ -2742,30 +2705,14 @@ export function initApp(): void {
     bookletSaveSpinner.classList.remove('hidden');
 
     try {
-      const frontUri = await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
-      await rememberSaved(frontUri, `${docName} — Front Side.pdf`);
-      const backUri = await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
-      await rememberSaved(backUri, `${docName} — Back Side.pdf`);
-      const combinedUri = await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
-      await rememberSaved(combinedUri, `${docName} — Combined Booklet.pdf`);
+      await savePdfPrivately(booklet.frontPdf, `booklets/${docName}/Front Side.pdf`);
+      await savePdfPrivately(booklet.backPdf, `booklets/${docName}/Back Side.pdf`);
+      await savePdfPrivately(booklet.combinedPdf, `booklets/${docName}/Combined Booklet.pdf`);
       if (booklet.coverPdf) {
-        const coverUri = await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
-        await rememberSaved(coverUri, `${docName} — Cover.pdf`);
+        await savePdfPrivately(booklet.coverPdf, `booklets/${docName}/Cover.pdf`);
       }
       if (booklet.instructionsPdf) {
-        const instrUri = await savePdfPrivately(booklet.instructionsPdf, `booklets/${docName}/Instructions.pdf`);
-        await rememberSaved(instrUri, `${docName} — Instructions.pdf`);
-      }
-      // Wrap cover lands in the same booklet folder as the block it belongs to,
-      // one file per printed sheet.
-      for (const [pdf, fileName] of [
-        [booklet.wrapCoverSheet1Pdf, 'Cover Sheet 1.pdf'],
-        [booklet.wrapCoverSheet2Pdf, 'Cover Sheet 2.pdf'],
-        [booklet.wrapCoverPdf, 'Cover Wrap.pdf'],
-      ] as const) {
-        if (!pdf) continue;
-        const uri = await savePdfPrivately(pdf, `booklets/${docName}/${fileName}`);
-        await rememberSaved(uri, `${docName} — ${fileName}`);
+        await savePdfPrivately(booklet.instructionsPdf, `booklets/${docName}/Instructions.pdf`);
       }
       bookletFileNameInput.value = docName;
       const savedFiles = [
@@ -2775,13 +2722,11 @@ export function initApp(): void {
       ];
       if (booklet.coverPdf) savedFiles.push(t('booklet.fileCover'));
       if (booklet.instructionsPdf) savedFiles.push(t('booklet.fileInstructions'));
-      if (booklet.wrapCoverSheet1Pdf) savedFiles.push(t('booklet.fileWrapCoverSheet1'));
-      if (booklet.wrapCoverSheet2Pdf) savedFiles.push(t('booklet.fileWrapCoverSheet2'));
-      if (booklet.wrapCoverPdf) savedFiles.push(t('booklet.fileWrapCover'));
       actionStatus.textContent = t('status.booklet.savedList', {
         count: savedFiles.length,
         files: savedFiles.join(', '),
       });
+      void recordBookletInLibrary('save', { relPath: `booklets/${docName}` });
       bookletSaveState = 'saved';
       refreshSaveLabel();
       bookletGoToLocationBtn.classList.remove('hidden');
@@ -2798,8 +2743,10 @@ export function initApp(): void {
   });
 
   bookletGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = `booklets/${safeBaseName(bookletFileNameInput.value)}`;
-    showScreen('files');
+    openLibrary('files', {
+      folderPath: `booklets/${safeBaseName(bookletFileNameInput.value)}`,
+      backTarget: { screen: 'result' },
+    });
   });
 
   newFileBtn.addEventListener('click', async () => {
@@ -2816,19 +2763,6 @@ export function initApp(): void {
     bookletGoToLocationBtn.classList.add('hidden');
     coverActionRow.classList.add('hidden');
     instructionsActionRow.classList.add('hidden');
-    // Hides both wrap-cover rows and restores the "Design…" button label, since
-    // `booklet` is null by now.
-    applyWrapCoverResultVisibility();
-    for (const [cell, img, error, spinner] of [
-      [wrapCoverSheet1PreviewCell, wrapCoverSheet1PreviewImg, wrapCoverSheet1PreviewError, wrapCoverSheet1PreviewSpinner],
-      [wrapCoverSheet2PreviewCell, wrapCoverSheet2PreviewImg, wrapCoverSheet2PreviewError, wrapCoverSheet2PreviewSpinner],
-    ] as const) {
-      cell.classList.add('hidden');
-      img.classList.add('hidden');
-      img.src = '';
-      error.classList.add('hidden');
-      spinner.classList.remove('hidden');
-    }
     frontPreviewImg.classList.add('hidden');
     frontPreviewImg.src = '';
     frontPreviewError.classList.add('hidden');
@@ -3003,8 +2937,7 @@ export function initApp(): void {
   mergeSaveBtn.addEventListener('click', mergeSaveFlow.save);
 
   mergeGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'merges';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'merges', backTarget: { screen: 'merge-result' } });
   });
 
   mergeShareBtn.addEventListener('click', async () => {
@@ -3217,8 +3150,7 @@ export function initApp(): void {
   organizeSaveBtn.addEventListener('click', organizeSaveFlow.save);
 
   organizeGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'organize-result' } });
   });
 
   organizeShareBtn.addEventListener('click', async () => {
@@ -3425,8 +3357,7 @@ export function initApp(): void {
   rotateSaveBtn.addEventListener('click', rotateSaveFlow.save);
 
   rotateGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'rotate-result' } });
   });
 
   rotateShareBtn.addEventListener('click', async () => {
@@ -3481,29 +3412,13 @@ export function initApp(): void {
       | 'paper'
       | 'sig'
       | 'binding'
-      | 'wrapcover'
-      | 'wrapbinding'
-      | 'wrapkind'
-      | 'wrapboard'
       | 'cover'
       | 'instr'
       | 'order'
       | 'marks'
-      | 'gsm'
-      | 'style'
-      | 'kind'
-      | 'board'
-      | 'trim'
       | 'paperType',
     value: string,
   ): void {
-    if (dataKey === 'style' && value === 'softcover') {
-      const target = coverFormat;
-      group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.dataset.style === target);
-      });
-      return;
-    }
     group.querySelectorAll<HTMLButtonElement>('.segmented-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset[dataKey] === value);
     });
@@ -3635,8 +3550,7 @@ export function initApp(): void {
   pageNumbersSaveBtn.addEventListener('click', pageNumbersSaveFlow.save);
 
   pageNumbersGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'page-numbers-result' } });
   });
 
   pageNumbersShareBtn.addEventListener('click', async () => {
@@ -3863,8 +3777,7 @@ export function initApp(): void {
   watermarkSaveBtn.addEventListener('click', watermarkSaveFlow.save);
 
   watermarkGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
+    openLibrary('files', { folderPath: 'edits', backTarget: { screen: 'watermark-result' } });
   });
 
   watermarkShareBtn.addEventListener('click', async () => {
@@ -4041,7 +3954,7 @@ export function initApp(): void {
       const filename = `Scan_${dateStr}_${timeStr}.pdf`;
       const scanRelPath = `scans/${filename}`;
       const privateUri = await savePdfPrivately(pdfBytes, scanRelPath);
-      await rememberSaved(privateUri, filename);
+      await rememberSaved(privateUri, filename, pdfBytes);
 
       await openReaderWithBytes(pdfBytes, filename, privateUri, 'image-to-pdf', 1, scanRelPath);
     } catch (error) {
@@ -4349,682 +4262,6 @@ export function initApp(): void {
     } finally {
       cropApplyBtn.disabled = false;
     }
-  });
-
-  // ── Cover Studio Screen Logic ─────────────────────────────────────────────
-
-  function applyCoverKindHint(): void {
-    if (!coverKindHint) return;
-    if (coverBindingType === 'saddle') {
-      coverKindHint.dataset.i18n = 'cover.saddleNote';
-      coverKindHint.textContent = t('cover.saddleNote');
-    } else if (coverCoverStyle === 'hardcover') {
-      coverKindHint.dataset.i18n = 'cover.hardHint';
-      coverKindHint.textContent = t('cover.hardHint');
-    } else {
-      coverKindHint.dataset.i18n = '';
-      coverKindHint.textContent = '';
-    }
-  }
-
-  function updateCoverLiveCalculations(): {
-    spineWidthMm: number;
-    spineWidthPt: number;
-    canPrintSpineText: boolean;
-    textBlockThicknessMm: number;
-    threadSwellMm: number;
-    hingeAllowanceMm: number;
-    totalWidthMm: number;
-    totalHeightMm: number;
-  } {
-    const options = getStudioCoverOptions();
-    const isA5 = coverPageTrim === 'A5';
-    const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
-    const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
-
-    const spineResult = computeSpineWidth(
-      spineInput(options, coverSheetCount, coverSigCount),
-    );
-
-    const dimInput = coverGeometryInput(
-      options,
-      pageWidthPt,
-      pageHeightPt,
-      spineResult.totalSpineWidthPt,
-    );
-
-    const mmPerPt = 25.4 / 72;
-    // In split mode "total width" is per sheet, not one wide wrap: sheet 1 is the
-    // widest of the two, so it is what has to clear the printer.
-    const splitDims = options.paper === 'split' ? computeSplitCoverDimensions(dimInput) : null;
-    const singleDims = splitDims ? null : computeCoverDimensions(dimInput);
-    const sheet1WidthMm = splitDims ? splitDims.sheet1.widthPt * mmPerPt : 0;
-    const sheet2WidthMm = splitDims ? splitDims.sheet2.widthPt * mmPerPt : 0;
-    const singleWrapWidthPt = singleDims && 'totalWidthPt' in singleDims ? singleDims.totalWidthPt : 0;
-    const singleWrapHeightPt = singleDims && 'totalHeightPt' in singleDims ? singleDims.totalHeightPt : 0;
-    const totalWidthMm = splitDims ? sheet1WidthMm : singleWrapWidthPt * mmPerPt;
-    const totalHeightMm = (splitDims ? splitDims.totalHeightPt : singleWrapHeightPt) * mmPerPt;
-
-    // UI Badges & Labels
-    coverSpineWidthLabel.textContent = `${spineResult.totalSpineWidthMm.toFixed(2)} mm`;
-    coverPaperBulkBadge.textContent = t('cover.paperBulk', { value: spineResult.textBlockThicknessMm.toFixed(2) });
-    coverThreadSwellBadge.textContent = t('cover.threadSwell', { value: spineResult.threadSwellMm.toFixed(2) });
-    coverHingeBadge.textContent = t('cover.hingeAllowance', { value: spineResult.hingeAllowanceMm.toFixed(2) });
-
-    if (spineResult.canPrintSpineText) {
-      coverSpineFitBadge.className = 'cover-fit-badge cover-fit-badge--ok';
-      coverSpineFitBadge.textContent = t('cover.spineTextFit');
-    } else {
-      coverSpineFitBadge.className = 'cover-fit-badge cover-fit-badge--warn';
-      coverSpineFitBadge.textContent = t('cover.spineTextTooNarrow');
-    }
-
-    const dimensions = splitDims ?? singleDims!;
-    const fitResult = checkCoverFormatFit(dimensions);
-    coverPaperFitBadge.classList.toggle('hidden', fitResult.fits);
-    const coverPaperFitWarnKey = fitResult.warnKey;
-    coverPaperFitBadge.dataset.i18n = coverPaperFitWarnKey;
-    coverPaperFitBadge.textContent = t(coverPaperFitWarnKey);
-
-    if (coverFormatResultLine) {
-      coverFormatResultLine.classList.toggle('hidden', !fitResult.fits);
-      if (fitResult.fits) {
-        coverFormatResultLine.textContent = t('cover.formatResultFit', {
-          paper: t(fitResult.paperKey),
-          w: fitResult.wMm.toFixed(1),
-          h: fitResult.hMm.toFixed(1),
-        });
-      }
-    }
-
-    coverTotalDimensionsLabel.textContent = splitDims
-      ? t('cover.totalDimensionsSplit', {
-          w1: sheet1WidthMm.toFixed(1),
-          w2: sheet2WidthMm.toFixed(1),
-          h: totalHeightMm.toFixed(1),
-        })
-      : t('cover.totalDimensions', {
-          w: totalWidthMm.toFixed(1),
-          h: totalHeightMm.toFixed(1),
-        });
-
-    // Update Visual Flat Layout Preview
-    updateCoverPreviewVisuals(spineResult.totalSpineWidthMm, spineResult.canPrintSpineText);
-
-    return {
-      spineWidthMm: spineResult.totalSpineWidthMm,
-      spineWidthPt: spineResult.totalSpineWidthPt,
-      canPrintSpineText: spineResult.canPrintSpineText,
-      textBlockThicknessMm: spineResult.textBlockThicknessMm,
-      threadSwellMm: spineResult.threadSwellMm,
-      hingeAllowanceMm: spineResult.hingeAllowanceMm,
-      totalWidthMm,
-      totalHeightMm,
-    };
-  }
-
-  function updateCoverPreviewVisuals(spineWidthMm: number, canPrintSpineText: boolean): void {
-    const title = coverTitleInput.value.trim() || t('cover.bookTitle');
-    const author = coverAuthorInput.value.trim() || t('cover.author');
-    const synopsis = coverSynopsisInput.value.trim();
-
-    coverPreviewTitleText.textContent = title;
-    coverPreviewAuthorText.textContent = author;
-    coverPreviewSynopsisText.textContent = synopsis;
-
-    coverSplitTitleText.textContent = title;
-    coverSplitAuthorText.textContent = author;
-    coverSplitSynopsisText.textContent = synopsis;
-
-    const visualSpineWidth = Math.max(14, Math.min(80, Math.round(spineWidthMm * 4)));
-    coverSpinePreview.style.width = `${visualSpineWidth}px`;
-    coverSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
-    coverSplitSpinePreview.style.width = `${visualSpineWidth}px`;
-    coverSplitSpinePreview.style.flexBasis = `${visualSpineWidth}px`;
-
-    if (canPrintSpineText) {
-      coverPreviewSpineText.textContent = title;
-      coverPreviewSpineText.style.display = 'block';
-      coverSplitSpineText.textContent = title;
-      coverSplitSpineText.style.display = 'block';
-    } else {
-      coverPreviewSpineText.textContent = '';
-      coverPreviewSpineText.style.display = 'none';
-      coverSplitSpineText.textContent = '';
-      coverSplitSpineText.style.display = 'none';
-    }
-
-    const theme = coverPreviewTheme(coverTheme);
-    for (const sheet of [coverLayoutPreview, coverSplitSheet1Preview, coverSplitSheet2Preview]) {
-      sheet.style.backgroundColor = theme.bg;
-      sheet.style.color = theme.text;
-    }
-    // The flap and the tab are glue surfaces, not printed faces — shade them the
-    // way the spine is shaded so the preview reads as "this part gets buried".
-    for (const panel of [coverSpinePreview, coverSplitSpinePreview, coverSplitFlapPreview, coverSplitTabPreview]) {
-      panel.style.backgroundColor = theme.spineBg;
-    }
-  }
-
-  /**
-   * Swaps the Cover Studio chrome between the two sheet formats. The preview
-   * heading and format hint carry their own data-i18n keys, so the key is
-   * swapped alongside the text — otherwise a later language change would put
-   * the wrong format's wording back.
-   */
-  function applyCoverFormatToUi(): void {
-    const isSplit = coverFormat === 'split';
-
-    setActiveSegment(coverFormatGroup, 'format', coverFormat);
-    setActiveSegment(coverKindGroup, 'kind', coverCoverStyle);
-
-    const formatKey = isSplit ? 'cover.formatSplitHint' : 'cover.formatSingleHint';
-    coverFormatHint.dataset.i18n = formatKey;
-    coverFormatHint.textContent = t(coverFormatHint.dataset.i18n);
-
-    coverPreviewHeading.dataset.i18n = isSplit ? 'cover.previewTitleSplit' : 'cover.previewTitle';
-    coverPreviewHeading.textContent = t(coverPreviewHeading.dataset.i18n);
-
-    coverLayoutPreview.classList.toggle('hidden', isSplit);
-    coverSplitPreview.classList.toggle('hidden', !isSplit);
-  }
-
-  function resetCoverScreen(): void {
-    coverPickedPdfName = '';
-    coverSheetCount = 20;
-    coverSigCount = 5;
-    coverPaperGsm = 80;
-    coverBindingType = 'sewn';
-    coverCoverStyle = 'softcover';
-    coverBoardThicknessMm = 2.0;
-    coverPageTrim = 'A5';
-    coverFormat = 'split';
-    coverTheme = 'cream';
-    coverImageBytes = null;
-    coverResultPdf = null;
-    coverSaveState = 'idle';
-
-    setActiveSegment(coverSourceModeGroup, 'mode', 'pdf');
-    coverPdfSourceCard.classList.remove('hidden');
-    coverManualCountsCard.classList.add('hidden');
-    coverPdfBadge.classList.add('hidden');
-    coverPickPdfBtn.classList.remove('hidden');
-
-    coverSheetCountInput.value = '20';
-    coverSigCountInput.value = '5';
-    coverTitleInput.value = '';
-    coverAuthorInput.value = '';
-    coverSynopsisInput.value = '';
-
-    coverPreviewThumbImg.src = '';
-    coverPreviewThumbImg.classList.add('hidden');
-    coverSplitThumbImg.src = '';
-    coverSplitThumbImg.classList.add('hidden');
-    coverRemoveImageBtn.classList.add('hidden');
-    coverImageStatus.textContent = t('cover.noImage');
-
-    setActiveSegment(coverGsmGroup, 'gsm', '80');
-    setActiveSegment(coverBindingGroup, 'binding', 'sewn');
-    setActiveSegment(coverKindGroup, 'kind', 'softcover');
-    coverKindRow.classList.remove('hidden');
-    coverKindGroup.classList.remove('hidden');
-    const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
-    if (hardcoverBtn) {
-      hardcoverBtn.disabled = false;
-      hardcoverBtn.classList.remove('is-disabled');
-    }
-    coverBoardThicknessBlock.classList.add('hidden');
-    setActiveSegment(coverBoardGroup, 'board', '2.0');
-    setActiveSegment(coverPageTrimGroup, 'trim', 'A5');
-    if (coverTrimUnsupportedHint) {
-      coverTrimUnsupportedHint.classList.add('hidden');
-    }
-    if (coverPageTrimHint) {
-      coverPageTrimHint.dataset.i18n = 'cover.pageTrimA5Hint';
-      coverPageTrimHint.textContent = t('cover.pageTrimA5Hint');
-    }
-    applyCoverKindHint();
-    applyCoverFormatToUi();
-
-    coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
-      swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === 'cream');
-    });
-
-    updateCoverLiveCalculations();
-  }
-
-  async function loadCoverPdf(bytes: Uint8Array, name: string): Promise<void> {
-    await validatePdf(bytes);
-    coverPickedPdfName = name.replace(/\.pdf$/i, '');
-
-    const pdfDoc = await loadPdfForThumbnails(bytes);
-    const pageCount = pdfDoc.numPages;
-    await destroyThumbnailDoc(pdfDoc);
-
-    const sheets = Math.ceil(pageCount / 4);
-    const signatures = Math.max(1, computeSignatureMappings(sheets * 4, 'auto').length);
-
-    coverSheetCount = sheets;
-    coverSigCount = signatures;
-    coverSheetCountInput.value = String(sheets);
-    coverSigCountInput.value = String(signatures);
-
-    coverPdfName.textContent = name;
-    coverPdfInfo.textContent = t('cover.pdfDetected', {
-      name: '',
-      pages: pageCount,
-      sheets,
-    });
-    coverPdfBadge.classList.remove('hidden');
-    coverPickPdfBtn.classList.add('hidden');
-
-    if (!coverTitleInput.value.trim()) {
-      coverTitleInput.value = coverPickedPdfName;
-    }
-
-    updateCoverLiveCalculations();
-  }
-
-  coverSourceModeGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const mode = btn?.dataset.mode as 'pdf' | 'manual' | undefined;
-    if (!mode) return;
-    setActiveSegment(coverSourceModeGroup, 'mode', mode);
-    coverPdfSourceCard.classList.toggle('hidden', mode !== 'pdf');
-    coverManualCountsCard.classList.toggle('hidden', mode !== 'manual');
-    updateCoverLiveCalculations();
-  });
-
-  coverPickPdfBtn.addEventListener('click', async () => {
-    showToast(t('toast.selectingSource'));
-    try {
-      const picked = await promptAndPickPdfs({ allowMultiple: false });
-      if (!picked) return;
-      await loadCoverPdf(picked.bytes, picked.name);
-    } catch (error) {
-      const message = errorText(error);
-      goToError(t('error.pdfOpenFailed'), message, 'cover');
-    }
-  });
-
-  coverClearPdfBtn.addEventListener('click', () => {
-    coverPickedPdfName = '';
-    coverPdfBadge.classList.add('hidden');
-    coverPickPdfBtn.classList.remove('hidden');
-    updateCoverLiveCalculations();
-  });
-
-  coverSheetCountInput.addEventListener('input', () => {
-    const val = parseInt(coverSheetCountInput.value, 10);
-    coverSheetCount = Number.isNaN(val) || val < 1 ? 1 : val;
-    updateCoverLiveCalculations();
-  });
-
-  coverSigCountInput.addEventListener('input', () => {
-    const val = parseInt(coverSigCountInput.value, 10);
-    coverSigCount = Number.isNaN(val) || val < 1 ? 1 : val;
-    updateCoverLiveCalculations();
-  });
-
-  coverTitleInput.addEventListener('input', () => {
-    const options = getStudioCoverOptions();
-    const spine = computeSpineWidth(
-      spineInput(options, coverSheetCount, coverSigCount),
-    );
-    updateCoverPreviewVisuals(spine.totalSpineWidthMm, spine.canPrintSpineText);
-  });
-
-  coverAuthorInput.addEventListener('input', () => {
-    updateCoverLiveCalculations();
-  });
-
-  coverSynopsisInput.addEventListener('input', () => {
-    updateCoverLiveCalculations();
-  });
-
-  coverPickImageBtn.addEventListener('click', async () => {
-    try {
-      const picked = await pickImage();
-      if (!picked) return;
-      coverImageBytes = picked.bytes;
-      coverImageStatus.textContent = t('cover.imageSelected', { name: picked.name });
-      const objectUrl = URL.createObjectURL(new Blob([new Uint8Array(picked.bytes)]));
-      coverPreviewThumbImg.src = objectUrl;
-      coverPreviewThumbImg.classList.remove('hidden');
-      coverSplitThumbImg.src = objectUrl;
-      coverSplitThumbImg.classList.remove('hidden');
-      coverRemoveImageBtn.classList.remove('hidden');
-      updateCoverLiveCalculations();
-    } catch (error) {
-      const message = errorText(error);
-      coverImageStatus.textContent = t('watermark.imageSelectError', { message });
-    }
-  });
-
-  coverRemoveImageBtn.addEventListener('click', () => {
-    coverImageBytes = null;
-    coverPreviewThumbImg.src = '';
-    coverPreviewThumbImg.classList.add('hidden');
-    coverSplitThumbImg.src = '';
-    coverSplitThumbImg.classList.add('hidden');
-    coverRemoveImageBtn.classList.add('hidden');
-    coverImageStatus.textContent = t('cover.noImage');
-    updateCoverLiveCalculations();
-  });
-
-  coverPaletteGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.cover-swatch');
-    const theme = btn?.dataset.theme as typeof coverTheme | undefined;
-    if (!theme) return;
-    coverTheme = theme;
-    coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
-      swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === theme);
-    });
-    updateCoverLiveCalculations();
-  });
-
-  coverGsmGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const gsm = Number(btn?.dataset.gsm) as PaperGsm;
-    if (!gsm || !(gsm in PAPER_CALIPERS_MM)) return;
-    coverPaperGsm = gsm;
-    setActiveSegment(coverGsmGroup, 'gsm', String(gsm));
-    updateCoverLiveCalculations();
-  });
-
-  coverBindingGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const binding = btn?.dataset.binding as BindingType | undefined;
-    if (!binding) return;
-    coverBindingType = binding;
-    setActiveSegment(coverBindingGroup, 'binding', binding);
-    const isSaddle = binding === 'saddle';
-    coverSigCountRow.classList.toggle('hidden', isSaddle);
-    const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
-    if (hardcoverBtn) {
-      hardcoverBtn.disabled = isSaddle;
-      hardcoverBtn.classList.toggle('is-disabled', isSaddle);
-    }
-    if (isSaddle && coverCoverStyle === 'hardcover') {
-      coverCoverStyle = 'softcover';
-      setActiveSegment(coverKindGroup, 'kind', 'softcover');
-      coverBoardThicknessBlock.classList.add('hidden');
-    }
-    applyCoverKindHint();
-    applyCoverFormatToUi();
-    updateCoverLiveCalculations();
-  });
-
-  coverKindGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    if (btn?.disabled) return;
-    const kind = btn?.dataset.kind as 'softcover' | 'hardcover' | undefined;
-    if (!kind) return;
-    if (coverBindingType === 'saddle' && kind === 'hardcover') return;
-    coverCoverStyle = kind;
-    setActiveSegment(coverKindGroup, 'kind', kind);
-    coverBoardThicknessBlock.classList.toggle('hidden', kind !== 'hardcover');
-    applyCoverKindHint();
-    applyCoverFormatToUi();
-    updateCoverLiveCalculations();
-  });
-
-  coverBoardGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const board = Number(btn?.dataset.board) as BoardThicknessMm;
-    if (!board || ![1.5, 2.0, 2.5, 3.0].includes(board)) return;
-    coverBoardThicknessMm = board;
-    setActiveSegment(coverBoardGroup, 'board', String(board));
-    updateCoverLiveCalculations();
-  });
-
-  coverPageTrimGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const trim = btn?.dataset.trim as 'A5' | 'A4' | undefined;
-    if (!trim) return;
-    coverPageTrim = trim;
-    setActiveSegment(coverPageTrimGroup, 'trim', trim);
-    if (coverTrimUnsupportedHint) {
-      coverTrimUnsupportedHint.classList.add('hidden');
-    }
-    if (coverPageTrimHint) {
-      const hintKey = trim === 'A5' ? 'cover.pageTrimA5Hint' : 'cover.pageTrimA4Hint';
-      coverPageTrimHint.dataset.i18n = hintKey;
-      coverPageTrimHint.textContent = t(hintKey);
-    }
-    updateCoverLiveCalculations();
-  });
-
-  coverFormatGroup.addEventListener('click', (event) => {
-    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('.segmented-btn');
-    const format = btn?.dataset.format as CoverFormat | undefined;
-    if (format !== 'split' && format !== 'single') return;
-    coverFormat = format;
-    applyCoverFormatToUi();
-    updateCoverLiveCalculations();
-  });
-
-  coverGenerateBtn.addEventListener('click', async () => {
-    coverGenerateBtn.disabled = true;
-    coverGenerateBtnLabel.textContent = t('cover.generating');
-    coverGenerateSpinner.classList.remove('hidden');
-
-    try {
-      const options = getStudioCoverOptions();
-      const isA5 = coverPageTrim === 'A5';
-      const pageWidthPt = isA5 ? (148 * 72) / 25.4 : (210 * 72) / 25.4;
-      const pageHeightPt = isA5 ? (210 * 72) / 25.4 : (297 * 72) / 25.4;
-
-      const spineCalc = computeSpineWidth(
-        spineInput(options, coverSheetCount, coverSigCount),
-      );
-
-      const dimInput = coverGeometryInput(
-        options,
-        pageWidthPt,
-        pageHeightPt,
-        spineCalc.totalSpineWidthPt,
-      );
-      const dimensions = options.paper === 'split'
-        ? computeSplitCoverDimensions(dimInput)
-        : computeCoverDimensions(dimInput);
-
-      const title = coverTitleInput.value.trim() || 'Book Title';
-      const author = coverAuthorInput.value.trim() || undefined;
-      const synopsis = coverSynopsisInput.value.trim() || undefined;
-
-      const pdfBytes = await generateCoverPdf({
-        dimensions,
-        content: {
-          title,
-          author,
-          synopsis,
-          coverImageBytes: coverImageBytes ?? undefined,
-          theme: coverTheme,
-        },
-        spineResult: spineCalc,
-        format: coverFormat,
-      });
-
-      coverResultPdf = pdfBytes;
-      coverSaveState = 'idle';
-
-      const mmPerPt = 25.4 / 72;
-      const hMm = dimensions.totalHeightPt * mmPerPt;
-
-      coverResultSpineStat.textContent = `${spineCalc.totalSpineWidthMm.toFixed(2)} mm`;
-      if (dimensions.format === 'split') {
-        coverResultDimStat.textContent = t('cover.dimStatSplit', {
-          w1: (dimensions.sheet1.widthPt * mmPerPt).toFixed(1),
-          w2: (dimensions.sheet2.widthPt * mmPerPt).toFixed(1),
-          h: hMm.toFixed(1),
-        });
-      } else {
-        coverResultDimStat.textContent = `${(dimensions.totalWidthPt * mmPerPt).toFixed(1)} × ${hMm.toFixed(1)} mm`;
-      }
-      // Which sheet holds what only needs saying when there is more than one.
-      coverResultBreakdownCard.classList.toggle('hidden', dimensions.format !== 'split');
-
-      const baseName = (title || coverPickedPdfName || 'book').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-      coverFileNameInput.value = `${baseName}_cover`;
-      coverSaveBtn.disabled = false;
-      coverSaveBtnLabel.textContent = t('common.save');
-      coverSaveSpinner.classList.add('hidden');
-      coverGoToLocationBtn.classList.add('hidden');
-      coverActionStatus.textContent = '';
-
-      showScreen('cover-result');
-    } catch (error) {
-      const message = errorText(error);
-      goToError(t('error.generic'), message, 'cover');
-    } finally {
-      coverGenerateBtn.disabled = false;
-      coverGenerateBtnLabel.textContent = t('cover.generateBtn');
-      coverGenerateSpinner.classList.add('hidden');
-    }
-  });
-
-  const coverSaveFlow = createSaveFlow(
-    {
-      getResultPdf: () => coverResultPdf,
-      targetDir: 'edits',
-      savedStatusKey: 'status.cover.saved',
-      getState: () => coverSaveState,
-      setState: (state) => { coverSaveState = state; },
-      elements: {
-        fileNameInput: coverFileNameInput,
-        saveBtn: coverSaveBtn,
-        saveBtnLabel: coverSaveBtnLabel,
-        saveSpinner: coverSaveSpinner,
-        actionStatus: coverActionStatus,
-        goToLocationBtn: coverGoToLocationBtn,
-      },
-    },
-    saveFlowDeps,
-  );
-
-  coverFileNameInput.addEventListener('input', coverSaveFlow.resetSavedState);
-  coverSaveBtn.addEventListener('click', coverSaveFlow.save);
-
-  coverGoToLocationBtn.addEventListener('click', () => {
-    currentFolderPath = 'edits';
-    showScreen('files');
-  });
-
-  coverShareBtn.addEventListener('click', async () => {
-    if (!coverResultPdf) return;
-    let filename = coverFileNameInput.value.trim();
-    if (!filename) filename = 'book_cover';
-    filename = safeFileName(filename, { ensurePdf: true });
-    try {
-      if ((await sharePdf(coverResultPdf, filename, t('cover.coverPdf'))) === 'canceled') return;
-      coverActionStatus.textContent = t('status.shared');
-    } catch (error) {
-      const message = errorText(error);
-      coverActionStatus.textContent = t('status.shareFailed', { message });
-    }
-  });
-
-  coverNewBtn.addEventListener('click', async () => {
-    if (coverResultPdf !== null && coverSaveState !== 'saved') {
-      if (!(await showConfirmDialog(t('confirm.discardResult')))) return;
-    }
-    resetCoverScreen();
-    showScreen('cover');
-  });
-
-  resultOpenCoverStudioBtn.addEventListener('click', () => {
-    resetCoverScreen();
-    if (booklet && selectedFile) {
-      const sheets = parseInt(statSheets.textContent || '20', 10) || 20;
-      coverSheetCount = sheets;
-      coverSheetCountInput.value = String(sheets);
-
-      const sigs = parseInt(statSignatures.textContent || '0', 10);
-      if (sigs > 0) {
-        coverSigCount = sigs;
-        coverSigCountInput.value = String(sigs);
-      } else {
-        coverSigCount = Math.max(1, computeSignatureMappings(sheets * 4, 'auto').length);
-        coverSigCountInput.value = String(coverSigCount);
-      }
-
-      coverPickedPdfName = selectedFile.name.replace(/\.pdf$/i, '');
-      coverPdfName.textContent = selectedFile.name;
-      coverPdfInfo.textContent = t('cover.pdfDetected', {
-        name: '',
-        pages: bookletOriginalPages,
-        sheets,
-      });
-      coverPdfBadge.classList.remove('hidden');
-      coverPickPdfBtn.classList.add('hidden');
-      coverPdfSourceCard.classList.remove('hidden');
-      coverManualCountsCard.classList.add('hidden');
-      setActiveSegment(coverSourceModeGroup, 'mode', 'pdf');
-
-      // With the inline cover section on, Cover Studio opens on exactly what was
-      // already produced — otherwise the binding is inferred from the imposition
-      // (a single signature is saddle-stitched) as before.
-      let targetOptions: CoverOptions;
-      if (bookletWrapCover) {
-        targetOptions = getBookletCoverOptions();
-        coverAuthorInput.value = wrapCoverAuthorInput.value;
-        coverSynopsisInput.value = wrapCoverSynopsisInput.value;
-      } else {
-        const isSingle = bookletSignature === 'single';
-        targetOptions = normalizeCoverOptions({
-          ...DEFAULT_COVER_OPTIONS,
-          binding: isSingle ? 'saddle' : 'sewn',
-        });
-      }
-
-      coverBindingType = targetOptions.binding;
-      coverCoverStyle = targetOptions.kind;
-      coverBoardThicknessMm = targetOptions.boardMm;
-      coverPaperGsm = targetOptions.gsm;
-      coverTheme = targetOptions.theme;
-      coverFormat = targetOptions.paper;
-
-      setActiveSegment(coverBindingGroup, 'binding', coverBindingType);
-      setActiveSegment(coverKindGroup, 'kind', coverCoverStyle);
-      setActiveSegment(coverBoardGroup, 'board', String(coverBoardThicknessMm));
-      coverBoardThicknessBlock.classList.toggle('hidden', coverCoverStyle !== 'hardcover');
-      setActiveSegment(coverFormatGroup, 'format', coverFormat);
-      setActiveSegment(coverGsmGroup, 'gsm', String(coverPaperGsm));
-
-      coverPaletteGroup.querySelectorAll('.cover-swatch').forEach((swatch) => {
-        swatch.classList.toggle('is-active', (swatch as HTMLElement).dataset.theme === coverTheme);
-      });
-
-      const isSaddle = coverBindingType === 'saddle';
-      coverSigCountRow.classList.toggle('hidden', isSaddle);
-      const hardcoverBtn = coverKindGroup.querySelector<HTMLButtonElement>('[data-kind="hardcover"]');
-      if (hardcoverBtn) {
-        hardcoverBtn.disabled = isSaddle;
-        hardcoverBtn.classList.toggle('is-disabled', isSaddle);
-      }
-      applyCoverKindHint();
-      applyCoverFormatToUi();
-
-      const [sheetW, sheetH] = wrapCoverSheetSize();
-      const trimResult = resolveCoverPageTrim(sheetW, sheetH);
-      coverPageTrim = trimResult.trim;
-      setActiveSegment(coverPageTrimGroup, 'trim', coverPageTrim);
-      if (coverTrimUnsupportedHint) {
-        coverTrimUnsupportedHint.classList.toggle('hidden', trimResult.isSupported);
-      }
-      if (coverPageTrimHint) {
-        const hintKey = coverPageTrim === 'A4' ? 'cover.pageTrimA4Hint' : 'cover.pageTrimA5Hint';
-        coverPageTrimHint.dataset.i18n = hintKey;
-        coverPageTrimHint.textContent = t(hintKey);
-      }
-
-      // The cover's own title wins over the file name the user typed on the
-      // result screen — it is the one they actually wrote onto the cover.
-      coverTitleInput.value = wrapCoverTitleInput.value.trim() || bookletFileNameInput.value.trim();
-      updateCoverLiveCalculations();
-    }
-    showScreen('cover');
   });
 
   let readerResizeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -5371,6 +4608,7 @@ export function initApp(): void {
   window.addEventListener('blur', forceEndPinchTracking);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) forceEndPinchTracking();
+    else if (getCurrentScreenId() === 'hub') void refreshHubSavedCount();
   });
 
   // touch-action can't change mid-gesture, so additionally block the
@@ -5432,7 +4670,32 @@ export function initApp(): void {
     goToPageInput.focus();
   });
 
+  const bookPageLabel = byId<HTMLElement>('bookPageLabel');
+  bookPageLabel.addEventListener('click', () => {
+    if (!bookReader || !bookReader.isOpen()) return;
+    const total = bookReader.totalPages();
+    goToPageInput.value = '';
+    goToPageInput.classList.remove('input-shake');
+    goToPageInput.placeholder = `1–${total}`;
+    openModal(goToPageModal, bookPageLabel);
+    goToPageInput.focus();
+  });
+
   function confirmGoToPage(): void {
+    if (getCurrentScreenId() === 'book') {
+      if (!bookReader || !bookReader.isOpen()) return;
+      const total = bookReader.totalPages();
+      const page = Number.parseInt(goToPageInput.value.trim(), 10);
+      if (!Number.isFinite(page) || page < 1 || page > total) {
+        goToPageInput.classList.remove('input-shake');
+        void goToPageInput.offsetWidth;
+        goToPageInput.classList.add('input-shake');
+        return;
+      }
+      closeModal(goToPageModal);
+      bookReader.goToPage(page - 1);
+      return;
+    }
     if (!readerDoc) return;
     const page = Number.parseInt(goToPageInput.value.trim(), 10);
     if (!Number.isFinite(page) || page < 1 || page > readerDoc.proxy.numPages) {
@@ -5656,11 +4919,76 @@ export function initApp(): void {
    * that is certainly untrue — and sending them back to save a file that
    * already exists.
    */
-  async function rememberSaved(uri: string, name: string): Promise<void> {
+  async function rememberSaved(uri: string, name: string, bytes: Uint8Array): Promise<void> {
     try {
-      await recordOpened({ uri, name });
+      await recordOpened({ uri, name, fp: fingerprintPdf(bytes) });
     } catch (error) {
       console.warn('Saved, but could not add to recents:', error);
+    }
+  }
+
+  /**
+   * Adds the current booklet result to the library, or updates its record when
+   * this result was already saved/shared once. Bookkeeping like rememberSaved:
+   * callers `void` it after the user-visible status is set, and it never throws.
+   */
+  async function recordBookletInLibrary(
+    // Which action succeeded; only `save` brings an output folder.
+    _trigger: 'save' | 'share',
+    output: { relPath: string } | null,
+  ): Promise<void> {
+    try {
+      const meta = lastBookletResultMeta;
+      const source = selectedFile;
+      if (!meta || !source) return;
+      const id = currentLibraryRecordId ?? newRecordId();
+      currentLibraryRecordId = id;
+      const draft = buildRecordDraft({
+        id,
+        // The save handler has just written docName back into this field; on
+        // a share it still holds the default (the source's stem) or the
+        // user's edit. Blank falls back to the source's stem.
+        title: safeBaseName(bookletFileNameInput.value),
+        sourceName: source.name,
+        sourceSize: source.bytes.length,
+        source: bookletSourceRef,
+        meta,
+        output,
+      });
+      const { record, evicted } = await upsertRecord(draft);
+      if (record.source.kind === 'none' && source.bytes.length > 0) {
+        setSessionSource(librarySessionSources, record.id, { name: source.name, bytes: source.bytes });
+      }
+      void refreshHubSavedCount();
+      for (const old of evicted) {
+        if (old.thumb) void deleteLibraryThumb(old.thumb.relPath);
+      }
+      if (!record.thumb) void renderLibraryThumb(record.id, source.bytes);
+    } catch (error) {
+      console.warn('Booklet done, but could not add it to the library:', error);
+    }
+  }
+
+  // Page 1 of the source as a small JPEG, stored under the record. Skipped past
+  // the same size ceiling as the Files previews; the library then draws a
+  // typographic cover instead.
+  async function renderLibraryThumb(id: string, bytes: Uint8Array): Promise<void> {
+    if (bytes.length > PDF_THUMBNAIL_MAX_SOURCE_BYTES) return;
+    try {
+      const doc = await loadPdfForThumbnails(bytes);
+      let dataUrl: string;
+      try {
+        dataUrl = await renderPageThumbnail(doc, 1, 240, 'image/jpeg', 0.8);
+      } finally {
+        await destroyThumbnailDoc(doc);
+      }
+      const relPath = await writeLibraryThumb(id, dataUrl);
+      if (relPath && !(await patchRecord(id, { thumb: { relPath } }))) {
+        // The record went away meanwhile; do not leave its thumbnail behind.
+        await deleteLibraryThumb(relPath);
+      }
+    } catch (error) {
+      console.warn('Could not render the library thumbnail:', error);
     }
   }
 
@@ -5687,8 +5015,13 @@ export function initApp(): void {
     returnTo: ScreenId = 'hub',
     initialPage: number = 1,
     relPath: string | null = null,
+    returnLibraryTab: LibraryTab | null = null,
   ): Promise<void> {
     if (isOpeningReader) return;
+    if (returnLibraryTab !== 'files') {
+      clearFilesBackTarget();
+    }
+    readerReturnLibraryTab = returnLibraryTab;
     isOpeningReader = true;
     showReaderOpening();
     try {
@@ -5701,6 +5034,10 @@ export function initApp(): void {
       readerOutline = (await readerDoc.proxy.getOutline().catch(() => null)) as
         | OutlineItem[]
         | null;
+      // The booklet engine marks its imposed outputs; the desk uses it to keep
+      // "Read as a book" away from them wherever they are opened from.
+      // A failed read stays "unknown" (undefined), never "not marked".
+      const readerImposed = imposedFromInfo((await readerDoc.proxy.getMetadata().catch(() => null))?.info);
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
@@ -5712,6 +5049,7 @@ export function initApp(): void {
       screens.reader.classList.toggle('night-mode', readerNightMode);
       showScreen('reader');
       topBarTitle.textContent = readerName;
+      topBarTitle.title = readerName;
       // Warn before the heavy per-page rendering work in renderReaderList
       // starts, not after — the user should see this while pages are still
       // loading, not once the memory pressure has already happened.
@@ -5722,7 +5060,14 @@ export function initApp(): void {
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
-      await recordOpened({ uri: sourceUri, name });
+      const recorded = await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });
+      // Opened without a page of its own (picker, Files, share) but known to
+      // the desk — possibly under another uri, matched by fingerprint: resume
+      // there. Otherwise the reader sits on page 1 and its page-save timer
+      // would overwrite the remembered page with 1.
+      if (initialPage <= 1 && recorded.lastPage > 1 && readerDoc) {
+        readerScroll.scrollTop = readerScrollTopForPage(Math.min(recorded.lastPage, readerDoc.proxy.numPages));
+      }
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
@@ -5732,9 +5077,9 @@ export function initApp(): void {
     }
   }
 
-  // First-page thumbnail cache shared by the hub recents grid and the files
-  // list. Keyed by `uri|size|lastModified` where metadata is known (files) or
-  // plain uri (recents); Map insertion order doubles as the eviction order.
+  // First-page thumbnail cache for the files list. Keyed by
+  // `uri|size|lastModified` where metadata is known, or plain uri otherwise;
+  // Map insertion order doubles as the eviction order.
   const pdfThumbnailCache = new Map<string, string>();
   const PDF_THUMBNAIL_CACHE_MAX = 50;
 
@@ -5761,7 +5106,7 @@ export function initApp(): void {
   /**
    * Renders page 1 of the PDF behind `uri` to a data URL, caching the result
    * under `cacheKey` in memory and, for a version-qualified key
-   * (`uri|size|mtime`, see loadHubRecentThumbnail/renderFilesList), on disk
+   * (`uri|size|mtime`, see renderFilesList), on disk
    * (Cache directory) too. A bare uri with no `|` is not safe to persist:
    * without size/mtime there is no way to tell a stale disk entry apart from
    * a fresh one if the file at that uri later changes, so those keys stay
@@ -5801,114 +5146,36 @@ export function initApp(): void {
     }
   }
 
-  /**
-   * Loads the first page of a recent entry as a real thumbnail and swaps it
-   * into `container`. Keeps the placeholder icon on any failure (missing uri,
-   * unreadable file) — never throws into the render path.
-   */
-  async function loadHubRecentThumbnail(entry: RecentEntry, container: HTMLElement): Promise<void> {
-    if (!entry.uri) return;
-    // A recent entry only stores a uri (see RecentEntry) — stat() at load time
-    // to build a version-qualified cache key, so a file overwritten at the
-    // same uri doesn't serve a stale thumbnail from the disk cache forever.
-    // On stat failure, fall back to the bare uri, which getPdfThumbnail keeps
-    // memory-only for exactly that reason.
-    const stat = await Filesystem.stat({ path: entry.uri }).catch(() => null);
-    const cacheKey = stat ? `${entry.uri}|${stat.size}|${stat.mtime}` : entry.uri;
-    const dataUrl = await getPdfThumbnail(entry.uri, cacheKey);
-    if (!dataUrl) return;
-    const img = document.createElement('img');
-    img.className = 'hub-recent-thumb-img';
-    img.alt = '';
-    img.src = dataUrl;
-    container.replaceChildren(img);
-  }
-
-  // Bumped by every hub render so a slow thumbnail fill from a previous one
-  // gives up instead of writing into containers that are no longer on screen.
-  let hubRecentsGeneration = 0;
-
-  async function renderHubRecentsGrid(): Promise<void> {
-    const recents = (await getRecents()).slice(0, 3);
-    const generation = ++hubRecentsGeneration;
-    const thumbTasks: { entry: RecentEntry; thumb: HTMLElement }[] = [];
-    recentsList.innerHTML = '';
-
-    for (const entry of recents) {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'hub-recent-card';
-
-      const thumb = document.createElement('span');
-      thumb.className = 'hub-recent-thumb';
-      const placeholder = document.createElement('span');
-      placeholder.className = 'hub-recent-thumb-placeholder';
-      placeholder.textContent = '📄';
-      placeholder.ariaHidden = 'true';
-      thumb.appendChild(placeholder);
-      card.appendChild(thumb);
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'hub-recent-name';
-      nameEl.textContent = entry.name;
-      card.appendChild(nameEl);
-
-      card.addEventListener('click', () => void openRecent(entry));
-      recentsList.appendChild(card);
-
-      thumbTasks.push({ entry, thumb });
+  // The atelier's card-2 line counts the booklets in the library.
+  async function refreshHubSavedCount(): Promise<void> {
+    try {
+      const books = await getLibrary();
+      atelierHub?.setSavedCount(books.length);
+    } catch (error) {
+      console.warn('Could not count the library:', error);
     }
-
-    // One at a time, like the files list. Each thumbnail holds the whole
-    // document in memory while it renders, so three at once meant three
-    // documents at once — on the screen the user sees first at launch.
-    void (async () => {
-      for (const task of thumbTasks) {
-        if (generation !== hubRecentsGeneration) return;
-        await loadHubRecentThumbnail(task.entry, task.thumb);
-      }
-    })();
-
-    const createCard = document.createElement('button');
-    createCard.type = 'button';
-    createCard.className = 'hub-recent-card hub-recent-card--create';
-
-    const createIcon = document.createElement('span');
-    createIcon.className = 'hub-recent-thumb hub-recent-thumb--create';
-    createIcon.ariaHidden = 'true';
-    createIcon.textContent = '+';
-    createCard.appendChild(createIcon);
-
-    const createLabel = document.createElement('span');
-    createLabel.className = 'hub-recent-name';
-    createLabel.dataset.i18n = 'hub.recents.createNew';
-    createLabel.textContent = t('hub.recents.createNew');
-    createCard.appendChild(createLabel);
-
-    createCard.addEventListener('click', () => {
-      const entryScreen = TOOL_ENTRY_SCREEN['image-to-pdf'];
-      if (entryScreen) showScreen(entryScreen);
-    });
-    recentsList.appendChild(createCard);
   }
 
   async function openRecent(entry: RecentEntry): Promise<void> {
     if (!entry.uri) {
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry);
-      await renderHubRecentsGrid();
+      await refreshHubSavedCount();
       return;
     }
     if (isOpeningReader) return;
-    const returnTo: ScreenId = getCurrentScreenId() === 'recents' ? 'recents' : 'hub';
+    const returnTo: ScreenId = getCurrentScreenId() === 'library' ? 'library' : 'hub';
     try {
       const picked = await readForReader(entry.uri);
-      await openReaderWithBytes(picked.bytes, picked.name, entry.uri, returnTo, entry.lastPage);
+      // Keep the name the desk already knows. The one read back from the uri
+      // is a guess (stat, else the uri's last segment, else "document.pdf"),
+      // and recording it would overwrite a good name with a worse one.
+      await openReaderWithBytes(picked.bytes, entry.name || picked.name, entry.uri, returnTo, entry.lastPage);
     } catch (error) {
       recordError('caught', error);
       showToast(t('toast.fileNoLongerAccessible'));
       await removeRecent(entry);
-      await renderHubRecentsGrid();
+      await refreshHubSavedCount();
     } finally {
       hideReaderOpening();
     }
@@ -6152,10 +5419,16 @@ export function initApp(): void {
           await addMergeFile(bytes, name);
           showScreen('merge-picker');
           break;
-        case 'booklet':
-          loadBookletFile(bytes, name);
+        case 'booklet': {
+          const source: SourceRef = readerRelPath
+            ? { kind: 'private', relPath: readerRelPath }
+            : readerUri
+              ? { kind: 'saf', uri: readerUri }
+              : { kind: 'none' };
+          loadBookletFile(bytes, name, source);
           showScreen('config');
           break;
+        }
         default:
           break;
       }
@@ -6364,7 +5637,7 @@ export function initApp(): void {
   }
 
   async function buildNavRecents(): Promise<void> {
-    const recents = (await getRecents()).filter((r) => r.uri !== readerUri);
+    const recents = (await getRecents()).filter((r) => r.uri !== null && r.uri !== readerUri);
     readerNavRecentsList.innerHTML = '';
     if (recents.length === 0) {
       const empty = document.createElement('p');
@@ -6825,6 +6098,13 @@ export function initApp(): void {
 
   // Auto-open fullscreen reader when device rotates to landscape while in reader screen
   screen.orientation.addEventListener('change', () => {
+    // The book has no immersive mode to fall back on: it just refits its pages
+    // to the new stage height. The ResizeObserver usually gets there first;
+    // this covers engines where the orientation event lands before layout.
+    if (getCurrentScreenId() === 'book') {
+      scheduleBookRelayout();
+      return;
+    }
     if (getCurrentScreenId() !== 'reader') return;
     if (window.innerWidth > window.innerHeight) {
       if (!isFullscreenReaderActive) {
@@ -6839,184 +6119,35 @@ export function initApp(): void {
     }
   });
 
-  byId<HTMLButtonElement>('hubCreateBookletBtn').addEventListener('click', () => {
-    const entry = TOOL_ENTRY_SCREEN.booklet; // same entry point as the Booklet tool-row
-    if (entry) showScreen(entry);
-  });
-
-  // ── Hub hero brand-moment: first-ever open flies in (A); later opens fold in
-  //    place (B); reduced-motion / same-session revisits show it resting. ──────
-  {
-    const BRAND_SEEN_KEY = 'bindery.brandIntroSeen';
-    // QC hooks: ?heroIntro=A|B|off force a path; =reset clears the persisted flag.
-    // ?heroPhase=load|settle|fold|rest freezes the booklet at one phase (static,
-    // no transition) so the fold geometry can be inspected on-device frame-by-frame.
-    const params = new URLSearchParams(location.search);
-    const forcedHero = params.get('heroIntro');
-    const forcedPhase = params.get('heroPhase');
-    if (forcedHero === 'reset') { try { localStorage.removeItem(BRAND_SEEN_KEY); } catch { /* ignore */ } }
-
-    const fly = byId<HTMLDivElement>('heroFly');
-    const booklet = byId<HTMLDivElement>('heroBooklet');
-    const deck = byId<HTMLDivElement>('heroDeck');
-    const stageEl = byId<HTMLDivElement>('heroStage');
-    const hubHero = byId<HTMLDivElement>('hubHero');
-    const hubScreen = byId<HTMLElement>('screen-hub');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const LEAVES = 4;
-    const INTRINSIC_W = 108;
-    const INTRINSIC_H = 74;
-    void fly; // layer referenced only for clarity; visibility follows #screen-hub
-
-    const cover = document.createElement('div');
-    cover.className = 'hero-cover';
-    cover.innerHTML = '<div class="emb"></div>';
-    deck.appendChild(cover);
-    for (let i = 0; i < LEAVES; i++) {
-      const leaf = document.createElement('div');
-      leaf.className = 'hero-leaf';
-      leaf.style.setProperty('--i', String(i));
-      leaf.innerHTML =
-        '<div class="hero-face l"><div class="hero-paper"></div></div>' +
-        '<div class="hero-face r"><div class="hero-paper"></div><div class="hero-paper back"></div><div class="hero-hinge"></div></div>';
-      deck.appendChild(leaf);
-    }
-
-    let homeScale = 1;
-    function homeTransform(): string {
-      const hub = hubScreen.getBoundingClientRect();
-      const st = stageEl.getBoundingClientRect();
-      homeScale = Math.max(0.6, (st.height * 0.62) / INTRINSIC_H);
-      const w = INTRINSIC_W * homeScale, h = INTRINSIC_H * homeScale;
-      const left = (st.left - hub.left) + (st.width - w) / 2;
-      const top = (st.top - hub.top) + (st.height - h) / 2;
-      return `translate(${left}px, ${top}px) scale(${homeScale})`;
-    }
-    function splashTransform(): string {
-      const hub = hubScreen.getBoundingClientRect();
-      const scale = homeScale * 1.8;
-      const w = INTRINSIC_W * scale;
-      const left = (window.innerWidth / 2 - hub.left) - w / 2;
-      const top = (window.innerHeight * 0.3 - hub.top);
-      return `translate(${left}px, ${top}px) scale(${scale})`;
-    }
-
-    let timers: ReturnType<typeof setTimeout>[] = [];
-    let armedSkip: (() => void) | null = null;
-    const clearTimers = (): void => { timers.forEach(clearTimeout); timers = []; };
-    const at = (ms: number, fn: () => void): void => { timers.push(setTimeout(fn, ms)); };
-    function disarmSkip(): void {
-      if (armedSkip) { hubScreen.removeEventListener('pointerdown', armedSkip); armedSkip = null; }
-    }
-    function revealCopy(): void { hubHero.classList.add('hero-revealed'); hubHero.classList.remove('hero-armed'); }
-
-    function settle(): void {
-      clearTimers(); disarmSkip();
-      booklet.classList.add('frozen', 'landed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', 'rest');
-      booklet.style.transform = homeTransform();
-      revealCopy();
-    }
-    function armSkip(): void {
-      disarmSkip();
-      armedSkip = () => settle();
-      hubScreen.addEventListener('pointerdown', armedSkip, { once: true });
-    }
-
-    function playA(): void { // splash → fold → fly into the hero stage
-      clearTimers();
-      booklet.classList.remove('frozen', 'landed');
-      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', 'settle');
-      booklet.style.transform = splashTransform();
-      void booklet.offsetWidth;
-      armSkip();
-      at(340, () => booklet.setAttribute('data-phase', 'fold'));
-      at(340 + 1150, () => {
-        booklet.style.transition = 'transform .92s cubic-bezier(.34,1.3,.5,1)';
-        booklet.classList.add('landed');
-        booklet.setAttribute('data-phase', 'rest');
-        booklet.style.transform = homeTransform();
-        at(200, revealCopy);
-        at(1000, () => { booklet.classList.add('frozen'); disarmSkip(); });
-      });
-      at(2600, settle); // hard fallback: never stay busy past ~2.6s
-    }
-
-    function playB(): void { // fold in place at the hero stage
-      clearTimers();
-      booklet.classList.remove('frozen', 'landed');
-      booklet.classList.add('landed'); // stays glued to the stage the whole time
-      hubHero.classList.add('hero-armed'); hubHero.classList.remove('hero-revealed');
-      booklet.style.transition = 'none';
-      booklet.style.transform = homeTransform();
-      booklet.setAttribute('data-phase', 'load');
-      void booklet.offsetWidth;
-      armSkip();
-      at(320, () => booklet.setAttribute('data-phase', 'settle'));
-      at(320 + 900, () => { booklet.setAttribute('data-phase', 'fold'); revealCopy(); });
-      at(320 + 900 + 1050, () => { booklet.setAttribute('data-phase', 'rest'); booklet.classList.add('frozen'); disarmSkip(); });
-      at(3200, disarmSkip);
-    }
-
-    function freezePhase(p: string): void { // QC freeze: static, no transition
-      clearTimers(); disarmSkip();
-      booklet.classList.add('frozen', 'landed');
-      booklet.style.transition = 'none';
-      booklet.setAttribute('data-phase', p);
-      booklet.style.transform = homeTransform();
-      revealCopy();
-    }
-
-    let played = false;
-    function maybePlayHeroIntro(): void {
-      if (getCurrentScreenId() !== 'hub') return;
-      if (played && !forcedHero && !forcedPhase) { settle(); return; }
-      played = true;
-      requestAnimationFrame(() => {
-        booklet.style.transform = homeTransform();
-        if (forcedPhase) { freezePhase(forcedPhase); return; }
-        if (reduceMotion.matches || forcedHero === 'off') { settle(); return; }
-        let seen = false;
-        try { seen = localStorage.getItem(BRAND_SEEN_KEY) === 'true'; } catch { seen = false; }
-        if (forcedHero === 'B') { playB(); return; }
-        if (forcedHero === 'A' || !seen) {
-          try { localStorage.setItem(BRAND_SEEN_KEY, 'true'); } catch { /* ignore */ }
-          playA();
-        } else {
-          playB();
-        }
-      });
-    }
-    requestHeroIntro = maybePlayHeroIntro;
-
-    // keep the resting booklet glued to the stage on resize / theme change
-    window.addEventListener('resize', () => {
-      if (booklet.classList.contains('landed')) { booklet.style.transition = 'none'; booklet.style.transform = homeTransform(); }
-    });
-  }
-
-  hubOpenReaderBtn.addEventListener('click', async () => {
+  async function openReaderFromPicker(returnTo: ScreenId = 'hub'): Promise<void> {
     try {
       if (Capacitor.getPlatform() !== 'android') {
         const picked = await pickPdf();
         if (!picked) return;
-        await openReaderWithBytes(picked.bytes, picked.name, null);
+        await openReaderWithBytes(picked.bytes, picked.name, null, returnTo);
         return;
       }
       const picked = await pickPdfWithPersistentUri();
       if (!picked) return;
       const file = await readForReader(picked.uri);
-      await openReaderWithBytes(file.bytes, file.name, picked.persistent ? picked.uri : null);
+      await openReaderWithBytes(file.bytes, file.name, picked.persistent ? picked.uri : null, returnTo);
     } catch (error) {
       const message = errorText(error);
-      goToError(t('error.pdfOpenFailed'), message, 'hub');
+      goToError(t('error.pdfOpenFailed'), message, returnTo);
     }
-  });
+  }
 
-  retryBtn.addEventListener('click', () => showScreen(returnScreenOnError));
+  function returnFromError(): void {
+    const returnTab = returnLibraryTabOnError;
+    returnLibraryTabOnError = null;
+    if (returnScreenOnError === 'library' && returnTab) {
+      openLibrary(returnTab);
+    } else {
+      showScreen(returnScreenOnError);
+    }
+  }
+
+  retryBtn.addEventListener('click', returnFromError);
 
   function hasUnsavedResultPdf(): boolean {
     switch (getCurrentScreenId()) {
@@ -7033,7 +6164,7 @@ export function initApp(): void {
   backBtn.addEventListener('click', async () => {
     const current = getCurrentScreenId();
     if (current === 'error') {
-      showScreen(returnScreenOnError);
+      returnFromError();
       return;
     }
     if (current === 'crop') {
@@ -7057,7 +6188,24 @@ export function initApp(): void {
         readerToolsSheet.classList.add('hidden');
         return;
       }
-      showScreen(readerReturnTo);
+      if (readerReturnTo === 'library' && readerReturnLibraryTab) {
+        const returnTab = readerReturnLibraryTab;
+        readerReturnLibraryTab = null;
+        openLibrary(returnTab);
+      } else {
+        showScreen(readerReturnTo);
+      }
+      return;
+    }
+    if (current === 'library' && handleLibraryFilesBack()) {
+      return;
+    }
+    if (current === 'book') {
+      if (bookReader?.isFormaOpen()) {
+        bookReader.setFormaOpen(false);
+        return;
+      }
+      showScreen(PARENT_SCREEN.book ?? 'library');
       return;
     }
     if (hasUnsavedResultPdf()) {
@@ -7067,7 +6215,12 @@ export function initApp(): void {
     if (current === 'image-to-pdf') {
       clearImageToPdfState();
     }
-    showScreen(PARENT_SCREEN[current] ?? 'hub');
+    showScreen(current === 'result' ? bookletResultReturnTo : (PARENT_SCREEN[current] ?? 'hub'));
+  });
+
+  const libraryBackBtn = byId<HTMLButtonElement>('libraryBackBtn');
+  libraryBackBtn.addEventListener('click', () => {
+    backBtn.click();
   });
 
   savePdfBtn.addEventListener('click', () => {
@@ -7126,33 +6279,41 @@ export function initApp(): void {
           const dir = lastSlash >= 0 ? readerRelPath.slice(0, lastSlash) : '';
           const newRelPath = dir ? `${dir}/${newName}` : newName;
           newUri = await movePrivateItem(readerRelPath, newRelPath);
-          await removeRecent({ uri: readerUri, name: readerName });
+          // Same file under a new name: the desk keeps its page and place.
+          await rekeyRecent({ uri: readerUri, name: readerName }, { uri: newUri, name: newName });
           readerRelPath = newRelPath;
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
           readerRelPath = `scans/${newName}`;
+          // A new copy, so a new desk entry. A rename above was followed by
+          // rekeyRecent and must not be recorded again: that would move it to
+          // the top and stamp a new openedAt.
+          await rememberSaved(newUri, newName, readerBytes);
         }
 
         readerName = newName;
         readerUri = newUri;
         topBarTitle.textContent = readerName;
+        topBarTitle.title = readerName;
 
-        await rememberSaved(newUri, newName);
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);
 
-        readerName = newName;
-        readerUri = publicUri;
-        readerRelPath = null;
-        topBarTitle.textContent = readerName;
+        if (publicUri !== null) {
+          readerName = newName;
+          readerUri = publicUri;
+          readerRelPath = null;
+          topBarTitle.textContent = readerName;
+          topBarTitle.title = readerName;
 
-        await recordOpened({ uri: publicUri, name: newName });
+          await recordOpened({ uri: publicUri, name: newName, fp: fingerprintPdf(readerBytes) });
+        }
         showToast(t('toast.savedToDevice'));
       }
 
       closeModal(saveDocModal);
-      void renderHubRecentsGrid();
+      void refreshHubSavedCount();
     } catch (error) {
       const message = errorText(error);
       showToast(t('toast.saveError', { message }));
@@ -7217,15 +6378,32 @@ export function initApp(): void {
       return;
     }
     const current = getCurrentScreenId();
-    if (current === 'files' && currentFolderPath !== '') {
-      currentFolderPath = currentFolderPath.includes('/')
-        ? currentFolderPath.slice(0, currentFolderPath.lastIndexOf('/'))
-        : '';
-      void renderFilesList();
+    if (current === 'hub' && atelierHub) {
+      const action = resolveAtelierBackAction({
+        menuOpen: atelierHub.isMenuOpen(),
+        isCoverflow: atelierHub.getState().isCoverflow,
+      });
+      if (action === 'close-menu') {
+        atelierHub.closeMenu();
+        return;
+      }
+      if (action === 'free-float') {
+        atelierHub.applyFreeFloat();
+        return;
+      }
+    }
+    if (current === 'library' && libraryScreen?.isSearchOpen()) {
+      libraryScreen.closeSearch();
       return;
     }
-    if (current === 'hub' || current === 'files' || current === 'settings') {
-      void App.exitApp();
+    if (current === 'library' && handleLibraryFilesBack()) {
+      return;
+    }
+    if (current === 'hub') {
+      // Back on a root screen sends the app to the background, as other
+      // Android apps do, rather than exiting: an open document is not lost
+      // and coming back is instant.
+      void App.minimizeApp();
     } else {
       backBtn.click();
     }
@@ -7255,63 +6433,6 @@ export function initApp(): void {
         month: 'short',
         year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
       });
-    }
-  }
-
-  async function renderRecentsListLarge(): Promise<void> {
-    const recents = await getRecents();
-    recentsEmptyHint.classList.toggle('hidden', recents.length > 0);
-    recentsListLarge.innerHTML = '';
-    
-    for (const entry of recents) {
-      const card = document.createElement('div');
-      card.className = 'recent-item-compact';
-
-      const iconWrapper = document.createElement('div');
-      iconWrapper.className = 'recent-icon-wrapper';
-      iconWrapper.textContent = '📄';
-      iconWrapper.ariaHidden = 'true';
-      card.appendChild(iconWrapper);
-
-      const details = document.createElement('div');
-      details.className = 'recent-item-details';
-
-      const name = document.createElement('span');
-      name.className = 'recent-item-name';
-      name.textContent = entry.name;
-      details.appendChild(name);
-
-      const meta = document.createElement('div');
-      meta.className = 'recent-item-meta';
-
-      const timeSpan = document.createElement('span');
-      timeSpan.textContent = formatRelativeDate(entry.openedAt);
-      meta.appendChild(timeSpan);
-
-      const pageBadge = document.createElement('span');
-      pageBadge.className = 'recent-page-badge';
-      pageBadge.textContent = t('recents.pageAbbrev', { n: entry.lastPage });
-      meta.appendChild(pageBadge);
-
-      details.appendChild(meta);
-      card.appendChild(details);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'recent-remove-btn';
-      removeBtn.textContent = '✕';
-      removeBtn.ariaLabel = t('recents.removeFromHistory');
-      removeBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        await removeRecent(entry);
-        void renderRecentsListLarge();
-      });
-      card.appendChild(removeBtn);
-
-      card.addEventListener('click', () => {
-        void openRecent(entry);
-      });
-
-      recentsListLarge.appendChild(card);
     }
   }
 
@@ -7396,22 +6517,24 @@ export function initApp(): void {
     return [header, ...blocks].join('\n\n');
   }
 
-  /** Renders the tappable breadcrumb trail (🏠 › folder › subfolder) for the current path. */
+  const FILES_ICON_HOME =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+  /** Renders the tappable breadcrumb trail (root › folder › subfolder) for the current path. */
   function renderFilesBreadcrumb(): void {
     filesBreadcrumb.innerHTML = '';
     const parts = currentFolderPath ? currentFolderPath.split('/') : [];
 
     const homeBtn = document.createElement('button');
     homeBtn.className = 'breadcrumb-segment';
-    homeBtn.textContent = '🏠';
+    homeBtn.innerHTML = FILES_ICON_HOME;
     homeBtn.ariaLabel = t('files.goToRoot');
     if (parts.length === 0) {
       homeBtn.classList.add('is-current');
       homeBtn.disabled = true;
     } else {
       homeBtn.addEventListener('click', () => {
-        currentFolderPath = '';
-        void renderFilesList();
+        navigateFilesFolder('');
       });
     }
     filesBreadcrumb.appendChild(homeBtn);
@@ -7435,8 +6558,7 @@ export function initApp(): void {
         segBtn.disabled = true;
       } else {
         segBtn.addEventListener('click', () => {
-          currentFolderPath = targetPath;
-          void renderFilesList();
+          navigateFilesFolder(targetPath);
         });
       }
       filesBreadcrumb.appendChild(segBtn);
@@ -7448,11 +6570,11 @@ export function initApp(): void {
     (bytes: Uint8Array, name: string, uri: string, relPath: string | null) => Promise<void>
   > = {
     reader: async (bytes, name, uri, relPath) => {
-      await openReaderWithBytes(bytes, name, uri, 'files', 1, relPath);
+      await openReaderWithBytes(bytes, name, uri, 'library', 1, relPath, 'files');
     },
-    booklet: async (bytes, name) => {
+    booklet: async (bytes, name, uri, relPath) => {
       showScreen('picker');
-      loadBookletFile(bytes, name);
+      loadBookletFile(bytes, name, relPath ? { kind: 'private', relPath } : { kind: 'saf', uri });
     },
     organize: async (bytes, name) => {
       resetOrganizeScreen();
@@ -7493,15 +6615,33 @@ export function initApp(): void {
     }
   }
 
+  const FILES_ACTION_ICON_OPEN_IN =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+  const FILES_ACTION_ICON_SHARE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>';
+  const FILES_ACTION_ICON_MOVE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-1.73"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/></svg>';
+  const FILES_ACTION_ICON_RENAME =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
+  const FILES_ACTION_ICON_DELETE =
+    '<svg aria-hidden="true" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+
   /** Opens the "⋮" overflow menu listing the available actions for one file or folder row. */
   function openFileActionsModal(item: FileEntryInfo, isDir: boolean): void {
     fileActionsTitle.textContent = item.name;
     fileActionsList.innerHTML = '';
 
-    const addAction = (icon: string, label: string, onClick: () => void | Promise<void>) => {
+    const addAction = (iconSvg: string, label: string, onClick: () => void | Promise<void>) => {
       const btn = document.createElement('button');
       btn.className = 'folder-select-item';
-      btn.textContent = `${icon} ${label}`;
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'folder-select-icon';
+      iconSpan.setAttribute('aria-hidden', 'true');
+      iconSpan.innerHTML = iconSvg;
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = label;
+      btn.appendChild(iconSpan);
+      btn.appendChild(labelSpan);
       btn.addEventListener('click', () => {
         closeModal(fileActionsModal);
         void onClick();
@@ -7510,13 +6650,13 @@ export function initApp(): void {
     };
 
     if (!isDir) {
-      addAction('↗️', 'Open in...', () => {
+      addAction(FILES_ACTION_ICON_OPEN_IN, 'Open in...', () => {
         openInToolUri = item.uri;
         openInToolRelPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         openModal(openInToolSheet);
       });
 
-      addAction('📤', t('common.share'), async () => {
+      addAction(FILES_ACTION_ICON_SHARE, t('common.share'), async () => {
         try {
           const picked = await withBusyOverlay(() => readPdfFromUri(item.uri));
           if ((await sharePdf(picked.bytes, item.name, t('common.share'))) === 'canceled') return;
@@ -7526,7 +6666,7 @@ export function initApp(): void {
         }
       });
 
-      addAction('📋', t('action.move'), async () => {
+      addAction(FILES_ACTION_ICON_MOVE, t('action.move'), async () => {
         moveSourceFile = item;
         moveTargetFolder = null;
         moveDocConfirmBtn.disabled = true;
@@ -7535,7 +6675,7 @@ export function initApp(): void {
       });
     }
 
-    addAction('✏️', t('action.rename'), async () => {
+    addAction(FILES_ACTION_ICON_RENAME, t('action.rename'), async () => {
       const currentName = item.name;
       const input = prompt(
         isDir ? t('common.newFolderPrompt') : t('common.newFileNamePrompt'),
@@ -7554,12 +6694,14 @@ export function initApp(): void {
         const newUri = await movePrivateItem(oldPath, newPath);
         if (!isDir) {
           try {
-            await removeRecent({ uri: item.uri, name: currentName });
-            await recordOpened({ uri: newUri, name: newName });
+            await rekeyRecent({ uri: item.uri, name: currentName }, { uri: newUri, name: newName });
           } catch {
             // not in recents, ignore
           }
         }
+        void rewritePrivatePaths(oldPath, newPath).catch((error: unknown) => {
+          console.warn('Renamed, but could not update the library:', error);
+        });
         showToast(t('toast.renamed', { name: newName }));
         void renderFilesList();
       } catch (error) {
@@ -7568,7 +6710,7 @@ export function initApp(): void {
       }
     });
 
-    addAction('🗑️', t('action.delete'), async () => {
+    addAction(FILES_ACTION_ICON_DELETE, t('action.delete'), async () => {
       const label = isDir
         ? t('files.deleteConfirmFolder', { name: item.name })
         : t('files.deleteConfirmFile', { name: item.name });
@@ -7577,7 +6719,11 @@ export function initApp(): void {
       try {
         const itemPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
         await deletePrivateItem(itemPath, isDir);
-        if (!isDir) await removeRecent(item);
+        if (isDir) await removeRecentsUnder(item.uri);
+        else await removeRecent(item);
+        void clearOutputUnder(itemPath).catch((error: unknown) => {
+          console.warn('Deleted, but could not update the library:', error);
+        });
         showToast(isDir ? t('toast.folderDeleted') : t('toast.fileDeleted'));
         void renderFilesList();
       } catch (error) {
@@ -7715,13 +6861,12 @@ export function initApp(): void {
       // Card click: navigate into folder or open PDF
       card.addEventListener('click', async () => {
         if (isDir) {
-          currentFolderPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
-          void renderFilesList();
+          navigateFilesFolder(currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name);
         } else {
           try {
             const picked = await readForReader(item.uri);
             const relPath = currentFolderPath ? `${currentFolderPath}/${item.name}` : item.name;
-            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'files', 1, relPath);
+            await openReaderWithBytes(picked.bytes, picked.name, item.uri, 'library', 1, relPath, 'files');
           } catch (error) {
             recordError('caught', error);
             showToast(t('toast.fileOpenError'));
@@ -7762,6 +6907,24 @@ export function initApp(): void {
     moveDocConfirmBtn.disabled = false;
   }
 
+  /** Renders the folder icon SVG + safe text label inside a Move modal folder button. */
+  function setMoveFolderButtonContent(btn: HTMLButtonElement, label: string): void {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'move-folder-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute(
+      'd',
+      'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+    );
+    svg.appendChild(path);
+    const text = document.createElement('span');
+    text.textContent = label;
+    btn.replaceChildren(svg, text);
+  }
+
   /** Builds one expandable folder row for the Move modal; subfolders are lazy-loaded on first expand. */
   function buildMoveFolderRow(path: string, name: string, depth: number): HTMLDivElement {
     const item = document.createElement('div');
@@ -7780,7 +6943,7 @@ export function initApp(): void {
 
     const selectBtn = document.createElement('button');
     selectBtn.className = 'folder-select-item';
-    selectBtn.textContent = `📁 ${name}`;
+    setMoveFolderButtonContent(selectBtn, name);
     selectBtn.dataset.path = path;
     selectBtn.addEventListener('click', () => selectMoveFolderRow(selectBtn, path));
     header.appendChild(selectBtn);
@@ -7825,7 +6988,7 @@ export function initApp(): void {
 
     const rootBtn = document.createElement('button');
     rootBtn.className = 'folder-select-item';
-    rootBtn.textContent = t('files.root');
+    setMoveFolderButtonContent(rootBtn, t('files.root'));
     rootBtn.dataset.path = '';
     rootBtn.addEventListener('click', () => selectMoveFolderRow(rootBtn, ''));
     moveDocFolderList.appendChild(rootBtn);
@@ -7862,18 +7025,18 @@ export function initApp(): void {
     filesSortRows.forEach((row) => {
       row.classList.toggle('is-selected', row.dataset.sort === filesSortMode);
     });
-    filesSortSheet.classList.remove('hidden');
+    openModal(filesSortSheet, filesSortBtn);
   });
 
   filesSortBackdrop.addEventListener('click', () => {
-    filesSortSheet.classList.add('hidden');
+    closeModal(filesSortSheet);
   });
 
   filesSortRows.forEach((row) => {
     row.addEventListener('click', () => {
       filesSortMode = (row.dataset.sort as FileSortMode) ?? 'date-desc';
       localStorage.setItem('bindery.filesSort', filesSortMode);
-      filesSortSheet.classList.add('hidden');
+      closeModal(filesSortSheet);
       void renderFilesList();
     });
   });
@@ -7927,13 +7090,13 @@ export function initApp(): void {
     try {
       const bytes = await downloadPdfFromUrl(url);
       const savedUri = await savePdfPrivately(bytes, targetPath);
-      await recordOpened({ uri: savedUri, name: filename });
+      await recordOpened({ uri: savedUri, name: filename, fp: fingerprintPdf(bytes) });
       
       showToast(t('toast.downloadSuccess'));
       closeModal(downloadPdfModal);
       
       // Auto-open in reader
-      await openReaderWithBytes(bytes, filename, savedUri, 'files', 1, targetPath);
+      await openReaderWithBytes(bytes, filename, savedUri, 'library', 1, targetPath, 'files');
       void renderFilesList();
     } catch (error) {
       const message = errorText(error);
@@ -7986,11 +7149,13 @@ export function initApp(): void {
       const newUri = await movePrivateItem(sourceDir, destDir);
       // Update recents with new URI
       try {
-        await removeRecent(moveSourceFile);
-        await recordOpened({ uri: newUri, name: moveSourceFile.name });
+        await rekeyRecent(moveSourceFile, { uri: newUri, name: moveSourceFile.name });
       } catch {
         // not in recents, ignore
       }
+      void rewritePrivatePaths(sourceDir, destDir).catch((error: unknown) => {
+        console.warn('Moved, but could not update the library:', error);
+      });
       showToast(t('toast.moved', { name: moveSourceFile.name }));
       closeModal(moveDocModal);
       moveSourceFile = null;
@@ -8006,19 +7171,40 @@ export function initApp(): void {
 
 
   // Dark mode init
-  function applyThemePreference(active: boolean): void {
-    document.documentElement.classList.toggle('dark-theme', active);
-    document.documentElement.classList.toggle('light-theme', !active);
+  let currentDarkMode = false;
+
+  function syncOnboardingThemeButtons(dark: boolean): void {
+    onboardingThemeBtns.forEach((b) => {
+      const selected = (b.dataset.theme === 'dark') === dark;
+      b.classList.toggle('is-selected', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
   }
 
-  const isDarkMode = localStorage.getItem('bindery.darkmode') === 'true';
+  function applyThemePreference(active: boolean): void {
+    currentDarkMode = active;
+    document.documentElement.classList.toggle('dark-theme', active);
+    document.documentElement.classList.toggle('light-theme', !active);
+    if (bookReader && bookReader.isOpen()) {
+      bookReader.relayout();
+    }
+  }
+
+  const storedDarkMode = localStorage.getItem('bindery.darkmode');
+  const isDarkMode =
+    storedDarkMode !== null
+      ? storedDarkMode === 'true'
+      : typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
   settingsDarkModeToggle.checked = isDarkMode;
   applyThemePreference(isDarkMode);
+  syncOnboardingThemeButtons(isDarkMode);
 
   settingsDarkModeToggle.addEventListener('change', () => {
     const active = settingsDarkModeToggle.checked;
     localStorage.setItem('bindery.darkmode', String(active));
     applyThemePreference(active);
+    syncOnboardingThemeButtons(active);
   });
 
   function syncSettingsLangButtons(): void {
@@ -8029,6 +7215,7 @@ export function initApp(): void {
     const current = getCurrentScreenId();
     if (current !== 'reader') {
       topBarTitle.textContent = t(SCREEN_TITLES[current]);
+      topBarTitle.title = '';
     }
   }
 
@@ -8047,15 +7234,21 @@ export function initApp(): void {
   let onboardingTouchStartY = 0;
 
   function renderOnboarding(): void {
+    const isLast = onboardingIndex === ONBOARDING_PAGE_COUNT - 1;
     onboardingTrack.style.transform = `translateX(-${onboardingIndex * (100 / ONBOARDING_PAGE_COUNT)}%)`;
     Array.from(onboardingDots.querySelectorAll<HTMLSpanElement>('.onboarding-dot')).forEach((dot, i) => {
       dot.classList.toggle('is-active', i === onboardingIndex);
     });
-    onboardingNextBtn.textContent = onboardingIndex === ONBOARDING_PAGE_COUNT - 1 ? t('onboarding.start') : t('onboarding.next');
+    onboardingNextBtn.textContent = isLast ? t('onboarding.start') : t('onboarding.next');
+    onboardingSkipBtn.hidden = isLast;
   }
 
   function syncOnboardingLangButtons(): void {
-    onboardingLangBtns.forEach((b) => b.classList.toggle('is-selected', b.dataset.lang === getLanguage()));
+    onboardingLangBtns.forEach((b) => {
+      const selected = b.dataset.lang === getLanguage();
+      b.classList.toggle('is-selected', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
   }
 
   function applyLanguageChange(lang: Lang): void {
@@ -8069,11 +7262,18 @@ export function initApp(): void {
     refreshSaveLabel();
     updateCoverAvailability();
     refreshConfigSummary();
+    updatePaperSelectedBadge();
+    syncSignatureMore();
+    updateConfigPreflightWarning();
+    atelierHub?.refreshTexts();
+    libraryScreen?.refreshTexts();
+    bookReader?.refreshTexts();
   }
 
   function startOnboarding(): void {
     onboardingIndex = 0;
     syncOnboardingLangButtons();
+    syncOnboardingThemeButtons(currentDarkMode);
     renderOnboarding();
     onboardingOverlay.classList.remove('hidden');
   }
@@ -8096,11 +7296,17 @@ export function initApp(): void {
 
   function finishOnboarding(): void {
     localStorage.setItem('bindery.onboarded', 'true');
+    if (localStorage.getItem('bindery.darkmode') === null) {
+      localStorage.setItem('bindery.darkmode', String(currentDarkMode));
+    }
+    settingsDarkModeToggle.checked = currentDarkMode;
     onboardingOverlay.classList.add('hidden');
     seedQuickStartFile();
-    // hub is now actually visible for the first time → play the brand intro
-    requestHeroIntro();
   }
+
+  onboardingSkipBtn.addEventListener('click', () => {
+    finishOnboarding();
+  });
 
   onboardingNextBtn.addEventListener('click', () => {
     if (onboardingIndex < ONBOARDING_PAGE_COUNT - 1) {
@@ -8114,9 +7320,9 @@ export function initApp(): void {
   onboardingThemeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const active = btn.dataset.theme === 'dark';
-      onboardingThemeBtns.forEach((b) => b.classList.toggle('is-selected', b === btn));
       localStorage.setItem('bindery.darkmode', String(active));
       applyThemePreference(active);
+      syncOnboardingThemeButtons(active);
       settingsDarkModeToggle.checked = active;
     });
   });
@@ -8281,8 +7487,8 @@ export function initApp(): void {
       openReaderWithBytes(bytes, filename, uri, 'md-to-pdf'),
     savePdfPrivately,
     rememberSaved,
-    onBookletGenerated: async (bytes: Uint8Array, filename: string) => {
-      loadBookletFile(bytes, filename);
+    onBookletGenerated: async (bytes: Uint8Array, filename: string, _privateUri: string, relPath: string) => {
+      loadBookletFile(bytes, filename, { kind: 'private', relPath });
       showScreen('config');
       showToast(t('toast.mdCreated'));
     },
@@ -8290,6 +7496,409 @@ export function initApp(): void {
   });
 
   initPwaInstallExperience({ showToast });
+
+  // ── Library screen ─────────────────────────────────────────────────────────
+
+  // A file picked without a lasting handle (the web, or a non-persistable
+  // Android grant) can still be re-linked for this session: its bytes are
+  // kept here, by record id, until the app is closed.
+  const librarySessionSources = new Map<string, PickedPdf>();
+  const libraryPlatform = Capacitor.getPlatform() === 'android' ? 'android' : Capacitor.getPlatform() === 'ios' ? 'ios' : 'web';
+
+  async function probeLibrarySource(record: LibraryRecord): Promise<'ok' | 'missing' | 'unknown'> {
+    if (librarySessionSources.has(record.id)) return 'ok';
+    if (!canReopen(record.source, libraryPlatform)) return 'missing';
+    return probeSource(record.source);
+  }
+
+  function readLibrarySource(record: LibraryRecord): Promise<PickedPdf> {
+    const session = librarySessionSources.get(record.id);
+    return session ? Promise.resolve(session) : readSource(record.source);
+  }
+
+  // "Read as a book": the record's source in the book reader, with the
+  // signature view worked out from the settings it was produced with.
+  async function readLibraryRecordAsBook(listed: LibraryRecord): Promise<void> {
+    if (isOpeningReader) return;
+    let file: PickedPdf;
+    let uri: string | null = null;
+    // The listed copy can trail a position saved since the list was drawn.
+    const record = (await getRecord(listed.id).catch(() => null)) ?? listed;
+    try {
+      file = await withBusyOverlay(() => readLibrarySource(record));
+      if (record.source.kind === 'saf') uri = record.source.uri;
+      if (record.source.kind === 'private') {
+        uri = (await Filesystem.getUri({ path: record.source.relPath, directory: Directory.Data })).uri;
+      }
+    } catch (error) {
+      showToast(errorText(error), { type: 'error' });
+      return;
+    }
+    bookSession = {
+      bytes: file.bytes,
+      name: file.name,
+      title: record.title,
+      record,
+      desk: null,
+      uri,
+      relPath: record.source.kind === 'private' ? record.source.relPath : null,
+      page: Math.max(0, (record.lastReadPage ?? 1) - 1),
+    };
+    showScreen('book');
+  }
+
+  // A desk PDF as a book: spreads only — a plain PDF has no booklet settings,
+  // so there is no signature view to show.
+  async function readDeskAsBook(entry: RecentEntry): Promise<void> {
+    if (!entry.uri) {
+      showToast(t('toast.fileNoLongerAccessible'));
+      return;
+    }
+    if (isOpeningReader) return;
+    let file: PickedPdf;
+    try {
+      file = await withBusyOverlay(() => readPdfFromUri(entry.uri!));
+    } catch (error) {
+      recordError('caught', error);
+      showToast(t('toast.fileNoLongerAccessible'));
+      return;
+    }
+    bookSession = {
+      bytes: file.bytes,
+      name: file.name,
+      title: entry.name,
+      record: null,
+      desk: entry,
+      uri: entry.uri,
+      relPath: null,
+      page: Math.max(0, entry.lastPage - 1),
+    };
+    showScreen('book');
+  }
+
+  // Opens the current session's document in the book reader. Runs on every
+  // entry to the book screen; a session already shown is left alone.
+  async function startBookSession(): Promise<void> {
+    clearFilesBackTarget();
+    const session = bookSession;
+    if (!bookReader || bookSessionShown === session) return;
+    if (!session) {
+      // Nothing to show (e.g. back through an error screen): return to the library.
+      showScreen('library');
+      return;
+    }
+    bookSessionShown = session;
+    const token = ++bookOpenToken;
+    topBarTitle.textContent = session.title;
+    showReaderOpening();
+    let handle: ReaderDocument;
+    try {
+      handle = await openReaderDocument(session.bytes);
+    } catch (error) {
+      hideReaderOpening();
+      if (token !== bookOpenToken) return;
+      bookSessionShown = null;
+      bookSession = null;
+      goToError(t('error.pdfOpenFailed'), errorText(error), 'library');
+      return;
+    }
+    try {
+      if (token !== bookOpenToken) {
+        await handle.destroy().catch(() => {});
+        return;
+      }
+      const proxy = handle.proxy;
+      const firstPage = await proxy.getPage(1);
+      const viewport = firstPage.getViewport({ scale: 1 });
+      firstPage.cleanup();
+      if (token !== bookOpenToken) {
+        await handle.destroy().catch(() => {});
+        return;
+      }
+      const options = session.record?.settings.options;
+      // Worked out for the file as it is now; a source that changed so much
+      // that the stored options no longer apply simply has no signature view.
+      const forma = options ? computeFormaMap(proxy.numPages, options) : null;
+      const sequence: PhysicalPage[] =
+        forma?.sequence ?? Array.from({ length: proxy.numPages }, (_, i) => ({ src: i, kind: 'page' as const }));
+      if (session.bytes.length >= READER_LARGE_FILE_WARN_BYTES) {
+        showToast(t('reader.largeFileWarning', { mb: Math.round(session.bytes.length / 1048576) }), { type: 'info' });
+      }
+      bookReader.open({
+        sequence,
+        binding: options?.binding === 'rtl' ? 'rtl' : 'ltr',
+        forma,
+        printNotes: options ? { reverseSheetOrder: options.reverseSheetOrder, flipEdge: options.flipEdge } : undefined,
+        startPage: Math.min(Math.max(0, session.page), sequence.length - 1),
+        pageAspect: viewport.height / viewport.width,
+        renderPage: (src, widthPx) => {
+          const isDark =
+            document.documentElement.classList.contains('dark-theme') ||
+            (window.matchMedia('(prefers-color-scheme: dark)').matches &&
+              !document.documentElement.classList.contains('light-theme'));
+          return renderReaderPage(proxy, src + 1, widthPx, isDark);
+        },
+        destroy: () => handle.destroy(),
+      });
+    } finally {
+      hideReaderOpening();
+    }
+  }
+
+  // Closes the book's document (renders cancelled first) and stores where
+  // the reader was. `keepSession` holds the bytes for a return from the reader.
+  async function closeBookReader(keepSession: boolean): Promise<void> {
+    bookOpenToken++;
+    const session = bookSessionShown;
+    bookSessionShown = null;
+    const closing = bookReader?.close();
+    if (!keepSession) bookSession = null;
+    const position = closing ? await closing.catch(() => null) : null;
+    if (!session || position === null) return;
+    session.page = position;
+    try {
+      if (session.record) {
+        await patchRecord(session.record.id, { lastReadPage: position + 1 });
+      } else if (session.desk) {
+        await updateLastPage(session.desk, position + 1);
+      }
+    } catch (error) {
+      console.warn('Could not keep the book position:', error);
+    }
+  }
+
+  // "Print sheets" (D9): the source goes back through the booklet flow with
+  // the stored settings, landing on the usual result screen. The record id
+  // rides along so that result's save/share updates this record.
+  async function printLibraryRecord(record: LibraryRecord): Promise<void> {
+    let file: PickedPdf;
+    try {
+      file = await withBusyOverlay(() => readLibrarySource(record));
+    } catch (error) {
+      showToast(errorText(error), { type: 'error' });
+      return;
+    }
+    resetPicker();
+    await withBusyOverlay(() => loadBookletFile(file.bytes, file.name, record.source));
+    applyStoredBookletSettings(record.settings);
+    pendingLibraryRecordId = record.id;
+    pendingLibraryTitle = record.title;
+    bookletResultReturnTo = 'library';
+    if (bookletOriginalPages > 0 && bookletOriginalPages !== record.sourcePageCount) {
+      showToast(t('library.toast.pageCountChanged', { count: bookletOriginalPages }));
+    }
+    showScreen('config');
+    generateBtn.click();
+  }
+
+  async function relinkLibraryRecord(record: LibraryRecord): Promise<LibraryRecord | null> {
+    try {
+      let picked: PickedPdf;
+      let source: SourceRef = { kind: 'none' };
+      if (Capacitor.getPlatform() === 'android') {
+        const chosen = await pickPdfWithPersistentUri();
+        if (!chosen) return null;
+        picked = await withBusyOverlay(() => readPdfFromUri(chosen.uri));
+        if (chosen.persistent) source = { kind: 'saf', uri: chosen.uri };
+      } else {
+        const chosen = await pickPdf();
+        if (!chosen) return null;
+        picked = chosen;
+      }
+      const { pageCount } = await withBusyOverlay(() => inspectPdf(picked.bytes));
+      if (
+        pageCount !== record.sourcePageCount &&
+        !(await showConfirmDialog(
+          t('library.confirm.relinkDifferent', { newCount: pageCount, oldCount: record.sourcePageCount }),
+        ))
+      ) {
+        return null;
+      }
+      if (source.kind === 'none') setSessionSource(librarySessionSources, record.id, picked);
+      else librarySessionSources.delete(record.id);
+      const updated = await patchRecord(record.id, { source, sourceSize: picked.bytes.length });
+      if (updated && !updated.thumb) void renderLibraryThumb(updated.id, picked.bytes);
+      showToast(t('library.toast.relinked'));
+      return updated;
+    } catch (error) {
+      showToast(errorText(error), { type: 'error' });
+      return null;
+    }
+  }
+
+  async function removeLibraryRecord(record: LibraryRecord): Promise<boolean> {
+    if (!(await showConfirmDialog(t('library.confirm.remove', { title: record.title })))) return false;
+    try {
+      const removed = await removeRecord(record.id);
+      if (removed?.thumb) void deleteLibraryThumb(removed.thumb.relPath);
+      librarySessionSources.delete(record.id);
+      void refreshHubSavedCount();
+      showToast(t('library.toast.removed'));
+      return true;
+    } catch (error) {
+      showToast(errorText(error), { type: 'error' });
+      return false;
+    }
+  }
+
+  libraryScreen = createLibraryScreen({
+    t,
+    getLang: getLanguage,
+    platform: libraryPlatform,
+    loadBooks: getLibrary,
+    loadDesk: getRecents,
+    loadThumb: readLibraryThumb,
+    probeSource: probeLibrarySource,
+    formatDate: formatRelativeDate,
+    onOpenPdf: () => void openReaderFromPicker('library'),
+    onReadDeskAsBook: (entry) => void readDeskAsBook(entry),
+    onOpenDesk: (entry) => {
+      void openRecent(entry).then(() => {
+        // A file that could not be opened was dropped from the desk.
+        if (getCurrentScreenId() === 'library') void libraryScreen?.show('desk');
+      });
+    },
+    onProduce: () => {
+      resetPicker();
+      showScreen('picker');
+    },
+    onRead: (record) => void readLibraryRecordAsBook(record),
+    onPrintSheet: (record) => void printLibraryRecord(record),
+    onRelink: relinkLibraryRecord,
+    onOpenOutput: (record) => {
+      if (!record.output) return;
+      openLibrary('files', { folderPath: record.output.relPath, backTarget: { tab: 'books' } });
+    },
+    onTabChange: (tab) => {
+      currentLibraryTab = tab;
+      if (tab !== 'files') clearFilesBackTarget();
+      if (tab === 'files') void renderFilesList();
+      setErrorScreen(`library:${tab}`);
+    },
+    onRemove: removeLibraryRecord,
+    onRemoveDesk: async (entry) => {
+      await removeRecent(entry);
+      showToast(t('library.desk.removed'), {
+        durationMs: 5000,
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void restoreRecent(entry)
+              .then(() => {
+                if (getCurrentScreenId() === 'library') return libraryScreen?.show('desk');
+              })
+              .catch((error) => console.warn('Could not put the entry back on the desk:', error));
+          },
+        },
+      });
+    },
+    openModal: (el, trigger) => openModal(el, trigger ?? document.activeElement),
+    closeModal,
+    matchMedia: (query) => window.matchMedia(query),
+    IntersectionObserver: typeof IntersectionObserver === 'undefined' ? undefined : IntersectionObserver,
+    storage: {
+      getItem: (key) => localStorage.getItem(key),
+      setItem: (key, value) => localStorage.setItem(key, value),
+    },
+  });
+
+  bookReader = createBookReader({
+    t,
+    cancelRenders: cancelAllReaderRenders,
+    matchMedia: (query) => window.matchMedia(query),
+    onPositionChange: (seqIndex) => {
+      if (bookSessionShown) bookSessionShown.page = seqIndex;
+    },
+    // Double tap: that page in the full reader (zoom, search); back returns here.
+    onOpenPage: (src) => {
+      const session = bookSessionShown;
+      if (!session) return;
+      void openReaderWithBytes(session.bytes, session.name, session.uri, 'book', src + 1, session.relPath);
+    },
+    onToggleChrome: () => {
+      if (getCurrentScreenId() !== 'book') return;
+      appShell.classList.toggle('book-chrome-hidden');
+      bookReader?.relayout();
+    },
+  });
+
+  let bookResizeTimer: ReturnType<typeof setTimeout> | null = null;
+  // The book's layout is measured off #bookStage itself, and that box changes
+  // with no window resize at all: the address bar sliding away, a rotation
+  // settling, the keyboard. A ResizeObserver on the stage follows the thing
+  // layout() actually measures; the window resize listener stays as the
+  // fallback for engines without ResizeObserver (pre-64 WebView).
+  let bookStageObserver: ResizeObserver | null = null;
+  let bookStageRaf = 0;
+
+  function scheduleBookRelayout(): void {
+    if (getCurrentScreenId() !== 'book' || !bookReader?.isOpen()) return;
+    if (bookStageRaf) return;
+    bookStageRaf = requestAnimationFrame(() => {
+      bookStageRaf = 0;
+      const stage = document.getElementById('bookStage');
+      // A hidden or mid-transition stage measures 0, and relayout() would then
+      // write --book-page-w: 0px and evict every rendered page.
+      if (!stage || stage.clientWidth <= 0 || stage.clientHeight <= 0) return;
+      bookReader?.relayout();
+    });
+  }
+
+  function startBookResizeWatch(): void {
+    if (bookStageObserver || typeof ResizeObserver === 'undefined') return;
+    const stage = document.getElementById('bookStage');
+    if (!stage) return;
+    bookStageObserver = new ResizeObserver(() => scheduleBookRelayout());
+    bookStageObserver.observe(stage);
+  }
+
+  function stopBookResizeWatch(): void {
+    bookStageObserver?.disconnect();
+    bookStageObserver = null;
+    if (bookStageRaf) {
+      cancelAnimationFrame(bookStageRaf);
+      bookStageRaf = 0;
+    }
+  }
+
+  window.addEventListener('resize', () => {
+    if (getCurrentScreenId() !== 'book') return;
+    if (bookResizeTimer) clearTimeout(bookResizeTimer);
+    bookResizeTimer = setTimeout(() => {
+      bookResizeTimer = null;
+      bookReader?.relayout();
+    }, 150);
+  });
+
+  atelierHub = initAtelierHub({
+    t,
+    isHubVisible: () =>
+      getCurrentScreenId() === 'hub' &&
+      modalStack.length === 0 &&
+      onboardingOverlay.classList.contains('hidden'),
+    onNavigateScreen: (target) => {
+      if (target === 'files') {
+        openLibrary('files', { folderPath: '' });
+      } else if (target === 'recents') {
+        // The hub still names its menu entry 'recents'; the library replaced that screen.
+        showScreen('library');
+      } else {
+        showScreen(target);
+      }
+    },
+    onSelectModule: (moduleIndex) => {
+      if (moduleIndex === 0) {
+        const entry = TOOL_ENTRY_SCREEN.booklet;
+        if (entry) showScreen(entry);
+      } else if (moduleIndex === 1) {
+        showScreen('library');
+      }
+    },
+  });
+
+  updatePaperSelectedBadge();
+  syncSignatureMore();
+  updateConfigPreflightWarning();
 
   showScreen('hub');
 

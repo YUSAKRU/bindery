@@ -240,6 +240,16 @@ async function readFileChunked(uri: string, expectedSize: number | null): Promis
 }
 
 /** Reads an arbitrary `content://`/`file://` URI (e.g. from Android's "Open with") into bytes. */
+/** The decoded last path segment of a uri, without its query; "" when there is none. */
+function lastUriSegment(uri: string): string {
+  const segment = (uri.split('?')[0].split('/').pop() ?? '').trim();
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
   // stat() is unreliable on raw content:// URIs (may throw on some Android versions
   // and may return a path segment rather than a display name). Try it first for the
@@ -258,10 +268,11 @@ export async function readPdfFromUri(uri: string): Promise<PickedPdf> {
 
   const bytes = await readFileChunked(uri, statSize);
 
-  // Safe name fallback: decode the last path segment of the URI.
-  const name =
-    (statName ?? decodeURIComponent(uri.split('/').pop() ?? '').split('?')[0]) ||
-    'document.pdf';
+  // stat's name first, then the uri's last segment, then a generic name. An
+  // empty name counts as none: the web Filesystem's stat always reports ""
+  // for a file, and `??` let that through, so every file opened from the
+  // Files screen on the web was called "document.pdf".
+  const name = statName || lastUriSegment(uri) || 'document.pdf';
 
   return { name, bytes };
 }
@@ -429,13 +440,17 @@ function downloadPdfInBrowser(bytes: Uint8Array, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Writes a PDF to the device's Documents directory for permanent storage. */
-export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string> {
-  const uri = await writeFileChunked(filename, Directory.Documents, bytes);
+/**
+ * Writes a PDF to the device's Documents directory for permanent storage on
+ * native platforms. On web, triggers a browser download without writing a
+ * hidden copy to IndexedDB and returns `null`.
+ */
+export async function savePdfToDevice(bytes: Uint8Array, filename: string): Promise<string | null> {
   if (Capacitor.getPlatform() === 'web') {
     downloadPdfInBrowser(bytes, filename);
+    return null;
   }
-  return uri;
+  return writeFileChunked(filename, Directory.Documents, bytes);
 }
 
 /** Checks whether a file or folder already exists at the given path inside Directory.Data. */
@@ -559,7 +574,12 @@ export async function printPdf(
   filename: string,
   jobName: string,
   pageDimensions?: { widthPt: number; heightPt: number },
-): Promise<void> {
+): Promise<PrintOutcome> {
+  // Web/PWA has no system print bridge. This branch must run before any
+  // `await`: share sheets and new tabs need the click's transient activation.
+  if (Capacitor.getPlatform() === 'web') {
+    return printPdfOnWeb(bytes, filename, jobName);
+  }
   if (!canPrint()) {
     throw new PrintUnavailableError();
   }
@@ -588,6 +608,74 @@ export async function printPdf(
   } else {
     await printPdfUri(uri, jobName);
   }
+  return 'dialog';
+}
+
+/**
+ * What a print request turned into, so the UI can tell the user the next step.
+ * - `dialog`: the native Android print dialog opened.
+ * - `share-sheet`: web on a phone — the OS share sheet opened with the PDF;
+ *   its "Print" entry (iOS AirPrint, Android's built-in print service) prints it.
+ * - `opened`: web on a desktop — the PDF opened in a new tab to print from.
+ * - `downloaded`: nothing better was available; the PDF was downloaded.
+ * - `canceled`: the user dismissed the share sheet.
+ */
+export type PrintOutcome = 'dialog' | 'share-sheet' | 'opened' | 'downloaded' | 'canceled';
+
+/** Phones and tablets, including iPadOS which reports itself as a Mac. */
+export function isTouchMobile(nav: Pick<Navigator, 'userAgent' | 'maxTouchPoints'> & { platform?: string }): boolean {
+  if (/Android|iPhone|iPad|iPod/i.test(nav.userAgent)) return true;
+  return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
+}
+
+/**
+ * Web print. Browsers cannot print a PDF reliably from a hidden frame on
+ * phones (Android Chrome has no inline PDF viewer; iOS prints only page 1 and
+ * `window.print()` is unreliable in Home Screen apps), so phones get the OS
+ * share sheet, which offers Print. Desktops open the PDF in a new tab, whose
+ * built-in viewer prints all pages at their real size.
+ */
+async function printPdfOnWeb(bytes: Uint8Array, filename: string, title: string): Promise<PrintOutcome> {
+  const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+
+  if (nav && isTouchMobile(nav)) {
+    const file = new File([copy], filename, { type: 'application/pdf' });
+    if (typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+      try {
+        await nav.share({ title, files: [file] });
+        return 'share-sheet';
+      } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || isShareCanceled(error))) {
+          return 'canceled';
+        }
+        // NotAllowedError etc.: fall through to a download the user can open.
+      }
+    }
+    downloadPdfInBrowser(copy, filename);
+    return 'downloaded';
+  }
+
+  if (typeof window !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    const url = URL.createObjectURL(new Blob([copy], { type: 'application/pdf' }));
+    // No 'noopener' feature: with it window.open always returns null and a
+    // popup block could not be detected. Detach the opener by hand instead.
+    const tab = window.open(url, '_blank');
+    if (tab) {
+      try {
+        tab.opener = null;
+      } catch {
+        // Cross-origin hardening may forbid this; harmless.
+      }
+      // Give the new tab time to load the blob before releasing it.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return 'opened';
+    }
+    URL.revokeObjectURL(url);
+  }
+  downloadPdfInBrowser(copy, filename);
+  return 'downloaded';
 }
 
 /** Raised when printing is requested on a platform with no system print dialog. */

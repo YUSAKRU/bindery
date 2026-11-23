@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-130 5 1080 1080" width="1024" height="1024">
+  <title>Bindery</title>
+  <!-- Bindery işareti: izometrik açık kitap, sayfalar "B" harfini oluşturur. Kare ikon sürümü (şef), 2026-11-19. -->
+  <defs>
+    <linearGradient id="cover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C4683C"/>
+      <stop offset="1" stop-color="#8A3819"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#E08E62"/>
+      <stop offset="1" stop-color="#9A401D"/>
+    </linearGradient>
+  </defs>
+  <!-- altın gölge -->
+  <polygon points="420,950 712,792 740,872 420,1040" fill="#C89D53"/>
+  <!-- arka kapak (yalnızca üst kenarı görünür) -->
+  <polygon points="80,268 440,44 448,60 448,320 112,520" fill="url(#back)"/>
+  <!-- arka sayfa -->
+  <polygon points="150,298 582,62 582,330 300,500" fill="#FEF1DE"/>
+  <polyline points="150,298 582,62 582,90" fill="none" stroke="#2B1A12" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- ön sayfa: B -->
+  <polygon points="150,298 340,388 340,302 692,104 692,398 598,520 712,588 712,782 420,938 420,432"
+           fill="#FEF1DE" stroke="#2B1A12" stroke-width="18" stroke-linejoin="round"/>
+  <!-- B'nin bel çizgisi (altın kat izi) -->
+  <line x1="424" y1="712" x2="690" y2="402" stroke="#C89D53" stroke-width="9" stroke-linecap="butt"/>
+  <!-- ön kapak -->
+  <polygon points="80,270 398,446 398,1040 80,856" fill="url(#cover)"/>
+  <!-- ön kapak sırt kenarı (açık ton) -->
+  <polygon points="80,270 398,446 398,462 80,286" fill="#E08E62"/>
+  <polygon points="386,440 398,446 398,1040 386,1034" fill="#E08E62"/>
+  <!-- sırt: sayfa bloğunun koyu kenarı -->
+  <polygon points="398,446 420,432 420,1030 398,1040" fill="#2B1A12"/>
+  <!-- sayfa bloğu alt kalınlığı -->
+  <polygon points="420,930 712,774 712,800 420,958" fill="#2B1A12"/>
+</svg>

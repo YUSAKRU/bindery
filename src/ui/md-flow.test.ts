@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookletError } from '../engine/types';
-import { MAX_MD_FILES, MdFlowManager } from './md-flow';
+import { initMdFlow, MAX_MD_FILES, MdFlowManager } from './md-flow';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const readFont = (name: string) => {
@@ -178,5 +178,40 @@ describe('MdFlowManager', () => {
 
     expect(compactBytes).not.toEqual(largeBytes);
   });
-});
 
+  it('hands the booklet flow the private uri and relPath it saved the PDF under', async () => {
+    const listeners: Record<string, () => void> = {};
+    const bookletBtn = {
+      disabled: false,
+      addEventListener: (type: string, fn: () => void) => {
+        listeners[type] = fn;
+      },
+    };
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => (id === 'mdGenerateBookletBtn' ? bookletBtn : null),
+    });
+    const savePdfPrivately = vi.fn(async (_bytes: Uint8Array, relPath: string) => `file:///data/${relPath}`);
+    const onBookletGenerated = vi.fn(async () => undefined);
+    const flow = initMdFlow({
+      showToast: vi.fn(),
+      goToError: vi.fn(),
+      openReaderWithBytes: vi.fn(),
+      savePdfPrivately,
+      rememberSaved: vi.fn(async () => undefined),
+      onBookletGenerated,
+    });
+    flow.manager.addFile('doc.md', '# Doc\nBody.');
+
+    listeners.click();
+    await vi.waitFor(() => expect(onBookletGenerated).toHaveBeenCalledTimes(1), { timeout: 10000 });
+
+    const relPath = savePdfPrivately.mock.calls[0][1];
+    expect(relPath).toMatch(/^documents\/Doc_.*\.pdf$/);
+    expect(onBookletGenerated).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      relPath.slice('documents/'.length),
+      `file:///data/${relPath}`,
+      relPath,
+    );
+  });
+});

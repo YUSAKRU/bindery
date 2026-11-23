@@ -10,7 +10,6 @@
 
 import { inspectPdfCore, makeBookletCore } from './booklet-engine';
 import { mergePdfsCore } from './merge-engine';
-import { generateCoverPdfCore } from './cover-engine';
 import { organizePages } from './organize-engine';
 import { rotatePages } from './rotate-engine';
 import { addWatermark } from './watermark-engine';
@@ -66,11 +65,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case 'mergePdfs': {
         result = await mergePdfsCore(payload.inputs);
         if (result.mergedPdf?.buffer instanceof ArrayBuffer) transferables.push(result.mergedPdf.buffer);
-        break;
-      }
-      case 'generateCoverPdf': {
-        result = await generateCoverPdfCore(payload.options);
-        if (result?.buffer instanceof ArrayBuffer) transferables.push(result.buffer);
         break;
       }
       case 'organizePages': {
