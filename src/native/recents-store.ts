@@ -82,22 +82,35 @@ export async function getRecents(): Promise<RecentEntry[]> {
  * content fingerprint — so one file reached through two uris stays one entry,
  * under the newest uri. Never by name alone: two files may share a name.
  */
-export async function recordOpened(entry: { uri: string | null; name: string; fp?: string; imposed?: boolean }): Promise<void> {
+export async function recordOpened(entry: {
+  uri: string | null;
+  name: string;
+  fp?: string;
+  imposed?: boolean;
+}): Promise<RecentEntry> {
   return enqueue(async () => {
     const entries = await readAll();
     const id = entryId(entry);
-    // The entry with this exact identity wins over a fingerprint match: its
-    // lastPage is the one the reader was last told about under this uri.
-    const existing = entries.find((e) => entryId(e) === id) ?? entries.find((e) => sameFile(e, entry));
+    // Same identity is the same document unless the fingerprints disagree —
+    // then the file at this uri was replaced, and nothing it knew carries over.
+    const byId = entries.find((e) => entryId(e) === id);
+    const idSameContent = byId !== undefined && (!entry.fp || !byId.fp || byId.fp === entry.fp);
+    const byFp = entry.fp ? entries.find((e) => e !== byId && e.fp === entry.fp) : undefined;
+    // The exact identity wins over a fingerprint match: its lastPage is the
+    // one the reader was last told about under this uri.
+    const existing = (idSameContent ? byId : undefined) ?? byFp;
+    const fp = entry.fp ?? (idSameContent ? byId?.fp : undefined);
     const next: RecentEntry = { uri: entry.uri, name: entry.name, lastPage: existing?.lastPage ?? 1, openedAt: Date.now() };
-    const fp = entry.fp ?? (existing && entryId(existing) === id ? existing.fp : undefined);
     if (fp) next.fp = fp;
-    // Known now, or known before for this same file.
-    const imposed = entry.imposed ?? (existing && sameFile(existing, { ...entry, fp }) ? existing.imposed : undefined);
+    // Known now, else known before for this same content — under this uri or
+    // under another uri being collapsed into this entry.
+    const imposed = entry.imposed ?? (idSameContent ? byId?.imposed : undefined) ?? byFp?.imposed;
     if (imposed !== undefined) next.imposed = imposed;
-    const filtered = entries.filter((e) => !sameFile(e, { ...entry, fp }));
+    // One entry per identity, and one per fingerprint.
+    const filtered = entries.filter((e) => e !== byId && !(fp && e.fp === fp));
     filtered.unshift(next);
     await writeAll(filtered.slice(0, MAX_ENTRIES));
+    return next;
   });
 }
 
@@ -115,12 +128,10 @@ export async function rekeyRecent(
     const index = entries.findIndex((e) => entryId(e) === entryId(from));
     if (index < 0) return;
     const moved: RecentEntry = { ...entries[index], uri: to.uri, name: to.name };
-    // An entry already sitting under the target identity is the same file
-    // seen before the move; keep one.
-    const rest = entries.filter((e, i) => i !== index && entryId(e) !== entryId(to));
-    const at = Math.min(index, rest.length);
-    rest.splice(at, 0, moved);
-    await writeAll(rest);
+    // In place; an entry already sitting under the target identity is the
+    // same file seen before the move, so it goes.
+    const next = entries.flatMap((e, i) => (i === index ? [moved] : entryId(e) === entryId(to) ? [] : [e]));
+    await writeAll(next);
   });
 }
 

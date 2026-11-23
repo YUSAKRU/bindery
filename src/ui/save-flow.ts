@@ -55,7 +55,7 @@ export interface SaveFlowElements {
 export interface SaveFlowDeps {
   pathExists(path: string): Promise<boolean>;
   savePdfPrivately(bytes: Uint8Array, relPath: string): Promise<string>;
-  recordOpened(entry: { uri: string | null; name: string; fp?: string }): Promise<void>;
+  recordOpened(entry: { uri: string | null; name: string; fp?: string }): Promise<unknown>;
   showConfirmDialog(message: string): Promise<boolean>;
   showToast(message: string): void;
   errorText(error: unknown): string;

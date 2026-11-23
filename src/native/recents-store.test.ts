@@ -284,6 +284,24 @@ describe('recents-store', () => {
       expect((await getRecents())[0].imposed).toBe(true);
     });
 
+    it('an unknown answer keeps the stored one; a read "not marked" replaces it', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: true });
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: undefined });
+      expect((await getRecents())[0].imposed).toBe(true);
+      await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: false });
+      expect((await getRecents())[0].imposed).toBe(false);
+    });
+
+    it('does not carry the mark to different content saved under the same uri', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      await recordOpened({ uri: 'file:///x.pdf', name: 'x.pdf', fp: 'A', imposed: true });
+      await recordOpened({ uri: 'file:///x.pdf', name: 'x.pdf', fp: 'B' });
+      const [entry] = await getRecents();
+      expect(entry.fp).toBe('B');
+      expect('imposed' in entry).toBe(false);
+    });
+
     it('follows the file to its new uri through the fingerprint', async () => {
       const { recordOpened, getRecents } = await importStore();
       await recordOpened({ uri: 'content://a', name: 'a.pdf', fp: 'F1', imposed: true });
@@ -304,6 +322,71 @@ describe('recents-store', () => {
       expect((await getRecents()).find((e) => e.uri === 'file:///x.pdf')?.imposed).toBe(true);
       await rekeyRecent(marked, { uri: 'file:///y.pdf', name: 'y.pdf' });
       expect((await getRecents()).find((e) => e.uri === 'file:///y.pdf')?.imposed).toBe(true);
+    });
+  });
+
+  describe('audit scenarios', () => {
+    it('recordOpened returns the entry as stored, with the page carried from the same file', async () => {
+      const { recordOpened, updateLastPage } = await importStore();
+      await recordOpened({ uri: 'content://downloads/1', name: 'DarHub.pdf', fp: 'F1' });
+      await updateLastPage({ uri: 'content://downloads/1', name: 'DarHub.pdf' }, 42);
+      const recorded = await recordOpened({ uri: 'content://recent/9', name: 'DarHub.pdf', fp: 'F1' });
+      expect(recorded).toMatchObject({ uri: 'content://recent/9', lastPage: 42, fp: 'F1' });
+    });
+
+    it('new content under a known uri starts fresh: no stale page, no stale mark', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      store.set(STORAGE_KEY, JSON.stringify([{ uri: 'file:///edits/report.pdf', name: 'report.pdf', lastPage: 40, openedAt: 1, fp: 'OLD', imposed: true }]));
+      const recorded = await recordOpened({ uri: 'file:///edits/report.pdf', name: 'report.pdf', fp: 'NEW' });
+      expect(recorded).toEqual({ uri: 'file:///edits/report.pdf', name: 'report.pdf', lastPage: 1, openedAt: recorded.openedAt, fp: 'NEW' });
+      expect(await getRecents()).toHaveLength(1);
+    });
+
+    it('new content under a known uri takes over the entry that already holds that content', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      store.set(
+        STORAGE_KEY,
+        JSON.stringify([
+          { uri: 'file:///edits/report.pdf', name: 'report.pdf', lastPage: 40, openedAt: 2, fp: 'OLD' },
+          { uri: 'content://downloads/1', name: 'other.pdf', lastPage: 7, openedAt: 1, fp: 'NEW', imposed: true },
+        ]),
+      );
+      await recordOpened({ uri: 'file:///edits/report.pdf', name: 'report.pdf', fp: 'NEW' });
+      const entries = await getRecents();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ uri: 'file:///edits/report.pdf', lastPage: 7, fp: 'NEW', imposed: true });
+    });
+
+    it('collapsing a pair keeps the mark the other side knew', async () => {
+      const { recordOpened, getRecents } = await importStore();
+      store.set(
+        STORAGE_KEY,
+        JSON.stringify([
+          { uri: 'content://a', name: 'x.pdf', lastPage: 3, openedAt: 2, fp: 'F1', imposed: true },
+          { uri: 'content://b', name: 'x.pdf', lastPage: 1, openedAt: 1 },
+        ]),
+      );
+      await recordOpened({ uri: 'content://b', name: 'x.pdf', fp: 'F1' });
+      const entries = await getRecents();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ uri: 'content://b', fp: 'F1', imposed: true });
+    });
+
+    it('rekeyRecent onto an identity listed earlier keeps the order', async () => {
+      const { rekeyRecent, getRecents } = await importStore();
+      store.set(
+        STORAGE_KEY,
+        JSON.stringify([
+          { uri: 'file:///y.pdf', name: 'y.pdf', lastPage: 1, openedAt: 300 },
+          { uri: 'file:///b.pdf', name: 'b.pdf', lastPage: 1, openedAt: 200 },
+          { uri: 'file:///x.pdf', name: 'x.pdf', lastPage: 9, openedAt: 100 },
+          { uri: 'file:///c.pdf', name: 'c.pdf', lastPage: 1, openedAt: 50 },
+        ]),
+      );
+      await rekeyRecent({ uri: 'file:///x.pdf', name: 'x.pdf' }, { uri: 'file:///y.pdf', name: 'y.pdf' });
+      const entries = await getRecents();
+      expect(entries.map((e) => e.uri)).toEqual(['file:///b.pdf', 'file:///y.pdf', 'file:///c.pdf']);
+      expect(entries[1]).toMatchObject({ lastPage: 9, openedAt: 100 });
     });
   });
 });

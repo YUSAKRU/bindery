@@ -62,7 +62,7 @@ import {
   renderReaderPage,
   type ReaderDocument,
 } from '../native/pdf-reader-render';
-import { hasImposedKeyword } from '../engine/imposed-mark';
+import { imposedFromInfo } from '../engine/imposed-mark';
 import { fingerprintPdf, getRecents, recordOpened, rekeyRecent, removeRecent, restoreRecent, updateLastPage, type RecentEntry } from '../native/recents-store';
 import {
   clearOutputUnder,
@@ -4953,10 +4953,8 @@ export function initApp(): void {
         | null;
       // The booklet engine marks its imposed outputs; the desk uses it to keep
       // "Read as a book" away from them wherever they are opened from.
-      const readerInfo = (await readerDoc.proxy.getMetadata().catch(() => null))?.info as
-        | { Keywords?: unknown }
-        | undefined;
-      const readerImposed = hasImposedKeyword(readerInfo?.Keywords);
+      // A failed read stays "unknown" (undefined), never "not marked".
+      const readerImposed = imposedFromInfo((await readerDoc.proxy.getMetadata().catch(() => null))?.info);
       readerBytes = bytes;
       readerName = name;
       readerUri = sourceUri;
@@ -4979,7 +4977,14 @@ export function initApp(): void {
       if (initialPage > 1) {
         readerScroll.scrollTop = readerScrollTopForPage(initialPage);
       }
-      await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });
+      const recorded = await recordOpened({ uri: sourceUri, name, fp: fingerprintPdf(bytes), imposed: readerImposed });
+      // Opened without a page of its own (picker, Files, share) but known to
+      // the desk — possibly under another uri, matched by fingerprint: resume
+      // there. Otherwise the reader sits on page 1 and its page-save timer
+      // would overwrite the remembered page with 1.
+      if (initialPage <= 1 && recorded.lastPage > 1 && readerDoc) {
+        readerScroll.scrollTop = readerScrollTopForPage(Math.min(recorded.lastPage, readerDoc.proxy.numPages));
+      }
     } catch (error) {
       const message = errorText(error);
       goToError(t('error.pdfOpenFailed'), message, returnTo);
@@ -6178,6 +6183,10 @@ export function initApp(): void {
         } else {
           newUri = await savePdfPrivately(readerBytes, `scans/${newName}`);
           readerRelPath = `scans/${newName}`;
+          // A new copy, so a new desk entry. A rename above was followed by
+          // rekeyRecent and must not be recorded again: that would move it to
+          // the top and stamp a new openedAt.
+          await rememberSaved(newUri, newName, readerBytes);
         }
 
         readerName = newName;
@@ -6185,7 +6194,6 @@ export function initApp(): void {
         topBarTitle.textContent = readerName;
         topBarTitle.title = readerName;
 
-        await rememberSaved(newUri, newName, readerBytes);
         showToast(t('toast.savedToBindery'));
       } else {
         const publicUri = await savePdfToDevice(readerBytes, newName);

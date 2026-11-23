@@ -12,3 +12,13 @@ export function hasImposedKeyword(keywords: unknown): boolean {
   if (typeof keywords !== 'string') return false;
   return keywords.split(/[\s,;]+/).includes(IMPOSED_KEYWORD);
 }
+
+/**
+ * The mark as read from a document's info dictionary (pdf.js `getMetadata().info`):
+ * true or false when the info was read, undefined when it could not be — so a
+ * failed read never overwrites what the desk already knew.
+ */
+export function imposedFromInfo(info: unknown): boolean | undefined {
+  if (!info || typeof info !== 'object') return undefined;
+  return hasImposedKeyword((info as { Keywords?: unknown }).Keywords);
+}

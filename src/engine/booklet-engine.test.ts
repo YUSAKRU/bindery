@@ -26,7 +26,7 @@ import {
   signatureStartPages,
 } from './booklet-engine';
 import { BookletError } from './types';
-import { IMPOSED_KEYWORD, hasImposedKeyword } from './imposed-mark';
+import { IMPOSED_KEYWORD, hasImposedKeyword, imposedFromInfo } from './imposed-mark';
 
 
 // makeBooklet's instructions sheet now embeds a Unicode font subset, fetched
@@ -1450,9 +1450,25 @@ describe('imposed mark', () => {
     expect(hasImposedKeyword(await keywordsViaPdfJs(result.instructionsPdf!))).toBe(false);
   });
 
-  it('is not carried over from the source onto anything but imposed output', async () => {
-    const source = await buildTestPdf(8);
-    expect(hasImposedKeyword((await PDFDocument.load(source)).getKeywords())).toBe(false);
+  it('outputs carry exactly the mark, whatever keywords the source had', async () => {
+    const doc = await PDFDocument.load(await buildTestPdf(16));
+    doc.setKeywords(['bindery-imposed', 'private-note']);
+    const result = await makeBooklet(await doc.save(), { separateCover: true, includeInstructions: true });
+    for (const bytes of [result.frontPdf, result.backPdf, result.combinedPdf, result.coverPdf!]) {
+      expect((await PDFDocument.load(bytes)).getKeywords()).toBe(IMPOSED_KEYWORD);
+    }
+    // A marked source does not mark the instructions page.
+    expect((await PDFDocument.load(result.instructionsPdf!)).getKeywords()).toBeUndefined();
+  });
+});
+
+describe('imposedFromInfo', () => {
+  it('answers true/false when the info was read, and undefined when it was not', () => {
+    expect(imposedFromInfo({ Keywords: IMPOSED_KEYWORD })).toBe(true);
+    expect(imposedFromInfo({ Keywords: 'other' })).toBe(false);
+    expect(imposedFromInfo({})).toBe(false);
+    expect(imposedFromInfo(null)).toBeUndefined();
+    expect(imposedFromInfo(undefined)).toBeUndefined();
   });
 });
 
