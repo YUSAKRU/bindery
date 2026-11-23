@@ -2894,6 +2894,101 @@ dialog.modal-sheet::backdrop {
   background: rgba(var(--reader-accent-rgb), 0.3);
 }
 
+:root:not(.reader-night) #screen-reader .reader-tools-panel {
+  background: var(--atelier-bg);
+  border-top: 1px solid var(--atelier-border-hairline);
+}
+
+:root:not(.reader-night) #screen-reader .reader-sheet-grabber {
+  background: var(--atelier-paper-edge);
+}
+
+:root:not(.reader-night) #screen-reader .reader-sheet-title {
+  color: var(--atelier-ink-black);
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+:root:not(.reader-night) #screen-reader .reader-tool-tile {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  border-radius: 14px;
+  color: var(--atelier-ink-black);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+}
+
+:root:not(.reader-night) #screen-reader .reader-tool-tile:active {
+  background: var(--atelier-paper-edge);
+}
+
+:root:not(.reader-night) #screen-reader .reader-tool-tile-icon {
+  background: rgba(var(--reader-accent-rgb), 0.12);
+}
+
+:root:not(.reader-night) #screen-reader .reader-tool-tile-icon .tool-icon {
+  stroke: var(--reader-accent);
+}
+
+:root:not(.reader-night) #screen-reader .reader-tool-tile-title {
+  color: var(--atelier-ink-black);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-tab {
+  background: var(--atelier-surface-cream);
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-tab.is-active {
+  background: rgba(var(--reader-accent-rgb), 0.14);
+  color: var(--reader-accent);
+  font-weight: 600;
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-cell-thumb {
+  background: var(--atelier-surface-cream);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-cell.is-current .reader-nav-cell-thumb {
+  border-color: var(--reader-accent);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-cell-num {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-cell.is-current .reader-nav-cell-num {
+  color: var(--reader-accent);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-outline-row {
+  color: var(--atelier-ink-black);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-outline-row:active {
+  background: rgba(var(--reader-accent-rgb), 0.10);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-recent-row {
+  background: var(--atelier-surface-cream);
+  border: 1px solid var(--atelier-paper-edge);
+  color: var(--atelier-ink-black);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-recent-row:active {
+  background: rgba(var(--reader-accent-rgb), 0.10);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-recent-thumb {
+  background: var(--atelier-bg);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-recent-page {
+  color: var(--atelier-ink-muted);
+}
+
+:root:not(.reader-night) #screen-reader .reader-nav-empty {
+  color: var(--atelier-ink-muted);
+}
+
 /* ── Reader Night Chrome ─────────────────────────────────────────────────────── */
 .reader-night .top-bar {
   background: #181818;
@@ -2935,21 +3030,30 @@ dialog.modal-sheet::backdrop {
   color: #e0e0e0;
 }
 .reader-night .reader-tool-tile:active {
-  background: rgba(187, 134, 252, .25);
+  background: rgba(200, 157, 83, .25);
 }
 .reader-night .reader-tool-tile-icon {
-  background: rgba(187, 134, 252, .20);
+  background: rgba(200, 157, 83, .20);
 }
 .reader-night .reader-tool-tile-icon .tool-icon {
-  stroke: #d0aaff;
+  stroke: #e6c07b;
 }
 .reader-night .reader-nav-tab {
   background: rgba(255, 255, 255, .08);
   color: #e0e0e0;
 }
 .reader-night .reader-nav-tab.is-active {
-  background: rgba(187, 134, 252, .25);
-  color: #d0aaff;
+  background: rgba(200, 157, 83, .25);
+  color: #e6c07b;
+}
+.reader-night .reader-nav-cell.is-current .reader-nav-cell-thumb {
+  border-color: #e6c07b;
+}
+.reader-night .reader-nav-cell.is-current .reader-nav-cell-num {
+  color: #e6c07b;
+}
+.reader-night .reader-nav-outline-row:active {
+  background: rgba(200, 157, 83, .20);
 }
 .reader-night .reader-nav-outline-row,
 .reader-night .reader-nav-recent-row {

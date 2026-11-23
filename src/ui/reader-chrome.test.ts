@@ -124,7 +124,63 @@ describe('reader atelier chrome', () => {
 
   it('never uses the old indigo theme', () => {
     expect(section).not.toMatch(/--color-primary|--color-on-primary/);
-    expect(section).not.toMatch(/79, ?70, ?229|#4f46e5|187, ?134, ?252/i);
+    expect(section).not.toMatch(/79, ?70, ?229|#4f46e5|124, ?140, ?248|187, ?134, ?252|#d0aaff/i);
+  });
+
+  it('styles the reader tools and pages sheets with atelier tokens in day mode', () => {
+    const panel = rule(':root:not(.reader-night) #screen-reader .reader-tools-panel', section);
+    expect(panel).toContain('var(--atelier-bg)');
+    expect(panel).toContain('var(--atelier-border-hairline)');
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-sheet-grabber', section)).toContain(
+      'var(--atelier-paper-edge)',
+    );
+    const sheetTitle = rule(':root:not(.reader-night) #screen-reader .reader-sheet-title', section);
+    expect(sheetTitle).toContain('var(--atelier-ink-black)');
+    expect(sheetTitle).toContain("'EB Garamond'");
+
+    const tile = rule(':root:not(.reader-night) #screen-reader .reader-tool-tile', section);
+    expect(tile).toContain('var(--atelier-surface-cream)');
+    expect(tile).toContain('var(--atelier-paper-edge)');
+    expect(tile).toContain('border-radius: 14px');
+    expect(tile).toContain('var(--atelier-ink-black)');
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-tool-tile:active', section)).toContain(
+      'var(--atelier-paper-edge)',
+    );
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-tool-tile-title', section)).toContain(
+      'var(--atelier-ink-black)',
+    );
+
+    const tileIcon = rule(':root:not(.reader-night) #screen-reader .reader-tool-tile-icon', section);
+    expect(tileIcon).toContain('var(--reader-accent-rgb)');
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-tool-tile-icon .tool-icon', section)).toContain(
+      'var(--reader-accent)',
+    );
+
+    const navTab = rule(':root:not(.reader-night) #screen-reader .reader-nav-tab', section);
+    expect(navTab).toContain('var(--atelier-surface-cream)');
+    expect(navTab).toContain('var(--atelier-ink-muted)');
+    const navTabActive = rule(':root:not(.reader-night) #screen-reader .reader-nav-tab.is-active', section);
+    expect(navTabActive).toContain('var(--reader-accent-rgb)');
+    expect(navTabActive).toContain('var(--reader-accent)');
+    expect(navTabActive).toContain('font-weight: 600');
+
+    expect(
+      rule(':root:not(.reader-night) #screen-reader .reader-nav-cell.is-current .reader-nav-cell-thumb', section),
+    ).toContain('var(--reader-accent)');
+    expect(
+      rule(':root:not(.reader-night) #screen-reader .reader-nav-cell.is-current .reader-nav-cell-num', section),
+    ).toContain('var(--reader-accent)');
+
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-nav-outline-row:active', section)).toContain(
+      'var(--reader-accent-rgb)',
+    );
+    const recentRow = rule(':root:not(.reader-night) #screen-reader .reader-nav-recent-row', section);
+    expect(recentRow).toContain('var(--atelier-surface-cream)');
+    expect(recentRow).toContain('var(--atelier-ink-black)');
+    expect(rule(':root:not(.reader-night) #screen-reader .reader-nav-recent-page', section)).toContain(
+      'var(--atelier-ink-muted)',
+    );
   });
 
   it('leaves night mode alone: every styling rule is guarded against it', () => {
@@ -163,6 +219,21 @@ describe('reader atelier chrome', () => {
     expect(nightActive).not.toMatch(/187, ?134, ?252|#d0aaff/i);
     expect(nightActive).toContain('rgba(200, 157, 83, .25)');
     expect(nightActive).toContain('#e6c07b');
+  });
+
+  it('the night mode tools and pages sheets use warm gold and drop all purple/indigo', () => {
+    expect(nightSection).not.toMatch(/187, ?134, ?252|#d0aaff|--color-primary|79, ?70, ?229|#4f46e5|124, ?140, ?248/i);
+    expect(rule('.reader-night .reader-tool-tile:active', nightSection)).toContain('rgba(200, 157, 83, .25)');
+    expect(rule('.reader-night .reader-tool-tile-icon', nightSection)).toContain('rgba(200, 157, 83, .20)');
+    expect(rule('.reader-night .reader-tool-tile-icon .tool-icon', nightSection)).toContain('#e6c07b');
+
+    const nightNavActive = rule('.reader-night .reader-nav-tab.is-active', nightSection);
+    expect(nightNavActive).toContain('rgba(200, 157, 83, .25)');
+    expect(nightNavActive).toContain('#e6c07b');
+
+    expect(rule('.reader-night .reader-nav-cell.is-current .reader-nav-cell-thumb', nightSection)).toContain('#e6c07b');
+    expect(rule('.reader-night .reader-nav-cell.is-current .reader-nav-cell-num', nightSection)).toContain('#e6c07b');
+    expect(rule('.reader-night .reader-nav-outline-row:active', nightSection)).toContain('rgba(200, 157, 83, .20)');
   });
 
   it('the active search button uses the reader accent in atelier mode and warm gold in night mode', () => {
