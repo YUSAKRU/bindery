@@ -64,6 +64,7 @@ docs/
 
 # Local-only Play Store assets
 android/play-store-feature-graphic.png
+assets/brand/play-store-screenshots/
 # Hcom files
 node_modules/
 .hcom-scaffold-backup/
