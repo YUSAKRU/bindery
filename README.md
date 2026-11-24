@@ -11,11 +11,13 @@
 
 ![Bindery — Make Print-Ready Booklets](assets/brand/play-store-feature-1024x500-en.png)
 
-Bindery is a privacy-focused PDF toolkit for Android. Every core tool — booklet making, merging, page management, watermarking — runs entirely on your device.
+Bindery is a mobile-first, privacy-focused PDF toolkit for phones and the browser. Every core tool — booklet making, merging, page management, watermarking — runs entirely on your device, with nothing uploaded.
 
-### Get it
+### Try it now
 
-**[Bindery on Google Play](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery)** — or build it from this repository yourself, see [Development & Build](#development--build).
+Open **[https://yusakru.github.io/bindery/](https://yusakru.github.io/bindery/)** — one link for every device: Android visits go to Google Play on first open, while iPhone and desktop run directly in the browser and can be added to the home screen.
+
+You can also go straight to [Bindery on Google Play](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery), or build it from this repository yourself (see [Development & Build](#development--build)).
 
 ### Why Privacy-Focused?
 
@@ -79,11 +81,13 @@ This project is licensed under **GPL-3.0**. See [`LICENSE`](LICENSE) for the ful
 
 ![Bindery — Yazdırılabilir Kitapçık Hazırla](assets/brand/play-store-feature-1024x500-tr.png)
 
-Bindery, Android için gizlilik odaklı bir PDF araç setidir. Kitapçık oluşturma, birleştirme, sayfa düzenleme, filigran gibi tüm çekirdek araçlar tamamen cihazınızda çalışır.
+Bindery, telefonlar ve tarayıcı için mobil öncelikli, gizlilik odaklı bir PDF araç setidir. Kitapçık hazırlama, birleştirme, sayfa düzenleme, filigran gibi tüm çekirdek araçlar hiçbir şey yüklenmeden tamamen cihazınızda çalışır.
 
-### Nereden indirilir
+### Hemen deneyin
 
-**[Google Play'de Bindery](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery)** — ya da bu depodan kendiniz derleyebilirsiniz, bkz. [Geliştirme & Derleme](#geliştirme--derleme).
+**[https://yusakru.github.io/bindery/](https://yusakru.github.io/bindery/)** adresini açın — her cihaz için tek bağlantı: Android'de ilk ziyarette Google Play'e yönlendirir; iPhone ve masaüstünde doğrudan tarayıcıda çalışır ve ana ekrana eklenebilir.
+
+Doğrudan [Google Play'de Bindery](https://play.google.com/store/apps/details?id=com.eduplayconnect.bindery) sayfasını da açabilir ya da bu depodan kendiniz derleyebilirsiniz (bkz. [Geliştirme & Derleme](#geliştirme--derleme)).
 
 ### Neden Gizlilik Odaklı?
 
