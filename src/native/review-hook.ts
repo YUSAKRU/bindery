@@ -32,10 +32,18 @@ export async function recordSuccessfulOperation(): Promise<number> {
 }
 
 /**
+ * Returns whether the current runtime is a native app that can offer store reviews.
+ */
+export function canOfferStoreReview(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
+/**
  * Checks if the user is eligible for an in-app review prompt.
  */
 export async function isReviewEligible(): Promise<boolean> {
   try {
+    if (!canOfferStoreReview()) return false;
     if (Capacitor.getPlatform() !== 'android') return false;
     const { value: completed } = await Preferences.get({ key: PREF_REVIEW_COMPLETED });
     if (completed === 'true') return false;

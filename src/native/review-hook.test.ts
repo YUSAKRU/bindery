@@ -24,6 +24,7 @@ vi.mock('./file-bridge', () => ({
 }));
 
 import {
+  canOfferStoreReview,
   isReviewEligible,
   markReviewCompleted,
   MIN_OPS_FOR_REVIEW,
@@ -95,6 +96,25 @@ describe('In-App Review & Share Hook', () => {
     const oldTime = Date.now() - (PROMPT_INTERVAL_MS + 1000);
     store.set(PREF_LAST_REVIEW_PROMPT, String(oldTime));
     expect(await isReviewEligible()).toBe(true);
+  });
+
+  it('offers store review only on native platforms', () => {
+    platformState.isNative = true;
+    expect(canOfferStoreReview()).toBe(true);
+
+    platformState.isNative = false;
+    expect(canOfferStoreReview()).toBe(false);
+  });
+
+  it('returns false for isReviewEligible on non-native web even when ops and interval allow it', async () => {
+    for (let i = 0; i < MIN_OPS_FOR_REVIEW; i++) {
+      await recordSuccessfulOperation();
+    }
+    platformState.isNative = false;
+    expect(await isReviewEligible()).toBe(false);
+
+    platformState.platform = 'web';
+    expect(await isReviewEligible()).toBe(false);
   });
 
   it('returns false for isReviewEligible when platform is not android even if count reaches threshold', async () => {

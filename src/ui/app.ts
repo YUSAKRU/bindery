@@ -93,6 +93,7 @@ import {
   type ErrorEntry,
 } from '../native/error-log';
 import {
+  canOfferStoreReview,
   recordSuccessfulOperation,
   isReviewEligible,
   openStoreListing,
@@ -7416,6 +7417,7 @@ export function initApp(): void {
   });
 
   async function triggerReviewPromptIfEligible(): Promise<void> {
+    if (!canOfferStoreReview()) return;
     try {
       await recordSuccessfulOperation();
       const eligible = await isReviewEligible();
@@ -7436,6 +7438,9 @@ export function initApp(): void {
     }
   });
 
+  const offerStoreReview = canOfferStoreReview();
+  settingsRateAppBtn.hidden = !offerStoreReview;
+  settingsRateAppBtn.classList.toggle('hidden', !offerStoreReview);
   settingsRateAppBtn.addEventListener('click', async () => {
     try {
       await openStoreListing();
